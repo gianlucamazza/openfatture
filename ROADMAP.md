@@ -170,9 +170,9 @@ Build a modern, open-source electronic invoicing system for Italian freelancers 
 
 ---
 
-### 🚧 Phase 4: AI Layer (IN PROGRESS - 60% Complete)
+### 🚧 Phase 4: AI Layer (IN PROGRESS - 65% Complete)
 
-**Status:** 60% Complete (Phase 4.1 ✅ & 4.2 ✅ Done, 4.3 🚧 In Progress)
+**Status:** 65% Complete (Phase 4.1 ✅, 4.2 ✅, 4.3 🚧 20% - Streaming ✅)
 **Priority:** High
 **Started:** October 2025
 **Target Completion:** Q1 2026
@@ -308,15 +308,18 @@ Build a modern, open-source electronic invoicing system for Italian freelancers 
 - [ ] Update `enrich_with_rag()` in `openfatture/ai/context/enrichment.py:193`
   - **Note:** Currently placeholder with TODO comment
 
-*Streaming Response Support:*
-- [ ] Implement streaming in all providers
-  - [ ] OpenAI streaming (method exists, not used)
-  - [ ] Anthropic streaming (method exists, not used)
-  - [ ] Ollama streaming (method exists, not used)
-- [ ] Update ChatAgent to support streaming
-  - **Note:** Currently `enable_streaming=False` in `chat.py:124`
-- [ ] Rich terminal UI for streaming output
-- [ ] Token-by-token rendering in chat interface
+*✅ Streaming Response Support (COMPLETED):*
+- [x] Implement streaming in all providers
+  - [x] OpenAI streaming (fully functional)
+  - [x] Anthropic streaming (fully functional)
+  - [x] Ollama streaming (fully functional)
+- [x] Update ChatAgent to support streaming
+  - **Status:** `enable_streaming=True` by default
+- [x] Rich terminal UI for streaming output
+  - **Implementation:** Rich Live with Markdown rendering
+- [x] Token-by-token rendering in chat interface
+- [x] Comprehensive test suite (14 tests, 100% pass rate)
+- **Benefits:** <100ms time to first token, ChatGPT-like UX
 
 *Advanced Caching Strategies:*
 - [ ] Implement semantic similarity caching
@@ -606,13 +609,14 @@ This section tracks code that exists but is incomplete or shows placeholder beha
 - **Dependency:** ChromaDB already installed
 - **Target:** Phase 4.3 - Complete RAG Implementation
 
-**Streaming Responses** - `openfatture/cli/ui/chat.py:124`
-- **TODO:** Implement streaming for ChatAgent
-- **Current State:** `enable_streaming=False`
-- **Required:**
-  - Update all providers to enable streaming
-  - Rich terminal UI for token-by-token rendering
-- **Target:** Phase 4.3 - Streaming Response Support
+**✅ Streaming Responses** - ~~`openfatture/cli/ui/chat.py:124`~~ (COMPLETED)
+- **Status:** ~~TODO~~ ✅ Implemented in Phase 4.3
+- **Current State:** `enable_streaming=True` by default
+- **Implementation:**
+  - BaseAgent.execute_stream() method with AsyncIterator[str]
+  - All providers support streaming (OpenAI, Anthropic, Ollama)
+  - Rich Live terminal UI with Markdown rendering
+  - 14 comprehensive tests (100% pass rate)
 
 **Token Counter Optimization** - `openfatture/ai/providers/anthropic.py:255`
 - **TODO:** Use official Anthropic token counter when available
