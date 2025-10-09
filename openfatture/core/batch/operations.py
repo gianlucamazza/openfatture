@@ -5,6 +5,7 @@ Provides high-level batch operations for import, export, validation, and sending
 """
 
 import csv
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -204,7 +205,7 @@ def import_invoices_csv(
 
 def validate_batch(
     invoices: list[Fattura],
-    xml_generator: callable | None = None,
+    xml_generator: Callable | None = None,
     validator: FatturaPAValidator | None = None,
 ) -> BatchResult:
     """

@@ -116,10 +116,46 @@ class Settings(BaseSettings):
     ai_temperature: float = Field(default=0.7, description="AI temperature")
     ai_max_tokens: int = Field(default=2000, description="AI max tokens")
 
+    # AI Chat Assistant
+    ai_chat_enabled: bool = Field(
+        default=True,
+        description="Enable AI chat assistant",
+    )
+    ai_chat_sessions_dir: Path = Field(
+        default=Path.home() / ".openfatture" / "ai" / "sessions",
+        description="Directory for chat session storage",
+    )
+    ai_chat_auto_save: bool = Field(
+        default=True,
+        description="Auto-save chat sessions after each message",
+    )
+    ai_chat_max_messages: int = Field(
+        default=100,
+        description="Maximum messages per chat session",
+    )
+    ai_chat_max_tokens: int = Field(
+        default=8000,
+        description="Maximum tokens per chat session",
+    )
+
+    # AI Tools & Function Calling
+    ai_tools_enabled: bool = Field(
+        default=True,
+        description="Enable AI tool/function calling",
+    )
+    ai_enabled_tools: str = Field(
+        default="search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats",
+        description="Comma-separated list of enabled tools",
+    )
+    ai_tools_require_confirmation: bool = Field(
+        default=True,
+        description="Require user confirmation before executing tools",
+    )
+
     # Vector Store (for AI)
     vector_store_path: Path = Field(default=Path.home() / ".openfatture" / "vector_store")
 
-    @field_validator("data_dir", "archivio_dir", "certificates_dir", "vector_store_path")
+    @field_validator("data_dir", "archivio_dir", "certificates_dir", "vector_store_path", "ai_chat_sessions_dir")
     @classmethod
     def create_dir_if_not_exists(cls, v: Path) -> Path:
         """Create directory if it doesn't exist."""

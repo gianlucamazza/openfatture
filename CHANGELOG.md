@@ -28,12 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Progress bars for long-running tasks
   - Interactive dashboard with real-time statistics
 
-- **AI-Powered Workflows**:
-  - Smart invoice description generation
-  - Tax rate and deduction suggestions
-  - Cash flow forecasting with ML
-  - Compliance checking before SDI submission
-  - Multi-agent system with LangGraph orchestration
+- **AI-Powered Workflows** (CLI stubs - implementation planned for Phase 4):
+  - CLI commands for AI features (`ai describe`, `ai suggest-vat`, `ai forecast`, `ai check`)
+  - Placeholder responses showing planned functionality
+  - Full implementation with LangChain/LangGraph planned for Phase 4
+  - Dependencies included (langchain, langgraph, openai, anthropic, chromadb)
 
 - **Email System**:
   - Professional HTML email templates with Jinja2

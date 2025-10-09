@@ -1,5 +1,7 @@
 """UI helper functions for interactive mode."""
 
+from collections.abc import Callable
+
 import questionary
 from rich.console import Console
 
@@ -138,7 +140,7 @@ def confirm_action(message: str, default: bool = False) -> bool:
     return questionary.confirm(message, default=default, style=openfatture_style).ask()
 
 
-def text_input(message: str, default: str = "", validate: callable | None = None) -> str:
+def text_input(message: str, default: str = "", validate: Callable | None = None) -> str:
     """
     Text input prompt.
 

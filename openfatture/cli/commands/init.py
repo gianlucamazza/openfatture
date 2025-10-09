@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import questionary
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -105,6 +106,95 @@ def init(
         )
         locale = Prompt.ask("Locale (it/en)", default="it")
 
+        # AI Configuration (optional)
+        console.print("\n[bold]🤖 AI Configuration (Optional)[/bold]")
+        console.print("[dim]Configure AI features for smart invoice descriptions, tax suggestions, and chat assistant.[/dim]")
+
+        configure_ai = Confirm.ask(
+            "Configure AI features now? (You can do this later via config wizard)",
+            default=False,
+        )
+
+        ai_lines = []
+        if configure_ai:
+            ai_provider = questionary.select(
+                "AI Provider",
+                choices=["anthropic", "openai", "ollama", "Skip for now"],
+                default="anthropic",
+            ).ask()
+
+            if ai_provider != "Skip for now":
+                # Add to env_lines based on provider
+                if ai_provider == "anthropic":
+                    ai_model = "claude-3-5-sonnet-20241022"
+                    console.print("\n[cyan]Anthropic Claude selected - get API key from:[/cyan]")
+                    console.print("  https://console.anthropic.com/settings/keys")
+                    ai_key = Prompt.ask("API Key (or leave empty to set later)", default="", password=True)
+
+                elif ai_provider == "openai":
+                    ai_model = "gpt-4o"
+                    console.print("\n[cyan]OpenAI selected - get API key from:[/cyan]")
+                    console.print("  https://platform.openai.com/api-keys")
+                    ai_key = Prompt.ask("API Key (or leave empty to set later)", default="", password=True)
+
+                else:  # ollama
+                    ai_model = "llama3.2"
+                    ai_key = ""
+                    console.print("\n[cyan]Ollama selected - FREE local model![/cyan]")
+                    console.print("  Install: [bold]ollama pull llama3.2[/bold]")
+                    console.print("  Start: [bold]ollama serve[/bold]")
+
+                # Add AI config
+                ai_lines = [
+                    "",
+                    "# AI Configuration",
+                    f"AI_PROVIDER={ai_provider}",
+                    f"AI_MODEL={ai_model}",
+                ]
+
+                if ai_key:
+                    ai_lines.append(f"AI_API_KEY={ai_key}")
+                else:
+                    ai_lines.append("# AI_API_KEY=your-key-here  # Add your key later")
+
+                if ai_provider == "ollama":
+                    ai_lines.append("AI_BASE_URL=http://localhost:11434")
+
+                # Add chat defaults
+                ai_lines.extend([
+                    "",
+                    "# AI Chat Assistant",
+                    "AI_CHAT_ENABLED=true",
+                    "AI_CHAT_AUTO_SAVE=true",
+                    "AI_CHAT_MAX_MESSAGES=100",
+                    "AI_CHAT_MAX_TOKENS=8000",
+                    "",
+                    "# AI Tools",
+                    "AI_TOOLS_ENABLED=true",
+                    "AI_ENABLED_TOOLS=search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats",
+                    "AI_TOOLS_REQUIRE_CONFIRMATION=true",
+                ])
+            else:
+                # User chose "Skip for now"
+                ai_lines = [
+                    "",
+                    "# AI Configuration (optional - uncomment and configure to enable)",
+                    "# AI_PROVIDER=anthropic",
+                    "# AI_MODEL=claude-3-5-sonnet-20241022",
+                    "# AI_API_KEY=sk-ant-your-key-here",
+                    "# See docs for full configuration: docs/CONFIGURATION.md",
+                ]
+        else:
+            # User chose not to configure AI now
+            ai_lines = [
+                "",
+                "# AI Configuration (optional - uncomment and configure to enable)",
+                "# AI_PROVIDER=anthropic",
+                "# AI_MODEL=claude-3-5-sonnet-20241022",
+                "# AI_API_KEY=sk-ant-your-key-here",
+                "# See docs for full configuration: docs/CONFIGURATION.md",
+            ]
+
         # Write .env file
         env_lines = [
             "# OpenFatture Configuration",
@@ -139,12 +229,10 @@ def init(
             "# EMAIL_LOGO_URL=https://yourcompany.com/logo.png",
             "# EMAIL_PRIMARY_COLOR=#1976D2",
             "# EMAIL_FOOTER_TEXT=© 2025 Your Company",
-            "",
-            "# AI Configuration (optional - add your API key here)",
-            "# AI_PROVIDER=anthropic",
-            "# AI_MODEL=claude-3-5-sonnet-20241022",
-            "# AI_API_KEY=sk-ant-your-key-here",
         ]
+
+        # Add AI lines
+        env_lines.extend(ai_lines)
 
         env_file.write_text("\n".join(env_lines))
         console.print(f"\n  ✓ Configuration saved to: {env_file.absolute()}\n")

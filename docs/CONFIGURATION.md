@@ -767,6 +767,185 @@ AI_MAX_TOKENS=4000   # Risposte lunghe
 
 ---
 
+## AI Chat Assistant (NEW!)
+
+Configurazione per il sistema di chat interattivo con AI.
+
+### `AI_CHAT_ENABLED`
+
+**Descrizione**: Abilita/disabilita chat assistant
+
+**Tipo**: Boolean
+
+**Default**: `true`
+
+**Esempio**:
+```env
+AI_CHAT_ENABLED=true   # Abilita chat
+AI_CHAT_ENABLED=false  # Disabilita chat
+```
+
+**Note**:
+- Richiede `AI_PROVIDER` e `AI_API_KEY` configurati
+- Accessibile via `openfatture -i` → "AI Assistant" → "Chat"
+
+---
+
+### `AI_CHAT_SESSIONS_DIR`
+
+**Descrizione**: Directory per salvare sessioni di chat
+
+**Tipo**: Path
+
+**Default**: `~/.openfatture/ai/sessions`
+
+**Esempio**:
+```env
+AI_CHAT_SESSIONS_DIR=/path/to/sessions
+AI_CHAT_SESSIONS_DIR=~/.openfatture/ai/sessions
+```
+
+**Note**:
+- Le sessioni vengono salvate in formato JSON
+- Include cronologia messaggi, token usage, costi
+- Supporta export in Markdown
+
+---
+
+### `AI_CHAT_AUTO_SAVE`
+
+**Descrizione**: Salvataggio automatico delle conversazioni
+
+**Tipo**: Boolean
+
+**Default**: `true`
+
+**Esempio**:
+```env
+AI_CHAT_AUTO_SAVE=true   # Salva dopo ogni messaggio
+AI_CHAT_AUTO_SAVE=false  # Solo salvataggio manuale con /save
+```
+
+**Note**:
+- Raccomandato `true` per non perdere conversazioni
+- Le sessioni salvate possono essere riprese successivamente
+
+---
+
+### `AI_CHAT_MAX_MESSAGES`
+
+**Descrizione**: Numero massimo messaggi per sessione
+
+**Tipo**: Integer
+
+**Default**: `100`
+
+**Esempio**:
+```env
+AI_CHAT_MAX_MESSAGES=50    # Limita a 50 messaggi
+AI_CHAT_MAX_MESSAGES=200   # Estendi a 200 messaggi
+```
+
+**Note**:
+- Limita il context window per controllo costi
+- Messaggi più vecchi vengono rimossi automaticamente
+- Non include system message
+
+---
+
+### `AI_CHAT_MAX_TOKENS`
+
+**Descrizione**: Numero massimo token per sessione
+
+**Tipo**: Integer
+
+**Default**: `8000`
+
+**Esempio**:
+```env
+AI_CHAT_MAX_TOKENS=4000    # Sessioni più brevi
+AI_CHAT_MAX_TOKENS=16000   # Sessioni più lunghe
+```
+
+**Note**:
+- Aiuta a controllare i costi
+- Quando raggiunto, messaggi più vecchi vengono rimossi
+- Si riferisce al totale di input + output
+
+---
+
+## AI Tools & Function Calling (NEW!)
+
+Configurazione per il sistema di tool calling.
+
+### `AI_TOOLS_ENABLED`
+
+**Descrizione**: Abilita function calling
+
+**Tipo**: Boolean
+
+**Default**: `true`
+
+**Esempio**:
+```env
+AI_TOOLS_ENABLED=true   # Abilita tools
+AI_TOOLS_ENABLED=false  # Solo conversazione senza tools
+```
+
+**Note**:
+- Permette all'AI di cercare fatture, clienti, statistiche
+- Richiede database inizializzato
+- 6 tools disponibili (invoice e client operations)
+
+---
+
+### `AI_ENABLED_TOOLS`
+
+**Descrizione**: Lista tools abilitati (comma-separated)
+
+**Tipo**: String (comma-separated)
+
+**Default**: Tutti i tools
+
+**Esempio**:
+```env
+# Abilita solo tools invoice
+AI_ENABLED_TOOLS=search_invoices,get_invoice_details,get_invoice_stats
+
+# Abilita tutti i tools
+AI_ENABLED_TOOLS=search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats
+```
+
+**Tools disponibili**:
+- `search_invoices` - Cerca fatture
+- `get_invoice_details` - Dettagli fattura
+- `get_invoice_stats` - Statistiche fatture
+- `search_clients` - Cerca clienti
+- `get_client_details` - Dettagli cliente
+- `get_client_stats` - Statistiche clienti
+
+---
+
+### `AI_TOOLS_REQUIRE_CONFIRMATION`
+
+**Descrizione**: Richiedi conferma prima di eseguire tools
+
+**Tipo**: Boolean
+
+**Default**: `true`
+
+**Esempio**:
+```env
+AI_TOOLS_REQUIRE_CONFIRMATION=true   # Chiedi conferma
+AI_TOOLS_REQUIRE_CONFIRMATION=false  # Esegui direttamente
+```
+
+**Note**:
+- Attualmente tutti i tools sono read-only (nessun rischio)
+- Utile se in futuro verranno aggiunti tools distruttivi
+
+---
+
 ## Paths & Directories
 
 Configurazione opzionale delle directory di lavoro.

@@ -33,16 +33,16 @@ def show_main_menu() -> str:
     console.print("\n")
 
     choices = [
-        "1. 🚀 Setup & Configurazione",
-        "2. 👤 Gestione Clienti",
-        "3. 🧾 Gestione Fatture",
-        "4. 📬 Notifiche SDI",
-        "5. 📧 Email & Templates",
-        "6. 📦 Operazioni Batch",
-        "7. 📊 Report & Statistiche",
-        "8. 🤖 AI Assistant",
+        "🚀 Setup & Configurazione",
+        "👤 Gestione Clienti",
+        "🧾 Gestione Fatture",
+        "📬 Notifiche SDI",
+        "📧 Email & Templates",
+        "📦 Operazioni Batch",
+        "📊 Report & Statistiche",
+        "🤖 AI Assistant",
         questionary.Separator(),
-        "0. ❌ Esci",
+        "❌ Esci",
     ]
 
     choice = questionary.select(
@@ -51,7 +51,7 @@ def show_main_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-8 per selezionare, 0 per uscire, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
     return choice
@@ -98,12 +98,12 @@ def handle_main_menu(choice: str) -> bool:
 def show_setup_menu() -> str:
     """Show setup submenu."""
     choices = [
-        "1. 🚀 Inizializza OpenFatture",
-        "2. 👁️  Mostra configurazione",
-        "3. ✏️  Modifica configurazione",
-        "4. 📧 Test PEC",
+        "🚀 Inizializza OpenFatture",
+        "👁️  Mostra configurazione",
+        "✏️  Modifica configurazione",
+        "📧 Test PEC",
         questionary.Separator(),
-        "0. ← Torna al menu principale",
+        "← Torna al menu principale",
     ]
 
     return questionary.select(
@@ -112,7 +112,7 @@ def show_setup_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-4 per selezionare, 0 per tornare, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
 
@@ -142,13 +142,13 @@ def handle_setup_menu() -> None:
 def show_clienti_menu() -> str:
     """Show clients submenu."""
     choices = [
-        "1. ➕ Crea nuovo cliente",
-        "2. 📋 Lista tutti i clienti",
-        "3. 🔍 Cerca cliente",
-        "4. ✏️  Modifica cliente",
-        "5. 🗑️  Elimina cliente",
+        "➕ Crea nuovo cliente",
+        "📋 Lista tutti i clienti",
+        "🔍 Cerca cliente",
+        "✏️  Modifica cliente",
+        "🗑️  Elimina cliente",
         questionary.Separator(),
-        "0. ← Torna al menu principale",
+        "← Torna al menu principale",
     ]
 
     return questionary.select(
@@ -157,7 +157,7 @@ def show_clienti_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-5 per selezionare, 0 per tornare, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
 
@@ -189,15 +189,15 @@ def handle_clienti_menu() -> None:
 def show_fatture_menu() -> str:
     """Show invoices submenu."""
     choices = [
-        "1. ➕ Crea nuova fattura (wizard)",
-        "2. 📋 Lista fatture",
-        "3. 🔍 Cerca fattura",
-        "4. 👁️  Mostra dettagli fattura",
-        "5. 📄 Genera XML",
-        "6. 📤 Invia a SDI",
-        "7. 🗑️  Elimina fattura",
+        "➕ Crea nuova fattura (wizard)",
+        "📋 Lista fatture",
+        "🔍 Cerca fattura",
+        "👁️  Mostra dettagli fattura",
+        "📄 Genera XML",
+        "📤 Invia a SDI",
+        "🗑️  Elimina fattura",
         questionary.Separator(),
-        "0. ← Torna al menu principale",
+        "← Torna al menu principale",
     ]
 
     return questionary.select(
@@ -206,7 +206,7 @@ def show_fatture_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-7 per selezionare, 0 per tornare, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
 
@@ -242,11 +242,11 @@ def handle_fatture_menu() -> None:
 def show_notifiche_menu() -> str:
     """Show SDI notifications submenu."""
     choices = [
-        "1. 📬 Processa notifica da file",
-        "2. 📋 Lista tutte le notifiche",
-        "3. 👁️  Mostra dettagli notifica",
+        "📬 Processa notifica da file",
+        "📋 Lista tutte le notifiche",
+        "👁️  Mostra dettagli notifica",
         questionary.Separator(),
-        "0. ← Torna al menu principale",
+        "← Torna al menu principale",
     ]
 
     return questionary.select(
@@ -255,7 +255,7 @@ def show_notifiche_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-3 per selezionare, 0 per tornare, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
 
@@ -278,11 +278,11 @@ def handle_notifiche_menu() -> None:
 def show_email_menu() -> str:
     """Show email templates submenu."""
     choices = [
-        "1. 📧 Invia email di test",
-        "2. 👁️  Anteprima template",
-        "3. ℹ️  Info templates",
+        "📧 Invia email di test",
+        "👁️  Anteprima template",
+        "ℹ️  Info templates",
         questionary.Separator(),
-        "0. ← Torna al menu principale",
+        "← Torna al menu principale",
     ]
 
     return questionary.select(
@@ -291,7 +291,7 @@ def show_email_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-3 per selezionare, 0 per tornare, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
 
@@ -314,13 +314,13 @@ def handle_email_menu() -> None:
 def show_batch_menu() -> str:
     """Show batch operations submenu."""
     choices = [
-        "1. 📤 Invia multiple fatture a SDI",
-        "2. 📥 Importa fatture da CSV",
-        "3. 💾 Esporta fatture selezionate",
-        "4. 🗑️  Elimina fatture multiple",
-        "5. 📜 Storico operazioni",
+        "📤 Invia multiple fatture a SDI",
+        "📥 Importa fatture da CSV",
+        "💾 Esporta fatture selezionate",
+        "🗑️  Elimina fatture multiple",
+        "📜 Storico operazioni",
         questionary.Separator(),
-        "0. ← Torna al menu principale",
+        "← Torna al menu principale",
     ]
 
     return questionary.select(
@@ -329,7 +329,7 @@ def show_batch_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-5 per selezionare, 0 per tornare, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
 
@@ -356,13 +356,13 @@ def handle_batch_menu() -> None:
 def show_report_menu() -> str:
     """Show reports submenu."""
     choices = [
-        "1. 📊 Dashboard Interattiva",
-        "2. 📈 Report mensile",
-        "3. 📅 Report annuale",
-        "4. 👤 Report per cliente",
-        "5. 📋 Export Excel",
+        "📊 Dashboard Interattiva",
+        "📈 Report mensile",
+        "📅 Report annuale",
+        "👤 Report per cliente",
+        "📋 Export Excel",
         questionary.Separator(),
-        "0. ← Torna al menu principale",
+        "← Torna al menu principale",
     ]
 
     return questionary.select(
@@ -371,7 +371,7 @@ def show_report_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-5 per selezionare, 0 per tornare, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
 
@@ -398,10 +398,10 @@ def handle_report_menu() -> None:
 def show_ai_menu() -> str:
     """Show AI assistant submenu."""
     choices = [
-        "1. 💬 Chat con assistente AI",
-        "2. 💡 Suggerimenti fattura",
+        "💬 Chat con assistente AI",
+        "💡 Suggerimenti fattura",
         questionary.Separator(),
-        "0. ← Torna al menu principale",
+        "← Torna al menu principale",
     ]
 
     return questionary.select(
@@ -410,7 +410,7 @@ def show_ai_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Premi 1-2 per selezionare, 0 per tornare, ↑↓ per navigare)",
+        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
     ).ask()
 
 
@@ -435,15 +435,15 @@ def handle_ai_menu() -> None:
 
 def action_init_openfatture() -> None:
     """Initialize OpenFatture (calls init command)."""
+    from openfatture.cli.commands.init import init
 
-    console.print("\n[bold blue]🚀 Inizializzazione OpenFatture[/bold blue]\n")
+    console.print("\n")
     try:
         # Call the existing init command interactively
-        # This is a simplified version - the full wizard is in init.py
-        console.print("[yellow]Utilizza il comando:[/yellow] openfatture init")
-        press_any_key()
+        init(interactive=True)
+        press_any_key("\n[dim]Premi INVIO per tornare al menu...[/dim]")
     except Exception as e:
-        console.print(f"[red]Errore: {e}[/red]")
+        console.print(f"\n[red]Errore: {e}[/red]")
         press_any_key()
 
 
@@ -462,10 +462,13 @@ def action_show_config() -> None:
 
 def action_edit_config() -> None:
     """Edit configuration."""
-    console.print("\n[bold blue]✏️  Modifica Configurazione[/bold blue]\n")
-    console.print("[yellow]Usa:[/yellow] openfatture config set <key> <value>")
-    console.print("[dim]Esempio: openfatture config set pec.address test@pec.it[/dim]")
-    press_any_key()
+    from openfatture.cli.ui.config_wizard import interactive_config_wizard
+
+    try:
+        interactive_config_wizard()
+    except Exception as e:
+        console.print(f"\n[red]Errore: {e}[/red]")
+        press_any_key()
 
 
 def action_test_pec() -> None:
@@ -919,9 +922,16 @@ def action_export_excel() -> None:
 
 def action_ai_chat() -> None:
     """AI chat assistant."""
-    console.print("\n[yellow]AI Chat non ancora implementato[/yellow]")
-    console.print("[dim]Usa: openfatture ai chat[/dim]")
-    press_any_key()
+    import asyncio
+
+    from openfatture.cli.ui.chat import start_interactive_chat
+
+    try:
+        # Run async chat
+        asyncio.run(start_interactive_chat())
+    except Exception as e:
+        console.print(f"\n[red]Errore: {e}[/red]")
+        press_any_key()
 
 
 def action_ai_suggestions() -> None:

@@ -26,12 +26,18 @@
 - 📦 **Batch Operations** - Import/export multiple invoices with CSV
 - 💰 **Payment Tracking** - Monitor due dates and overdue invoices
 
-### AI-Powered Workflows (2025 Best Practices)
-- 🤖 **Smart Descriptions** - Auto-generate invoice descriptions from natural language
-- 💡 **Tax Suggestions** - AI recommends correct VAT rates and deductions
-- 📈 **Cash Flow Forecasting** - ML-based payment predictions
-- 🔍 **Compliance Checker** - AI validates invoices before SDI submission
-- 🧠 **Multi-Agent System** - LangGraph orchestration for complex workflows
+### AI-Powered Workflows (Phase 4 - Partially Implemented)
+- ✅ **Interactive Chat Assistant** - Conversational AI for invoicing questions and automation
+- ✅ **Smart Descriptions** - Auto-generate invoice descriptions from natural language
+- ✅ **Tax Suggestions** - AI recommends correct VAT rates and deductions
+- ✅ **Tool Calling** - AI can search invoices, query clients, and retrieve statistics
+- ✅ **Session Management** - Persistent conversations with context tracking
+- ✅ **Multi-Provider Support** - OpenAI, Anthropic, or local Ollama models
+- 📈 **Cash Flow Forecasting** - ML-based payment predictions (CLI stub available)
+- 🔍 **Compliance Checker** - AI validates invoices before SDI submission (CLI stub available)
+- 🧠 **Multi-Agent System** - LangGraph orchestration for complex workflows (planned)
+
+> **Status**: AI features are **now functional**! Access via interactive mode (`openfatture -i` → "AI Assistant" → "Chat") or CLI commands (`openfatture ai describe`, `openfatture ai suggest-vat`). Full LangGraph orchestration and advanced agents planned for Phase 4.3-4.4.
 
 ### Developer Experience
 - ⚡ **CLI-First** - Fast, keyboard-driven workflow
@@ -123,6 +129,14 @@ openfatture/
 ├── sdi/              # SDI integration
 │   ├── validator/    # XSD validation
 │   └── notifiche/    # SDI notification parser (AT, RC, NS, MC, NE)
+├── ai/               # AI & LLM integration (Phase 4)
+│   ├── agents/       # AI agents (InvoiceAssistant, TaxAdvisor, ChatAgent)
+│   ├── providers/    # LLM providers (OpenAI, Anthropic, Ollama)
+│   ├── domain/       # Core models (Message, Context, Response)
+│   ├── session/      # Chat session management
+│   ├── tools/        # Function calling tools (search, query, stats)
+│   ├── context/      # Context enrichment utilities
+│   └── prompts/      # YAML prompt templates
 ├── utils/            # Utilities
 │   ├── email/        # Email templates & PEC sender
 │   │   ├── templates/    # Jinja2 HTML/text templates
@@ -137,6 +151,7 @@ openfatture/
 ├── storage/          # Data persistence
 │   └── database/     # SQLAlchemy models (Cliente, Fattura, NotificaSDI)
 ├── cli/              # Command-line interface (Typer)
+│   └── ui/           # Interactive UI (menus, chat interface)
 ├── examples/         # Usage examples
 ├── docs/             # Documentation
 └── tests/            # Test suite (pytest)
@@ -218,28 +233,56 @@ sender.send_batch_summary(result, operation_type="import", recipients=[...])
 
 ---
 
-## AI Integration
+## AI Integration (Phase 4 - Partially Implemented)
 
-OpenFatture uses **LangChain + LangGraph** for intelligent automation:
+OpenFatture features an **AI-powered assistant** with LLM integration (OpenAI, Anthropic, Ollama).
 
-### Available Agents
+### Implemented Features
 
-1. **Invoice Assistant** - Generates detailed descriptions from brief inputs
-2. **Tax Advisor** - Suggests correct VAT rates and deductions
-3. **Cash Flow Predictor** - Forecasts payment timing based on historical data
-4. **Compliance Checker** - Pre-validates invoices with AI reasoning
-
-### Configuration
-
+**✅ Interactive Chat Assistant**
 ```bash
-# Set your LLM provider (supports OpenAI, Anthropic, local models)
-openfatture config --set ai.provider anthropic
-openfatture config --set ai.api_key sk-ant-...
+# Start interactive mode and select AI Assistant
+openfatture -i
+# Navigate to: 8. AI Assistant → 1. Chat
 
-# Or use local models with Ollama (privacy-first)
-openfatture config --set ai.provider ollama
-openfatture config --set ai.model llama3
+# Or use CLI commands directly
+openfatture ai describe "sviluppo API REST" --hours 8 --tech "Python,FastAPI"
+openfatture ai suggest-vat "consulenza IT per azienda edile"
 ```
+
+**✅ Available AI Agents**
+1. **Chat Assistant** - Conversational AI with tool calling for invoices/clients
+2. **Invoice Assistant** - Generates detailed descriptions from brief inputs
+3. **Tax Advisor** - Suggests correct VAT rates and fiscal treatments
+
+**✅ AI Capabilities**
+- 🔍 Search invoices and clients via natural language
+- 📊 Get statistics and analytics on demand
+- 💬 Multi-turn conversations with context
+- 🛠️ Function calling with 6 built-in tools
+- 💾 Session persistence and export (JSON/Markdown)
+- 🎯 Structured outputs with Pydantic validation
+
+**Example Chat Conversation:**
+```
+Tu: Quante fatture ho emesso quest'anno?
+AI: Quest'anno hai emesso 42 fatture per un totale di €125,430.00...
+
+Tu: Cerca fatture del cliente Rossi
+AI: Ho trovato 5 fatture per Mario Rossi SRL...
+
+Tu: Mostrami le ultime 5 fatture
+AI: Ecco le ultime 5 fatture emesse: [...]
+```
+
+### Planned Features (Phase 4.3-4.4)
+
+- [ ] **Cash Flow Predictor** - ML-based payment predictions (stub available)
+- [ ] **Compliance Checker** - AI validates invoices before SDI submission (stub available)
+- [ ] **LangGraph Orchestration** - Multi-agent workflows
+- [ ] **RAG with ChromaDB** - Semantic search over invoice history
+
+**📖 Full guide:** [examples/AI_CHAT_ASSISTANT.md](examples/AI_CHAT_ASSISTANT.md)
 
 ---
 
@@ -304,19 +347,31 @@ ptw
 - [x] **Batch operations with CSV import/export**
 - [x] **Internationalization (IT/EN)**
 
-### 🚧 Phase 3 - CLI & User Experience (In Progress)
-- [ ] Interactive CLI with Typer
-- [ ] Invoice creation wizard
-- [ ] Client management commands
-- [ ] Status monitoring dashboard
-- [ ] PDF generation for human-readable invoices
+### ✅ Phase 3 - CLI & User Experience (95% Complete)
+- [x] Interactive CLI with Typer
+- [x] Invoice creation wizard
+- [x] Client management commands
+- [x] Status monitoring dashboard
+- [x] Batch operation commands
+- [x] Report generation (IVA, clienti, scadenze)
+- [x] Email template management
+- [x] SDI notification processing
+- [ ] PDF generation for human-readable invoices (pending)
 
-### 📋 Phase 4 - AI Layer (Planned)
-- [ ] LangChain integration
-- [ ] Invoice description generator
-- [ ] Tax suggestion agent
-- [ ] Cash flow forecasting
-- [ ] Multi-agent orchestration
+### 📋 Phase 4 - AI Layer (In Progress - Partially Implemented)
+- [x] LLM provider abstraction (OpenAI, Anthropic, Ollama)
+- [x] Base agent protocol and implementations
+- [x] **Interactive Chat Assistant with tool calling**
+- [x] **Session management and persistence**
+- [x] **Tool registry with 6 built-in tools**
+- [x] Invoice description generator: `ai describe` (functional)
+- [x] Tax suggestion agent: `ai suggest-vat` (functional)
+- [x] Prompt template system (YAML-based)
+- [x] Context enrichment for business data
+- [ ] Cash flow forecasting: `ai forecast` (stub available)
+- [ ] Compliance checker agent: `ai check` (stub available)
+- [ ] Multi-agent orchestration with LangGraph
+- [ ] Vector embeddings with ChromaDB (RAG)
 
 ### 🚀 Phase 5 - Production & Advanced (Future)
 - [ ] Docker containerization
@@ -326,7 +381,7 @@ ptw
 - [ ] Payment gateway integration
 - [ ] Web GUI (optional)
 
-**Current Status**: Phase 2 completed ✅ | Phase 3 in progress 🚧
+**Current Status**: Phase 2 completed ✅ | Phase 3 completed 95% ✅ | Phase 4 (AI) in progress 🚧 (60% complete)
 
 ---
 

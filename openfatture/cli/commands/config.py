@@ -69,14 +69,42 @@ def show_config() -> None:
         settings.email_footer_text or "[dim]Auto-generated[/dim]",
     )
 
-    # AI
+    # AI Configuration (expanded)
     table.add_section()
     table.add_row("AI Provider", settings.ai_provider)
     table.add_row("AI Model", settings.ai_model)
+
+    # Show base URL for ollama
+    if settings.ai_provider == "ollama":
+        base_url = getattr(settings, "ai_base_url", "http://localhost:11434")
+        table.add_row("AI Base URL", base_url)
+
     table.add_row(
         "AI API Key",
         "[green]Set[/green]" if settings.ai_api_key else "[yellow]Not set[/yellow]",
     )
+
+    # AI Chat
+    chat_enabled = getattr(settings, "ai_chat_enabled", True)
+    table.add_row(
+        "Chat Enabled",
+        "[green]Yes[/green]" if chat_enabled else "[red]No[/red]",
+    )
+    table.add_row("Chat Auto-Save", str(getattr(settings, "ai_chat_auto_save", True)))
+    table.add_row("Max Messages/Session", str(getattr(settings, "ai_chat_max_messages", 100)))
+    table.add_row("Max Tokens/Session", str(getattr(settings, "ai_chat_max_tokens", 8000)))
+
+    # AI Tools
+    tools_enabled = getattr(settings, "ai_tools_enabled", True)
+    table.add_row(
+        "Tools Enabled",
+        "[green]Yes[/green]" if tools_enabled else "[red]No[/red]",
+    )
+
+    enabled_tools = getattr(settings, "ai_enabled_tools", "all")
+    if enabled_tools:
+        tools_list = enabled_tools.split(",") if isinstance(enabled_tools, str) else enabled_tools
+        table.add_row("Enabled Tools", f"{len(tools_list)} tools")
 
     console.print(table)
 
