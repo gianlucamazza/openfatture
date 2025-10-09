@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>✅ {{ _('email.sdi.notifica_consegna.title') }}</h1>
+
+<div class="alert alert-success">
+    <strong>{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}</strong><br/>
+    {{ _('email.sdi.notifica_consegna.intro') }}
+</div>
+
+<p>{{ _('email.sdi.notifica_consegna.message') }}</p>
+
+<table class="summary-table">
+    <tr>
+        <td>{{ _('email.common.invoice') }}:</td>
+        <td><strong>{{ fattura.numero }}/{{ fattura.anno }}</strong></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.sdi.notifica_attestazione.sdi_id') }}:</td>
+        <td>{{ notification.identificativo_sdi }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.sdi.notifica_consegna.delivered_at') }}:</td>
+        <td>{{ notification.data_ricezione | date_it }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.client') }}:</td>
+        <td>{{ cliente.denominazione }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.amount') }}:</td>
+        <td>{{ fattura.totale | currency }}</td>
+    </tr>
+</table>
+
+<div class="divider"></div>
+
+<h3>{{ _('email.sdi.invio_fattura.next_steps') }}</h3>
+<p>{{ _('email.sdi.notifica_consegna.next_steps') }}</p>
+
+<a href="https://www.fatturapa.gov.it/" class="button">Vai al Portale SDI</a>
+{% endblock %}

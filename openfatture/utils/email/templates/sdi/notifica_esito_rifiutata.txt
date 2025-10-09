@@ -1,0 +1,29 @@
+{% extends "base.txt" %}
+
+{% block content %}
+⚠️ {{ _('email.sdi.notifica_esito_rifiutata.title') }}
+
+{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
+
+{{ _('email.sdi.notifica_esito_rifiutata.intro') }}
+{{ _('email.sdi.notifica_esito_rifiutata.message') }}
+
+---
+
+{{ _('email.common.invoice') }}: {{ fattura.numero }}/{{ fattura.anno }}
+{{ _('email.sdi.notifica_esito_rifiutata.outcome') }}: {{ _('email.sdi.notifica_esito_rifiutata.rejected') }}
+{{ _('email.common.client') }}: {{ cliente.denominazione }}
+
+{% if notification.messaggio %}
+---
+
+{{ _('email.sdi.notifica_esito_rifiutata.reason') }}:
+{{ notification.messaggio }}
+{% endif %}
+
+---
+
+⚠️  {{ _('email.sdi.notifica_esito_rifiutata.action_required') }}
+
+{{ _('email.sdi.notifica_esito_rifiutata.action_text') }}
+{% endblock %}

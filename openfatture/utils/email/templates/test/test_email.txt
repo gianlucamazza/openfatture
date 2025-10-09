@@ -1,0 +1,22 @@
+{% extends "base.txt" %}
+
+{% block content %}
+🧪 {{ _('email.test.title') }}
+
+✅ {{ _('email.test.success') }}
+
+{{ _('email.test.intro') }}
+
+---
+
+{{ _('email.test.server_info') }}:
+
+{{ _('email.test.smtp_server') }}: {{ smtp_server }}
+{{ _('email.test.smtp_port') }}: {{ smtp_port }}
+{{ _('email.test.pec_address') }}: {{ pec_address }}
+{{ _('email.test.test_time') }}: {{ test_time | date_it }}
+
+---
+
+✅ Configurazione PEC funzionante!
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>📨 {{ _('email.sdi.invio_fattura.title') }}</h1>
+
+<div class="alert alert-info">
+    <strong>{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}</strong><br/>
+    {{ _('email.sdi.invio_fattura.intro') }}
+</div>
+
+<h2>{{ _('email.sdi.invio_fattura.invoice_details') }}</h2>
+
+<table class="summary-table">
+    <tr>
+        <td>{{ _('email.common.invoice') }}:</td>
+        <td><strong>{{ fattura.numero }}/{{ fattura.anno }}</strong></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.date') }}:</td>
+        <td>{{ fattura.data_emissione | date_it }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.client') }}:</td>
+        <td>{{ fattura.cliente.denominazione }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.subtotal') }}:</td>
+        <td>{{ fattura.imponibile | currency }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.vat') }}:</td>
+        <td>{{ fattura.iva | currency }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.total') }}:</td>
+        <td>{{ fattura.totale | currency }}</td>
+    </tr>
+</table>
+
+<h3>{{ _('email.sdi.invio_fattura.sender_info') }}</h3>
+<p>
+    <strong>{{ cedente.denominazione }}</strong><br/>
+    P.IVA: {{ cedente.partita_iva }}<br/>
+    {{ cedente.indirizzo }}, {{ cedente.cap }} {{ cedente.comune }}
+</p>
+
+<h3>{{ _('email.sdi.invio_fattura.attached_file') }}</h3>
+<p>
+    📄 <strong>{{ xml_filename }}</strong>
+    {% if is_signed %}<span class="badge badge-success">Firmato digitalmente</span>{% endif %}
+</p>
+
+<div class="divider"></div>
+
+<h3>{{ _('email.sdi.invio_fattura.next_steps') }}</h3>
+<p>{{ _('email.sdi.invio_fattura.next_steps_text') }}</p>
+
+<a href="https://www.fatturapa.gov.it/" class="button">Vai al Portale SDI</a>
+{% endblock %}

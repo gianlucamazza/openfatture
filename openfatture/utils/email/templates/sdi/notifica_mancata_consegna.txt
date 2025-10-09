@@ -1,0 +1,29 @@
+{% extends "base.txt" %}
+
+{% block content %}
+⚠️ {{ _('email.sdi.notifica_mancata_consegna.title') }}
+
+{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
+
+{{ _('email.sdi.notifica_mancata_consegna.intro') }}
+
+---
+
+{{ _('email.common.invoice') }}: {{ fattura.numero }}/{{ fattura.anno }}
+{{ _('email.sdi.notifica_attestazione.sdi_id') }}: {{ notification.identificativo_sdi }}
+{{ _('email.common.date') }}: {{ notification.data_ricezione | date_it }}
+{{ _('email.common.client') }}: {{ cliente.denominazione }}
+
+{% if notification.messaggio %}
+---
+
+{{ _('email.sdi.notifica_mancata_consegna.reason') }}:
+{{ notification.messaggio }}
+{% endif %}
+
+---
+
+⚠️  {{ _('email.sdi.notifica_mancata_consegna.action_required') }}
+
+{{ _('email.sdi.notifica_mancata_consegna.action_text') }}
+{% endblock %}

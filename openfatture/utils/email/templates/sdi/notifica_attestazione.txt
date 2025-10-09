@@ -1,0 +1,17 @@
+{% extends "base.txt" %}
+
+{% block content %}
+📨 {{ _('email.sdi.notifica_attestazione.title') }}
+
+{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
+
+{{ _('email.sdi.notifica_attestazione.intro') }}
+{{ _('email.sdi.notifica_attestazione.message') }}
+
+---
+
+{{ _('email.common.invoice') }}: {{ fattura.numero }}/{{ fattura.anno }}
+{{ _('email.sdi.notifica_attestazione.sdi_id') }}: {{ notification.identificativo_sdi }}
+{{ _('email.common.date') }}: {{ notification.data_ricezione | date_it }}
+{{ _('email.common.client') }}: {{ cliente.denominazione }}
+{% endblock %}

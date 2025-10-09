@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>✅ {{ _('email.sdi.notifica_esito_accettata.title') }}</h1>
+
+<div class="alert alert-success">
+    <strong>{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}</strong><br/>
+    {{ _('email.sdi.notifica_esito_accettata.intro') }}
+</div>
+
+<p>{{ _('email.sdi.notifica_esito_accettata.message') }}</p>
+
+<table class="summary-table">
+    <tr>
+        <td>{{ _('email.common.invoice') }}:</td>
+        <td><strong>{{ fattura.numero }}/{{ fattura.anno }}</strong></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.sdi.notifica_esito_accettata.outcome') }}:</td>
+        <td><span class="badge badge-success">{{ _('email.sdi.notifica_esito_accettata.accepted') }}</span></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.client') }}:</td>
+        <td>{{ cliente.denominazione }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.amount') }}:</td>
+        <td>{{ fattura.totale | currency }}</td>
+    </tr>
+</table>
+{% endblock %}

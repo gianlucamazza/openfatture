@@ -1,0 +1,26 @@
+{% extends "base.txt" %}
+
+{% block content %}
+✅ {{ _('email.sdi.notifica_consegna.title') }}
+
+{{ _('email.common.invoice') }} n. {{ fattura.numero}}/{{ fattura.anno }}
+
+{{ _('email.sdi.notifica_consegna.intro') }}
+
+{{ _('email.sdi.notifica_consegna.message') }}
+
+---
+
+{{ _('email.common.invoice') }}: {{ fattura.numero }}/{{ fattura.anno }}
+{{ _('email.sdi.notifica_attestazione.sdi_id') }}: {{ notification.identificativo_sdi }}
+{{ _('email.sdi.notifica_consegna.delivered_at') }}: {{ notification.data_ricezione | date_it }}
+{{ _('email.common.client') }}: {{ cliente.denominazione }}
+{{ _('email.common.amount') }}: {{ fattura.totale | currency }}
+
+---
+
+{{ _('email.sdi.invio_fattura.next_steps') }}:
+{{ _('email.sdi.notifica_consegna.next_steps') }}
+
+Portale SDI: https://www.fatturapa.gov.it/
+{% endblock %}

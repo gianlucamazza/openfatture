@@ -1,0 +1,33 @@
+{% extends "base.txt" %}
+
+{% block content %}
+❌ {{ _('email.sdi.notifica_scarto.title') }}
+
+{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
+
+{{ _('email.sdi.notifica_scarto.intro') }}
+
+---
+
+{{ _('email.common.invoice') }}: {{ fattura.numero }}/{{ fattura.anno }}
+{{ _('email.sdi.notifica_attestazione.sdi_id') }}: {{ notification.identificativo_sdi }}
+{{ _('email.common.date') }}: {{ notification.data_ricezione | date_it }}
+
+---
+
+{{ _('email.sdi.notifica_scarto.error_list') }}:
+
+{{ _('email.sdi.notifica_scarto.error_count', count=notification.lista_errori|length) }}
+
+{% for error in notification.lista_errori %}
+{{ loop.index }}. {{ error }}
+{% endfor %}
+
+---
+
+⚠️  {{ _('email.sdi.notifica_scarto.action_required') }}
+
+{{ _('email.sdi.notifica_scarto.action_text') }}
+
+Portale SDI: https://www.fatturapa.gov.it/
+{% endblock %}

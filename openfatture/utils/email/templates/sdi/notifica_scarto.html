@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>❌ {{ _('email.sdi.notifica_scarto.title') }}</h1>
+
+<div class="alert alert-error">
+    <strong>{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}</strong><br/>
+    {{ _('email.sdi.notifica_scarto.intro') }}
+</div>
+
+<table class="summary-table">
+    <tr>
+        <td>{{ _('email.common.invoice') }}:</td>
+        <td><strong>{{ fattura.numero }}/{{ fattura.anno }}</strong></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.sdi.notifica_attestazione.sdi_id') }}:</td>
+        <td>{{ notification.identificativo_sdi }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.date') }}:</td>
+        <td>{{ notification.data_ricezione | date_it }}</td>
+    </tr>
+</table>
+
+<div class="divider"></div>
+
+<h2>{{ _('email.sdi.notifica_scarto.error_list') }}</h2>
+
+<p><strong>{{ _('email.sdi.notifica_scarto.error_count', count=notification.lista_errori|length) }}</strong></p>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>{{ _('email.common.error') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for error in notification.lista_errori %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ error }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="divider"></div>
+
+<div class="alert alert-warning">
+    <h3>{{ _('email.sdi.notifica_scarto.action_required') }}</h3>
+    <p>{{ _('email.sdi.notifica_scarto.action_text') }}</p>
+</div>
+
+<a href="https://www.fatturapa.gov.it/" class="button">Vai al Portale SDI</a>
+{% endblock %}

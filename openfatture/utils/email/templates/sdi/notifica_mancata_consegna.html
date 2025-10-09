@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>⚠️ {{ _('email.sdi.notifica_mancata_consegna.title') }}</h1>
+
+<div class="alert alert-warning">
+    <strong>{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}</strong><br/>
+    {{ _('email.sdi.notifica_mancata_consegna.intro') }}
+</div>
+
+<table class="summary-table">
+    <tr>
+        <td>{{ _('email.common.invoice') }}:</td>
+        <td><strong>{{ fattura.numero }}/{{ fattura.anno }}</strong></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.sdi.notifica_attestazione.sdi_id') }}:</td>
+        <td>{{ notification.identificativo_sdi }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.date') }}:</td>
+        <td>{{ notification.data_ricezione | date_it }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.client') }}:</td>
+        <td>{{ cliente.denominazione }}</td>
+    </tr>
+</table>
+
+{% if notification.messaggio %}
+<div class="divider"></div>
+
+<h3>{{ _('email.sdi.notifica_mancata_consegna.reason') }}</h3>
+<p>{{ notification.messaggio }}</p>
+{% endif %}
+
+<div class="divider"></div>
+
+<div class="alert alert-warning">
+    <h3>{{ _('email.sdi.notifica_mancata_consegna.action_required') }}</h3>
+    <p>{{ _('email.sdi.notifica_mancata_consegna.action_text') }}</p>
+</div>
+{% endblock %}

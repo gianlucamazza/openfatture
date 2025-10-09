@@ -1,0 +1,40 @@
+{% extends "base.txt" %}
+
+{% block content %}
+📨 {{ _('email.sdi.invio_fattura.title') }}
+
+{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
+
+{{ _('email.sdi.invio_fattura.intro') }}
+
+---
+
+{{ _('email.sdi.invio_fattura.invoice_details') }}:
+
+{{ _('email.common.invoice') }}: {{ fattura.numero }}/{{ fattura.anno }}
+{{ _('email.common.date') }}: {{ fattura.data_emissione | date_it }}
+{{ _('email.common.client') }}: {{ fattura.cliente.denominazione }}
+{{ _('email.common.subtotal') }}: {{ fattura.imponibile | currency }}
+{{ _('email.common.vat') }}: {{ fattura.iva | currency }}
+{{ _('email.common.total') }}: {{ fattura.totale | currency }}
+
+---
+
+{{ _('email.sdi.invio_fattura.sender_info') }}:
+
+{{ cedente.denominazione }}
+P.IVA: {{ cedente.partita_iva }}
+{{ cedente.indirizzo }}, {{ cedente.cap }} {{ cedente.comune }}
+
+---
+
+{{ _('email.sdi.invio_fattura.attached_file') }}: {{ xml_filename }}
+{% if is_signed %}(Firmato digitalmente){% endif %}
+
+---
+
+{{ _('email.sdi.invio_fattura.next_steps') }}:
+{{ _('email.sdi.invio_fattura.next_steps_text') }}
+
+Portale SDI: https://www.fatturapa.gov.it/
+{% endblock %}

@@ -1,0 +1,128 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run tests with pytest
+        run: |
+          uv run pytest --cov=openfatture --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}
+          fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Install dependencies
+        run: uv sync --all-extras --python $(which python3)
+
+      - name: Run Black
+        run: uv run black --check .
+
+      - name: Run Ruff
+        run: uv run ruff check .
+
+      - name: Run MyPy
+        run: uv run mypy openfatture/
+        continue-on-error: true  # Don't fail on type errors yet
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run Safety check
+        run: uv run safety check --json
+        continue-on-error: true
+
+  coverage-gate:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Install dependencies
+        run: uv sync --all-extras --python $(which python3)
+
+      - name: Run coverage check
+        run: |
+          uv run pytest --cov=openfatture --cov-report=term-missing --cov-fail-under=50
+          echo "✓ Coverage threshold met (minimum 50%)"

@@ -1,0 +1,1 @@
+"""Invoice management module."""

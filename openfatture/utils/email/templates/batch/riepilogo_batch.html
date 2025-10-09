@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>📊 {{ _('email.batch.summary.title') }}</h1>
+
+<p><strong>{{ _('email.batch.summary.operation') }}:</strong> {{ operation_type }}</p>
+
+<div class="alert {% if ((result.succeeded / result.total) * 100) >= 80 %}alert-success{% elif ((result.succeeded / result.total) * 100) >= 50 %}alert-warning{% else %}alert-error{% endif %}">
+    <p><strong>{{ _('email.batch.summary.success_rate') }}:</strong> {{ ((result.succeeded / result.total) * 100) | percentage }}</p>
+</div>
+
+<h2>{{ _('email.batch.summary.metrics') }}</h2>
+
+<table class="summary-table">
+    <tr>
+        <td>{{ _('email.batch.summary.started_at') }}:</td>
+        <td>{{ result.start_time | date_it if result.start_time else 'N/A' }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.batch.summary.completed_at') }}:</td>
+        <td>{{ result.end_time | date_it if result.end_time else 'N/A' }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.batch.summary.duration') }}:</td>
+        <td>{{ result.duration | duration if result.duration else 'N/A' }}</td>
+    </tr>
+    <tr style="border-top: 2px solid #1976D2;">
+        <td>{{ _('email.batch.summary.total_items') }}:</td>
+        <td><strong>{{ result.total }}</strong></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.batch.summary.processed') }}:</td>
+        <td>{{ result.processed }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.batch.summary.succeeded') }}:</td>
+        <td><span class="badge badge-success">{{ result.succeeded }}</span></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.batch.summary.failed') }}:</td>
+        <td><span class="badge badge-error">{{ result.failed }}</span></td>
+    </tr>
+</table>
+
+{% if result.errors %}
+<div class="divider"></div>
+
+<h2>{{ _('email.batch.summary.errors') }}</h2>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>{{ _('email.common.error') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for error in result.errors[:10] %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ error }}</td>
+        </tr>
+        {% endfor %}
+        {% if result.errors|length > 10 %}
+        <tr>
+            <td colspan="2" style="text-align: center; font-style: italic;">
+                ... e altri {{ result.errors|length - 10 }} errori
+            </td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-success">
+    <p>{{ _('email.batch.summary.no_errors') }}</p>
+</div>
+{% endif %}
+
+{% if csv_report_path %}
+<div class="divider"></div>
+<p style="text-align: center;">
+    <a href="file://{{ csv_report_path }}" class="button">{{ _('email.batch.summary.download_csv') }}</a>
+</p>
+{% endif %}
+{% endblock %}

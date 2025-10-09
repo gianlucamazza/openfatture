@@ -1,0 +1,120 @@
+{
+  "email": {
+    "footer": {
+      "generated_by": "Generato automaticamente da",
+      "do_not_reply": "Questa è una email automatica. Si prega di non rispondere.",
+      "link_sdi": "Portale SDI",
+      "link_help": "Guida"
+    },
+    "common": {
+      "invoice": "Fattura",
+      "client": "Cliente",
+      "date": "Data",
+      "amount": "Importo",
+      "status": "Stato",
+      "details": "Dettagli",
+      "view_details": "Visualizza Dettagli",
+      "total": "Totale",
+      "subtotal": "Imponibile",
+      "vat": "IVA",
+      "errors": "Errori",
+      "error": "Errore",
+      "success": "Successo",
+      "warning": "Attenzione"
+    },
+    "sdi": {
+      "invio_fattura": {
+        "subject": "Invio Fattura {{numero}}/{{anno}} a SDI",
+        "title": "Trasmissione Fattura Elettronica",
+        "intro": "La fattura è stata inviata al Sistema di Interscambio (SDI) per la consegna al destinatario.",
+        "invoice_details": "Dettagli Fattura",
+        "sender_info": "Informazioni Mittente",
+        "attached_file": "File allegato",
+        "next_steps": "Prossimi Passi",
+        "next_steps_text": "Riceverai una notifica quando la fattura sarà consegnata al destinatario. Il processo può richiedere alcune ore."
+      },
+      "notifica_attestazione": {
+        "subject": "📨 Fattura {{numero}}/{{anno}} - Trasmissione Confermata",
+        "title": "Attestazione di Trasmissione",
+        "intro": "Il Sistema di Interscambio (SDI) conferma la ricezione della fattura.",
+        "message": "La fattura è stata accettata dal sistema e verrà inoltrata al destinatario.",
+        "sdi_id": "Identificativo SDI"
+      },
+      "notifica_consegna": {
+        "subject": "✅ Fattura {{numero}}/{{anno}} Consegnata",
+        "title": "Fattura Consegnata con Successo",
+        "intro": "La fattura è stata consegnata con successo al destinatario.",
+        "message": "Il Sistema di Interscambio ha confermato la consegna della fattura al sistema del cliente.",
+        "delivered_at": "Consegnata il",
+        "next_steps": "Attendi ora l'esito da parte del committente (accettazione o rifiuto)."
+      },
+      "notifica_scarto": {
+        "subject": "❌ Fattura {{numero}}/{{anno}} Scartata da SDI",
+        "title": "Fattura Scartata",
+        "intro": "La fattura è stata scartata dal Sistema di Interscambio a causa di errori di validazione.",
+        "error_list": "Lista Errori",
+        "action_required": "Azione Richiesta",
+        "action_text": "Correggi gli errori indicati e reinvia la fattura al Sistema di Interscambio.",
+        "error_count": "{{count}} errore(i) rilevato(i)"
+      },
+      "notifica_mancata_consegna": {
+        "subject": "⚠️ Fattura {{numero}}/{{anno}} - Mancata Consegna",
+        "title": "Mancata Consegna",
+        "intro": "Il Sistema di Interscambio non è riuscito a consegnare la fattura al destinatario.",
+        "reason": "Motivo",
+        "action_required": "Azione Richiesta",
+        "action_text": "Verifica i dati del destinatario (PEC o Codice Destinatario) e reinvia la fattura con le informazioni corrette."
+      },
+      "notifica_esito_accettata": {
+        "subject": "✅ Fattura {{numero}}/{{anno}} Accettata dal Cliente",
+        "title": "Fattura Accettata",
+        "intro": "Il committente ha accettato la fattura.",
+        "message": "La fattura è stata validata e accettata dal destinatario. Il processo di fatturazione è completato con successo.",
+        "outcome": "Esito Committente",
+        "accepted": "Accettata (EC01)"
+      },
+      "notifica_esito_rifiutata": {
+        "subject": "⚠️ Fattura {{numero}}/{{anno}} Rifiutata dal Cliente",
+        "title": "Fattura Rifiutata",
+        "intro": "Il committente ha rifiutato la fattura.",
+        "message": "Il destinatario ha respinto la fattura. Contatta il cliente per chiarimenti.",
+        "outcome": "Esito Committente",
+        "rejected": "Rifiutata (EC02)",
+        "reason": "Motivazione",
+        "action_required": "Azione Richiesta",
+        "action_text": "Contatta il cliente per comprendere i motivi del rifiuto. Potrebbe essere necessario emettere una nota di credito."
+      }
+    },
+    "batch": {
+      "summary": {
+        "subject": "Riepilogo Operazione Batch - {{operation}}",
+        "title": "Riepilogo Operazione Batch",
+        "operation": "Operazione",
+        "started_at": "Iniziata alle",
+        "completed_at": "Completata alle",
+        "duration": "Durata",
+        "metrics": "Metriche",
+        "total_items": "Elementi Totali",
+        "processed": "Elaborati",
+        "succeeded": "Riusciti",
+        "failed": "Falliti",
+        "success_rate": "Tasso di Successo",
+        "errors": "Errori Rilevati",
+        "no_errors": "Nessun errore",
+        "results": "Risultati",
+        "download_csv": "Scarica Report CSV"
+      }
+    },
+    "test": {
+      "subject": "Test Configurazione PEC - OpenFatture",
+      "title": "Test Configurazione PEC",
+      "intro": "Questo è un messaggio di test per verificare la configurazione PEC.",
+      "success": "Se ricevi questo messaggio, la configurazione è corretta!",
+      "server_info": "Informazioni Server",
+      "smtp_server": "Server SMTP",
+      "smtp_port": "Porta SMTP",
+      "pec_address": "Indirizzo PEC",
+      "test_time": "Test effettuato il"
+    }
+  }
+}

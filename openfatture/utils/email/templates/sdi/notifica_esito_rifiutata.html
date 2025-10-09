@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>⚠️ {{ _('email.sdi.notifica_esito_rifiutata.title') }}</h1>
+
+<div class="alert alert-warning">
+    <strong>{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}</strong><br/>
+    {{ _('email.sdi.notifica_esito_rifiutata.intro') }}
+</div>
+
+<p>{{ _('email.sdi.notifica_esito_rifiutata.message') }}</p>
+
+<table class="summary-table">
+    <tr>
+        <td>{{ _('email.common.invoice') }}:</td>
+        <td><strong>{{ fattura.numero }}/{{ fattura.anno }}</strong></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.sdi.notifica_esito_rifiutata.outcome') }}:</td>
+        <td><span class="badge badge-error">{{ _('email.sdi.notifica_esito_rifiutata.rejected') }}</span></td>
+    </tr>
+    <tr>
+        <td>{{ _('email.common.client') }}:</td>
+        <td>{{ cliente.denominazione }}</td>
+    </tr>
+</table>
+
+{% if notification.messaggio %}
+<div class="divider"></div>
+
+<h3>{{ _('email.sdi.notifica_esito_rifiutata.reason') }}</h3>
+<p>{{ notification.messaggio }}</p>
+{% endif %}
+
+<div class="divider"></div>
+
+<div class="alert alert-warning">
+    <h3>{{ _('email.sdi.notifica_esito_rifiutata.action_required') }}</h3>
+    <p>{{ _('email.sdi.notifica_esito_rifiutata.action_text') }}</p>
+</div>
+{% endblock %}

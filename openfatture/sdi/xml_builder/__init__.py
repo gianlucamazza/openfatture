@@ -1,0 +1,1 @@
+"""FatturaPA XML generation."""

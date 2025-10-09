@@ -1,0 +1,35 @@
+{
+  "ref": "refs/tags/v0.1.1",
+  "ref_type": "tag",
+  "repository": {
+    "name": "openfatture",
+    "full_name": "gianlucamazza/openfatture",
+    "owner": {
+      "login": "gianlucamazza",
+      "name": "Gianluca Mazza"
+    },
+    "html_url": "https://github.com/gianlucamazza/openfatture",
+    "description": "Open-source electronic invoicing for Italian freelancers",
+    "private": false,
+    "default_branch": "main"
+  },
+  "sender": {
+    "login": "gianlucamazza",
+    "type": "User"
+  },
+  "created": true,
+  "deleted": false,
+  "forced": false,
+  "base_ref": null,
+  "compare": "https://github.com/gianlucamazza/openfatture/compare/v0.1.0...v0.1.1",
+  "commits": [],
+  "head_commit": {
+    "id": "0000000000000000000000000000000000000000",
+    "message": "Bump version: 0.1.0 → 0.1.1",
+    "timestamp": "2025-01-10T12:00:00Z",
+    "author": {
+      "name": "Gianluca Mazza",
+      "email": "info@gianlucamazza.it"
+    }
+  }
+}

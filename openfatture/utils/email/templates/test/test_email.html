@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>🧪 {{ _('email.test.title') }}</h1>
+
+<div class="alert alert-success">
+    <p><strong>{{ _('email.test.success') }}</strong></p>
+    <p>{{ _('email.test.intro') }}</p>
+</div>
+
+<h2>{{ _('email.test.server_info') }}</h2>
+
+<table class="summary-table">
+    <tr>
+        <td>{{ _('email.test.smtp_server') }}:</td>
+        <td>{{ smtp_server }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.test.smtp_port') }}:</td>
+        <td>{{ smtp_port }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.test.pec_address') }}:</td>
+        <td>{{ pec_address }}</td>
+    </tr>
+    <tr>
+        <td>{{ _('email.test.test_time') }}:</td>
+        <td>{{ test_time | date_it }}</td>
+    </tr>
+</table>
+
+<div class="divider"></div>
+
+<p style="text-align: center; color: #4CAF50; font-weight: bold; font-size: 18px;">
+    ✅ Configurazione PEC funzionante!
+</p>
+{% endblock %}

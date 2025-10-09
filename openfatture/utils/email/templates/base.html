@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="{{ locale }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        {{ styles }}
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="email-header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="{{ app_name }}" />
+            {% else %}
+            <h1 style="margin: 0; color: #ffffff;">{{ app_name }}</h1>
+            {% endif %}
+        </div>
+
+        <!-- Body -->
+        <div class="email-body">
+            {% block content %}
+            <!-- Content goes here -->
+            {% endblock %}
+        </div>
+
+        <!-- Footer -->
+        <div class="email-footer">
+            {% if footer_text %}
+            <p style="margin: 0 0 10px 0;">{{ footer_text }}</p>
+            {% endif %}
+
+            <p style="margin: 0;">
+                <strong>{{ cedente_denominazione }}</strong><br/>
+                P.IVA: {{ cedente_partita_iva }}<br/>
+                {{ cedente_indirizzo }}, {{ cedente_cap }} {{ cedente_comune }} ({{ cedente_provincia }})<br/>
+                {% if cedente_email %}Email: <a href="mailto:{{ cedente_email }}">{{ cedente_email }}</a>{% endif %}
+                {% if cedente_telefono %} | Tel: {{ cedente_telefono }}{% endif %}
+            </p>
+
+            <div class="divider" style="border-top: 1px solid #666; margin: 15px 0;"></div>
+
+            <p style="margin: 0; font-size: 12px; color: #BDBDBD;">
+                {{ _('email.footer.generated_by') }} <strong>OpenFatture</strong><br/>
+                {{ _('email.footer.do_not_reply') }}
+            </p>
+
+            {% if show_links %}
+            <p style="margin: 10px 0 0 0;">
+                <a href="https://www.fatturapa.gov.it/" style="color: #ffffff; margin: 0 5px;">{{ _('email.footer.link_sdi') }}</a> |
+                <a href="https://github.com/gianlucamazza/openfatture" style="color: #ffffff; margin: 0 5px;">{{ _('email.footer.link_help') }}</a>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

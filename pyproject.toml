@@ -1,0 +1,179 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openfatture"
+dynamic = ["version"]
+description = "Open-source electronic invoicing for Italian freelancers - CLI-first with AI workflows"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Gianluca Mazza", email = "info@gianlucamazza.it"}
+]
+keywords = ["fattura-elettronica", "sdi", "fatturapa", "freelance", "invoicing", "cli", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    # CLI Framework
+    "typer[all]>=0.12.0",
+    "rich>=13.7.0",
+    "questionary>=2.0.0",  # Interactive prompts and menus
+
+    # Database & ORM
+    "sqlalchemy>=2.0.25",
+    "alembic>=1.13.1",
+
+    # Data Validation
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.1.0",
+
+    # XML Processing
+    "lxml>=5.1.0",
+    "xmlschema>=3.0.1",
+
+    # Cryptography & Digital Signatures
+    "cryptography>=42.0.2",
+    "asn1crypto>=1.5.1",
+
+    # HTTP & Email (for PEC)
+    "requests>=2.31.0",
+    "httpx>=0.26.0",
+
+    # Email Templates
+    "jinja2>=3.1.0",
+
+    # AI & LLM Integration
+    "langchain>=0.1.6",
+    "langchain-core>=0.1.20",
+    "langchain-community>=0.0.17",
+    "langgraph>=0.0.20",
+    "openai>=1.12.0",
+    "anthropic>=0.18.0",
+
+    # Vector Store & Embeddings
+    "chromadb>=0.4.22",
+
+    # Date & Time
+    "python-dateutil>=2.8.2",
+
+    # Configuration
+    "python-dotenv>=1.0.0",
+
+    # Logging & Observability
+    "structlog>=24.1.0",
+
+    # PDF Generation
+    "reportlab>=4.0.9",
+
+    # Utilities
+    "click>=8.1.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.3",
+    "pytest-mock>=3.12.0",
+    "hypothesis>=6.98.0",
+
+    # Code Quality
+    "black>=24.1.1",
+    "ruff>=0.2.1",
+    "mypy>=1.8.0",
+    "isort>=5.13.2",
+
+    # Pre-commit hooks
+    "pre-commit>=3.6.0",
+
+    # Version Management
+    "bump-my-version>=0.18.0",
+
+    # Type stubs
+    "types-requests>=2.31.0",
+]
+
+[project.scripts]
+openfatture = "openfatture.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/gianlucamazza/openfatture"
+Repository = "https://github.com/gianlucamazza/openfatture"
+Issues = "https://github.com/gianlucamazza/openfatture/issues"
+
+[tool.black]
+line-length = 100
+target-version = ['py312']
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "B904",  # raise from err (TODO: fix in future)
+    "F841",  # unused variable (TODO: fix in future)
+    "UP046", # Generic type parameters (TODO: migrate when ready)
+    "UP047", # Generic type parameters (TODO: migrate when ready)
+    "E731",  # lambda assignment (TODO: fix in future)
+    "E402",  # module level import (test files)
+    "B007",  # unused loop variable (TODO: fix in future)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --cov=openfatture --cov-report=term-missing --cov-report=html"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["openfatture"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+# Hatchling configuration for dynamic versioning
+[tool.hatch.version]
+path = "openfatture/__init__.py"

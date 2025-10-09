@@ -1,0 +1,17 @@
+{% extends "base.txt" %}
+
+{% block content %}
+✅ {{ _('email.sdi.notifica_esito_accettata.title') }}
+
+{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
+
+{{ _('email.sdi.notifica_esito_accettata.intro') }}
+{{ _('email.sdi.notifica_esito_accettata.message') }}
+
+---
+
+{{ _('email.common.invoice') }}: {{ fattura.numero }}/{{ fattura.anno }}
+{{ _('email.sdi.notifica_esito_accettata.outcome') }}: {{ _('email.sdi.notifica_esito_accettata.accepted') }}
+{{ _('email.common.client') }}: {{ cliente.denominazione }}
+{{ _('email.common.amount') }}: {{ fattura.totale | currency }}
+{% endblock %}

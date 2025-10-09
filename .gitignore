@@ -1,0 +1,92 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.json
+htmlcov/
+.tox/
+.hypothesis/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Poetry
+poetry.lock
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# OpenFatture Specific
+data/
+archivio/
+certificates/
+*.p7m
+*.xml.p7m
+
+# AI Models Cache
+models/
+.cache/
+
+# PDF Output
+output/
+*.pdf
+
+# Sensitive Data
+*.key
+*.pem
+*.crt
+
+# GitHub Actions Local Testing (act)
+.secrets
+.env.act

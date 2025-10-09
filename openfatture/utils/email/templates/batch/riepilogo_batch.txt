@@ -1,0 +1,43 @@
+{% extends "base.txt" %}
+
+{% block content %}
+📊 {{ _('email.batch.summary.title') }}
+
+{{ _('email.batch.summary.operation') }}: {{ operation_type }}
+{{ _('email.batch.summary.success_rate') }}: {{ ((result.succeeded / result.total) * 100) | percentage }}
+
+---
+
+{{ _('email.batch.summary.metrics') }}:
+
+{{ _('email.batch.summary.started_at') }}: {{ result.start_time | date_it if result.start_time else 'N/A' }}
+{{ _('email.batch.summary.completed_at') }}: {{ result.end_time | date_it if result.end_time else 'N/A' }}
+{{ _('email.batch.summary.duration') }}: {{ result.duration | duration if result.duration else 'N/A' }}
+
+{{ _('email.batch.summary.total_items') }}: {{ result.total }}
+{{ _('email.batch.summary.processed') }}: {{ result.processed }}
+{{ _('email.batch.summary.succeeded') }}: {{ result.succeeded }}
+{{ _('email.batch.summary.failed') }}: {{ result.failed }}
+
+{% if result.errors %}
+---
+
+{{ _('email.batch.summary.errors') }}:
+
+{% for error in result.errors[:10] %}
+{{ loop.index }}. {{ error }}
+{% endfor %}
+{% if result.errors|length > 10 %}
+... e altri {{ result.errors|length - 10 }} errori
+{% endif %}
+{% else %}
+
+✅ {{ _('email.batch.summary.no_errors') }}
+{% endif %}
+
+{% if csv_report_path %}
+---
+
+{{ _('email.batch.summary.download_csv') }}: {{ csv_report_path }}
+{% endif %}
+{% endblock %}
