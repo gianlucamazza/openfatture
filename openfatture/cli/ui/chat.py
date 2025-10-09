@@ -117,17 +117,18 @@ class InteractiveChatUI:
             # Create provider
             self.provider = create_provider()
 
-            # Create agent
+            # Create agent with streaming enabled
             self.agent = ChatAgent(
                 provider=self.provider,
                 enable_tools=True,
-                enable_streaming=False,  # TODO: Implement streaming
+                enable_streaming=True,
             )
 
             logger.info(
                 "chat_agent_initialized",
                 provider=self.provider.provider_name,
                 model=self.provider.model,
+                streaming_enabled=True,
             )
 
         except Exception as e:
@@ -190,6 +191,69 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         # Build context
         context = self._build_context(user_input)
 
+        try:
+            # Check if streaming is enabled
+            if self.agent.config.streaming_enabled:
+                # Stream response with real-time rendering
+                await self._process_message_streaming(context)
+            else:
+                # Use non-streaming mode (fallback)
+                await self._process_message_non_streaming(context)
+
+        except Exception as e:
+            logger.error("message_processing_failed", error=str(e))
+            console.print(f"\n[red]Errore nell'elaborazione: {e}[/red]\n")
+
+    async def _process_message_streaming(self, context: ChatContext) -> None:
+        """
+        Process message with streaming response.
+
+        Args:
+            context: Chat context
+        """
+        console.print("\n[bold cyan]AI:[/bold cyan]")
+
+        # Collect response chunks for session storage
+        full_response = ""
+
+        try:
+            # Stream response with Live rendering
+            with Live("", console=console, refresh_per_second=10) as live:
+                async for chunk in self.agent.execute_stream(context):
+                    full_response += chunk
+                    # Update live display with markdown
+                    live.update(Markdown(full_response))
+
+            console.print()  # Add newline after response
+
+            # Add assistant message to session
+            # Note: Token count is estimated in streaming mode
+            estimated_tokens = len(full_response) // 4
+            estimated_cost = estimated_tokens * 0.00001  # Rough estimate
+
+            self.session.add_assistant_message(
+                full_response,
+                provider=self.provider.provider_name,
+                model=self.provider.model,
+                tokens=estimated_tokens,
+                cost=estimated_cost,
+            )
+
+            # Auto-save if configured
+            if self.session.auto_save:
+                self._auto_save()
+
+        except Exception as e:
+            logger.error("streaming_failed", error=str(e))
+            console.print(f"\n[red]Errore nello streaming: {e}[/red]\n")
+
+    async def _process_message_non_streaming(self, context: ChatContext) -> None:
+        """
+        Process message without streaming (fallback).
+
+        Args:
+            context: Chat context
+        """
         # Show "thinking" indicator
         with console.status("[bold green]AI sta pensando...") as status:
             try:
@@ -221,7 +285,7 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 
             except Exception as e:
                 status.stop()
-                logger.error("message_processing_failed", error=str(e))
+                logger.error("non_streaming_failed", error=str(e))
                 console.print(f"\n[red]Errore nell'elaborazione: {e}[/red]\n")
 
     def _build_context(self, user_input: str) -> ChatContext:

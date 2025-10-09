@@ -41,7 +41,7 @@ class ChatAgent(BaseAgent):
         provider: BaseLLMProvider,
         tool_registry: Optional[ToolRegistry] = None,
         enable_tools: bool = True,
-        enable_streaming: bool = False,
+        enable_streaming: bool = True,
     ) -> None:
         """
         Initialize Chat Agent.
@@ -50,7 +50,7 @@ class ChatAgent(BaseAgent):
             provider: LLM provider instance
             tool_registry: Tool registry (uses global if None)
             enable_tools: Enable tool calling
-            enable_streaming: Enable streaming responses
+            enable_streaming: Enable streaming responses (default: True for better UX)
         """
         # Agent configuration
         config = AgentConfig(

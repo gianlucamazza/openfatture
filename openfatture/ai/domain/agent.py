@@ -2,7 +2,7 @@
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, AsyncIterator, Optional
 
 from pydantic import BaseModel, Field
 
@@ -255,6 +255,103 @@ class BaseAgent(AgentProtocol):
                 error_details={"error_type": type(e).__name__},
             )
 
+    async def execute_stream(
+        self,
+        context: AgentContext,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """
+        Execute the agent with streaming response.
+
+        This method yields response chunks as they arrive from the LLM,
+        enabling real-time token-by-token rendering in UIs.
+
+        Flow:
+        1. Validate input
+        2. Build prompt
+        3. Stream from LLM (with retry logic)
+        4. Yield chunks in real-time
+
+        Args:
+            context: Agent execution context
+            **kwargs: Additional arguments
+
+        Yields:
+            str: Response chunks as they arrive
+
+        Raises:
+            ValueError: If streaming is not enabled in config
+            ProviderError: If execution fails
+        """
+        if not self.config.streaming_enabled:
+            raise ValueError(
+                f"Streaming not enabled for agent '{self.config.name}'. "
+                "Set streaming_enabled=True in AgentConfig."
+            )
+
+        start_time = time.time()
+
+        self.logger.info(
+            "agent_streaming_started",
+            agent=self.config.name,
+            correlation_id=context.correlation_id,
+            user_input_preview=context.user_input[:100],
+        )
+
+        try:
+            # 1. Validate input
+            is_valid, error_msg = await self.validate_input(context)
+            if not is_valid:
+                self.logger.warning(
+                    "agent_validation_failed",
+                    agent=self.config.name,
+                    error=error_msg,
+                )
+                yield f"[Error: {error_msg}]"
+                return
+
+            # 2. Build prompt
+            messages = await self._build_prompt(context)
+
+            # 3. Stream from LLM with retry logic
+            total_tokens = 0
+            collected_content = ""
+
+            async for chunk in self._call_llm_streaming_with_retry(messages, context):
+                collected_content += chunk
+                yield chunk
+
+            # 4. Update metrics (estimate tokens from content)
+            # Note: Exact token count not available in streaming mode
+            # We'll estimate based on content length
+            estimated_tokens = len(collected_content) // 4  # Rough estimate
+            self.total_requests += 1
+            self.total_tokens += estimated_tokens
+
+            latency_ms = (time.time() - start_time) * 1000
+
+            self.logger.info(
+                "agent_streaming_completed",
+                agent=self.config.name,
+                correlation_id=context.correlation_id,
+                estimated_tokens=estimated_tokens,
+                latency_ms=latency_ms,
+                content_length=len(collected_content),
+            )
+
+        except Exception as e:
+            self.total_errors += 1
+
+            self.logger.error(
+                "agent_streaming_failed",
+                agent=self.config.name,
+                correlation_id=context.correlation_id,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+
+            yield f"\n\n[Error: {str(e)}]"
+
     async def validate_input(self, context: AgentContext) -> tuple[bool, Optional[str]]:
         """
         Default validation - can be overridden by subclasses.
@@ -402,6 +499,73 @@ class BaseAgent(AgentProtocol):
         # All retries failed
         raise last_error or ProviderError(
             "LLM call failed after all retries",
+            provider=self.provider.provider_name,
+        )
+
+    async def _call_llm_streaming_with_retry(
+        self,
+        messages: list[Message],
+        context: AgentContext,
+    ) -> AsyncIterator[str]:
+        """
+        Call LLM in streaming mode with retry logic.
+
+        Args:
+            messages: Messages to send
+            context: Agent execution context
+
+        Yields:
+            str: Response chunks as they arrive
+
+        Raises:
+            ProviderError: If all retries fail
+        """
+        last_error = None
+
+        for attempt in range(self.config.max_retries + 1):
+            try:
+                # Get system prompt
+                system_prompt = self.config.system_prompt
+
+                # Get parameters from config
+                temperature = self.config.temperature
+                max_tokens = self.config.max_tokens
+
+                # Stream from provider
+                async for chunk in self.provider.stream(
+                    messages=messages,
+                    system_prompt=system_prompt,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                ):
+                    yield chunk
+
+                # If we got here, streaming succeeded
+                return
+
+            except ProviderError as e:
+                last_error = e
+
+                self.logger.warning(
+                    "agent_llm_streaming_failed",
+                    agent=self.config.name,
+                    attempt=attempt + 1,
+                    max_retries=self.config.max_retries,
+                    error=str(e),
+                )
+
+                # If this was the last attempt, raise
+                if attempt >= self.config.max_retries:
+                    break
+
+                # Wait before retrying (exponential backoff)
+                import asyncio
+
+                await asyncio.sleep(2**attempt)
+
+        # All retries failed
+        raise last_error or ProviderError(
+            "LLM streaming call failed after all retries",
             provider=self.provider.provider_name,
         )
 
