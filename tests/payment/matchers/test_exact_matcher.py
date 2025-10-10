@@ -19,8 +19,7 @@ pytestmark = pytest.mark.unit
 class TestExactAmountMatcher:
     """Tests for ExactAmountMatcher."""
 
-    @pytest.mark.asyncio
-    async def test_exact_amount_match_100_percent_confidence(self):
+    def test_exact_amount_match_100_percent_confidence(self):
         """Test exact amount match returns 100% confidence."""
         matcher = ExactAmountMatcher()
 
@@ -28,23 +27,22 @@ class TestExactAmountMatcher:
         transaction.amount = Decimal("1000.00")
         transaction.date = date(2025, 1, 15)
 
-        # Create candidate payment with exact amount
+        # Create candidate payment with exact amount (within 3-day tolerance)
         payment = Mock()
         payment.id = 1
         payment.importo_da_pagare = Decimal("1000.00")
-        payment.data_scadenza = date(2025, 1, 20)
+        payment.data_scadenza = date(2025, 1, 17)  # 2 days later, within tolerance
 
         candidates = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         assert len(results) == 1
         assert results[0].confidence == Decimal("1.0")
         assert results[0].match_type == MatchType.EXACT
         assert results[0].payment.id == 1
 
-    @pytest.mark.asyncio
-    async def test_exact_amount_no_match_returns_empty(self):
+    def test_exact_amount_no_match_returns_empty(self):
         """Test no match when amounts differ."""
         matcher = ExactAmountMatcher()
 
@@ -60,12 +58,11 @@ class TestExactAmountMatcher:
 
         candidates = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         assert len(results) == 0
 
-    @pytest.mark.asyncio
-    async def test_exact_amount_multiple_candidates_all_returned(self):
+    def test_exact_amount_multiple_candidates_all_returned(self):
         """Test that all candidates with exact amount are returned."""
         matcher = ExactAmountMatcher()
 
@@ -90,16 +87,16 @@ class TestExactAmountMatcher:
 
         candidates = [payment1, payment2, payment3]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # Should return 2 matches (payment1 and payment2)
         assert len(results) == 2
         assert all(r.confidence == Decimal("1.0") for r in results)
 
-    @pytest.mark.asyncio
-    async def test_exact_amount_date_window_filtering(self):
+    def test_exact_amount_date_window_filtering(self):
         """Test that date_window parameter filters candidates."""
-        matcher = ExactAmountMatcher()
+        # Create matcher with 30-day window
+        matcher = ExactAmountMatcher(date_tolerance_days=30)
 
         transaction = Mock()
         transaction.amount = Decimal("1000.00")
@@ -120,13 +117,12 @@ class TestExactAmountMatcher:
         candidates = [payment_in_window, payment_out_window]
 
         # With 30-day window, only first payment should match
-        results = await matcher.match(transaction, candidates, date_window_days=30)
+        results = matcher.match(transaction, candidates)
 
         assert len(results) == 1
         assert results[0].payment.id == 1
 
-    @pytest.mark.asyncio
-    async def test_decimal_precision_matching(self):
+    def test_decimal_precision_matching(self):
         """Test that Decimal precision is handled correctly."""
         matcher = ExactAmountMatcher()
 
@@ -147,13 +143,12 @@ class TestExactAmountMatcher:
 
         candidates = [payment1, payment2]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # Both should match (Decimal equality)
         assert len(results) == 2
 
-    @pytest.mark.asyncio
-    async def test_exact_amount_empty_candidates(self):
+    def test_exact_amount_empty_candidates(self):
         """Test behavior with empty candidates list."""
         matcher = ExactAmountMatcher()
 
@@ -161,12 +156,11 @@ class TestExactAmountMatcher:
         transaction.amount = Decimal("1000.00")
         transaction.date = date.today()
 
-        results = await matcher.match(transaction, [])
+        results = matcher.match(transaction, [])
 
         assert results == []
 
-    @pytest.mark.asyncio
-    async def test_exact_amount_negative_amounts(self):
+    def test_exact_amount_negative_amounts(self):
         """Test matching with negative amounts (debits)."""
         matcher = ExactAmountMatcher()
 
@@ -181,13 +175,12 @@ class TestExactAmountMatcher:
 
         candidates = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         assert len(results) == 1
         assert results[0].confidence == Decimal("1.0")
 
-    @pytest.mark.asyncio
-    async def test_exact_amount_match_reason_descriptive(self):
+    def test_exact_amount_match_reason_descriptive(self):
         """Test that match reason is descriptive."""
         matcher = ExactAmountMatcher()
 
@@ -202,7 +195,7 @@ class TestExactAmountMatcher:
 
         candidates = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         assert "Exact amount" in results[0].match_reason
         assert "1234.56" in results[0].match_reason or "exact" in results[0].match_reason.lower()

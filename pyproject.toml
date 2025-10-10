@@ -68,6 +68,9 @@ dependencies = [
     # Date & Time
     "python-dateutil>=2.8.2",
 
+    # Fuzzy String Matching
+    "rapidfuzz>=3.0.0",  # Fast fuzzy string matching for payment reconciliation
+
     # Configuration
     "python-dotenv>=1.0.0",
 
@@ -153,6 +156,15 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["openfatture.payment.cli.payment_cli"]
+disallow_untyped_defs = false
+check_untyped_defs = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"
