@@ -47,8 +47,8 @@ class DashboardData:
         total = (
             self.db.query(func.sum(Fattura.totale))
             .filter(
-                extract("year", Fattura.data) == now.year,
-                extract("month", Fattura.data) == now.month,
+                extract("year", Fattura.data_emissione) == now.year,
+                extract("month", Fattura.data_emissione) == now.month,
             )
             .scalar()
         )
@@ -105,8 +105,8 @@ class DashboardData:
             revenue = (
                 self.db.query(func.sum(Fattura.totale))
                 .filter(
-                    extract("year", Fattura.data) == year,
-                    extract("month", Fattura.data) == month,
+                    extract("year", Fattura.data_emissione) == year,
+                    extract("month", Fattura.data_emissione) == month,
                 )
                 .scalar()
             ) or Decimal("0")
@@ -151,7 +151,7 @@ class DashboardData:
         Returns:
             List of Invoice objects
         """
-        return self.db.query(Fattura).order_by(Fattura.data.desc()).limit(limit).all()
+        return self.db.query(Fattura).order_by(Fattura.data_emissione.desc()).limit(limit).all()
 
 
 def create_overview_panel(data: DashboardData) -> Panel:
@@ -331,7 +331,7 @@ def create_recent_invoices_table(data: DashboardData, limit: int = 5) -> Table:
 
         table.add_row(
             f"{fattura.numero}/{fattura.anno}",
-            fattura.data.strftime("%d/%m/%Y"),
+            fattura.data_emissione.strftime("%d/%m/%Y"),
             client_name,
             f"€{fattura.totale:,.2f}",
             f"{emoji} {fattura.stato.value}",

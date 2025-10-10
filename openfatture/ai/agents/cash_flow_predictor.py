@@ -34,12 +34,13 @@ from typing import Any
 
 import pandas as pd
 
-from openfatture.ai.domain.message import UserMessage
+from openfatture.ai.domain.message import Message
 from openfatture.ai.ml.config import MLConfig, get_ml_config
 from openfatture.ai.ml.data_loader import InvoiceDataLoader
 from openfatture.ai.ml.features import FeaturePipeline
 from openfatture.ai.ml.models import CashFlowEnsemble
-from openfatture.ai.providers import AIProvider, create_provider
+from openfatture.ai.providers import create_provider
+from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
@@ -136,7 +137,7 @@ class CashFlowPredictorAgent:
     def __init__(
         self,
         config: MLConfig | None = None,
-        ai_provider: AIProvider | None = None,
+        ai_provider: BaseLLMProvider | None = None,
     ):
         """Initialize Cash Flow Predictor Agent.
 
@@ -495,8 +496,8 @@ Fornisci:
 Rispondi in italiano, conciso e professionale."""
 
         try:
-            messages = [UserMessage(content=prompt)]
-            response = await self.ai_provider.chat(
+            messages = [Message(role="user", content=prompt)]
+            response = await self.ai_provider.generate(
                 messages=messages,
                 temperature=0.3,
             )
@@ -562,8 +563,8 @@ Provide:
 Respond in Italian, concise and professional."""
 
         try:
-            messages = [UserMessage(content=prompt)]
-            response = await self.ai_provider.chat(
+            messages = [Message(role="user", content=prompt)]
+            response = await self.ai_provider.generate(
                 messages=messages,
                 temperature=0.3,
             )

@@ -16,8 +16,9 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 from openfatture.ai.agents.compliance.rules import ValidationIssue, ValidationSeverity
-from openfatture.ai.domain.message import UserMessage
-from openfatture.ai.providers import AIProvider, create_provider
+from openfatture.ai.domain.message import Message
+from openfatture.ai.providers import create_provider
+from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
@@ -72,7 +73,7 @@ class AIHeuristicAnalyzer:
             model: Model to use
             api_key: API key for the provider
         """
-        self.provider: AIProvider = create_provider(
+        self.provider: BaseLLMProvider = create_provider(
             provider_name=provider_name,
             model=model,
             api_key=api_key,
@@ -279,8 +280,8 @@ Rispondi in formato JSON con:
 }}"""
 
         try:
-            messages = [UserMessage(content=prompt)]
-            response = await self.provider.chat(messages=messages, temperature=0.3)
+            messages = [Message(role="user", content=prompt)]
+            response = await self.provider.generate(messages=messages, temperature=0.3)
 
             # Parse AI response (simplified - in production use structured output)
             ai_content = response.content

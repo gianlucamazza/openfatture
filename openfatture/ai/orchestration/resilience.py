@@ -36,7 +36,8 @@ from pydantic import BaseModel, Field
 
 from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import AIResponse
-from openfatture.ai.providers import AIProvider, create_provider
+from openfatture.ai.providers import create_provider
+from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -160,7 +161,7 @@ class CircuitBreaker:
         >>> breaker = CircuitBreaker(name="anthropic")
         >>> if breaker.can_attempt():
         ...     try:
-        ...         result = await provider.chat(messages)
+        ...         result = await provider.generate(messages)
         ...         breaker.record_success()
         ...     except Exception as e:
         ...         breaker.record_failure()
@@ -321,12 +322,12 @@ class ResilientProvider:
         ...     primary_provider=anthropic_provider,
         ...     policy=policy
         ... )
-        >>> response = await provider.chat_with_resilience(messages)
+        >>> response = await provider.generate_with_resilience(messages)
     """
 
     def __init__(
         self,
-        primary_provider: AIProvider,
+        primary_provider: BaseLLMProvider,
         policy: ResiliencePolicy | None = None,
     ):
         """Initialize resilient provider.
@@ -345,7 +346,7 @@ class ResilientProvider:
         )
 
         # Fallback providers (lazily initialized)
-        self.fallback_providers: list[AIProvider] = []
+        self.fallback_providers: list[BaseLLMProvider] = []
 
         logger.info(
             "resilient_provider_initialized",
@@ -370,7 +371,7 @@ class ResilientProvider:
                     error=str(e),
                 )
 
-    async def chat_with_resilience(
+    async def generate_with_resilience(
         self,
         messages: list[Message],
         **kwargs: Any,
@@ -401,7 +402,7 @@ class ResilientProvider:
             try:
                 # Execute with timeout
                 response = await asyncio.wait_for(
-                    self.primary_provider.chat(messages, **kwargs),
+                    self.primary_provider.generate(messages, **kwargs),
                     timeout=self.policy.operation_timeout_seconds,
                 )
 
@@ -455,7 +456,7 @@ class ResilientProvider:
                 )
 
                 response = await asyncio.wait_for(
-                    fallback_provider.chat(messages, **kwargs),
+                    fallback_provider.generate(messages, **kwargs),
                     timeout=self.policy.operation_timeout_seconds,
                 )
 
@@ -503,7 +504,7 @@ def create_resilient_provider(
         ...     primary_provider_name="anthropic",
         ...     fallback_providers=["openai", "ollama"]
         ... )
-        >>> response = await provider.chat_with_resilience(messages)
+        >>> response = await provider.generate_with_resilience(messages)
     """
     if fallback_providers is None:
         fallback_providers = ["openai", "ollama"]

@@ -428,7 +428,7 @@ class CashFlowAnalysisWorkflow:
             )
 
             # Generate insights using AI
-            from openfatture.ai.domain.message import UserMessage
+            from openfatture.ai.domain.message import Message
 
             prompt = f"""Analizza questa previsione cash flow:
 
@@ -445,8 +445,8 @@ Fornisci:
 
 Rispondi in italiano, conciso e professionale."""
 
-            messages = [UserMessage(content=prompt)]
-            response = await self.ai_provider.chat(
+            messages = [Message(role="user", content=prompt)]
+            response = await self.ai_provider.generate(
                 messages=messages,
                 temperature=0.3,
             )

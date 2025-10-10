@@ -813,7 +813,7 @@ def action_batch_export() -> None:
                     [
                         fattura.numero,
                         fattura.anno,
-                        fattura.data.strftime("%Y-%m-%d"),
+                        fattura.data_emissione.strftime("%Y-%m-%d"),
                         fattura.cliente.denominazione,
                         float(fattura.totale),
                         fattura.stato.value,
