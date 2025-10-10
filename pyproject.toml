@@ -37,9 +37,10 @@ dependencies = [
     "pydantic>=2.6.0",
     "pydantic-settings>=2.1.0",
 
-    # XML Processing
+    # XML Processing & Financial Formats
     "lxml>=5.1.0",
     "xmlschema>=3.0.1",
+    "ofxparse>=0.21",  # OFX/QFX bank statement parsing
 
     # Cryptography & Digital Signatures
     "cryptography>=42.0.2",
