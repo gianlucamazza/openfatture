@@ -174,28 +174,73 @@ def _get_recent_clients_summary(limit: int = 5) -> str:
         db.close()
 
 
-def enrich_with_rag(context: ChatContext, query: str) -> ChatContext:
+async def enrich_with_rag(context: ChatContext, query: str) -> ChatContext:
     """
-    Enrich context with RAG (Retrieval Augmented Generation).
+    Enrich context with RAG (Retrieval-Augmented Generation).
 
-    Uses vector search on previous conversations and documents
-    to find relevant context.
-
-    Note: This is a placeholder for future RAG implementation with ChromaDB.
+    Uses semantic search to find relevant invoices and historical data
+    to provide better context for the AI assistant.
 
     Args:
         context: Chat context to enrich
         query: User query for similarity search
 
     Returns:
-        Enriched context
+        Enriched context with relevant documents
     """
-    # TODO: Implement RAG with ChromaDB
-    # 1. Embed query
-    # 2. Search similar conversations
-    # 3. Search similar invoice descriptions
-    # 4. Add to context.similar_conversations and context.relevant_documents
+    try:
+        from openfatture.ai.rag import RAGSystem
+        from openfatture.ai.rag.config import get_rag_config
+        import os
 
-    logger.debug("rag_enrichment_not_yet_implemented")
+        # Check if RAG is enabled
+        config = get_rag_config()
+        if not config.enabled:
+            logger.debug("rag_enrichment_disabled")
+            return context
+
+        # Get API key for embeddings
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key and config.embedding_provider == "openai":
+            logger.warning("openai_api_key_missing_for_rag")
+            return context
+
+        # Initialize RAG system
+        rag = await RAGSystem.create(config, api_key=api_key)
+
+        # Search for relevant invoices
+        results = await rag.search(
+            query=query,
+            top_k=config.top_k,
+            min_similarity=config.similarity_threshold,
+        )
+
+        # Add to context
+        if results:
+            context.relevant_documents = [
+                f"{r.client_name} - {r.document[:200]}..." for r in results
+            ]
+
+            logger.info(
+                "rag_enrichment_completed",
+                results_count=len(results),
+                query_length=len(query),
+            )
+        else:
+            logger.debug("no_rag_results_found", query=query[:50])
+
+    except ImportError as e:
+        logger.warning(
+            "rag_import_failed",
+            error=str(e),
+            message="RAG system not available",
+        )
+
+    except Exception as e:
+        logger.warning(
+            "rag_enrichment_failed",
+            error=str(e),
+            message="Continuing without RAG enrichment",
+        )
 
     return context
