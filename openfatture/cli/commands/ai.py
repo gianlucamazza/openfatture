@@ -382,24 +382,133 @@ def _display_tax_result(response) -> None:
 @app.command("forecast")
 def ai_forecast(
     months: int = typer.Option(3, "--months", "-m", help="Months to forecast"),
+    client_id: Optional[int] = typer.Option(None, "--client", "-c", help="Filter by client ID"),
+    retrain: bool = typer.Option(False, "--retrain", help="Force model retraining"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """
-    Use AI/ML to forecast cash flow.
+    Use AI/ML to forecast cash flow based on invoice payment predictions.
 
-    Example:
+    The forecast analyzes unpaid invoices using an ML ensemble (Prophet + XGBoost)
+    to predict when payments will arrive and provides AI-powered insights.
+
+    Examples:
         openfatture ai forecast --months 6
+        openfatture ai forecast --client 123 --months 3
+        openfatture ai forecast --retrain --months 12
     """
-    console.print("\n[bold blue]🤖 AI Cash Flow Forecasting[/bold blue]\n")
+    asyncio.run(_run_cash_flow_forecast(months, client_id, retrain, json_output))
 
-    console.print("[yellow]⚠ AI/ML features not yet implemented[/yellow]")
+
+async def _run_cash_flow_forecast(
+    months: int,
+    client_id: Optional[int],
+    retrain: bool,
+    json_output: bool,
+) -> None:
+    """Run cash flow forecasting with ML models."""
+    if not json_output:
+        console.print("\n[bold blue]💰 AI Cash Flow Forecasting[/bold blue]\n")
+
+    try:
+        from openfatture.ai.agents.cash_flow_predictor import CashFlowPredictorAgent
+
+        # Create agent
+        if not json_output:
+            with console.status("[bold green]Initializing ML models..."):
+                agent = CashFlowPredictorAgent()
+                await agent.initialize(force_retrain=retrain)
+        else:
+            agent = CashFlowPredictorAgent()
+            await agent.initialize(force_retrain=retrain)
+
+        # Generate forecast
+        if not json_output:
+            status_msg = f"[bold green]Forecasting {months} months..."
+            if client_id:
+                status_msg += f" (client {client_id})"
+            with console.status(status_msg):
+                forecast = await agent.forecast_cash_flow(
+                    months=months,
+                    client_id=client_id,
+                )
+        else:
+            forecast = await agent.forecast_cash_flow(
+                months=months,
+                client_id=client_id,
+            )
+
+        # Display results
+        if json_output:
+            console.print(JSON(json.dumps(forecast.to_dict(), indent=2, ensure_ascii=False)))
+        else:
+            _display_forecast(forecast)
+
+    except ValueError as e:
+        console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
+        logger.error("forecast_error", error=str(e))
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}\n")
+        logger.error("forecast_unexpected_error", error=str(e), error_type=type(e).__name__)
+        raise typer.Exit(1)
+
+
+def _display_forecast(forecast) -> None:
+    """Display cash flow forecast in rich format."""
+    # Summary panel
+    summary_text = f"""[bold]Forecast Period:[/bold] {forecast.months} months
+[bold]Total Expected:[/bold] €{forecast.total_expected:,.2f}"""
+
     console.print(
-        f"[dim]This will analyze your invoices and predict cash flow for the next {months} months.[/dim]\n"
+        Panel(
+            summary_text,
+            title="[bold]📊 Cash Flow Summary[/bold]",
+            border_style="blue",
+        )
     )
+    console.print()
 
-    console.print("[bold]Forecast preview:[/bold]")
-    console.print("  Month 1: +€5,000 (expected)")
-    console.print("  Month 2: +€3,500 (expected)")
-    console.print("  Month 3: +€4,200 (expected)")
+    # Monthly forecast table
+    table = Table(title="Monthly Forecast", box=None, show_header=True)
+    table.add_column("Month", style="cyan", no_wrap=True)
+    table.add_column("Expected Revenue", justify="right", style="green")
+
+    for month_data in forecast.monthly_forecast:
+        # Color based on amount
+        amount = month_data['expected']
+        if amount > 0:
+            amount_str = f"€{amount:,.2f}"
+            amount_style = "green bold" if amount > 1000 else "green"
+        else:
+            amount_str = "€0.00"
+            amount_style = "dim"
+
+        table.add_row(
+            month_data['month'],
+            f"[{amount_style}]{amount_str}[/{amount_style}]",
+        )
+
+    console.print(table)
+    console.print()
+
+    # AI Insights
+    if forecast.insights:
+        console.print(
+            Panel(
+                forecast.insights,
+                title="[bold]🤖 AI Insights[/bold]",
+                border_style="magenta",
+            )
+        )
+        console.print()
+
+    # Recommendations
+    if forecast.recommendations:
+        console.print("[bold cyan]💡 Recommendations:[/bold cyan]\n")
+        for rec in forecast.recommendations:
+            console.print(f"  • {rec}")
+        console.print()
 
 
 @app.command("check")
