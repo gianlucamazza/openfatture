@@ -3,6 +3,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum as PyEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -17,6 +18,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
+
+if TYPE_CHECKING:
+    from ...payment.domain.payment_allocation import PaymentAllocation
 
 
 # Enums for invoice states and types

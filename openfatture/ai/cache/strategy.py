@@ -7,13 +7,13 @@ used in the OpenFatture AI system.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
 
 @dataclass
-class CacheEntry(Generic[T]):
+class CacheEntry[T]:
     """Represents a cached entry with metadata.
 
     Attributes:
@@ -50,7 +50,7 @@ class CacheEntry(Generic[T]):
         self.access_count += 1
 
 
-class CacheStrategy(ABC, Generic[T]):
+class CacheStrategy[T](ABC):
     """Abstract base class for cache strategies.
 
     All cache implementations must inherit from this class and implement
