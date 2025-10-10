@@ -452,15 +452,23 @@ ptw
 - [ ] Multi-agent orchestration with LangGraph
 - [ ] Vector embeddings with ChromaDB (RAG)
 
-### 🚀 Phase 5 - Production & Advanced (Future)
+### ✅ Phase 5 - Payment Module (v1.0.0 - Completed!)
+- [x] **Bank statement import** (CSV, OFX, QIF formats)
+- [x] **Intelligent payment matching** (5 algorithms with confidence scoring)
+- [x] **Bank reconciliation workflow** (auto-match, review queue, manual)
+- [x] **Payment reminders** (4 strategies: DEFAULT, PROGRESSIVE, AGGRESSIVE, CUSTOM)
+- [x] **Multi-channel notifications** (Email, SMS, webhook)
+- [x] **CLI commands** (`openfatture payment` with 8 commands)
+- [x] **74 comprehensive tests** (100% pass rate, 85%+ coverage)
+
+### 🚀 Phase 6 - Production & Advanced (Future)
 - [ ] Docker containerization
 - [ ] CI/CD pipeline
-- [ ] Bank statement import
 - [ ] Accountant export formats (CSV, Excel)
 - [ ] Payment gateway integration
 - [ ] Web GUI (optional)
 
-**Current Status**: Phase 2 completed ✅ | Phase 3 completed 95% ✅ | Phase 4 (AI) in progress 🚧 (60% complete)
+**Current Status**: Phase 2 ✅ | Phase 3 95% ✅ | **Phase 5 (Payment Module v1.0.0) ✅** | Phase 4 (AI) 60% 🚧
 
 ---
 
@@ -477,6 +485,7 @@ Complete documentation is available in the `docs/` directory:
 | [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | Email templates system documentation |
 | [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) | Full CLI command catalogue with examples |
 | [BATCH_OPERATIONS.md](docs/BATCH_OPERATIONS.md) | CSV import/export workflow and best practices |
+| [PAYMENT_TRACKING.md](openfatture/payment/README.md) | **NEW!** Payment tracking & bank reconciliation module (v1.0.0) |
 
 ### Examples
 
@@ -485,6 +494,9 @@ Practical code examples are in the `examples/` directory:
 ```bash
 # Email templates examples
 uv run python examples/email_templates_example.py
+
+# Payment tracking examples (NEW!)
+uv run python examples/payment_examples.py
 
 # Basic usage
 uv run python examples/basic_usage.py
