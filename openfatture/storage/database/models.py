@@ -282,6 +282,11 @@ class Pagamento(Base):
     # Note
     note: Mapped[str | None] = mapped_column(Text)
 
+    # Relationships
+    allocations: Mapped[list["PaymentAllocation"]] = relationship(  # type: ignore[name-defined]
+        back_populates="payment", cascade="all, delete-orphan"
+    )
+
     def __repr__(self) -> str:
         return f"<Pagamento(id={self.id}, fattura_id={self.fattura_id}, importo={self.importo}, stato='{self.stato.value}')>"
 
