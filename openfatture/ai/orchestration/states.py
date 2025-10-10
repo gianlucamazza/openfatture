@@ -1,0 +1,480 @@
+"""Workflow State Models for LangGraph Orchestration.
+
+Pydantic-based state management for multi-agent workflows.
+Each state model represents the complete state at each workflow step,
+enabling:
+- Type-safe state transitions
+- Validation at each step
+- Persistent checkpointing
+- Human-in-the-loop decision points
+- Conditional routing based on state
+
+Architecture:
+- BaseWorkflowState: Common fields (correlation_id, timestamps, metadata)
+- Specific states: InvoiceCreationState, ComplianceCheckState, etc.
+- SharedContext: Business data shared across agents
+- AgentResult: Standardized agent output format
+
+Example:
+    >>> state = InvoiceCreationState(
+    ...     user_input="consulenza Python 5h",
+    ...     correlation_id="req-123"
+    ... )
+    >>> # Agent updates state
+    >>> state.description_result = DescriptionResult(
+    ...     content="Consulenza tecnica Python...",
+    ...     confidence=0.92
+    ... )
+"""
+
+from datetime import datetime
+from enum import Enum
+from typing import Optional, Dict, Any, List
+from uuid import uuid4
+
+from pydantic import BaseModel, Field, field_validator
+
+
+class WorkflowStatus(Enum):
+    """Workflow execution status."""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    AWAITING_APPROVAL = "awaiting_approval"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ApprovalDecision(Enum):
+    """Human approval decision."""
+
+    APPROVE = "approve"
+    REJECT = "reject"
+    REQUEST_CHANGES = "request_changes"
+    SKIP = "skip"
+
+
+class AgentType(Enum):
+    """Available agent types."""
+
+    DESCRIPTION = "description"
+    TAX_ADVISOR = "tax_advisor"
+    COMPLIANCE = "compliance"
+    CASH_FLOW = "cash_flow"
+    CHAT = "chat"
+
+
+# ============================================================================
+# Base Models
+# ============================================================================
+
+
+class AgentResult(BaseModel):
+    """Standardized agent execution result.
+
+    All agents return this format for consistency across workflows.
+    """
+
+    agent_type: AgentType
+    success: bool
+    content: str
+    confidence: float = Field(ge=0.0, le=1.0, description="Confidence score (0-1)")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    error: Optional[str] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        use_enum_values = True
+
+
+class HumanReview(BaseModel):
+    """Human review decision."""
+
+    decision: ApprovalDecision
+    feedback: Optional[str] = None
+    reviewer: Optional[str] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        use_enum_values = True
+
+
+class SharedContext(BaseModel):
+    """Business context shared across all agents in workflow.
+
+    Populated once at workflow start to avoid repeated DB queries.
+    """
+
+    # Current year statistics
+    total_invoices_ytd: int = 0
+    total_revenue_ytd: float = 0.0
+    unpaid_invoices_count: int = 0
+    unpaid_invoices_value: float = 0.0
+
+    # Recent data summaries
+    recent_clients: List[Dict[str, Any]] = Field(default_factory=list)
+    recent_invoices: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # User preferences
+    default_tax_regime: Optional[str] = None
+    default_payment_terms: int = 30  # days
+
+    # Metadata
+    loaded_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class BaseWorkflowState(BaseModel):
+    """Base state for all workflows.
+
+    Contains common fields required by all workflow types.
+    """
+
+    # Workflow tracking
+    workflow_id: str = Field(default_factory=lambda: str(uuid4()))
+    correlation_id: Optional[str] = None
+    status: WorkflowStatus = WorkflowStatus.PENDING
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+
+    # Shared context
+    context: SharedContext = Field(default_factory=SharedContext)
+
+    # Error handling
+    errors: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+    # Metadata for extensibility
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    class Config:
+        use_enum_values = True
+
+    def add_error(self, error: str) -> None:
+        """Add error and update status."""
+        self.errors.append(error)
+        self.status = WorkflowStatus.FAILED
+        self.updated_at = datetime.utcnow()
+
+    def add_warning(self, warning: str) -> None:
+        """Add warning."""
+        self.warnings.append(warning)
+        self.updated_at = datetime.utcnow()
+
+    def mark_completed(self) -> None:
+        """Mark workflow as completed."""
+        self.status = WorkflowStatus.COMPLETED
+        self.completed_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
+
+
+# ============================================================================
+# Invoice Creation Workflow State
+# ============================================================================
+
+
+class InvoiceCreationState(BaseWorkflowState):
+    """State for Invoice Creation workflow.
+
+    Workflow: User Input → Description Agent → Tax Advisor → Compliance → Create
+
+    Human approval checkpoints:
+    1. After Description (optional)
+    2. After Tax Suggestion (optional)
+    3. After Compliance Check (if warnings/errors)
+
+    Example:
+        >>> state = InvoiceCreationState(
+        ...     user_input="consulenza DevOps 3 giorni",
+        ...     client_id=123
+        ... )
+    """
+
+    # User inputs
+    user_input: str
+    client_id: int
+    invoice_date: Optional[datetime] = None
+    payment_due_date: Optional[datetime] = None
+
+    # Agent results (populated by workflow)
+    description_result: Optional[AgentResult] = None
+    tax_result: Optional[AgentResult] = None
+    compliance_result: Optional[AgentResult] = None
+
+    # Human reviews (if checkpoints enabled)
+    description_review: Optional[HumanReview] = None
+    tax_review: Optional[HumanReview] = None
+    compliance_review: Optional[HumanReview] = None
+
+    # Final output
+    invoice_id: Optional[int] = None
+    invoice_xml_path: Optional[str] = None
+
+    # Configuration
+    require_description_approval: bool = False
+    require_tax_approval: bool = False
+    require_compliance_approval: bool = True  # Always for errors
+
+    @property
+    def is_description_approved(self) -> bool:
+        """Check if description was approved (or no review required)."""
+        if not self.require_description_approval:
+            return True
+        if not self.description_review:
+            return False
+        return self.description_review.decision == ApprovalDecision.APPROVE
+
+    @property
+    def is_tax_approved(self) -> bool:
+        """Check if tax suggestion was approved."""
+        if not self.require_tax_approval:
+            return True
+        if not self.tax_review:
+            return False
+        return self.tax_review.decision == ApprovalDecision.APPROVE
+
+    @property
+    def is_compliant(self) -> bool:
+        """Check if compliance check passed."""
+        if not self.compliance_result:
+            return False
+        return self.compliance_result.success and self.compliance_result.confidence > 0.8
+
+
+# ============================================================================
+# Compliance Check Workflow State
+# ============================================================================
+
+
+class ComplianceCheckState(BaseWorkflowState):
+    """State for Compliance Check workflow.
+
+    Workflow: Load Invoice → Rules Check → Heuristics → SDI Patterns → AI Analysis
+
+    Multi-level compliance checking:
+    - Level 1 (BASIC): Deterministic rules only
+    - Level 2 (STANDARD): Rules + SDI rejection patterns
+    - Level 3 (ADVANCED): Rules + SDI + AI heuristics
+    """
+
+    # Input
+    invoice_id: int
+    check_level: str = "standard"  # basic, standard, advanced
+
+    # Check results
+    rules_passed: bool = False
+    rules_issues: List[Dict[str, Any]] = Field(default_factory=list)
+
+    sdi_patterns_checked: bool = False
+    sdi_warnings: List[Dict[str, Any]] = Field(default_factory=list)
+
+    ai_analysis_performed: bool = False
+    ai_insights: Optional[str] = None
+
+    # Final assessment
+    is_compliant: bool = False
+    compliance_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    risk_score: float = Field(default=0.0, ge=0.0, le=100.0)
+
+    # Recommendations
+    fix_suggestions: List[str] = Field(default_factory=list)
+    sdi_approval_probability: Optional[float] = None
+
+    # Human review (if critical issues found)
+    review: Optional[HumanReview] = None
+    require_review_on_warnings: bool = True
+
+
+# ============================================================================
+# Cash Flow Analysis Workflow State
+# ============================================================================
+
+
+class CashFlowAnalysisState(BaseWorkflowState):
+    """State for Cash Flow Analysis workflow.
+
+    Workflow: Load Unpaid → Predict Each → Aggregate → Generate Insights
+
+    Can run for:
+    - All clients (comprehensive forecast)
+    - Single client (client-specific forecast)
+    - Filtered invoices (custom query)
+    """
+
+    # Input filters
+    client_id: Optional[int] = None
+    invoice_ids: Optional[List[int]] = None
+    forecast_months: int = 3
+
+    # ML model results
+    predictions: List[Dict[str, Any]] = Field(default_factory=list)
+    total_invoices_analyzed: int = 0
+    failed_predictions: int = 0
+
+    # Aggregated forecast
+    monthly_forecast: List[Dict[str, Any]] = Field(default_factory=list)
+    total_expected_revenue: float = 0.0
+
+    # Risk analysis
+    high_risk_invoices: List[int] = Field(default_factory=list)
+    overdue_predictions: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # AI insights
+    insights: Optional[str] = None
+    recommendations: List[str] = Field(default_factory=list)
+
+    # Model performance
+    average_confidence: float = 0.0
+    model_agreement_avg: float = 0.0
+
+
+# ============================================================================
+# Batch Processing Workflow State
+# ============================================================================
+
+
+class BatchProcessingState(BaseWorkflowState):
+    """State for Batch Processing workflow.
+
+    Workflow: Load Batch → Parallel Process → Aggregate Results → Report
+
+    Supports:
+    - Parallel agent execution (rate-limited)
+    - Progress tracking
+    - Partial failures handling
+    - Resume on interruption
+    """
+
+    # Batch configuration
+    operation_type: str  # "validate", "generate_xml", "compliance_check", etc.
+    item_ids: List[int]  # Invoice IDs or Client IDs
+    batch_size: int = 10
+    max_parallel: int = 5
+
+    # Progress tracking
+    total_items: int = 0
+    processed_items: int = 0
+    successful_items: int = 0
+    failed_items: int = 0
+
+    # Results
+    results: List[Dict[str, Any]] = Field(default_factory=list)
+    errors_detail: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # Performance
+    started_at: Optional[datetime] = None
+    items_per_second: float = 0.0
+    estimated_completion: Optional[datetime] = None
+
+    # Resume support
+    checkpoint_ids: List[int] = Field(default_factory=list)  # Completed IDs
+    can_resume: bool = True
+
+    @property
+    def progress_percentage(self) -> float:
+        """Calculate progress percentage."""
+        if self.total_items == 0:
+            return 0.0
+        return (self.processed_items / self.total_items) * 100
+
+    @property
+    def success_rate(self) -> float:
+        """Calculate success rate."""
+        if self.processed_items == 0:
+            return 0.0
+        return (self.successful_items / self.processed_items) * 100
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+
+def create_invoice_workflow(
+    user_input: str,
+    client_id: int,
+    require_approvals: bool = False,
+) -> InvoiceCreationState:
+    """Create a new invoice creation workflow state.
+
+    Args:
+        user_input: User's invoice description input
+        client_id: Client ID for the invoice
+        require_approvals: Enable human approval checkpoints
+
+    Returns:
+        InvoiceCreationState ready for workflow execution
+    """
+    return InvoiceCreationState(
+        user_input=user_input,
+        client_id=client_id,
+        require_description_approval=require_approvals,
+        require_tax_approval=require_approvals,
+        require_compliance_approval=True,  # Always for errors
+    )
+
+
+def create_compliance_workflow(
+    invoice_id: int,
+    level: str = "standard",
+) -> ComplianceCheckState:
+    """Create a new compliance check workflow state.
+
+    Args:
+        invoice_id: Invoice ID to check
+        level: Check level (basic/standard/advanced)
+
+    Returns:
+        ComplianceCheckState ready for workflow execution
+    """
+    return ComplianceCheckState(
+        invoice_id=invoice_id,
+        check_level=level,
+    )
+
+
+def create_cash_flow_workflow(
+    months: int = 3,
+    client_id: Optional[int] = None,
+) -> CashFlowAnalysisState:
+    """Create a new cash flow analysis workflow state.
+
+    Args:
+        months: Number of months to forecast
+        client_id: Optional client filter
+
+    Returns:
+        CashFlowAnalysisState ready for workflow execution
+    """
+    return CashFlowAnalysisState(
+        forecast_months=months,
+        client_id=client_id,
+    )
+
+
+def create_batch_workflow(
+    operation_type: str,
+    item_ids: List[int],
+    batch_size: int = 10,
+) -> BatchProcessingState:
+    """Create a new batch processing workflow state.
+
+    Args:
+        operation_type: Type of operation to perform
+        item_ids: List of item IDs to process
+        batch_size: Number of items per batch
+
+    Returns:
+        BatchProcessingState ready for workflow execution
+    """
+    return BatchProcessingState(
+        operation_type=operation_type,
+        item_ids=item_ids,
+        total_items=len(item_ids),
+        batch_size=batch_size,
+    )
