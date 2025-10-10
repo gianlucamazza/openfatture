@@ -111,6 +111,10 @@ dev = [
 
     # Type stubs
     "types-requests>=2.31.0",
+    "types-reportlab>=4.0.0",
+    "types-PyYAML>=6.0.0",
+    "types-pyasn1>=0.5.0",
+    "pandas-stubs>=2.0.0",
 ]
 
 [project.scripts]
@@ -164,6 +168,19 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 ignore_errors = true
+
+# External libraries without stubs
+[[tool.mypy.overrides]]
+module = ["prophet.*", "prophet"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["xgboost.*", "xgboost"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["prometheus_client.*", "prometheus_client"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
