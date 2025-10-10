@@ -16,6 +16,7 @@ from rich.table import Table
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
 from openfatture.ai.context import enrich_with_rag
 from openfatture.ai.domain.context import InvoiceContext, TaxContext
+from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.rag import KnowledgeIndexer, get_rag_config
 from openfatture.utils.logging import get_logger
@@ -297,7 +298,7 @@ def _display_input(context: InvoiceContext) -> None:
 app.add_typer(rag_app, name="rag")
 
 
-def _display_result(response) -> None:
+def _display_result(response: AgentResponse) -> None:
     """Display structured result."""
     # Try to get structured model
     if response.metadata.get("is_structured"):
@@ -345,7 +346,7 @@ def _display_result(response) -> None:
     console.print()
 
 
-def _display_metrics(response) -> None:
+def _display_metrics(response: AgentResponse) -> None:
     """Display response metrics."""
     metrics_table = Table(show_header=False, box=None, padding=(0, 2))
     metrics_table.add_column("Metric", style="dim")
@@ -496,7 +497,7 @@ def _display_tax_input(context: TaxContext) -> None:
     console.print()
 
 
-def _display_tax_result(response) -> None:
+def _display_tax_result(response: AgentResponse) -> None:
     """Display tax suggestion result."""
     # Try to get structured model
     if response.metadata.get("is_structured"):
@@ -631,7 +632,7 @@ async def _run_cash_flow_forecast(
         raise typer.Exit(1)
 
 
-def _display_forecast(forecast) -> None:
+def _display_forecast(forecast: Any) -> None:
     """Display cash flow forecast in rich format."""
     # Summary panel
     summary_text = f"""[bold]Forecast Period:[/bold] {forecast.months} months
@@ -763,7 +764,7 @@ async def _run_compliance_check(
         raise typer.Exit(1)
 
 
-def _display_compliance_report(report, verbose: bool) -> None:
+def _display_compliance_report(report: Any, verbose: bool) -> None:
     """Display compliance check report in rich format."""
     # Header
     console.print(f"[bold]Invoice:[/bold] {report.invoice_number}")

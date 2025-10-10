@@ -17,9 +17,11 @@ All features are engineered to be:
 import statistics
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from typing import Any
 
 import numpy as np
 import pandas as pd
+from sqlalchemy.orm import Session
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -103,7 +105,7 @@ class TemporalFeatureExtractor(BaseEstimator, TransformerMixin):
     - week_of_year (1-53)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize temporal feature extractor."""
         self.feature_names_ = [
             "day_of_week",
@@ -116,7 +118,7 @@ class TemporalFeatureExtractor(BaseEstimator, TransformerMixin):
             "week_of_year",
         ]
 
-    def fit(self, X, y=None):
+    def fit(self, X: Any, y: Any = None) -> "TemporalFeatureExtractor":
         """Fit transformer (no-op for temporal features)."""
         return self
 
@@ -164,7 +166,7 @@ class TemporalFeatureExtractor(BaseEstimator, TransformerMixin):
 
         return X
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(self, input_features: Any = None) -> list[str]:
         """Get output feature names."""
         return self.feature_names_
 
@@ -183,7 +185,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
     - total_amount_paid (lifetime value)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize client behavior extractor."""
         self.feature_names_ = [
             "avg_payment_delay_30d",
@@ -197,7 +199,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
         ]
         self.client_stats_cache_ = {}
 
-    def fit(self, X, y=None):
+    def fit(self, X: Any, y: Any = None) -> "ClientBehaviorFeatureExtractor":
         """Fit transformer by computing client statistics."""
         # Compute stats for each unique client
         unique_clients = X["cliente_id"].unique()
@@ -235,7 +237,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
 
         return X
 
-    def _compute_client_stats(self, db, client_id: int) -> dict[str, float]:
+    def _compute_client_stats(self, db: Session, client_id: int) -> dict[str, float]:
         """Compute historical statistics for a client."""
         # Get all invoices for client
         fatture = (
@@ -309,7 +311,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
             "total_amount_paid": total_paid,
         }
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(self, input_features: Any = None) -> list[str]:
         """Get output feature names."""
         return self.feature_names_
 
@@ -330,7 +332,7 @@ class InvoiceFeatureExtractor(BaseEstimator, TransformerMixin):
     - line_item_count
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize invoice feature extractor."""
         self.feature_names_ = [
             "amount",
@@ -345,7 +347,7 @@ class InvoiceFeatureExtractor(BaseEstimator, TransformerMixin):
         self.amount_mean_ = 0.0
         self.amount_std_ = 1.0
 
-    def fit(self, X, y=None):
+    def fit(self, X: Any, y: Any = None) -> "InvoiceFeatureExtractor":
         """Fit transformer by computing amount statistics."""
         amounts = X["totale"].astype(float)
         self.amount_mean_ = amounts.mean()
@@ -394,7 +396,7 @@ class InvoiceFeatureExtractor(BaseEstimator, TransformerMixin):
 
         return X
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(self, input_features: Any = None) -> list[str]:
         """Get output feature names."""
         return self.feature_names_
 
@@ -456,7 +458,7 @@ class FeaturePipeline:
             scale_features=scale_features,
         )
 
-    def fit(self, X: pd.DataFrame, y: pd.Series | None = None):
+    def fit(self, X: pd.DataFrame, y: pd.Series | None = None) -> "FeaturePipeline":
         """Fit all feature extractors.
 
         Args:
