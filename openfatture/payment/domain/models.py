@@ -214,6 +214,7 @@ class PaymentReminder(Base):
     Attributes:
         payment_id: Foreign key to Pagamento
         reminder_date: When the reminder should be sent
+        days_before_due: Days relative to due date (negative = overdue, positive = before)
         status: Reminder status (PENDING/SENT/FAILED/CANCELLED)
         strategy: Reminder strategy used
         email_template: Name of the email template to use
@@ -231,6 +232,9 @@ class PaymentReminder(Base):
 
     # Scheduling
     reminder_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    days_before_due: Mapped[int] = mapped_column(
+        nullable=False
+    )  # Days relative to due date (negative = overdue)
     status: Mapped[ReminderStatus] = mapped_column(
         Enum(ReminderStatus), nullable=False, default=ReminderStatus.PENDING, index=True
     )

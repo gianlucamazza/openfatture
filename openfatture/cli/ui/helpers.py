@@ -6,7 +6,7 @@ import questionary
 from rich.console import Console
 
 from openfatture.cli.ui.styles import openfatture_style
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura
 
 console = Console()
@@ -23,7 +23,7 @@ def select_cliente(message: str = "Seleziona cliente:", allow_none: bool = False
     Returns:
         Selected Client or None
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         clienti = db.query(Cliente).order_by(Cliente.denominazione).all()
 
@@ -80,7 +80,7 @@ def select_fattura(
     Returns:
         Selected Invoice or None
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         query = db.query(Fattura).order_by(Fattura.anno.desc(), Fattura.numero.desc())
 
@@ -106,6 +106,7 @@ def select_fattura(
                 value=f.id,
             )
             for f in fatture
+            if f.cliente is not None  # Skip if cliente is None
         ]
 
         fattura_id = questionary.select(
@@ -189,7 +190,7 @@ def select_multiple_fatture(
     Returns:
         List of selected invoices
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         query = db.query(Fattura).order_by(Fattura.anno.desc(), Fattura.numero.desc())
 
@@ -216,6 +217,7 @@ def select_multiple_fatture(
                 checked=False,  # None pre-selected
             )
             for f in fatture
+            if f.cliente is not None  # Skip if cliente is None
         ]
 
         selected_ids = questionary.checkbox(
@@ -243,7 +245,7 @@ def select_multiple_clienti(
     Returns:
         List of selected clients
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         clienti = db.query(Cliente).order_by(Cliente.denominazione).all()
 

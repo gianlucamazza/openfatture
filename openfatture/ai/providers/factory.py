@@ -1,6 +1,6 @@
 """Factory for creating LLM providers."""
 
-from typing import Literal
+from typing import Literal, TypedDict
 
 from openfatture.ai.config import AISettings, get_ai_settings
 from openfatture.ai.providers.anthropic import AnthropicProvider
@@ -10,6 +10,30 @@ from openfatture.ai.providers.openai import OpenAIProvider
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+class ProviderConfig(TypedDict, total=False):
+    """
+    Type-safe configuration for LLM providers.
+
+    All fields are optional to support partial configuration updates.
+    Used for type-safe **kwargs unpacking in provider constructors.
+
+    Fields:
+        api_key: API key for authentication (OpenAI, Anthropic)
+        base_url: Base URL for API (Ollama, or custom endpoints)
+        model: Model name to use
+        temperature: Generation temperature (0.0-2.0)
+        max_tokens: Maximum tokens to generate
+        timeout: Request timeout in seconds
+    """
+
+    api_key: str
+    base_url: str
+    model: str
+    temperature: float
+    max_tokens: int
+    timeout: int
 
 
 def create_provider(
@@ -89,7 +113,7 @@ def create_provider(
 
 def _create_openai_provider(
     settings: AISettings,
-    **kwargs,
+    **kwargs: str | int | float,
 ) -> OpenAIProvider:
     """Create OpenAI provider."""
     # Check if API key is configured
@@ -102,22 +126,23 @@ def _create_openai_provider(
             provider="openai",
         )
 
-    # Merge kwargs with settings
-    config = {
+    # Merge kwargs with settings (type-safe)
+    config: ProviderConfig = {
         "api_key": api_key,
         "model": settings.openai_model,
         "temperature": settings.temperature,
         "max_tokens": settings.max_tokens,
         "timeout": settings.request_timeout_seconds,
     }
-    config.update(kwargs)
+    # Update with kwargs (cast to match TypedDict)
+    config.update(kwargs)  # type: ignore[typeddict-item]
 
     return OpenAIProvider(**config)
 
 
 def _create_anthropic_provider(
     settings: AISettings,
-    **kwargs,
+    **kwargs: str | int | float,
 ) -> AnthropicProvider:
     """Create Anthropic provider."""
     # Check if API key is configured
@@ -130,33 +155,37 @@ def _create_anthropic_provider(
             provider="anthropic",
         )
 
-    # Merge kwargs with settings
-    config = {
+    # Merge kwargs with settings (type-safe)
+    config: ProviderConfig = {
         "api_key": api_key,
         "model": settings.anthropic_model,
         "temperature": settings.temperature,
         "max_tokens": settings.max_tokens,
         "timeout": settings.request_timeout_seconds,
     }
-    config.update(kwargs)
+    # Update with kwargs (cast to match TypedDict)
+    config.update(kwargs)  # type: ignore[typeddict-item]
 
     return AnthropicProvider(**config)
 
 
 def _create_ollama_provider(
     settings: AISettings,
-    **kwargs,
+    **kwargs: str | int | float,
 ) -> OllamaProvider:
     """Create Ollama provider."""
-    # Merge kwargs with settings
-    config = {
+    # Merge kwargs with settings (type-safe)
+    # Note: Ollama doesn't use api_key, only base_url
+    config: ProviderConfig = {
         "base_url": settings.ollama_base_url,
         "model": settings.ollama_model,
         "temperature": settings.temperature,
         "max_tokens": settings.max_tokens,
         "timeout": settings.request_timeout_seconds,
     }
-    config.update(kwargs)
+    # Update with kwargs, but remove api_key if present (Ollama doesn't use it)
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k != "api_key"}
+    config.update(filtered_kwargs)  # type: ignore[typeddict-item]
 
     return OllamaProvider(**config)
 

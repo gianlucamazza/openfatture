@@ -159,7 +159,7 @@ class IBANMatcher(IMatcherStrategy):
         Returns:
             Set of normalized IBANs (uppercase, no spaces)
         """
-        ibans = set()
+        ibans: set[str] = set()
 
         reference = self._get_text(transaction, "reference")
         if reference:
@@ -270,7 +270,7 @@ class IBANMatcher(IMatcherStrategy):
             payment: Payment record
 
         Returns:
-            Confidence score
+            Confidence score (float)
         """
         confidence = Decimal(str(base_confidence))
 
@@ -292,7 +292,8 @@ class IBANMatcher(IMatcherStrategy):
         elif date_diff_days <= 3:
             confidence = min(Decimal("1.0"), confidence + Decimal("0.02"))  # Close date
 
-        return confidence
+        # Convert to float for MatchResult compatibility
+        return float(confidence)
 
     def _build_match_reason(
         self,
@@ -346,11 +347,21 @@ class IBANMatcher(IMatcherStrategy):
             f"amount_tolerance={self.amount_tolerance_pct}%)>"
         )
 
-    def _validate_confidence(self, confidence: float | Decimal) -> Decimal:
-        """Clamp confidence to [0.0, 1.0] and return Decimal."""
+    def _validate_confidence(self, confidence: float | Decimal) -> float:
+        """Clamp confidence to [0.0, 1.0] and return float.
+
+        Overrides base class to accept both float and Decimal for internal
+        calculations, but always returns float for MatchResult compatibility.
+
+        Args:
+            confidence: Confidence value (float or Decimal)
+
+        Returns:
+            Clamped confidence as float (0.0-1.0)
+        """
         value = Decimal(str(confidence))
         if value < Decimal("0.0"):
-            return Decimal("0.0")
+            return 0.0
         if value > Decimal("1.0"):
-            return Decimal("1.0")
-        return value
+            return 1.0
+        return float(value)

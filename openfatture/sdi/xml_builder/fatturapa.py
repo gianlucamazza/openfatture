@@ -262,7 +262,7 @@ class FatturaPABuilder:
         # DatiRiepilogo (VAT summary by rate)
         from collections import defaultdict
 
-        riepilogo_by_aliquota = defaultdict(lambda: Decimal("0"))
+        riepilogo_by_aliquota: dict[Decimal, Decimal] = defaultdict(lambda: Decimal("0"))
 
         for riga in fattura.righe:
             riepilogo_by_aliquota[riga.aliquota_iva] += riga.imponibile

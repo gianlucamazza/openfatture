@@ -37,7 +37,7 @@ class RateLimiter:
         """
         self.max_calls = max_calls
         self.period = period
-        self.calls = deque()
+        self.calls: deque[float] = deque()  # Timestamps of recent calls
         self.lock = Lock()
 
     def __call__(self, func: Callable) -> Callable:
@@ -199,7 +199,7 @@ class SlidingWindowRateLimiter:
         """
         self.max_calls = max_calls
         self.window = window
-        self.calls = []
+        self.calls: list[datetime] = []  # Timestamps of recent calls
         self.lock = Lock()
 
     def acquire(self, blocking: bool = True, timeout: float | None = None) -> bool:

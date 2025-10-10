@@ -3,7 +3,7 @@
 from typing import Any
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente
 from openfatture.utils.logging import get_logger
 
@@ -29,7 +29,7 @@ def search_clients(
     Returns:
         Dictionary with search results
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         # Build query
         db_query = db.query(Cliente)
@@ -86,11 +86,11 @@ def get_client_details(cliente_id: int) -> dict[str, Any]:
     Returns:
         Dictionary with client details
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 
-        if not cliente:
+        if cliente is None:
             return {"error": f"Cliente {cliente_id} non trovato"}
 
         # Format details
@@ -150,7 +150,7 @@ def get_client_stats() -> dict[str, Any]:
     Returns:
         Dictionary with client stats
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         stats = {
             "totale_clienti": db.query(Cliente).count(),

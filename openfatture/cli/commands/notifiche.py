@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from openfatture.sdi.notifiche.processor import NotificationProcessor
-from openfatture.storage.database.base import SessionLocal, init_db
+from openfatture.storage.database.base import get_session, init_db
 from openfatture.storage.database.models import LogSDI
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
@@ -50,7 +50,7 @@ def process_notification(
     console.print(f"[cyan]Size:[/cyan] {file.stat().st_size} bytes\n")
 
     settings = get_settings()
-    db = SessionLocal()
+    db = get_session()
 
     try:
         # Initialize processor with optional email sender
@@ -69,7 +69,7 @@ def process_notification(
 
         success, error, notification = processor.process_file(file)
 
-        if not success:
+        if not success or notification is None:
             console.print(f"\n[red]❌ Error: {error}[/red]")
             raise typer.Exit(1)
 
@@ -126,7 +126,7 @@ def list_notifications(
 
     console.print("\n[bold blue]📬 SDI Notifications[/bold blue]\n")
 
-    db = SessionLocal()
+    db = get_session()
     try:
         query = db.query(LogSDI).order_by(LogSDI.data_ricezione.desc())
 
@@ -159,6 +159,10 @@ def list_notifications(
                 "NE": "blue",
             }.get(n.tipo_notifica, "white")
 
+            # Skip if fattura or cliente is None
+            if n.fattura is None or n.fattura.cliente is None:
+                continue
+
             table.add_row(
                 str(n.id),
                 f"[{type_color}]{n.tipo_notifica}[/{type_color}]",
@@ -187,11 +191,11 @@ def show_notification(
     """
     ensure_db()
 
-    db = SessionLocal()
+    db = get_session()
     try:
         notifica = db.query(LogSDI).filter(LogSDI.id == notification_id).first()
 
-        if not notifica:
+        if notifica is None:
             console.print(f"[red]Notification {notification_id} not found[/red]")
             raise typer.Exit(1)
 

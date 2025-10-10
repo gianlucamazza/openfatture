@@ -74,3 +74,30 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def get_session() -> Session:
+    """
+    Get a database session directly (not a generator).
+
+    This is a helper function for CLI commands and other synchronous code
+    that needs a session. The caller is responsible for closing the session.
+
+    Returns:
+        Session: Database session
+
+    Raises:
+        RuntimeError: If database not initialized
+
+    Usage:
+        db = get_session()
+        try:
+            # Use db
+            pass
+        finally:
+            db.close()
+    """
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+
+    return SessionLocal()

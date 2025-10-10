@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
-from openfatture.storage.database.base import SessionLocal, init_db
+from openfatture.storage.database.base import get_session, init_db
 from openfatture.storage.database.models import Cliente
 from openfatture.utils.config import get_settings
 from openfatture.utils.validators import (
@@ -80,7 +80,7 @@ def add_cliente(
         raise typer.Exit(1)
 
     # Create client
-    db = SessionLocal()
+    db = get_session()
     try:
         cliente = Cliente(
             denominazione=denominazione,
@@ -133,7 +133,7 @@ def list_clienti(
     """List all clients."""
     ensure_db()
 
-    db = SessionLocal()
+    db = get_session()
     try:
         clienti = db.query(Cliente).order_by(Cliente.denominazione).limit(limit).all()
 
@@ -172,7 +172,7 @@ def show_cliente(
     """Show detailed client information."""
     ensure_db()
 
-    db = SessionLocal()
+    db = get_session()
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 
@@ -222,7 +222,7 @@ def delete_cliente(
     """Delete a client."""
     ensure_db()
 
-    db = SessionLocal()
+    db = get_session()
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 

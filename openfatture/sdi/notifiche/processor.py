@@ -207,7 +207,23 @@ class NotificationProcessor:
         Args:
             fattura: Invoice related to notification
             notification: Notification data
+
+        Raises:
+            RuntimeError: If email_sender is not configured (internal error)
+
+        Note:
+            This method should only be called when email_sender is configured.
+            The caller checks `if self.email_sender:` before calling this method.
+            If email_sender is None here, it indicates a programming error.
         """
+        # Type narrowing: explicit None check for MyPy
+        # This should never happen if caller follows the contract
+        if self.email_sender is None:
+            raise RuntimeError(
+                "Internal error: email_sender is None. "
+                "This method should only be called when email_sender is configured."
+            )
+
         try:
             # Determine which notification method to call based on type
             if notification.tipo == TipoNotifica.ATTESTAZIONE_TRASMISSIONE:

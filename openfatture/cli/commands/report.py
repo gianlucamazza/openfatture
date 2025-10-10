@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from openfatture.storage.database.base import SessionLocal, init_db
+from openfatture.storage.database.base import get_session, init_db
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.config import get_settings
 
@@ -53,7 +53,7 @@ def report_iva(
         mese_inizio, mese_fine = 1, 12
         console.print("[cyan]Full year[/cyan]\n")
 
-    db = SessionLocal()
+    db = get_session()
     try:
         # Query invoices
         query = (
@@ -100,7 +100,9 @@ def report_iva(
         from collections import defaultdict
         from decimal import Decimal
 
-        by_aliquota = defaultdict(lambda: {"imponibile": Decimal("0"), "iva": Decimal("0")})
+        by_aliquota: dict[Decimal, dict[str, Decimal]] = defaultdict(
+            lambda: {"imponibile": Decimal("0"), "iva": Decimal("0")}
+        )
 
         for f in fatture:
             for riga in f.righe:
@@ -142,7 +144,7 @@ def report_clienti(
 
     console.print(f"\n[bold blue]📊 Client Revenue Report - {anno}[/bold blue]\n")
 
-    db = SessionLocal()
+    db = get_session()
     try:
         from sqlalchemy import func
 
@@ -174,6 +176,9 @@ def report_clienti(
             from openfatture.storage.database.models import Cliente
 
             cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+            if cliente is None:
+                # Skip if client was deleted
+                continue
 
             table.add_row(
                 str(i),

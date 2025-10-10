@@ -403,7 +403,7 @@ class ChatSession(BaseModel):
         if self.metadata.total_tokens > self.max_tokens:
             # Keep last N messages that fit within token limit
             cumulative_tokens = 0
-            keep_messages = []
+            keep_messages: list[ChatMessage] = []
 
             for msg in reversed(self.messages):
                 if msg.role == Role.SYSTEM:

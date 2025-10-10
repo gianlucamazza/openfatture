@@ -78,7 +78,7 @@ class BaseLLMProvider(ABC):
         pass
 
     @abstractmethod
-    async def stream(
+    def stream(
         self,
         messages: list[Message],
         system_prompt: str | None = None,
@@ -88,6 +88,10 @@ class BaseLLMProvider(ABC):
     ) -> AsyncIterator[str]:
         """
         Stream response tokens from the LLM.
+
+        This method returns an async generator that yields response tokens.
+        Subclasses should implement this as an async generator function
+        using 'async def' and 'yield'.
 
         Args:
             messages: List of conversation messages
@@ -101,6 +105,10 @@ class BaseLLMProvider(ABC):
 
         Raises:
             ProviderError: If streaming fails
+
+        Note:
+            This is NOT an async function - it's a sync function that returns
+            an AsyncIterator. Implement as: async def stream() -> AsyncIterator[str]
         """
         pass
 

@@ -11,7 +11,7 @@ from rich.table import Table
 from rich.text import Text
 from sqlalchemy import extract, func
 
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 
 console = Console()
@@ -22,7 +22,7 @@ class DashboardData:
 
     def __init__(self):
         """Initialize with database session."""
-        self.db = SessionLocal()
+        self.db = get_session()
 
     def close(self):
         """Close database session."""
@@ -322,6 +322,10 @@ def create_recent_invoices_table(data: DashboardData, limit: int = 5) -> Table:
     }
 
     for fattura in recent:
+        # Skip if cliente is None
+        if fattura.cliente is None:
+            continue
+
         emoji = status_emoji.get(fattura.stato, "📄")
         client_name = (
             fattura.cliente.denominazione[:30] + "..."

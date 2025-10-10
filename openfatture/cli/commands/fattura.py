@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
 
-from openfatture.storage.database.base import SessionLocal, init_db
+from openfatture.storage.database.base import get_session, init_db
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
@@ -39,7 +39,7 @@ def crea_fattura(
 
     console.print("\n[bold blue]🧾 Create New Invoice[/bold blue]\n")
 
-    db = SessionLocal()
+    db = get_session()
     try:
         # Select client
         if not cliente_id:
@@ -195,7 +195,7 @@ def list_fatture(
     """List invoices."""
     ensure_db()
 
-    db = SessionLocal()
+    db = get_session()
     try:
         query = db.query(Fattura).order_by(Fattura.anno.desc(), Fattura.numero.desc())
 
@@ -255,7 +255,7 @@ def show_fattura(
     """Show invoice details."""
     ensure_db()
 
-    db = SessionLocal()
+    db = get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
@@ -338,7 +338,7 @@ def delete_fattura(
     """Delete an invoice."""
     ensure_db()
 
-    db = SessionLocal()
+    db = get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
@@ -385,7 +385,7 @@ def genera_xml(
 
     console.print("\n[bold blue]🔧 Generating FatturaPA XML[/bold blue]\n")
 
-    db = SessionLocal()
+    db = get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
@@ -457,7 +457,7 @@ def invia_fattura(
 
     console.print("\n[bold blue]📤 Sending Invoice to SDI[/bold blue]\n")
 
-    db = SessionLocal()
+    db = get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 

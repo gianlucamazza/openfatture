@@ -3,7 +3,7 @@
 from typing import Any
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
 
@@ -35,7 +35,7 @@ def search_invoices(
     Returns:
         Dictionary with search results
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         # Build query
         db_query = db.query(Fattura)
@@ -67,6 +67,10 @@ def search_invoices(
         # Format results
         results = []
         for f in fatture:
+            # Skip if cliente is None
+            if f.cliente is None:
+                continue
+
             results.append(
                 {
                     "id": f.id,
@@ -103,12 +107,15 @@ def get_invoice_details(fattura_id: int) -> dict[str, Any]:
     Returns:
         Dictionary with invoice details
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
-        if not fattura:
+        if fattura is None:
             return {"error": f"Fattura {fattura_id} non trovata"}
+
+        if fattura.cliente is None:
+            return {"error": f"Fattura {fattura_id} has no associated cliente"}
 
         # Format details
         details = {
@@ -165,7 +172,7 @@ def get_invoice_stats(anno: int | None = None) -> dict[str, Any]:
     """
     from datetime import datetime
 
-    db = SessionLocal()
+    db = get_session()
     try:
         year = anno or datetime.now().year
 
