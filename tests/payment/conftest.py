@@ -108,7 +108,7 @@ def matched_transaction(db_session: Session, bank_account: BankAccount) -> BankT
         status=TransactionStatus.MATCHED,
         matched_payment_id=1,  # Assume payment exists
         match_confidence=0.95,
-        match_type=MatchType.AUTO,
+        match_type=MatchType.EXACT,
     )
     db_session.add(transaction)
     db_session.commit()

@@ -28,7 +28,9 @@ class TestTransactionStatus:
 
     def test_enum_str_representation(self):
         """Test string representation of enum members."""
-        assert str(TransactionStatus.UNMATCHED) == "TransactionStatus.UNMATCHED"
+        assert str(TransactionStatus.UNMATCHED) == "unmatched"
+        assert str(TransactionStatus.MATCHED) == "matched"
+        assert str(TransactionStatus.IGNORED) == "ignored"
         assert TransactionStatus.MATCHED.value == "matched"
 
     def test_enum_database_persistence(self, db_session: Session, bank_account):
@@ -67,17 +69,18 @@ class TestMatchType:
 
     def test_all_match_types_defined(self):
         """Test that all expected match types are defined."""
-        expected_types = {"AUTO", "MANUAL", "EXACT", "FUZZY", "IBAN", "DATE_WINDOW", "COMPOSITE"}
+        expected_types = {"MANUAL", "EXACT", "FUZZY", "IBAN", "DATE_WINDOW", "COMPOSITE"}
         actual_types = {mt.name for mt in MatchType}
 
-        assert expected_types.issubset(actual_types)
+        assert expected_types == actual_types
 
     def test_match_type_values(self):
         """Test enum values match expected strings."""
-        assert MatchType.AUTO.value == "auto"
         assert MatchType.MANUAL.value == "manual"
         assert MatchType.EXACT.value == "exact"
         assert MatchType.FUZZY.value == "fuzzy"
+        assert MatchType.IBAN.value == "iban"
+        assert MatchType.COMPOSITE.value == "composite"
 
 
 class TestReminderStatus:
@@ -95,9 +98,8 @@ class TestReminderStatus:
 
         reminder = PaymentReminder(
             payment_id=payment_with_reminder.id,
-            scheduled_date=date.today(),
-            days_before_due=7,
-            reminder_strategy=ReminderStrategy.DEFAULT,
+            reminder_date=date.today(),
+            strategy=ReminderStrategy.DEFAULT,
             status=ReminderStatus.SENT,
         )
 
