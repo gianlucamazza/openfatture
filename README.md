@@ -7,9 +7,42 @@
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
 [![CI Tests](https://github.com/gianlucamazza/openfatture/actions/workflows/test.yml/badge.svg)](https://github.com/gianlucamazza/openfatture/actions/workflows/test.yml)
 [![Release](https://github.com/gianlucamazza/openfatture/actions/workflows/release.yml/badge.svg)](https://github.com/gianlucamazza/openfatture/actions/workflows/release.yml)
+[![Media Generation](https://github.com/gianlucamazza/openfatture/actions/workflows/media-generation.yml/badge.svg)](https://github.com/gianlucamazza/openfatture/actions/workflows/media-generation.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+---
+
+## Demo
+
+<div align="center">
+
+### 🎥 See OpenFatture in Action
+
+**Quick Start: Setup & Configuration**
+
+https://github.com/user-attachments/assets/scenario_a_onboarding.mp4
+
+**Creating Professional Invoices**
+
+https://github.com/user-attachments/assets/scenario_b_invoice.mp4
+
+**AI-Powered Assistant with Local Ollama**
+
+https://github.com/user-attachments/assets/scenario_c_ai.mp4
+
+**Batch Operations & Analytics**
+
+https://github.com/user-attachments/assets/scenario_d_batch.mp4
+
+**PEC Integration & SDI Notifications**
+
+https://github.com/user-attachments/assets/scenario_e_pec.mp4
+
+> **📹 All demo videos:** [media/output/](media/output/) • **📸 Screenshots:** [media/screenshots/](media/screenshots/)
+
+</div>
 
 ---
 
@@ -119,6 +152,8 @@ success, error = sender.send_invoice_to_sdi(fattura, xml_path, signed=False)
 ---
 
 ## Architecture
+
+> **📐 Visual Diagrams:** See [docs/ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md) for Mermaid diagrams of system architecture, AI flows, SDI workflow, batch operations, and data model.
 
 ```
 openfatture/
@@ -392,8 +427,12 @@ Complete documentation is available in the `docs/` directory:
 | Document | Description |
 |----------|-------------|
 | [QUICKSTART.md](docs/QUICKSTART.md) | Step-by-step guide to get started in 15 minutes |
+| [ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md) | **NEW!** Visual Mermaid diagrams (system, AI, SDI, batch, data model) |
+| [AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) | AI module architecture and agent implementation details |
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | Complete reference for all configuration options |
 | [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | Email templates system documentation |
+| [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) | Full CLI command catalogue with examples |
+| [BATCH_OPERATIONS.md](docs/BATCH_OPERATIONS.md) | CSV import/export workflow and best practices |
 
 ### Examples
 

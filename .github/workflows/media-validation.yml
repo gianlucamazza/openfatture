@@ -1,0 +1,174 @@
+name: Media Validation
+
+on:
+  pull_request:
+    paths:
+      - 'media/automation/**/*.tape'
+      - 'scripts/reset_demo.sh'
+      - 'scripts/check_ollama.sh'
+      - 'scripts/optimize_videos.sh'
+      - 'scripts/generate_gifs.sh'
+      - '.github/workflows/media-*.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Lint tape files
+        run: |
+          echo "🔍 Validating tape files..."
+          validation_failed=0
+
+          for tape in media/automation/*.tape; do
+            echo ""
+            echo "Validating $tape..."
+
+            # Check syntax - must have Output and basic commands
+            if ! grep -E "^(Output|Set|Type|Enter|Sleep|Ctrl)" "$tape" > /dev/null; then
+              echo "❌ Invalid syntax in $tape"
+              validation_failed=1
+              continue
+            fi
+
+            # Check required settings
+            if ! grep -q "^Output " "$tape"; then
+              echo "❌ Missing 'Output' directive in $tape"
+              validation_failed=1
+            fi
+
+            if ! grep -q "^Set Shell" "$tape"; then
+              echo "⚠️  Missing 'Set Shell' in $tape"
+            fi
+
+            if ! grep -q "^Set FontFamily" "$tape"; then
+              echo "⚠️  Missing 'Set FontFamily' in $tape"
+            fi
+
+            if ! grep -q "^Set Theme" "$tape"; then
+              echo "⚠️  Missing 'Set Theme' in $tape"
+            fi
+
+            # Check for valid time units in Sleep commands
+            if grep -E "^Sleep [0-9]+$" "$tape" > /dev/null; then
+              echo "⚠️  Sleep commands should have time units (ms/s) in $tape"
+            fi
+
+            # Check for supported theme
+            if grep -q 'Set Theme "Solarized Dark"' "$tape"; then
+              echo "❌ Unsupported theme 'Solarized Dark' in $tape (use 'Dracula' or other supported theme)"
+              validation_failed=1
+            fi
+
+            if [ $validation_failed -eq 0 ]; then
+              echo "✓ $tape is valid"
+            fi
+          done
+
+          if [ $validation_failed -ne 0 ]; then
+            echo ""
+            echo "❌ Tape validation failed!"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All tape files are valid"
+
+      - name: Validate shell scripts
+        run: |
+          echo "🔍 Validating shell scripts..."
+
+          for script in scripts/reset_demo.sh scripts/check_ollama.sh scripts/optimize_videos.sh scripts/generate_gifs.sh; do
+            if [ -f "$script" ]; then
+              echo "Checking $script..."
+              bash -n "$script"
+              echo "✓ $script syntax OK"
+            fi
+          done
+
+          echo "✅ All shell scripts are valid"
+
+      - name: Check for common issues
+        run: |
+          echo "🔍 Checking for common issues..."
+
+          # Check for hardcoded API keys
+          if grep -r "sk-ant-api" media/automation/ scripts/ 2>/dev/null; then
+            echo "❌ Hardcoded API key found! Use environment variables instead."
+            exit 1
+          fi
+
+          # Check for absolute paths
+          if grep -E "/(home|Users)/" media/automation/*.tape 2>/dev/null; then
+            echo "⚠️  Absolute paths found in tape files. Consider using relative paths."
+          fi
+
+          echo "✅ No common issues found"
+
+      - name: Comment PR with validation results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const conclusion = '${{ job.status }}';
+            const emoji = conclusion === 'success' ? '✅' : '❌';
+            const status = conclusion === 'success' ? 'passed' : 'failed';
+
+            const body = `${emoji} **Media validation ${status}!**
+
+            **Changed files validated:**
+            - Tape files: \`media/automation/*.tape\`
+            - Shell scripts: \`scripts/reset_demo.sh\`, \`scripts/check_ollama.sh\`
+
+            ${conclusion === 'success' ? `
+            **Test locally:**
+            \`\`\`bash
+            # Check prerequisites
+            make media-check
+
+            # Generate a single scenario
+            make media-scenarioA
+
+            # Generate all scenarios
+            make media-all
+            \`\`\`
+            ` : `
+            **Please fix the validation errors before merging.**
+
+            See the workflow logs for details.
+            `}
+
+            ---
+            *Automated validation by [Media Validation workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Validate workflow files
+        run: |
+          echo "🔍 Validating GitHub Actions workflows..."
+
+          # Check for syntax errors (basic YAML check)
+          for workflow in .github/workflows/media-*.yml; do
+            if [ -f "$workflow" ]; then
+              echo "Checking $workflow..."
+
+              # Check if file is valid YAML (basic check)
+              if ! grep -q "^name:" "$workflow"; then
+                echo "❌ Invalid workflow file: $workflow"
+                exit 1
+              fi
+
+              echo "✓ $workflow looks valid"
+            fi
+          done
+
+          echo "✅ Workflow files validated"

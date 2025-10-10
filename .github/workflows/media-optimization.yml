@@ -1,0 +1,188 @@
+name: Media Optimization
+
+on:
+  repository_dispatch:
+    types: [media-optimization-trigger]
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Run ID to download artifacts from'
+        required: true
+        type: string
+      generate_gifs:
+        description: 'Generate GIF previews'
+        type: boolean
+        default: true
+      generate_thumbnails:
+        description: 'Generate video thumbnails'
+        type: boolean
+        default: true
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Download videos from generation workflow
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: media-generation.yml
+          run_id: ${{ github.event.client_payload.run_id || inputs.source_run_id }}
+          name_is_regexp: true
+          name: 'media-videos-.*'
+          path: media/output/
+          skip_unpack: false
+
+      - name: List downloaded videos
+        run: |
+          echo "Downloaded videos:"
+          find media/output -name "*.mp4" -type f -exec ls -lh {} \;
+
+          # Move videos from subdirectories if needed
+          find media/output -name "*.mp4" -type f -exec mv {} media/output/ \;
+
+          echo ""
+          echo "Videos in media/output/:"
+          ls -lh media/output/*.mp4
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
+
+      - name: Optimize videos (HD, SD, Mobile)
+        run: |
+          echo "🎬 Optimizing videos..."
+          chmod +x scripts/optimize_videos.sh
+          ./scripts/optimize_videos.sh
+
+          echo ""
+          echo "Optimized videos:"
+          find media/videos -name "*.mp4" -type f -exec ls -lh {} \;
+
+      - name: Generate GIF previews
+        if: ${{ github.event.inputs.generate_gifs != 'false' && github.event.client_payload.run_id != '' || inputs.generate_gifs }}
+        run: |
+          echo "🎞️  Generating GIF previews..."
+          chmod +x scripts/generate_gifs.sh
+
+          # Generate 10s previews for all videos
+          ./scripts/generate_gifs.sh --preview
+
+          echo ""
+          echo "Generated GIFs:"
+          find media/gifs -name "*.gif" -type f -exec ls -lh {} \;
+
+      - name: Generate thumbnails
+        if: ${{ github.event.inputs.generate_thumbnails != 'false' || inputs.generate_thumbnails }}
+        run: |
+          echo "📸 Generating video thumbnails..."
+
+          mkdir -p media/thumbnails
+
+          for video in media/output/*.mp4; do
+            basename=$(basename "$video" .mp4)
+            thumbnail="media/thumbnails/${basename}_thumb.jpg"
+
+            echo "Creating thumbnail for $basename..."
+            ffmpeg -i "$video" -ss 00:00:01 -vframes 1 -vf "scale=640:-1" "$thumbnail" -loglevel error
+
+            echo "✓ $thumbnail"
+          done
+
+          echo ""
+          echo "Generated thumbnails:"
+          ls -lh media/thumbnails/*.jpg
+
+      - name: Calculate size savings
+        run: |
+          echo "📊 Size comparison:"
+          echo ""
+
+          original_size=$(du -ch media/output/*.mp4 | grep total | awk '{print $1}')
+          echo "Original videos:    $original_size"
+
+          if [ -d media/videos/hd ]; then
+            hd_size=$(du -ch media/videos/hd/*.mp4 2>/dev/null | grep total | awk '{print $1}' || echo "N/A")
+            echo "HD (720p):          $hd_size"
+          fi
+
+          if [ -d media/videos/sd ]; then
+            sd_size=$(du -ch media/videos/sd/*.mp4 2>/dev/null | grep total | awk '{print $1}' || echo "N/A")
+            echo "SD (480p):          $sd_size"
+          fi
+
+          if [ -d media/videos/mobile ]; then
+            mobile_size=$(du -ch media/videos/mobile/*.mp4 2>/dev/null | grep total | awk '{print $1}' || echo "N/A")
+            echo "Mobile (360p):      $mobile_size"
+          fi
+
+          if [ -d media/gifs ]; then
+            gif_size=$(du -ch media/gifs/*.gif 2>/dev/null | grep total | awk '{print $1}' || echo "N/A")
+            echo "GIF previews:       $gif_size"
+          fi
+
+      - name: Upload optimized videos
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-optimized-videos-${{ github.run_number }}
+          path: media/videos/
+          retention-days: 30
+          compression-level: 0
+
+      - name: Upload GIFs
+        if: ${{ github.event.inputs.generate_gifs != 'false' || inputs.generate_gifs }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-gifs-${{ github.run_number }}
+          path: media/gifs/
+          retention-days: 30
+          compression-level: 6
+
+      - name: Upload thumbnails
+        if: ${{ github.event.inputs.generate_thumbnails != 'false' || inputs.generate_thumbnails }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-thumbnails-${{ github.run_number }}
+          path: media/thumbnails/
+          retention-days: 30
+          compression-level: 6
+
+      - name: Generate summary
+        run: |
+          echo "## 🎨 Media Optimization Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "**Source Run:** ${{ github.event.client_payload.run_id || inputs.source_run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Generated Assets:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -d media/videos/hd ]; then
+            echo "**HD Videos (720p):**" >> $GITHUB_STEP_SUMMARY
+            ls -lh media/videos/hd/*.mp4 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- None" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -d media/videos/sd ]; then
+            echo "**SD Videos (480p):**" >> $GITHUB_STEP_SUMMARY
+            ls -lh media/videos/sd/*.mp4 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- None" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -d media/gifs ]; then
+            echo "**GIF Previews:**" >> $GITHUB_STEP_SUMMARY
+            ls -lh media/gifs/*.gif | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- None" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifacts from the [Artifacts section](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) above." >> $GITHUB_STEP_SUMMARY

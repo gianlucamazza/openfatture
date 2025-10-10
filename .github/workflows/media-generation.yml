@@ -1,0 +1,171 @@
+name: Media Generation
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Scenario to generate'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - A
+          - B
+          - C
+          - D
+          - E
+      skip_optimization:
+        description: 'Skip video optimization'
+        type: boolean
+        default: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+  UV_SYSTEM_PYTHON: "1"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: media-automation
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Setup Git LFS
+        run: |
+          git lfs install
+          git lfs pull
+
+      - name: Install VHS
+        run: |
+          curl -fsSL https://github.com/charmbracelet/vhs/releases/download/v0.10.0/vhs_Linux_x86_64.tar.gz | tar -xz
+          sudo mv vhs /usr/local/bin/
+          vhs --version
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Python dependencies
+        run: uv sync --all-extras
+
+      - name: Configure Anthropic AI
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          cat > .env <<EOF
+          # Database
+          DATABASE_URL=sqlite:///./openfatture_demo.db
+
+          # Cedente (demo data)
+          CEDENTE_DENOMINAZIONE="OpenFatture Demo Studio"
+          CEDENTE_PARTITA_IVA=04567890123
+          CEDENTE_CODICE_FISCALE=DMOGLC85A01H501Y
+          CEDENTE_REGIME_FISCALE=RF19
+          CEDENTE_INDIRIZZO="Via Digitale 42"
+          CEDENTE_CAP=20100
+          CEDENTE_COMUNE=Milano
+          CEDENTE_PROVINCIA=MI
+          CEDENTE_NAZIONE=IT
+          CEDENTE_TELEFONO="+39 02 1234567"
+          CEDENTE_EMAIL=demo@openfatture.dev
+
+          # AI Configuration - Anthropic Claude Sonnet 4.5
+          AI_PROVIDER=anthropic
+          AI_MODEL=claude-sonnet-4-5
+          OPENFATTURE_AI_ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+          AI_TEMPERATURE=0.7
+          AI_MAX_TOKENS=2000
+          AI_CHAT_ENABLED=true
+          AI_TOOLS_ENABLED=true
+
+          # Notifications
+          NOTIFICATION_EMAIL=ci@openfatture.dev
+          NOTIFICATION_ENABLED=false
+          LOCALE=it
+          EOF
+
+          echo "✓ Anthropic configured with claude-sonnet-4-5"
+
+      - name: Verify Anthropic configuration
+        run: |
+          uv run python -c "
+          from openfatture.ai.config.settings import get_ai_settings
+          settings = get_ai_settings()
+          print(f'Provider: {settings.provider}')
+          print(f'Model: {settings.anthropic_model}')
+          print(f'Configured: {settings.is_provider_configured()}')
+          assert settings.provider == 'anthropic'
+          assert settings.anthropic_model == 'claude-sonnet-4-5'
+          assert settings.is_provider_configured()
+          print('✓ Anthropic configuration verified')
+          "
+
+      - name: Reset demo environment
+        run: |
+          chmod +x scripts/reset_demo.sh
+          ./scripts/reset_demo.sh
+          echo "✓ Demo environment ready"
+
+      - name: Generate video(s)
+        run: |
+          scenario="${{ github.event.inputs.scenario || 'all' }}"
+
+          if [ "$scenario" = "all" ]; then
+            echo "→ Generating all scenarios..."
+            make media-all
+          else
+            echo "→ Generating scenario $scenario..."
+            make media-scenario${scenario}
+          fi
+
+      - name: List generated videos
+        run: |
+          echo "Generated videos:"
+          ls -lh media/output/*.mp4 | awk '{print "  " $9 " (" $5 ")"}'
+
+          total_size=$(du -ch media/output/*.mp4 | grep total | awk '{print $1}')
+          echo "Total size: $total_size"
+
+      - name: Upload videos as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-videos-${{ github.run_number }}
+          path: media/output/*.mp4
+          retention-days: 7
+          compression-level: 0  # Videos are already compressed
+
+      - name: Trigger optimization workflow
+        if: ${{ !inputs.skip_optimization }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: media-optimization-trigger
+          client-payload: '{"run_id": "${{ github.run_id }}"}'
+
+      - name: Generate summary
+        run: |
+          echo "## 🎬 Media Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scenario:** ${{ github.event.inputs.scenario || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Provider:** Anthropic Claude Sonnet 4.5" >> $GITHUB_STEP_SUMMARY
+          echo "**Videos generated:** $(ls media/output/*.mp4 | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files:" >> $GITHUB_STEP_SUMMARY
+          ls -lh media/output/*.mp4 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
