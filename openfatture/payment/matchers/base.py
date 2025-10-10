@@ -5,6 +5,7 @@ to be used interchangeably.
 """
 
 from abc import ABC, abstractmethod
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -85,3 +86,39 @@ class IMatcherStrategy(ABC):
     def __repr__(self) -> str:
         """Human-readable string representation."""
         return f"<{self.__class__.__name__}>"
+
+
+def payment_amount_for_matching(payment: "Pagamento") -> Decimal:
+    """Return the outstanding amount to use during matching comparisons."""
+
+    # Prefer dedicated outstanding attribute if available
+    saldo = getattr(payment, "saldo_residuo", None)
+    if saldo is not None:
+        try:
+            saldo_decimal = Decimal(saldo)
+        except (TypeError, ValueError):
+            saldo_decimal = Decimal("0.00")
+        if saldo_decimal >= 0:
+            return saldo_decimal
+
+    # Fallback to total minus paid
+    total = getattr(payment, "importo_da_pagare", None)
+    if total is None:
+        total = getattr(payment, "importo", Decimal("0.00"))
+
+    try:
+        total_decimal = Decimal(total)
+    except (TypeError, ValueError):
+        total_decimal = Decimal("0.00")
+
+    paid = getattr(payment, "importo_pagato", Decimal("0.00"))
+    try:
+        paid_decimal = Decimal(paid)
+    except (TypeError, ValueError):
+        paid_decimal = Decimal("0.00")
+
+    outstanding = total_decimal - paid_decimal
+    if outstanding < Decimal("0.00"):
+        outstanding = Decimal("0.00")
+
+    return outstanding

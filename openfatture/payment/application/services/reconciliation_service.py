@@ -397,9 +397,7 @@ class ReconciliationService:
 
         # Get unmatched transactions
         unmatched = self.tx_repo.get_by_status(
-            TransactionStatus.UNMATCHED,
-            account_id=account_id,
-            limit=limit
+            TransactionStatus.UNMATCHED, account_id=account_id, limit=limit
         )
 
         review_queue = []
@@ -408,15 +406,11 @@ class ReconciliationService:
         for tx in unmatched:
             # Get matches for this transaction
             matches = await self.matching_service.match_transaction(
-                tx,
-                confidence_threshold=min_conf
+                tx, confidence_threshold=min_conf
             )
 
             # Filter by confidence range
-            filtered_matches = [
-                m for m in matches
-                if min_conf <= m.confidence <= max_conf
-            ]
+            filtered_matches = [m for m in matches if min_conf <= m.confidence <= max_conf]
 
             if filtered_matches:
                 review_queue.append((tx, filtered_matches))
@@ -552,7 +546,4 @@ class ReconciliationService:
 
     def __repr__(self) -> str:
         """Human-readable string representation."""
-        return (
-            f"<ReconciliationService("
-            f"matching_service={self.matching_service})>"
-        )
+        return f"<ReconciliationService(" f"matching_service={self.matching_service})>"

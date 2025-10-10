@@ -34,7 +34,9 @@ class PaymentAllocation(Base):
         index=True,
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    allocated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    allocated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
     match_type: Mapped[MatchType | None] = mapped_column(Enum(MatchType))
     match_confidence: Mapped[float | None] = mapped_column()
     notes: Mapped[str | None] = mapped_column(Text)

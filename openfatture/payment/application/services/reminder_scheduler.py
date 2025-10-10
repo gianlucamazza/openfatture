@@ -393,7 +393,4 @@ class ReminderScheduler:
 
     def __repr__(self) -> str:
         """Human-readable string representation."""
-        return (
-            f"<ReminderScheduler("
-            f"notifier={self.notifier.__class__.__name__})>"
-        )
+        return f"<ReminderScheduler(" f"notifier={self.notifier.__class__.__name__})>"

@@ -105,7 +105,9 @@ class QIFImporter(BaseImporter):
                 if line.startswith("!Type:"):
                     account_type = line[6:].strip()
                     if account_type not in self.SUPPORTED_TYPES:
-                        print(f"Warning: Unsupported QIF type '{account_type}', attempting to parse anyway")
+                        print(
+                            f"Warning: Unsupported QIF type '{account_type}', attempting to parse anyway"
+                        )
                     continue
 
                 # Parse field code

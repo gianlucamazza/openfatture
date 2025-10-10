@@ -185,7 +185,10 @@ class BankTransactionRepository:
         return list(self.session.execute(stmt).scalars())
 
     def get_unmatched(
-        self, account_id: int | None = None, date_from: date | None = None, date_to: date | None = None
+        self,
+        account_id: int | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> list[BankTransaction]:
         """Get unmatched transactions for reconciliation.
 

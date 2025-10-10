@@ -112,9 +112,7 @@ class TestImportCommand:
             ).return_value
             mock_account_repo.get_by_id.return_value = None
 
-            result = runner.invoke(
-                app, ["import-statement", str(temp_csv), "--account", "999"]
-            )
+            result = runner.invoke(app, ["import-statement", str(temp_csv), "--account", "999"])
 
         assert result.exit_code == 1
         assert "Account 999 not found" in result.stdout
@@ -138,9 +136,7 @@ class TestImportCommand:
             ).return_value
             mock_factory.create_from_file.side_effect = ValueError("Unknown format")
 
-            result = runner.invoke(
-                app, ["import-statement", str(temp_csv), "--account", "1"]
-            )
+            result = runner.invoke(app, ["import-statement", str(temp_csv), "--account", "1"])
 
         assert result.exit_code == 1
         assert "Unknown format" in result.stdout
@@ -246,9 +242,7 @@ class TestMatchCommand:
             mock_match_result.match_type = "EXACT"
 
             with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [
-                    mock_match_result
-                ]
+                mock_loop.return_value.run_until_complete.return_value = [mock_match_result]
 
                 result = runner.invoke(app, ["match", "--auto-apply"])
 
@@ -352,9 +346,7 @@ class TestQueueCommand:
             mock_get_db.return_value.__enter__.return_value = mock_session
 
             with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [
-                    (mock_tx, [mock_match])
-                ]
+                mock_loop.return_value.run_until_complete.return_value = [(mock_tx, [mock_match])]
 
                 result = runner.invoke(app, ["queue", "--list-only"])
 
@@ -382,9 +374,7 @@ class TestQueueCommand:
             mock_get_db.return_value.__enter__.return_value = mock_session
 
             with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [
-                    (mock_tx, [mock_match])
-                ]
+                mock_loop.return_value.run_until_complete.return_value = [(mock_tx, [mock_match])]
 
                 # Mock user input to skip
                 with patch("rich.prompt.Prompt.ask", return_value="skip"):
@@ -403,9 +393,7 @@ class TestQueueCommand:
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_loop.return_value.run_until_complete.return_value = []
 
-                result = runner.invoke(
-                    app, ["queue", "--min", "0.50", "--max", "0.90"]
-                )
+                result = runner.invoke(app, ["queue", "--min", "0.50", "--max", "0.90"])
 
         # Should pass confidence range to get_review_queue
         assert result.exit_code == 0
@@ -434,9 +422,7 @@ class TestScheduleRemindersCommand:
                     mock_reminder2,
                 ]
 
-                result = runner.invoke(
-                    app, ["schedule-reminders", "123", "--strategy", "default"]
-                )
+                result = runner.invoke(app, ["schedule-reminders", "123", "--strategy", "default"])
 
         assert result.exit_code == 0
         assert "Scheduled 2 reminders" in result.stdout
@@ -444,9 +430,7 @@ class TestScheduleRemindersCommand:
 
     def test_schedule_reminders_invalid_strategy(self):
         """Test scheduling with invalid strategy."""
-        result = runner.invoke(
-            app, ["schedule-reminders", "123", "--strategy", "invalid"]
-        )
+        result = runner.invoke(app, ["schedule-reminders", "123", "--strategy", "invalid"])
 
         assert result.exit_code == 1
         assert "Invalid strategy" in result.stdout
@@ -512,9 +496,7 @@ class TestProcessRemindersCommand:
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_loop.return_value.run_until_complete.return_value = 3
 
-                result = runner.invoke(
-                    app, ["process-reminders", "--date", "2024-12-25"]
-                )
+                result = runner.invoke(app, ["process-reminders", "--date", "2024-12-25"])
 
         assert result.exit_code == 0
         assert "25/12/2024" in result.stdout

@@ -31,9 +31,7 @@ class TestTransactionStatus:
         assert str(TransactionStatus.UNMATCHED) == "TransactionStatus.UNMATCHED"
         assert TransactionStatus.MATCHED.value == "matched"
 
-    def test_enum_database_persistence(
-        self, db_session: Session, bank_account
-    ):
+    def test_enum_database_persistence(self, db_session: Session, bank_account):
         """Test that enum persists correctly to database."""
         from uuid import uuid4
         from datetime import date
@@ -91,9 +89,7 @@ class TestReminderStatus:
         assert ReminderStatus.SENT.value == "sent"
         assert ReminderStatus.FAILED.value == "failed"
 
-    def test_reminder_status_database_persistence(
-        self, db_session: Session, payment_with_reminder
-    ):
+    def test_reminder_status_database_persistence(self, db_session: Session, payment_with_reminder):
         """Test ReminderStatus persists to database correctly."""
         from datetime import date
 

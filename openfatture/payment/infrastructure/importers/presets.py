@@ -396,9 +396,7 @@ def get_preset(name: str) -> CSVConfig:
     name_lower = name.lower()
     if name_lower not in BANK_PRESETS:
         available = ", ".join(sorted(set(BANK_PRESETS.keys())))
-        raise KeyError(
-            f"Unknown bank preset: '{name}'. Available presets: {available}"
-        )
+        raise KeyError(f"Unknown bank preset: '{name}'. Available presets: {available}")
     return BANK_PRESETS[name_lower]
 
 

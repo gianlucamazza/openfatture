@@ -139,7 +139,9 @@ class EmailNotifier(INotifier):
 
             # Render template
             html_body = await self._render_template("reminder_email.html", context)
-            text_body = await self._render_template("reminder_email.txt", context, fallback_text=True)
+            text_body = await self._render_template(
+                "reminder_email.txt", context, fallback_text=True
+            )
 
             # Send email
             await self._send_email(
@@ -351,8 +353,7 @@ class CompositeNotifier(INotifier):
 
         # Check if all succeeded
         success = all(
-            result is True if not isinstance(result, Exception) else False
-            for result in results
+            result is True if not isinstance(result, Exception) else False for result in results
         )
 
         if not success:

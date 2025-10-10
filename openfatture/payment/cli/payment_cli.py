@@ -19,9 +19,14 @@ from rich.table import Table
 from sqlalchemy.orm import Session
 
 from ...storage.database import get_db
+from ...utils.logging import get_logger
+from ...ai.providers.factory import create_provider
+from ...ai.providers.base import ProviderError
+from ...ai.agents.payment_insight_agent import PaymentInsightAgent
 from ..application.notifications import ConsoleNotifier, EmailNotifier, SMTPConfig
 from ..application.services import (
     MatchingService,
+    TransactionInsightService,
     ReconciliationService,
     ReminderRepository,
     ReminderScheduler,
@@ -37,6 +42,10 @@ from ..matchers import CompositeMatcher, ExactAmountMatcher
 
 app = typer.Typer(name="payment", help="💰 Payment tracking & reconciliation")
 console = Console()
+logger = get_logger(__name__)
+
+_INSIGHT_SERVICE: TransactionInsightService | None = None
+_INSIGHT_INITIALIZED = False
 
 
 def get_db_session():
@@ -119,9 +128,8 @@ def import_statement(
             console.print(f"\n[cyan]🔍 Auto-matching with confidence >= {confidence}...[/]")
 
             # Initialize services
-            matching_service = MatchingService(
-                BankTransactionRepository(session),
-                PaymentRepository(session),
+            matching_service = _build_matching_service(
+                session,
                 strategies=[ExactAmountMatcher(), CompositeMatcher()],
             )
 
@@ -178,9 +186,8 @@ def match(
     """
     with get_db_session() as session:
         tx_repo = BankTransactionRepository(session)
-        matching_service = MatchingService(
-            tx_repo,
-            PaymentRepository(session),
+        matching_service = _build_matching_service(
+            session,
             strategies=[ExactAmountMatcher(), CompositeMatcher()],
         )
 
@@ -189,7 +196,9 @@ def match(
         )
 
         # Get unmatched transactions
-        unmatched = tx_repo.get_by_status(TransactionStatus.UNMATCHED, account_id=account_id, limit=limit)
+        unmatched = tx_repo.get_by_status(
+            TransactionStatus.UNMATCHED, account_id=account_id, limit=limit
+        )
 
         if not unmatched:
             console.print("[green]✅ No unmatched transactions[/]")
@@ -254,9 +263,8 @@ def queue(
         openfatture payment queue --min 0.50 --max 0.90
     """
     with get_db_session() as session:
-        matching_service = MatchingService(
-            BankTransactionRepository(session),
-            PaymentRepository(session),
+        matching_service = _build_matching_service(
+            session,
             strategies=[ExactAmountMatcher(), CompositeMatcher()],
         )
 
@@ -302,24 +310,32 @@ def queue(
                         if hasattr(match.payment, "fattura")
                         else f"#{match.payment.id}"
                     )
-                    table.add_row(str(j), invoice_num, f"{match.confidence:.1%}", match.match_reason[:40])
+                    table.add_row(
+                        str(j), invoice_num, f"{match.confidence:.1%}", match.match_reason[:40]
+                    )
 
                 console.print(table)
 
                 # Prompt action
                 action = Prompt.ask(
-                    "\n[bold]Action[/]", choices=["approve", "ignore", "skip", "quit"], default="skip"
+                    "\n[bold]Action[/]",
+                    choices=["approve", "ignore", "skip", "quit"],
+                    default="skip",
                 )
 
                 if action == "approve" and matches:
                     loop.run_until_complete(
-                        reconciliation_service.reconcile(tx.id, matches[0].payment.id, MatchType.MANUAL)
+                        reconciliation_service.reconcile(
+                            tx.id, matches[0].payment.id, MatchType.MANUAL
+                        )
                     )
                     console.print("[green]✅ Reconciled[/]\n")
 
                 elif action == "ignore":
                     reason = Prompt.ask("Reason (optional)", default="")
-                    loop.run_until_complete(reconciliation_service.ignore_transaction(tx.id, reason))
+                    loop.run_until_complete(
+                        reconciliation_service.ignore_transaction(tx.id, reason)
+                    )
                     console.print("[yellow]⏭️  Ignored[/]\n")
 
                 elif action == "quit":
@@ -399,7 +415,9 @@ def schedule_reminders(
 
         try:
             loop = asyncio.get_event_loop()
-            reminders = loop.run_until_complete(scheduler.schedule_reminders(payment_id, strategy_map[strategy]))
+            reminders = loop.run_until_complete(
+                scheduler.schedule_reminders(payment_id, strategy_map[strategy])
+            )
 
             console.print(f"\n[green]✅ Scheduled {len(reminders)} reminders[/]")
 
@@ -411,7 +429,11 @@ def schedule_reminders(
 
             for reminder in reminders:
                 status = "⏰ Before due" if reminder.days_before_due > 0 else "❗ After due"
-                table.add_row(reminder.scheduled_date.strftime("%d/%m/%Y"), str(reminder.days_before_due), status)
+                table.add_row(
+                    reminder.scheduled_date.strftime("%d/%m/%Y"),
+                    str(reminder.days_before_due),
+                    status,
+                )
 
             console.print(table)
 
@@ -427,7 +449,9 @@ def schedule_reminders(
 
 @app.command(name="process-reminders")
 def process_reminders(
-    target_date: Optional[str] = typer.Option(None, "--date", help="Date to process (YYYY-MM-DD), default: today"),
+    target_date: Optional[str] = typer.Option(
+        None, "--date", help="Date to process (YYYY-MM-DD), default: today"
+    ),
 ):
     """📧 Process due reminders (background job).
 
@@ -440,7 +464,9 @@ def process_reminders(
         # Process specific date
         openfatture payment process-reminders --date 2024-12-25
     """
-    process_date = datetime.strptime(target_date, "%Y-%m-%d").date() if target_date else date.today()
+    process_date = (
+        datetime.strptime(target_date, "%Y-%m-%d").date() if target_date else date.today()
+    )
 
     with get_db_session() as session:
         # Email notifier (requires SMTP config)
@@ -453,9 +479,13 @@ def process_reminders(
         )
 
         notifier = EmailNotifier(smtp_config) if os.getenv("SMTP_HOST") else ConsoleNotifier()
-        scheduler = ReminderScheduler(ReminderRepository(session), PaymentRepository(session), notifier)
+        scheduler = ReminderScheduler(
+            ReminderRepository(session), PaymentRepository(session), notifier
+        )
 
-        console.print(f"[cyan]📧 Processing reminders for {process_date.strftime('%d/%m/%Y')}...[/]")
+        console.print(
+            f"[cyan]📧 Processing reminders for {process_date.strftime('%d/%m/%Y')}...[/]"
+        )
 
         loop = asyncio.get_event_loop()
         count = loop.run_until_complete(scheduler.process_due_reminders(process_date))
@@ -510,3 +540,68 @@ def stats(
 
 if __name__ == "__main__":
     app()
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_transaction_insight_service() -> TransactionInsightService | None:
+    """Lazily initialize AI insight service (optional)."""
+    global _INSIGHT_SERVICE, _INSIGHT_INITIALIZED
+
+    if _INSIGHT_INITIALIZED:
+        return _INSIGHT_SERVICE
+
+    _INSIGHT_INITIALIZED = True
+
+    try:
+        provider = create_provider()
+        agent = PaymentInsightAgent(provider=provider)
+        _INSIGHT_SERVICE = TransactionInsightService(agent=agent)
+        logger.info(
+            "payment_cli_ai_insight_enabled",
+            provider=provider.provider_name,
+            model=provider.model,
+        )
+        console.print(
+            "[dim green]🤖 AI payment insight abilitato per analizzare causali e pagamenti parziali[/]"
+        )
+    except ProviderError as exc:
+        logger.info(
+            "payment_cli_ai_insight_disabled",
+            reason=str(exc),
+            provider=exc.provider,
+        )
+        console.print(
+            "[dim yellow]⚠️  AI insight non disponibile (configura le credenziali OPENFATTURE_AI_* per abilitarlo)[/]"
+        )
+        _INSIGHT_SERVICE = None
+    except Exception as exc:  # pragma: no cover - defensive guard
+        logger.warning(
+            "payment_cli_ai_insight_error",
+            error=str(exc),
+            error_type=type(exc).__name__,
+        )
+        console.print(f"[dim yellow]⚠️  Impossibile inizializzare l'AI insight: {exc}[/]")
+        _INSIGHT_SERVICE = None
+
+    return _INSIGHT_SERVICE
+
+
+def _build_matching_service(
+    session: Session,
+    *,
+    strategies: list = None,
+) -> MatchingService:
+    """Factory to create MatchingService with optional AI insight."""
+    strategies = strategies or [ExactAmountMatcher(), CompositeMatcher()]
+    tx_repo = BankTransactionRepository(session)
+    payment_repo = PaymentRepository(session)
+    insight_service = _get_transaction_insight_service()
+
+    return MatchingService(
+        tx_repo=tx_repo,
+        payment_repo=payment_repo,
+        strategies=strategies,
+        insight_service=insight_service,
+    )

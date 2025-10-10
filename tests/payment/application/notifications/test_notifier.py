@@ -83,9 +83,7 @@ class TestEmailNotifier:
     # ==========================================================================
 
     @pytest.mark.asyncio
-    async def test_send_reminder_success(
-        self, email_notifier, mock_reminder, mocker
-    ):
+    async def test_send_reminder_success(self, email_notifier, mock_reminder, mocker):
         """Test successful email sending with SMTP mock."""
         # Mock SMTP
         mock_smtp = mocker.MagicMock()
@@ -93,10 +91,12 @@ class TestEmailNotifier:
         mock_smtp.return_value.__enter__.return_value = mock_smtp_instance
 
         # Mock template rendering
-        email_notifier._render_template = AsyncMock(side_effect=[
-            "<html>Test HTML</html>",  # HTML body
-            "Test plain text",           # Text body
-        ])
+        email_notifier._render_template = AsyncMock(
+            side_effect=[
+                "<html>Test HTML</html>",  # HTML body
+                "Test plain text",  # Text body
+            ]
+        )
 
         with patch("smtplib.SMTP", mock_smtp):
             result = await email_notifier.send_reminder(mock_reminder)
@@ -107,15 +107,11 @@ class TestEmailNotifier:
         # Verify SMTP connection
         mock_smtp.assert_called_once_with("smtp.gmail.com", 587)
         mock_smtp_instance.starttls.assert_called_once()
-        mock_smtp_instance.login.assert_called_once_with(
-            "test@example.com", "testpassword"
-        )
+        mock_smtp_instance.login.assert_called_once_with("test@example.com", "testpassword")
         mock_smtp_instance.send_message.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_send_reminder_missing_invoice(
-        self, email_notifier, mock_reminder, mocker
-    ):
+    async def test_send_reminder_missing_invoice(self, email_notifier, mock_reminder, mocker):
         """Test that missing invoice returns False."""
         # Remove invoice from payment
         mock_reminder.payment.fattura = None
@@ -126,15 +122,15 @@ class TestEmailNotifier:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_send_reminder_smtp_exception(
-        self, email_notifier, mock_reminder, mocker
-    ):
+    async def test_send_reminder_smtp_exception(self, email_notifier, mock_reminder, mocker):
         """Test that SMTP exceptions are handled gracefully."""
         # Mock template rendering
-        email_notifier._render_template = AsyncMock(side_effect=[
-            "<html>Test</html>",
-            "Test text",
-        ])
+        email_notifier._render_template = AsyncMock(
+            side_effect=[
+                "<html>Test</html>",
+                "Test text",
+            ]
+        )
 
         # Mock SMTP to raise exception
         with patch("smtplib.SMTP") as mock_smtp:
@@ -146,9 +142,7 @@ class TestEmailNotifier:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_render_template_with_jinja2(
-        self, email_notifier, tmp_path, mocker
-    ):
+    async def test_render_template_with_jinja2(self, email_notifier, tmp_path, mocker):
         """Test template rendering with Jinja2."""
         # Create a test template
         template_dir = tmp_path / "templates"
@@ -157,23 +151,15 @@ class TestEmailNotifier:
         template_file.write_text("<h1>Hello {{ name }}</h1>")
 
         # Reinitialize notifier with template directory
-        email_notifier = EmailNotifier(
-            email_notifier.smtp_config,
-            template_dir=template_dir
-        )
+        email_notifier = EmailNotifier(email_notifier.smtp_config, template_dir=template_dir)
 
         # Render template
-        result = await email_notifier._render_template(
-            "test.html",
-            {"name": "World"}
-        )
+        result = await email_notifier._render_template("test.html", {"name": "World"})
 
         assert result == "<h1>Hello World</h1>"
 
     @pytest.mark.asyncio
-    async def test_render_template_fallback_text(
-        self, email_notifier, mock_reminder
-    ):
+    async def test_render_template_fallback_text(self, email_notifier, mock_reminder):
         """Test fallback text generation when template not found."""
         context = {
             "reminder": mock_reminder,
@@ -184,9 +170,7 @@ class TestEmailNotifier:
 
         # Request fallback text
         result = await email_notifier._render_template(
-            "nonexistent.txt",
-            context,
-            fallback_text=True
+            "nonexistent.txt", context, fallback_text=True
         )
 
         # Should return fallback text
@@ -195,16 +179,11 @@ class TestEmailNotifier:
         assert "1000.00" in result
 
     @pytest.mark.asyncio
-    async def test_send_email_validates_recipient(
-        self, email_notifier
-    ):
+    async def test_send_email_validates_recipient(self, email_notifier):
         """Test that send_email validates recipient email."""
         with pytest.raises(ValueError, match="Recipient email is required"):
             await email_notifier._send_email(
-                to_email=None,
-                subject="Test",
-                html_body="<html>Test</html>",
-                text_body="Test"
+                to_email=None, subject="Test", html_body="<html>Test</html>", text_body="Test"
             )
 
 
@@ -246,9 +225,7 @@ class TestConsoleNotifier:
     # ==========================================================================
 
     @pytest.mark.asyncio
-    async def test_send_reminder_prints_details(
-        self, console_notifier, mock_reminder, capsys
-    ):
+    async def test_send_reminder_prints_details(self, console_notifier, mock_reminder, capsys):
         """Test that console notifier prints reminder details."""
         result = await console_notifier.send_reminder(mock_reminder)
 
@@ -266,9 +243,7 @@ class TestConsoleNotifier:
         assert "15/11/2024" in captured.out
 
     @pytest.mark.asyncio
-    async def test_send_reminder_always_returns_true(
-        self, console_notifier, mock_reminder
-    ):
+    async def test_send_reminder_always_returns_true(self, console_notifier, mock_reminder):
         """Test that console notifier always succeeds."""
         result = await console_notifier.send_reminder(mock_reminder)
         assert result is True
@@ -291,9 +266,7 @@ class TestConsoleNotifier:
         assert "[REMINDER]" in captured.out
 
     @pytest.mark.asyncio
-    async def test_send_reminder_formats_correctly(
-        self, console_notifier, mock_reminder, capsys
-    ):
+    async def test_send_reminder_formats_correctly(self, console_notifier, mock_reminder, capsys):
         """Test that console output is properly formatted with separators."""
         await console_notifier.send_reminder(mock_reminder)
 
@@ -321,9 +294,7 @@ class TestCompositeNotifier:
     # ==========================================================================
 
     @pytest.mark.asyncio
-    async def test_send_reminder_all_succeed(
-        self, mock_reminder, mocker
-    ):
+    async def test_send_reminder_all_succeed(self, mock_reminder, mocker):
         """Test that composite returns True when all notifiers succeed."""
         # Create mock notifiers
         notifier1 = mocker.Mock(spec=INotifier)
@@ -343,9 +314,7 @@ class TestCompositeNotifier:
         assert notifier2.send_reminder.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_send_reminder_partial_failure(
-        self, mock_reminder, mocker
-    ):
+    async def test_send_reminder_partial_failure(self, mock_reminder, mocker):
         """Test that composite returns False when any notifier fails."""
         # First succeeds, second fails
         notifier1 = mocker.Mock(spec=INotifier)
@@ -362,9 +331,7 @@ class TestCompositeNotifier:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_send_reminder_all_fail(
-        self, mock_reminder, mocker
-    ):
+    async def test_send_reminder_all_fail(self, mock_reminder, mocker):
         """Test that composite returns False when all notifiers fail."""
         notifier1 = mocker.Mock(spec=INotifier)
         notifier1.send_reminder = AsyncMock(return_value=False)
@@ -379,9 +346,7 @@ class TestCompositeNotifier:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_send_reminder_parallel_execution(
-        self, mock_reminder, mocker
-    ):
+    async def test_send_reminder_parallel_execution(self, mock_reminder, mocker):
         """Test that notifiers execute in parallel using asyncio.gather."""
         import asyncio
 
@@ -400,6 +365,7 @@ class TestCompositeNotifier:
 
         # Measure execution time
         import time
+
         start = time.time()
         result = await composite.send_reminder(mock_reminder)
         duration = time.time() - start
@@ -409,9 +375,7 @@ class TestCompositeNotifier:
         assert duration < 0.15  # Allow some overhead
 
     @pytest.mark.asyncio
-    async def test_send_reminder_handles_exceptions(
-        self, mock_reminder, mocker
-    ):
+    async def test_send_reminder_handles_exceptions(self, mock_reminder, mocker):
         """Test that composite handles exceptions from notifiers gracefully."""
         # First succeeds, second raises exception
         notifier1 = mocker.Mock(spec=INotifier)
@@ -428,9 +392,7 @@ class TestCompositeNotifier:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_send_reminder_empty_notifiers_list(
-        self, mock_reminder
-    ):
+    async def test_send_reminder_empty_notifiers_list(self, mock_reminder):
         """Test composite with empty notifiers list."""
         composite = CompositeNotifier([])
 
@@ -440,9 +402,7 @@ class TestCompositeNotifier:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_add_notifier_dynamically(
-        self, mock_reminder, mocker
-    ):
+    async def test_add_notifier_dynamically(self, mock_reminder, mocker):
         """Test adding notifiers dynamically to composite."""
         notifier1 = mocker.Mock(spec=INotifier)
         notifier1.send_reminder = AsyncMock(return_value=True)

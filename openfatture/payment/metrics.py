@@ -46,7 +46,10 @@ matching_confidence_scores = Histogram(
 payment_reminders_sent_total = Counter(
     "openfatture_payment_reminders_sent_total",
     "Total number of payment reminders sent",
-    ["reminder_strategy", "notifier_type"],  # labels: default/aggressive/gentle/minimal, email/console
+    [
+        "reminder_strategy",
+        "notifier_type",
+    ],  # labels: default/aggressive/gentle/minimal, email/console
 )
 
 # Histogram: Import processing duration

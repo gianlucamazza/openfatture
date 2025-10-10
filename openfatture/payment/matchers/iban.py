@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy
+from .base import IMatcherStrategy, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -47,9 +47,7 @@ class IBANMatcher(IMatcherStrategy):
     # We'll support flexible IBAN detection (with/without spaces)
     IBAN_PATTERN = re.compile(r"IT\d{2}[A-Z]\d{10}[0-9A-Z]{12}", re.IGNORECASE)
 
-    def __init__(
-        self, date_tolerance_days: int = 30, amount_tolerance_pct: float = 5.0
-    ) -> None:
+    def __init__(self, date_tolerance_days: int = 30, amount_tolerance_pct: float = 5.0) -> None:
         """Initialize IBAN matcher.
 
         Args:
@@ -115,7 +113,9 @@ class IBANMatcher(IMatcherStrategy):
             confidence = self._calculate_confidence(transaction, payment)
 
             # Calculate amount difference
-            amount_diff = abs(transaction.amount - payment.importo)
+            transaction_amount = abs(transaction.amount)
+            payment_amount = payment_amount_for_matching(payment)
+            amount_diff = abs(transaction_amount - payment_amount)
 
             # Build match reason
             match_reason = self._build_match_reason(transaction, payment, payment_iban)
@@ -192,9 +192,7 @@ class IBANMatcher(IMatcherStrategy):
 
         return iban
 
-    def _calculate_confidence(
-        self, transaction: "BankTransaction", payment: "Pagamento"
-    ) -> float:
+    def _calculate_confidence(self, transaction: "BankTransaction", payment: "Pagamento") -> float:
         """Calculate confidence score based on amount and date match quality.
 
         Scoring:
@@ -213,8 +211,10 @@ class IBANMatcher(IMatcherStrategy):
         confidence = 0.90  # Base confidence for IBAN match
 
         # Check amount match
-        amount_diff = abs(transaction.amount - payment.importo)
-        amount_tolerance = payment.importo * (self.amount_tolerance_pct / 100)
+        transaction_amount = abs(transaction.amount)
+        payment_amount = payment_amount_for_matching(payment)
+        amount_diff = abs(transaction_amount - payment_amount)
+        amount_tolerance = payment_amount * (self.amount_tolerance_pct / 100)
         if amount_diff <= Decimal("0.01"):
             confidence = min(0.95, confidence + 0.05)  # Exact amount
         elif amount_diff <= amount_tolerance:
@@ -242,7 +242,8 @@ class IBANMatcher(IMatcherStrategy):
         Returns:
             Human-readable match reason
         """
-        amount_diff = abs(transaction.amount - payment.importo)
+        transaction_amount = abs(transaction.amount)
+        amount_diff = abs(transaction_amount - payment_amount_for_matching(payment))
         date_diff_days = abs((payment.data_scadenza - transaction.date).days)
 
         # Mask IBAN for privacy (show first 6 and last 4)

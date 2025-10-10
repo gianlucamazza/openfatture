@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy
+from .base import IMatcherStrategy, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -86,7 +86,9 @@ class ExactAmountMatcher(IMatcherStrategy):
 
         for payment in payments:
             # Check amount match (within tolerance)
-            amount_diff = abs(transaction.amount - payment.importo)
+            transaction_amount = abs(transaction.amount)
+            payment_amount = payment_amount_for_matching(payment)
+            amount_diff = abs(transaction_amount - payment_amount)
             if amount_diff > self.amount_tolerance:
                 continue
 

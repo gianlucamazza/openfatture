@@ -13,7 +13,7 @@ import pytest
 from openfatture.payment.application.services import MatchingService
 from openfatture.payment.domain.enums import MatchType, TransactionStatus
 from openfatture.payment.domain.models import BankTransaction
-from openfatture.payment.domain.value_objects import MatchResult
+from openfatture.payment.domain.value_objects import MatchResult, PaymentInsight
 from openfatture.payment.matchers import ExactAmountMatcher, IMatcherStrategy
 
 pytestmark = pytest.mark.asyncio
@@ -29,15 +29,17 @@ class MockMatcherStrategy(IMatcherStrategy):
     def match(self, transaction, candidates):
         """Return mock matches."""
         results = []
-        for i, payment in enumerate(candidates[:self.match_count]):
+        for i, payment in enumerate(candidates[: self.match_count]):
+            confidence = max(0.0, min(1.0, self.confidence - (i * 0.05)))  # Decreasing confidence
             results.append(
                 MatchResult(
+                    transaction=transaction,
                     payment=payment,
-                    confidence=self.confidence - (i * 0.05),  # Decreasing confidence
-                    match_type=MatchType.FUZZY,
+                    confidence=confidence,
                     match_reason=f"Mock match {i+1}",
-                    transaction_amount=transaction.amount,
-                    payment_amount=payment.importo_da_pagare,
+                    match_type=MatchType.FUZZY,
+                    matched_fields=["amount"],
+                    amount_diff=Decimal("0.00"),
                 )
             )
         return results
@@ -68,7 +70,7 @@ class TestMatchingService:
     def mock_payment_repo(self, mocker):
         """Mock PaymentRepository."""
         repo = mocker.Mock()
-        repo.get_unpaid = mocker.AsyncMock()
+        repo.get_unpaid = mocker.Mock()
         return repo
 
     # ==========================================================================
@@ -86,9 +88,9 @@ class TestMatchingService:
         for i in range(3):
             payment = Pagamento(
                 fattura_id=sample_fattura.id,
-                importo_da_pagare=Decimal("1000.00"),
+                importo=Decimal("1000.00"),
                 data_scadenza=bank_transaction.date,
-                stato=StatoPagamento.IN_ATTESA,
+                stato=StatoPagamento.DA_PAGARE,
             )
             db_session.add(payment)
             payments.append(payment)
@@ -106,9 +108,9 @@ class TestMatchingService:
 
         # Verify sorted by confidence
         assert len(matches) == 3
-        assert matches[0].confidence == 0.85
-        assert matches[1].confidence == 0.80
-        assert matches[2].confidence == 0.75
+        assert matches[0].confidence == pytest.approx(0.85)
+        assert matches[1].confidence == pytest.approx(0.80)
+        assert matches[2].confidence == pytest.approx(0.75)
 
         # Verify descending order
         for i in range(len(matches) - 1):
@@ -122,9 +124,9 @@ class TestMatchingService:
 
         payment = Pagamento(
             fattura_id=sample_fattura.id,
-            importo_da_pagare=Decimal("1000.00"),
+            importo=Decimal("1000.00"),
             data_scadenza=bank_transaction.date,
-            stato=StatoPagamento.IN_ATTESA,
+            stato=StatoPagamento.DA_PAGARE,
         )
         db_session.add(payment)
         db_session.commit()
@@ -136,8 +138,7 @@ class TestMatchingService:
 
         # Match with threshold 0.60
         matches = await matching_service.match_transaction(
-            bank_transaction,
-            confidence_threshold=0.60
+            bank_transaction, confidence_threshold=0.60
         )
 
         # Should filter out the 0.50 match
@@ -161,9 +162,9 @@ class TestMatchingService:
 
         payment = Pagamento(
             fattura_id=sample_fattura.id,
-            importo_da_pagare=Decimal("1000.00"),
+            importo=Decimal("1000.00"),
             data_scadenza=bank_transaction.date,
-            stato=StatoPagamento.IN_ATTESA,
+            stato=StatoPagamento.DA_PAGARE,
         )
         db_session.add(payment)
         db_session.commit()
@@ -183,16 +184,22 @@ class TestMatchingService:
         assert matches[0].confidence == 0.90
 
     async def test_match_transaction_logs_strategy_failures(
-        self, matching_service, bank_transaction, mock_payment_repo, sample_fattura, db_session, mocker
+        self,
+        matching_service,
+        bank_transaction,
+        mock_payment_repo,
+        sample_fattura,
+        db_session,
+        mocker,
     ):
         """Test that strategy failures are logged but don't stop execution."""
         from openfatture.storage.database.models import Pagamento, StatoPagamento
 
         payment = Pagamento(
             fattura_id=sample_fattura.id,
-            importo_da_pagare=Decimal("1000.00"),
+            importo=Decimal("1000.00"),
             data_scadenza=bank_transaction.date,
-            stato=StatoPagamento.IN_ATTESA,
+            stato=StatoPagamento.DA_PAGARE,
         )
         db_session.add(payment)
         db_session.commit()
@@ -220,7 +227,13 @@ class TestMatchingService:
     # ==========================================================================
 
     async def test_match_batch_parallel_execution_max_workers(
-        self, matching_service, mock_tx_repo, mock_payment_repo, bank_account, db_session, sample_fattura
+        self,
+        matching_service,
+        mock_tx_repo,
+        mock_payment_repo,
+        bank_account,
+        db_session,
+        sample_fattura,
     ):
         """Test that batch matching executes in parallel with max_workers."""
         from openfatture.storage.database.models import Pagamento, StatoPagamento
@@ -244,9 +257,9 @@ class TestMatchingService:
         # Create candidate payment
         payment = Pagamento(
             fattura_id=sample_fattura.id,
-            importo_da_pagare=Decimal("1000.00"),
+            importo=Decimal("1000.00"),
             data_scadenza=date.today(),
-            stato=StatoPagamento.IN_ATTESA,
+            stato=StatoPagamento.DA_PAGARE,
         )
         db_session.add(payment)
         db_session.commit()
@@ -267,7 +280,13 @@ class TestMatchingService:
         assert mock_tx_repo.get_by_status.called
 
     async def test_match_batch_categorizes_by_confidence(
-        self, matching_service, mock_tx_repo, mock_payment_repo, bank_account, db_session, sample_fattura
+        self,
+        matching_service,
+        mock_tx_repo,
+        mock_payment_repo,
+        bank_account,
+        db_session,
+        sample_fattura,
     ):
         """Test that batch results are categorized by confidence thresholds."""
         from openfatture.storage.database.models import Pagamento, StatoPagamento
@@ -305,9 +324,9 @@ class TestMatchingService:
 
         payment = Pagamento(
             fattura_id=sample_fattura.id,
-            importo_da_pagare=Decimal("1000.00"),
+            importo=Decimal("1000.00"),
             data_scadenza=date.today(),
-            stato=StatoPagamento.IN_ATTESA,
+            stato=StatoPagamento.DA_PAGARE,
         )
         db_session.add(payment)
         db_session.commit()
@@ -423,6 +442,56 @@ class TestMatchingService:
         # Verify no ExactAmountMatcher instances remain
         assert not any(isinstance(s, ExactAmountMatcher) for s in matching_service.strategies)
 
+    async def test_match_transaction_ai_insight_boosts_confidence(
+        self,
+        mock_tx_repo,
+        mock_payment_repo,
+        bank_transaction,
+        sample_fattura,
+    ):
+        """AI insight integration should boost match confidence and enrich reason."""
+        from openfatture.storage.database.models import Pagamento, StatoPagamento
+
+        payment = Pagamento(
+            fattura_id=sample_fattura.id,
+            importo=Decimal("1000.00"),
+            data_scadenza=bank_transaction.date,
+            stato=StatoPagamento.DA_PAGARE,
+        )
+        payment.id = 101
+        payment.fattura = sample_fattura
+
+        mock_payment_repo.get_unpaid.return_value = [payment]
+
+        class StubInsightService:
+            async def analyze(self, transaction, payments):
+                return PaymentInsight(
+                    probable_invoice_numbers=[getattr(sample_fattura, "numero", "INV-001")],
+                    is_partial_payment=True,
+                    suggested_allocation_amount=Decimal("400.00"),
+                    keywords=["acconto"],
+                    confidence=0.9,
+                    summary="La causale menziona un acconto per la fattura",
+                )
+
+        bank_transaction.raw_data = None
+
+        matching_service = MatchingService(
+            tx_repo=mock_tx_repo,
+            payment_repo=mock_payment_repo,
+            strategies=[MockMatcherStrategy(confidence=0.80)],
+            insight_service=StubInsightService(),
+        )
+
+        matches = await matching_service.match_transaction(bank_transaction)
+
+        assert matches
+        assert matches[0].confidence > 0.80
+        assert "AI partial payment" in matches[0].match_reason
+        assert bank_transaction.raw_data["ai_insight"]["probable_invoice_numbers"] == [
+            getattr(sample_fattura, "numero", "INV-001")
+        ]
+
     async def test_get_candidate_payments_date_window(
         self, matching_service, bank_transaction, mock_payment_repo
     ):
@@ -454,7 +523,13 @@ class TestMatchingService:
     # ==========================================================================
 
     async def test_suggest_matches_returns_top_n(
-        self, matching_service, mock_tx_repo, mock_payment_repo, bank_transaction, sample_fattura, db_session
+        self,
+        matching_service,
+        mock_tx_repo,
+        mock_payment_repo,
+        bank_transaction,
+        sample_fattura,
+        db_session,
     ):
         """Test that suggest_matches returns limited number of results."""
         from openfatture.storage.database.models import Pagamento, StatoPagamento
@@ -464,9 +539,9 @@ class TestMatchingService:
         for i in range(10):
             payment = Pagamento(
                 fattura_id=sample_fattura.id,
-                importo_da_pagare=Decimal("1000.00") + Decimal(i),
+                importo=Decimal("1000.00") + Decimal(i),
                 data_scadenza=date.today(),
-                stato=StatoPagamento.IN_ATTESA,
+                stato=StatoPagamento.DA_PAGARE,
             )
             db_session.add(payment)
             payments.append(payment)
@@ -484,9 +559,7 @@ class TestMatchingService:
 
         assert len(matches) <= 3
 
-    async def test_suggest_matches_raises_on_not_found(
-        self, matching_service, mock_tx_repo
-    ):
+    async def test_suggest_matches_raises_on_not_found(self, matching_service, mock_tx_repo):
         """Test that suggest_matches raises ValueError if transaction not found."""
         mock_tx_repo.get_by_id.return_value = None
 

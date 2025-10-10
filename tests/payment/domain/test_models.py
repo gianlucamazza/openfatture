@@ -180,9 +180,7 @@ class TestBankTransaction:
 
         assert debit.amount < 0
 
-    def test_transaction_duplicate_detection(
-        self, db_session: Session, bank_account: BankAccount
-    ):
+    def test_transaction_duplicate_detection(self, db_session: Session, bank_account: BankAccount):
         """Test detecting duplicate transactions (same date, amount, description)."""
         tx1 = BankTransaction(
             id=uuid4(),
@@ -207,9 +205,11 @@ class TestBankTransaction:
 
         # Both exist in DB (no unique constraint on content)
         # Duplicate detection happens at application layer
-        all_txs = db_session.query(BankTransaction).filter_by(
-            account_id=bank_account.id, date=date(2025, 1, 15), amount=Decimal("100.00")
-        ).all()
+        all_txs = (
+            db_session.query(BankTransaction)
+            .filter_by(account_id=bank_account.id, date=date(2025, 1, 15), amount=Decimal("100.00"))
+            .all()
+        )
 
         assert len(all_txs) == 2  # Duplicates allowed at DB level
 
@@ -223,9 +223,7 @@ class TestBankTransaction:
 class TestPaymentReminder:
     """Tests for PaymentReminder entity."""
 
-    def test_reminder_creation_with_payment(
-        self, db_session: Session, payment_with_reminder
-    ):
+    def test_reminder_creation_with_payment(self, db_session: Session, payment_with_reminder):
         """Test creating reminder linked to payment."""
         reminder = PaymentReminder(
             payment_id=payment_with_reminder.id,
@@ -242,9 +240,7 @@ class TestPaymentReminder:
         assert reminder.payment_id == payment_with_reminder.id
         assert reminder.status == ReminderStatus.PENDING
 
-    def test_reminder_scheduled_date_calculation(
-        self, db_session: Session, payment_with_reminder
-    ):
+    def test_reminder_scheduled_date_calculation(self, db_session: Session, payment_with_reminder):
         """Test scheduled date is calculated correctly based on due date."""
         due_date = payment_with_reminder.data_scadenza
         days_before = 7

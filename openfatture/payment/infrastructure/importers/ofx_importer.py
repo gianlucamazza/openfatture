@@ -90,8 +90,7 @@ class OFXImporter(BaseImporter):
         statement = self._find_statement(ofx)
         if statement is None:
             raise ValueError(
-                f"No matching account found in OFX file. "
-                f"Expected account_id: {self.account_id}"
+                f"No matching account found in OFX file. " f"Expected account_id: {self.account_id}"
             )
 
         # Extract transactions
@@ -262,9 +261,7 @@ class OFXImporter(BaseImporter):
         # OFX files must contain one of these signatures
         ofx_signatures = ["<OFX>", "OFXHEADER:", "<?xml"]
         if not any(sig in sample for sig in ofx_signatures):
-            raise ValueError(
-                f"File does not appear to be valid OFX format: {self.file_path.name}"
-            )
+            raise ValueError(f"File does not appear to be valid OFX format: {self.file_path.name}")
 
     def __repr__(self) -> str:
         """Human-readable string representation."""

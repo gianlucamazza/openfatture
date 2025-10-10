@@ -190,7 +190,10 @@ class TestReconciliationResult:
         )
 
         # Verify categorization logic
-        assert result.matched_count + result.review_count + result.unmatched_count == result.total_count
+        assert (
+            result.matched_count + result.review_count + result.unmatched_count
+            == result.total_count
+        )
 
         # Verify match_rate calculation
         assert result.match_rate == 7 / 20  # Only matched_count / total_count

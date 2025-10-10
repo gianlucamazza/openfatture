@@ -97,9 +97,7 @@ def bank_transaction(db_session: Session, bank_account: BankAccount) -> BankTran
 
 
 @pytest.fixture
-def matched_transaction(
-    db_session: Session, bank_account: BankAccount
-) -> BankTransaction:
+def matched_transaction(db_session: Session, bank_account: BankAccount) -> BankTransaction:
     """Create a matched transaction for testing."""
     transaction = BankTransaction(
         id=uuid4(),
@@ -119,9 +117,7 @@ def matched_transaction(
 
 
 @pytest.fixture
-def payment_with_reminder(
-    db_session: Session, sample_fattura: Fattura
-) -> Pagamento:
+def payment_with_reminder(db_session: Session, sample_fattura: Fattura) -> Pagamento:
     """Create a payment for testing reminders."""
     payment = Pagamento(
         fattura_id=sample_fattura.id,
@@ -136,9 +132,7 @@ def payment_with_reminder(
 
 
 @pytest.fixture
-def payment_reminder(
-    db_session: Session, payment_with_reminder: Pagamento
-) -> PaymentReminder:
+def payment_reminder(db_session: Session, payment_with_reminder: Pagamento) -> PaymentReminder:
     """Create a payment reminder for testing."""
     reminder = PaymentReminder(
         payment_id=payment_with_reminder.id,
@@ -153,9 +147,7 @@ def payment_reminder(
 
 
 @pytest.fixture
-def multiple_transactions(
-    db_session: Session, bank_account: BankAccount
-) -> list[BankTransaction]:
+def multiple_transactions(db_session: Session, bank_account: BankAccount) -> list[BankTransaction]:
     """Create multiple transactions for batch testing."""
     transactions = [
         BankTransaction(

@@ -141,9 +141,9 @@ class TestReminderScheduler:
         # Test each strategy
         strategies = {
             ReminderStrategy.AGGRESSIVE: 9,  # -10, -7, -3, -1, 0, 3, 7, 15, 30 days
-            ReminderStrategy.DEFAULT: 5,     # -7, -3, 0, 7, 30 days
-            ReminderStrategy.GENTLE: 4,      # -7, 0, 15, 30 days
-            ReminderStrategy.MINIMAL: 2,     # 0, 30 days
+            ReminderStrategy.DEFAULT: 5,  # -7, -3, 0, 7, 30 days
+            ReminderStrategy.GENTLE: 4,  # -7, 0, 15, 30 days
+            ReminderStrategy.MINIMAL: 2,  # 0, 30 days
         }
 
         for strategy, expected_max in strategies.items():
@@ -302,9 +302,7 @@ class TestReminderScheduler:
     # Cancel Reminders Tests (3 tests)
     # ==========================================================================
 
-    async def test_cancel_reminders_deletes_pending(
-        self, reminder_scheduler, mock_reminder_repo
-    ):
+    async def test_cancel_reminders_deletes_pending(self, reminder_scheduler, mock_reminder_repo):
         """Test that cancel_reminders deletes pending reminders."""
         mock_reminder_repo.delete_by_payment_id.return_value = 3
 
@@ -313,9 +311,7 @@ class TestReminderScheduler:
         assert deleted == 3
         mock_reminder_repo.delete_by_payment_id.assert_called_once_with(1)
 
-    async def test_cancel_reminders_keeps_sent(
-        self, reminder_scheduler, mock_reminder_repo
-    ):
+    async def test_cancel_reminders_keeps_sent(self, reminder_scheduler, mock_reminder_repo):
         """Test that cancel_reminders only deletes unsent reminders (sent_date = None)."""
         # Repository should filter by sent_date.is_(None) internally
         mock_reminder_repo.delete_by_payment_id.return_value = 2  # Only 2 pending
@@ -325,9 +321,7 @@ class TestReminderScheduler:
         assert deleted == 2
         mock_reminder_repo.delete_by_payment_id.assert_called_once_with(1)
 
-    async def test_cancel_reminders_returns_count(
-        self, reminder_scheduler, mock_reminder_repo
-    ):
+    async def test_cancel_reminders_returns_count(self, reminder_scheduler, mock_reminder_repo):
         """Test that cancel_reminders returns count of deleted reminders."""
         mock_reminder_repo.delete_by_payment_id.return_value = 5
 

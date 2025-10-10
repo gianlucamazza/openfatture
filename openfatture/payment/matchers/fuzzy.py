@@ -14,7 +14,7 @@ from rapidfuzz import fuzz
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy
+from .base import IMatcherStrategy, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -112,7 +112,9 @@ class FuzzyStringMatcher(IMatcherStrategy):
             confidence = self._similarity_to_confidence(max_similarity)
 
             # Calculate amount difference
-            amount_diff = abs(transaction.amount - payment.importo)
+            transaction_amount = abs(transaction.amount)
+            payment_amount = payment_amount_for_matching(payment)
+            amount_diff = abs(transaction_amount - payment_amount)
 
             # Build match reason
             match_reason = self._build_match_reason(similarity_scores, max_similarity)
@@ -154,8 +156,9 @@ class FuzzyStringMatcher(IMatcherStrategy):
         date_min = transaction.date - timedelta(days=self.date_tolerance_days)
         date_max = transaction.date + timedelta(days=self.date_tolerance_days)
 
-        amount_min = transaction.amount * (1 - self.amount_tolerance_pct / 100)
-        amount_max = transaction.amount * (1 + self.amount_tolerance_pct / 100)
+        transaction_amount = abs(transaction.amount)
+        amount_min = transaction_amount * (1 - self.amount_tolerance_pct / 100)
+        amount_max = transaction_amount * (1 + self.amount_tolerance_pct / 100)
 
         candidates = []
         for payment in payments:
@@ -164,7 +167,8 @@ class FuzzyStringMatcher(IMatcherStrategy):
                 continue
 
             # Check amount range
-            if not (amount_min <= payment.importo <= amount_max):
+            payment_amount = payment_amount_for_matching(payment)
+            if not (amount_min <= payment_amount <= amount_max):
                 continue
 
             candidates.append(payment)
@@ -193,7 +197,7 @@ class FuzzyStringMatcher(IMatcherStrategy):
         # Extract payment searchable text
         # Note: In real implementation, would need to join with Fattura to get description
         # For now, we'll use a simplified approach
-        payment_text = self._normalize_text(str(payment.importo))  # Simplified
+        payment_text = self._normalize_text(str(payment_amount_for_matching(payment)))  # Simplified
 
         # Calculate description similarity
         if trans_desc:
@@ -275,7 +279,9 @@ class FuzzyStringMatcher(IMatcherStrategy):
         else:
             return 0.70
 
-    def _build_match_reason(self, similarity_scores: dict[str, float], max_similarity: float) -> str:
+    def _build_match_reason(
+        self, similarity_scores: dict[str, float], max_similarity: float
+    ) -> str:
         """Build human-readable explanation of the fuzzy match.
 
         Args:

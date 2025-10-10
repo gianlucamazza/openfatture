@@ -43,12 +43,14 @@ class CSVConfig:
     skip_footer: int = 0
 
     # Field mapping: internal field name → CSV column name
-    field_mapping: dict[str, str] = field(default_factory=lambda: {
-        "date": "Date",
-        "amount": "Amount",
-        "description": "Description",
-        "reference": "Reference",
-    })
+    field_mapping: dict[str, str] = field(
+        default_factory=lambda: {
+            "date": "Date",
+            "amount": "Amount",
+            "description": "Description",
+            "reference": "Reference",
+        }
+    )
 
     # Date parsing
     date_format: str = "%Y-%m-%d"  # ISO format default
@@ -58,11 +60,13 @@ class CSVConfig:
     thousands_separator: str | None = None
 
     # Optional fields (won't error if missing)
-    optional_fields: list[str] = field(default_factory=lambda: [
-        "reference",
-        "counterparty",
-        "counterparty_iban",
-    ])
+    optional_fields: list[str] = field(
+        default_factory=lambda: [
+            "reference",
+            "counterparty",
+            "counterparty_iban",
+        ]
+    )
 
 
 class CSVImporter(BaseImporter):
@@ -229,7 +233,9 @@ class CSVImporter(BaseImporter):
             raw_data=row,  # Store original row for debugging
         )
 
-    def _get_field(self, row: dict[str, str], internal_name: str, required: bool = True) -> str | None:
+    def _get_field(
+        self, row: dict[str, str], internal_name: str, required: bool = True
+    ) -> str | None:
         """Get field from CSV row using field mapping.
 
         Args:

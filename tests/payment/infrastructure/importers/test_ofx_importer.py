@@ -108,8 +108,7 @@ class TestOFXImporter:
 
         # Find transaction with .50 amount
         tx_500_50 = next(
-            (tx for tx in bank_account.transactions if tx.amount == Decimal("500.50")),
-            None
+            (tx for tx in bank_account.transactions if tx.amount == Decimal("500.50")), None
         )
         assert tx_500_50 is not None
         assert tx_500_50.amount == Decimal("500.50")
@@ -122,10 +121,7 @@ class TestOFXImporter:
         importer.import_transactions(bank_account)
 
         # All transactions should have OFX source
-        assert all(
-            tx.import_source == ImportSource.OFX
-            for tx in bank_account.transactions
-        )
+        assert all(tx.import_source == ImportSource.OFX for tx in bank_account.transactions)
 
     def test_ofx_raw_data_preserved(self, db_session, bank_account):
         """Test raw OFX data is preserved for debugging."""
@@ -145,7 +141,8 @@ class TestOFXImporter:
         """Test duplicate transactions are prevented by FITID."""
         # Create OFX file with duplicate FITID
         duplicate_ofx = tmp_path / "duplicate.ofx"
-        duplicate_ofx.write_text("""<?xml version="1.0" encoding="UTF-8"?>
+        duplicate_ofx.write_text(
+            """<?xml version="1.0" encoding="UTF-8"?>
 <OFX>
   <SIGNONMSGSRSV1>
     <SONRS>
@@ -193,7 +190,8 @@ class TestOFXImporter:
     </STMTTRNRS>
   </BANKMSGSRSV1>
 </OFX>
-""")
+"""
+        )
 
         factory = ImporterFactory()
         importer = factory.create_from_file(duplicate_ofx)
@@ -233,10 +231,7 @@ class TestOFXImporter:
         importer.import_transactions(bank_account)
 
         # Find the DEBIT transaction (-150.00)
-        debit_tx = next(
-            (tx for tx in bank_account.transactions if tx.amount < 0),
-            None
-        )
+        debit_tx = next((tx for tx in bank_account.transactions if tx.amount < 0), None)
         assert debit_tx is not None
         assert debit_tx.amount == Decimal("-150.00")
         assert "Utilities Provider" in debit_tx.counterparty

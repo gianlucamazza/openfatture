@@ -66,6 +66,7 @@ def db_session():
 def sample_cliente(db_session):
     """Create a sample cliente for testing."""
     import uuid
+
     # Use unique partita_iva to avoid UNIQUE constraint failures
     piva_suffix = str(uuid.uuid4().int)[:11]
     cliente = Cliente(
@@ -89,6 +90,7 @@ def sample_cliente(db_session):
 def sample_bank_account(db_session):
     """Create a sample bank account."""
     import uuid
+
     # Use unique IBAN for each test run to avoid UNIQUE constraint failures
     account = BankAccount(
         name="Intesa Sanpaolo Business",
@@ -203,7 +205,9 @@ class TestCompletePaymentWorkflow:
             tx_repo=tx_repo,
             payment_repo=payment_repo,
             strategies=[
-                ExactAmountMatcher(date_tolerance_days=30),  # Allow wider date window for realistic scenarios
+                ExactAmountMatcher(
+                    date_tolerance_days=30
+                ),  # Allow wider date window for realistic scenarios
                 CompositeMatcher(),
             ],
         )

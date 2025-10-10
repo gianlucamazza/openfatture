@@ -264,7 +264,11 @@ class TestCompositeMatcherPropertyBased:
             # Property: confidence is bounded
             assert Decimal("0.0") <= results[0].confidence <= Decimal("1.0")
 
-    @given(confidences=st.lists(st.decimals(min_value=0, max_value=1, places=2), min_size=1, max_size=5))
+    @given(
+        confidences=st.lists(
+            st.decimals(min_value=0, max_value=1, places=2), min_size=1, max_size=5
+        )
+    )
     @pytest.mark.asyncio
     async def test_composite_deterministic(self, confidences):
         """Property: Same inputs should produce same outputs (determinism)."""
@@ -295,9 +299,7 @@ class TestCompositeMatcherPropertyBased:
         if results1 and results2:
             assert results1[0].confidence == results2[0].confidence
 
-    @given(
-        st.lists(st.decimals(min_value=0, max_value=1, places=2), min_size=2, max_size=5)
-    )
+    @given(st.lists(st.decimals(min_value=0, max_value=1, places=2), min_size=2, max_size=5))
     @pytest.mark.asyncio
     async def test_composite_average_properties(self, confidences):
         """Property: Weighted average should satisfy mathematical properties."""

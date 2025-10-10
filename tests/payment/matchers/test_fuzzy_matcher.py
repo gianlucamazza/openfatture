@@ -278,9 +278,7 @@ class TestFuzzyDescriptionMatcherPropertyBased:
         if results:
             assert Decimal("0.0") <= results[0].confidence <= Decimal("1.0")
 
-    @given(
-        st.text(alphabet=st.characters(whitelist_categories=("L",)), min_size=10, max_size=50)
-    )
+    @given(st.text(alphabet=st.characters(whitelist_categories=("L",)), min_size=10, max_size=50))
     @pytest.mark.asyncio
     async def test_fuzzy_case_normalization_property(self, text: str):
         """Property: Case variations should not affect matching significantly."""

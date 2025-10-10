@@ -159,7 +159,9 @@ class TestIBANMatcher:
 
         transaction = Mock()
         transaction.amount = Decimal("1000.00")
-        transaction.description = "Transfer from IT11A1234567890123456789012 to IT60X0542811101000000123456"
+        transaction.description = (
+            "Transfer from IT11A1234567890123456789012 to IT60X0542811101000000123456"
+        )
         transaction.memo = None
         transaction.date = date.today()
 

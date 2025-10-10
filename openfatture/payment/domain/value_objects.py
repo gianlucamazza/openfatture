@@ -8,7 +8,7 @@ Value Objects in DDD:
 
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .enums import MatchType
 
@@ -99,6 +99,54 @@ class MatchResult:
             f"MatchResult(confidence={self.confidence:.2f}, "
             f"type={self.match_type.value}, "
             f"reason='{self.match_reason}')"
+        )
+
+
+@dataclass(frozen=True)
+class PaymentInsight:
+    """AI-derived insight over a bank transaction and potential payments."""
+
+    probable_invoice_numbers: list[str] = field(default_factory=list)
+    is_partial_payment: bool = False
+    suggested_allocation_amount: Decimal | None = None
+    keywords: list[str] = field(default_factory=list)
+    confidence: float = 0.0
+    summary: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize insight for storage/logging."""
+        return {
+            "probable_invoice_numbers": self.probable_invoice_numbers,
+            "is_partial_payment": self.is_partial_payment,
+            "suggested_allocation_amount": (
+                float(self.suggested_allocation_amount)
+                if self.suggested_allocation_amount is not None
+                else None
+            ),
+            "keywords": self.keywords,
+            "confidence": self.confidence,
+            "summary": self.summary,
+        }
+
+    @classmethod
+    def from_payload(cls, payload: dict[str, Any]) -> "PaymentInsight":
+        """Create insight from agent payload dictionary."""
+
+        suggested = payload.get("suggested_allocation_amount")
+        suggested_decimal = None
+        if suggested is not None:
+            try:
+                suggested_decimal = Decimal(str(suggested))
+            except (ValueError, TypeError):
+                suggested_decimal = None
+
+        return cls(
+            probable_invoice_numbers=list(payload.get("probable_invoice_numbers", [])),
+            is_partial_payment=bool(payload.get("is_partial_payment", False)),
+            suggested_allocation_amount=suggested_decimal,
+            keywords=list(payload.get("keywords", [])),
+            confidence=float(payload.get("confidence", 0.0)),
+            summary=payload.get("summary"),
         )
 
 

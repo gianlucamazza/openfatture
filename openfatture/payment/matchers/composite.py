@@ -16,7 +16,7 @@ from rapidfuzz import fuzz
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy
+from .base import IMatcherStrategy, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -126,9 +126,7 @@ class CompositeMatcher(IMatcherStrategy):
         date_min = transaction.date - timedelta(days=self.date_tolerance_days)
         date_max = transaction.date + timedelta(days=self.date_tolerance_days)
 
-        candidates = [
-            p for p in payments if date_min <= p.data_scadenza <= date_max
-        ]
+        candidates = [p for p in payments if date_min <= p.data_scadenza <= date_max]
 
         for payment in candidates:
             # Calculate individual scores
@@ -162,7 +160,9 @@ class CompositeMatcher(IMatcherStrategy):
                 matched_fields.append("description")
 
             # Calculate amount difference
-            amount_diff = abs(transaction.amount - payment.importo)
+            transaction_amount = abs(transaction.amount)
+            payment_amount = payment_amount_for_matching(payment)
+            amount_diff = abs(transaction_amount - payment_amount)
 
             results.append(
                 MatchResult(
@@ -200,8 +200,9 @@ class CompositeMatcher(IMatcherStrategy):
         Returns:
             Amount score (0.0-1.0)
         """
-        amount_diff = abs(transaction.amount - payment.importo)
-        payment_amount = payment.importo
+        transaction_amount = abs(transaction.amount)
+        payment_amount = payment_amount_for_matching(payment)
+        amount_diff = abs(transaction_amount - payment_amount)
 
         if payment_amount == 0:
             return 0.0
@@ -222,9 +223,7 @@ class CompositeMatcher(IMatcherStrategy):
         else:
             return 0.0
 
-    def _calculate_date_score(
-        self, transaction: "BankTransaction", payment: "Pagamento"
-    ) -> float:
+    def _calculate_date_score(self, transaction: "BankTransaction", payment: "Pagamento") -> float:
         """Calculate date proximity score (0.0-1.0).
 
         Scoring:
@@ -282,7 +281,8 @@ class CompositeMatcher(IMatcherStrategy):
 
         # For payment, we'd ideally join with Fattura to get description
         # Simplified: use payment amount as identifier
-        payment_text = self._normalize_text(str(payment.importo))
+        payment_amount = payment_amount_for_matching(payment)
+        payment_text = self._normalize_text(str(payment_amount))
 
         # Calculate similarity scores
         desc_similarity = fuzz.ratio(trans_desc, payment_text) if trans_desc else 0
