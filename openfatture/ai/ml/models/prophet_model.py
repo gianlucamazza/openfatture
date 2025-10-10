@@ -234,6 +234,9 @@ class ProphetModel:
         if not self.fitted_:
             raise ValueError("Model must be fitted before prediction")
 
+        if self.model is None:
+            raise RuntimeError("Model not initialized. Call fit() first.")
+
         # Convert to Prophet format (without target)
         df_prophet = pd.DataFrame({"ds": pd.to_datetime(X["data_emissione"])})
 
@@ -326,6 +329,9 @@ class ProphetModel:
         if not self.fitted_:
             raise ValueError("Model must be fitted before getting components")
 
+        if self.model is None:
+            raise RuntimeError("Model not initialized. Call fit() first.")
+
         df_prophet = self._to_prophet_format(X)
         forecast = self.model.predict(df_prophet)
 
@@ -352,6 +358,9 @@ class ProphetModel:
         """
         if not self.fitted_:
             raise ValueError("Model must be fitted before getting changepoints")
+
+        if self.model is None:
+            raise RuntimeError("Model not initialized. Call fit() first.")
 
         changepoints = pd.DataFrame(
             {"date": self.model.changepoints, "delta": self.model.params["delta"].flatten()}

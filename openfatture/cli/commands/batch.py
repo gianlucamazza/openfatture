@@ -60,7 +60,7 @@ def import_invoices(
     settings = get_settings()
 
     try:
-        processor = BatchProcessor(db_session=db)
+        processor: BatchProcessor = BatchProcessor(db_session=db)
 
         # Start import
         result = processor.import_from_csv(file, dry_run=dry_run)
@@ -175,7 +175,7 @@ def export_invoices(
         console.print(f"[cyan]Invoices:[/cyan] {len(fatture)}\n")
 
         # Export
-        processor = BatchProcessor(db_session=db)
+        processor: BatchProcessor = BatchProcessor(db_session=db)
         output_path = Path(output_file)
 
         result = processor.export_to_csv(fatture, output_path)

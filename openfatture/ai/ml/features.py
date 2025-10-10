@@ -197,7 +197,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
             "total_invoices_count",
             "total_amount_paid",
         ]
-        self.client_stats_cache_ = {}
+        self.client_stats_cache_: dict[int, dict[str, float]] = {}
 
     def fit(self, X: Any, y: Any = None) -> "ClientBehaviorFeatureExtractor":
         """Fit transformer by computing client statistics."""

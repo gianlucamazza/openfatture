@@ -120,6 +120,9 @@ class InteractiveChatUI:
                 enable_streaming=True,
             )
 
+            if self.provider is None:
+                raise RuntimeError("Provider initialization failed.")
+
             logger.info(
                 "chat_agent_initialized",
                 provider=self.provider.provider_name,
@@ -189,6 +192,8 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 
         try:
             # Check if streaming is enabled
+            if self.agent is None:
+                raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
             if self.agent.config.streaming_enabled:
                 # Stream response with real-time rendering
                 await self._process_message_streaming(context)
@@ -213,6 +218,9 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         full_response = ""
 
         try:
+            if self.agent is None:
+                raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
+
             # Stream response with Live rendering
             with Live("", console=console, refresh_per_second=10) as live:
                 async for chunk in self.agent.execute_stream(context):
@@ -226,6 +234,9 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
             # Note: Token count is estimated in streaming mode
             estimated_tokens = len(full_response) // 4
             estimated_cost = estimated_tokens * 0.00001  # Rough estimate
+
+            if self.provider is None:
+                raise RuntimeError("Provider not initialized.")
 
             self.session.add_assistant_message(
                 full_response,
@@ -250,6 +261,9 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         Args:
             context: Chat context
         """
+        if self.agent is None:
+            raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
+
         # Show "thinking" indicator
         with console.status("[bold green]AI sta pensando...") as status:
             try:

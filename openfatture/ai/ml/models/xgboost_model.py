@@ -344,6 +344,8 @@ class XGBoostModel:
 
     def _predict_array(self, X: pd.DataFrame) -> np.ndarray:
         """Internal method to get raw predictions as numpy array."""
+        if self.model is None:
+            raise RuntimeError("Model not initialized. Call fit() first.")
         dmatrix = xgb.DMatrix(X, feature_names=self.feature_names_)
         return self.model.predict(dmatrix)
 
@@ -364,6 +366,9 @@ class XGBoostModel:
         """
         if not self.fitted_:
             raise ValueError("Model must be fitted before getting importance")
+
+        if self.model is None:
+            raise RuntimeError("Model not initialized. Call fit() first.")
 
         # Get importance from model
         importance_dict = self.model.get_score(importance_type=importance_type)
@@ -398,6 +403,9 @@ class XGBoostModel:
         """
         if not self.fitted_:
             raise ValueError("Cannot save unfitted model")
+
+        if self.model is None:
+            raise RuntimeError("Model not initialized. Cannot save.")
 
         self.model.save_model(filepath)
 

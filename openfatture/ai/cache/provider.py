@@ -63,6 +63,7 @@ class CachedProvider:
         self.config = config or get_cache_config()
 
         # Create cache if not provided
+        self._cache: CacheStrategy[Any]
         if cache is None:
             if self.config.strategy == "lru":
                 self._cache = LRUCache(

@@ -233,9 +233,15 @@ class CashFlowPredictorAgent:
             X_row = self._invoice_to_features(fattura)
 
             # Extract features
+            if self.feature_pipeline is None:
+                raise RuntimeError(
+                    "Feature pipeline not initialized. Call initialize() first."
+                )
             X_features = self.feature_pipeline.transform(pd.DataFrame([X_row]))
 
             # Make prediction
+            if self.ensemble is None:
+                raise RuntimeError("Ensemble model not initialized. Call initialize() first.")
             prediction = self.ensemble.predict_single(X_features.iloc[0])
 
             # Generate insights if requested
@@ -390,6 +396,8 @@ class CashFlowPredictorAgent:
         logger.info("training_models")
 
         # Load dataset
+        if self.data_loader is None:
+            raise RuntimeError("Data loader not initialized. Call initialize() first.")
         dataset = self.data_loader.load_dataset(
             val_split=self.config.validation_split,
             test_split=self.config.test_split,
@@ -403,6 +411,8 @@ class CashFlowPredictorAgent:
         )
 
         # Fit feature pipeline
+        if self.feature_pipeline is None:
+            raise RuntimeError("Feature pipeline not initialized. Call initialize() first.")
         self.feature_pipeline.fit(dataset.X_train, dataset.y_train)
 
         # Transform features
@@ -411,6 +421,8 @@ class CashFlowPredictorAgent:
         X_test_features = self.feature_pipeline.transform(dataset.X_test)
 
         # Train ensemble
+        if self.ensemble is None:
+            raise RuntimeError("Ensemble model not initialized. Call initialize() first.")
         self.ensemble.fit(
             X_train_features,
             dataset.y_train,
@@ -419,6 +431,8 @@ class CashFlowPredictorAgent:
         )
 
         # Evaluate on test set
+        if self.ensemble is None:
+            raise RuntimeError("Ensemble model not initialized. Call initialize() first.")
         test_mae = self.ensemble.score(X_test_features, dataset.y_test)
 
         logger.info("models_trained", test_mae=test_mae)
@@ -431,6 +445,8 @@ class CashFlowPredictorAgent:
 
     async def _save_models(self, filepath_prefix: str) -> None:
         """Save trained models to disk."""
+        if self.ensemble is None:
+            raise RuntimeError("Ensemble model not initialized. Cannot save.")
         self.ensemble.save(filepath_prefix)
 
         logger.info("models_saved", path=filepath_prefix)
