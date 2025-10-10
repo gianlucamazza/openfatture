@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promemoria Pagamento</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .greeting {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .invoice-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .invoice-details h2 {
+            margin-top: 0;
+            color: #667eea;
+            font-size: 18px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #6c757d;
+        }
+        .detail-value {
+            color: #212529;
+        }
+        .amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .alert {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            border: 1px solid #dc3545;
+            color: #721c24;
+        }
+        .alert-info {
+            background-color: #d1ecf1;
+            border: 1px solid #17a2b8;
+            color: #0c5460;
+        }
+        .alert .icon {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        .button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>💰 Promemoria Pagamento</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                Gentile Cliente,
+            </div>
+
+            <p>Le ricordiamo il pagamento relativo alla seguente fattura:</p>
+
+            <!-- Invoice Details -->
+            <div class="invoice-details">
+                <h2>Dettagli Fattura</h2>
+                <div class="detail-row">
+                    <span class="detail-label">Numero Fattura:</span>
+                    <span class="detail-value">{{ invoice.numero }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Data Emissione:</span>
+                    <span class="detail-value">{{ invoice.data.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Scadenza Pagamento:</span>
+                    <span class="detail-value">{{ payment.data_scadenza.strftime('%d/%m/%Y') }}</span>
+                </div>
+            </div>
+
+            <!-- Amount -->
+            <div class="amount">
+                € {{ "%.2f"|format(payment.importo_da_pagare) }}
+            </div>
+
+            <!-- Status Alert -->
+            {% if days_to_due < 0 %}
+                <div class="alert alert-danger">
+                    <span class="icon">⚠️</span>
+                    <strong>ATTENZIONE:</strong> Il pagamento è in ritardo di <strong>{{ -days_to_due }} giorni</strong>.
+                    Si prega di procedere con urgenza.
+                </div>
+            {% elif days_to_due == 0 %}
+                <div class="alert alert-warning">
+                    <span class="icon">⏰</span>
+                    <strong>SCADENZA OGGI:</strong> Il pagamento scade oggi.
+                    Si prega di procedere con il pagamento.
+                </div>
+            {% elif days_to_due <= 3 %}
+                <div class="alert alert-warning">
+                    <span class="icon">📅</span>
+                    Il pagamento scadrà tra <strong>{{ days_to_due }} giorni</strong>.
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <span class="icon">ℹ️</span>
+                    Il pagamento scadrà tra <strong>{{ days_to_due }} giorni</strong>.
+                </div>
+            {% endif %}
+
+            <!-- Payment Instructions (if available) -->
+            {% if payment.istruzioni_pagamento %}
+            <div style="margin-top: 20px;">
+                <strong>Istruzioni per il pagamento:</strong>
+                <p>{{ payment.istruzioni_pagamento }}</p>
+            </div>
+            {% endif %}
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="button">Visualizza Fattura</a>
+            </div>
+
+            <p style="margin-top: 30px;">
+                Cordiali saluti,<br>
+                <strong>{{ company_name }}</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                Questo è un messaggio automatico. Si prega di non rispondere a questa email.<br>
+                Per assistenza, contattare <a href="mailto:support@example.com">support@example.com</a>
+            </p>
+            <p style="margin-top: 10px;">
+                Powered by <a href="https://github.com/openfatture/openfatture">OpenFatture</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

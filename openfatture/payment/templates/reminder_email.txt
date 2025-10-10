@@ -1,0 +1,41 @@
+PROMEMORIA PAGAMENTO
+{{ '=' * 60 }}
+
+Gentile Cliente,
+
+Le ricordiamo il pagamento relativo alla seguente fattura:
+
+DETTAGLI FATTURA
+{{ '-' * 60 }}
+Numero Fattura:      {{ invoice.numero }}
+Data Emissione:      {{ invoice.data.strftime('%d/%m/%Y') }}
+Scadenza Pagamento:  {{ payment.data_scadenza.strftime('%d/%m/%Y') }}
+Importo da Pagare:   € {{ "%.2f"|format(payment.importo_da_pagare) }}
+{{ '-' * 60 }}
+
+{% if days_to_due < 0 %}
+⚠️  ATTENZIONE: Il pagamento è in ritardo di {{ -days_to_due }} giorni!
+   Si prega di procedere con URGENZA.
+{% elif days_to_due == 0 %}
+⏰ SCADENZA OGGI: Il pagamento scade oggi.
+   Si prega di procedere con il pagamento.
+{% elif days_to_due <= 3 %}
+📅 Il pagamento scadrà tra {{ days_to_due }} giorni.
+{% else %}
+ℹ️  Il pagamento scadrà tra {{ days_to_due }} giorni.
+{% endif %}
+
+{% if payment.istruzioni_pagamento %}
+ISTRUZIONI PER IL PAGAMENTO:
+{{ payment.istruzioni_pagamento }}
+{% endif %}
+
+Cordiali saluti,
+{{ company_name }}
+
+{{ '=' * 60 }}
+Questo è un messaggio automatico. Si prega di non rispondere.
+Per assistenza: support@example.com
+
+Powered by OpenFatture
+https://github.com/openfatture/openfatture

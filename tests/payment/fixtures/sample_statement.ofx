@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OFX>
+  <SIGNONMSGSRSV1>
+    <SONRS>
+      <STATUS>
+        <CODE>0</CODE>
+        <SEVERITY>INFO</SEVERITY>
+      </STATUS>
+      <DTSERVER>20250228120000</DTSERVER>
+      <LANGUAGE>ITA</LANGUAGE>
+    </SONRS>
+  </SIGNONMSGSRSV1>
+  <BANKMSGSRSV1>
+    <STMTTRNRS>
+      <TRNUID>1001</TRNUID>
+      <STATUS>
+        <CODE>0</CODE>
+        <SEVERITY>INFO</SEVERITY>
+      </STATUS>
+      <STMTRS>
+        <CURDEF>EUR</CURDEF>
+        <BANKACCTFROM>
+          <BANKID>05428</BANKID>
+          <ACCTID>000000123456</ACCTID>
+          <ACCTTYPE>CHECKING</ACCTTYPE>
+        </BANKACCTFROM>
+        <BANKTRANLIST>
+          <DTSTART>20250115000000</DTSTART>
+          <DTEND>20250228235959</DTEND>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250115000000</DTPOSTED>
+            <TRNAMT>1220.00</TRNAMT>
+            <FITID>TXN20250115001</FITID>
+            <NAME>ACME CORPORATION</NAME>
+            <MEMO>Fattura 2025/001</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250120000000</DTPOSTED>
+            <TRNAMT>500.50</TRNAMT>
+            <FITID>TXN20250120001</FITID>
+            <NAME>TEST SRL</NAME>
+            <MEMO>Pagamento servizi</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250125000000</DTPOSTED>
+            <TRNAMT>-150.00</TRNAMT>
+            <FITID>TXN20250125001</FITID>
+            <NAME>Utilities Provider</NAME>
+            <MEMO>Addebito utenze</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250128000000</DTPOSTED>
+            <TRNAMT>2000.00</TRNAMT>
+            <FITID>TXN20250128001</FITID>
+            <NAME>CLIENTE XYZ</NAME>
+            <MEMO>Consulenza gennaio IT60X0542811101000000123456</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250130000000</DTPOSTED>
+            <TRNAMT>750.00</TRNAMT>
+            <FITID>TXN20250130001</FITID>
+            <NAME>Bank Transfer</NAME>
+            <MEMO>IBAN IT60X0542811101000000123456</MEMO>
+          </STMTTRN>
+        </BANKTRANLIST>
+        <LEDGERBAL>
+          <BALAMT>33295.50</BALAMT>
+          <DTASOF>20250228235959</DTASOF>
+        </LEDGERBAL>
+      </STMTRS>
+    </STMTTRNRS>
+  </BANKMSGSRSV1>
+</OFX>
