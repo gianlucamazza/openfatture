@@ -45,7 +45,7 @@ def sample_cliente(db_session: Session) -> Cliente:
 @pytest.fixture
 def sample_fattura(db_session: Session, sample_cliente: Cliente) -> Fattura:
     """Create a sample fattura for testing."""
-    from openfatture.storage.database.models import TipoDocumento, StatoFattura
+    from openfatture.storage.database.models import StatoFattura, TipoDocumento
 
     fattura = Fattura(
         numero="001",

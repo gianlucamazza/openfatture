@@ -139,7 +139,7 @@ class CSVImporter(BaseImporter):
         transactions = []
         seen_hashes = set()  # For deduplication
 
-        with open(self.file_path, "r", encoding=encoding, errors="replace") as f:
+        with open(self.file_path, encoding=encoding, errors="replace") as f:
             # Skip header rows
             for _ in range(self.config.skip_rows):
                 next(f, None)
@@ -177,7 +177,7 @@ class CSVImporter(BaseImporter):
         Raises:
             ValueError: If delimiter cannot be detected
         """
-        with open(self.file_path, "r", encoding=self.detect_encoding()) as f:
+        with open(self.file_path, encoding=self.detect_encoding()) as f:
             # Read first 1KB for detection
             sample = f.read(1024)
 

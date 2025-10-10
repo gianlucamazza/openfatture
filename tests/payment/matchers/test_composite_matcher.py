@@ -4,7 +4,7 @@ The CompositeMatcher is the most complex matcher, combining multiple strategies
 with weighted scoring. Uses Hypothesis for property-based testing.
 """
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, Mock
 
@@ -340,8 +340,9 @@ class TestCompositeMatcherPropertyBased:
 
 
 # Configure Hypothesis settings for CI
-from hypothesis import Verbosity, settings
 import os
+
+from hypothesis import Verbosity, settings
 
 settings.register_profile("ci", max_examples=200, verbosity=Verbosity.verbose)
 settings.register_profile("dev", max_examples=50)

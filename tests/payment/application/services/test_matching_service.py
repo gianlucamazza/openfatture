@@ -3,7 +3,6 @@
 Tests cover: parallel execution, confidence filtering, strategy pipeline, date windows.
 """
 
-import asyncio
 from datetime import date, timedelta
 from decimal import Decimal
 from uuid import uuid4

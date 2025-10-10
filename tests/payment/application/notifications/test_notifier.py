@@ -4,22 +4,22 @@ Tests cover: SMTP mocking, Jinja2 template rendering, multi-channel notification
 error handling, and fallback text generation.
 """
 
-import pytest
+import smtplib
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
-import smtplib
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from openfatture.payment.application.notifications.notifier import (
-    EmailNotifier,
-    ConsoleNotifier,
     CompositeNotifier,
-    SMTPConfig,
+    ConsoleNotifier,
+    EmailNotifier,
     INotifier,
+    SMTPConfig,
 )
+from openfatture.payment.domain.enums import ReminderStatus, ReminderStrategy
 from openfatture.payment.domain.models import PaymentReminder
-from openfatture.payment.domain.enums import ReminderStrategy, ReminderStatus
 
 
 class TestEmailNotifier:

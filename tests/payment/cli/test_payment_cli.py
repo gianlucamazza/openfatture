@@ -4,18 +4,16 @@ Tests cover: import, match, queue, schedule-reminders, process-reminders, stats 
 with Rich output formatting and interactive prompts.
 """
 
-import pytest
 from datetime import date, timedelta
 from decimal import Decimal
-from pathlib import Path
-from tempfile import NamedTemporaryFile
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from typer.testing import CliRunner
 
 from openfatture.payment.cli.payment_cli import app
-from openfatture.payment.domain.enums import TransactionStatus, ReminderStrategy
-from openfatture.payment.domain.models import BankTransaction, BankAccount
-from openfatture.payment.domain.value_objects import ReconciliationResult, ImportResult
+from openfatture.payment.domain.models import BankAccount, BankTransaction
+from openfatture.payment.domain.value_objects import ImportResult, ReconciliationResult
 
 runner = CliRunner()
 

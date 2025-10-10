@@ -4,10 +4,11 @@ Tests cover: multi-step workflows, state transitions, rollback capabilities,
 domain event emission, and error handling.
 """
 
-import pytest
 from datetime import date, datetime
 from decimal import Decimal
 from uuid import uuid4
+
+import pytest
 
 from openfatture.payment.application.services import ReconciliationService
 from openfatture.payment.domain.enums import MatchType, TransactionStatus

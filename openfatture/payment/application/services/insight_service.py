@@ -11,12 +11,9 @@ from openfatture.ai.domain.response import ResponseStatus
 from openfatture.payment.domain.value_objects import PaymentInsight
 
 if TYPE_CHECKING:
-    from ...domain.models import BankTransaction
-    from ...domain.payment_allocation import PaymentAllocation
-    from ...infrastructure.repository import PaymentRepository
-    from ...storage.database.models import Pagamento
-    from ...storage.database.models import Pagamento as PagamentoModel
     from ....ai.agents.payment_insight_agent import PaymentInsightAgent
+    from ...domain.models import BankTransaction
+    from ...storage.database.models import Pagamento
 
 logger = structlog.get_logger()
 
@@ -24,13 +21,13 @@ logger = structlog.get_logger()
 class TransactionInsightService:
     """Facade around PaymentInsightAgent providing domain-friendly insights."""
 
-    def __init__(self, agent: "PaymentInsightAgent") -> None:
+    def __init__(self, agent: PaymentInsightAgent) -> None:
         self.agent = agent
 
     async def analyze(
         self,
-        transaction: "BankTransaction",
-        payments: list["Pagamento"],
+        transaction: BankTransaction,
+        payments: list[Pagamento],
     ) -> PaymentInsight | None:
         """Analyze a bank transaction description/reference and return AI insight."""
 
@@ -80,7 +77,7 @@ class TransactionInsightService:
         )
         return insight
 
-    def _serialize_payment(self, payment: "Pagamento") -> dict[str, Any]:
+    def _serialize_payment(self, payment: Pagamento) -> dict[str, Any]:
         """Serialize payment details for AI context consumption."""
 
         invoice_number = None

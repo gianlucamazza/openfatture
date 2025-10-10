@@ -5,22 +5,21 @@ bank transactions to payments using multiple algorithms and optional AI enrichme
 """
 
 import asyncio
-from datetime import date, timedelta
 from dataclasses import replace
+from datetime import timedelta
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 import structlog
 
-from ...domain.enums import MatchType, TransactionStatus
+from ...domain.enums import TransactionStatus
 from ...domain.models import BankTransaction
 from ...domain.value_objects import MatchResult, PaymentInsight, ReconciliationResult
 from ...matchers.base import IMatcherStrategy
 
 if TYPE_CHECKING:
-    from ...domain.models import BankAccount
-    from ...infrastructure.repository import BankTransactionRepository, PaymentRepository
     from ....storage.database.models import Pagamento
+    from ...infrastructure.repository import BankTransactionRepository, PaymentRepository
     from .insight_service import TransactionInsightService
 
 logger = structlog.get_logger()

@@ -4,14 +4,15 @@ Tests cover: reminder scheduling strategies, background job processing,
 cancellation, and notification integration.
 """
 
-import pytest
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock
 
+import pytest
+
 from openfatture.payment.application.services.reminder_scheduler import (
-    ReminderScheduler,
     ReminderRepository,
+    ReminderScheduler,
 )
 from openfatture.payment.domain.enums import ReminderStrategy
 from openfatture.payment.domain.models import PaymentReminder

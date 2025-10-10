@@ -11,7 +11,7 @@ __all__ = [
     "TransactionInsightService",
 ]
 
+from .insight_service import TransactionInsightService
 from .matching_service import MatchingService
 from .reconciliation_service import ReconciliationService
-from .insight_service import TransactionInsightService
 from .reminder_scheduler import ReminderRepository, ReminderScheduler

@@ -8,28 +8,26 @@ import asyncio
 import os
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
-from uuid import UUID
 
 import typer
 from rich.console import Console
-from rich.progress import Progress, track
-from rich.prompt import Confirm, Prompt
+from rich.progress import track
+from rich.prompt import Prompt
 from rich.table import Table
 from sqlalchemy.orm import Session
 
+from ...ai.agents.payment_insight_agent import PaymentInsightAgent
+from ...ai.providers.base import ProviderError
+from ...ai.providers.factory import create_provider
 from ...storage.database import get_db
 from ...utils.logging import get_logger
-from ...ai.providers.factory import create_provider
-from ...ai.providers.base import ProviderError
-from ...ai.agents.payment_insight_agent import PaymentInsightAgent
 from ..application.notifications import ConsoleNotifier, EmailNotifier, SMTPConfig
 from ..application.services import (
     MatchingService,
-    TransactionInsightService,
     ReconciliationService,
     ReminderRepository,
     ReminderScheduler,
+    TransactionInsightService,
 )
 from ..domain.enums import MatchType, ReminderStrategy, TransactionStatus
 from ..infrastructure.importers import ImporterFactory
@@ -63,7 +61,7 @@ def get_db_session():
 def import_statement(
     file_path: Path = typer.Argument(..., help="Bank statement file path", exists=True),
     account_id: int = typer.Option(..., "--account", "-a", help="Bank account ID"),
-    bank_preset: Optional[str] = typer.Option(
+    bank_preset: str | None = typer.Option(
         None, "--bank", "-b", help="Bank preset (intesa|unicredit|revolut|...)"
     ),
     auto_match: bool = typer.Option(True, "--auto-match/--no-auto-match"),
@@ -101,7 +99,7 @@ def import_statement(
             raise typer.Exit(1)
 
         # 3. Import with progress
-        console.print(f"[cyan]Importing transactions...[/]")
+        console.print("[cyan]Importing transactions...[/]")
         result = importer.import_transactions(account)
 
         # 4. Display results table
@@ -149,14 +147,14 @@ def import_statement(
             )
 
             # Display reconciliation results
-            console.print(f"\n[bold]Reconciliation Results:[/]")
+            console.print("\n[bold]Reconciliation Results:[/]")
             console.print(f"  [green]✅ Matched: {recon_result.matched_count}[/]")
             console.print(f"  [yellow]⏳ Review needed: {recon_result.review_count}[/]")
             console.print(f"  [dim]❔ Unmatched: {recon_result.unmatched_count}[/]")
 
             if recon_result.review_count > 0:
                 console.print(
-                    f"\n[yellow]💡 Tip: Run 'openfatture payment queue' to review medium-confidence matches[/]"
+                    "\n[yellow]💡 Tip: Run 'openfatture payment queue' to review medium-confidence matches[/]"
                 )
 
 
@@ -167,10 +165,10 @@ def import_statement(
 
 @app.command()
 def match(
-    account_id: Optional[int] = typer.Option(None, "--account", "-a", help="Filter by account"),
+    account_id: int | None = typer.Option(None, "--account", "-a", help="Filter by account"),
     confidence: float = typer.Option(0.60, "--confidence", "-c", min=0.0, max=1.0),
     auto_apply: bool = typer.Option(True, "--auto-apply/--manual-only"),
-    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Max transactions to match"),
+    limit: int | None = typer.Option(None, "--limit", "-l", help="Max transactions to match"),
 ):
     """🔍 Match unmatched transactions to payments.
 
@@ -231,7 +229,7 @@ def match(
                 review_count += 1
 
         # Results
-        console.print(f"\n[bold]Results:[/]")
+        console.print("\n[bold]Results:[/]")
         console.print(f"  [green]✅ Matched: {matched_count}[/]")
         console.print(f"  [yellow]⏳ Review needed: {review_count}[/]")
 
@@ -243,7 +241,7 @@ def match(
 
 @app.command()
 def queue(
-    account_id: Optional[int] = typer.Option(None, "--account", "-a"),
+    account_id: int | None = typer.Option(None, "--account", "-a"),
     interactive: bool = typer.Option(True, "--interactive/--list-only"),
     confidence_min: float = typer.Option(0.60, "--min", min=0.0, max=1.0),
     confidence_max: float = typer.Option(0.84, "--max", min=0.0, max=1.0),
@@ -449,7 +447,7 @@ def schedule_reminders(
 
 @app.command(name="process-reminders")
 def process_reminders(
-    target_date: Optional[str] = typer.Option(
+    target_date: str | None = typer.Option(
         None, "--date", help="Date to process (YYYY-MM-DD), default: today"
     ),
 ):
@@ -500,7 +498,7 @@ def process_reminders(
 
 @app.command()
 def stats(
-    account_id: Optional[int] = typer.Option(None, "--account", "-a", help="Filter by account"),
+    account_id: int | None = typer.Option(None, "--account", "-a", help="Filter by account"),
 ):
     """📊 Payment tracking statistics.
 

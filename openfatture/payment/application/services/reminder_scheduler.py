@@ -3,7 +3,7 @@
 Implements scheduling and execution of payment reminders based on configurable strategies.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
 import structlog
@@ -13,8 +13,8 @@ from ...domain.models import PaymentReminder
 from ..notifications.notifier import INotifier
 
 if TYPE_CHECKING:
-    from ...infrastructure.repository import PaymentRepository
     from ....storage.database.models import Pagamento
+    from ...infrastructure.repository import PaymentRepository
 
 logger = structlog.get_logger()
 

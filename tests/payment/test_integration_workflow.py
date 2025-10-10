@@ -11,45 +11,43 @@ These tests cover end-to-end scenarios combining multiple components:
 Focus: Realistic business workflows, not unit test isolation.
 """
 
-import pytest
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
+import pytest
 
 from openfatture.payment import (
     BankAccount,
     BankTransaction,
-    MatchResult,
-    ReconciliationResult,
     ImportResult,
-    TransactionStatus,
+    MatchResult,
     MatchType,
-    ReminderStatus,
     PaymentReminder,
-)
-from openfatture.payment.domain.enums import ImportSource, ReminderStrategy
-from openfatture.payment.infrastructure.importers.csv_importer import CSVConfig, CSVImporter
-from openfatture.payment.infrastructure.repository import (
-    BankAccountRepository,
-    BankTransactionRepository,
-    PaymentRepository,
+    ReconciliationResult,
+    ReminderStatus,
+    TransactionStatus,
 )
 from openfatture.payment.application.services.matching_service import MatchingService
 from openfatture.payment.application.services.reconciliation_service import ReconciliationService
-from openfatture.payment.matchers import ExactAmountMatcher, FuzzyStringMatcher, CompositeMatcher
+from openfatture.payment.domain.enums import ImportSource, ReminderStrategy
+from openfatture.payment.infrastructure.importers.csv_importer import CSVConfig, CSVImporter
+from openfatture.payment.infrastructure.repository import (
+    BankTransactionRepository,
+    PaymentRepository,
+)
+from openfatture.payment.matchers import CompositeMatcher, ExactAmountMatcher
+from openfatture.storage.database import get_db, init_db
 from openfatture.storage.database.models import (
-    Pagamento,
     Cliente,
     Fattura,
-    TipoDocumento,
+    Pagamento,
     StatoFattura,
     StatoPagamento,
+    TipoDocumento,
 )
-from openfatture.storage.database import get_db, init_db
 
 
 @pytest.fixture(scope="function")
@@ -475,7 +473,7 @@ class TestCompletePaymentWorkflow:
                 account=sample_bank_account,
                 date=date(2024, 10, 15),
                 amount=Decimal("500.00"),
-                description=f"Payment for INV-2024-001",
+                description="Payment for INV-2024-001",
                 reference="INV-2024-001",
                 import_source=ImportSource.CSV,
             ),
@@ -483,7 +481,7 @@ class TestCompletePaymentWorkflow:
                 account=sample_bank_account,
                 date=date(2024, 10, 16),
                 amount=Decimal("1000.00"),
-                description=f"Payment for INV-2024-002",
+                description="Payment for INV-2024-002",
                 reference="INV-2024-002",
                 import_source=ImportSource.CSV,
             ),

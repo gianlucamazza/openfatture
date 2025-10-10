@@ -7,7 +7,6 @@ efficient Levenshtein distance calculation.
 
 import re
 from datetime import timedelta
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from rapidfuzz import fuzz

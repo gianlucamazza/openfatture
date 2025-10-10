@@ -33,9 +33,9 @@ class TestTransactionStatus:
 
     def test_enum_database_persistence(self, db_session: Session, bank_account):
         """Test that enum persists correctly to database."""
-        from uuid import uuid4
         from datetime import date
         from decimal import Decimal
+        from uuid import uuid4
 
         transaction = BankTransaction(
             id=uuid4(),

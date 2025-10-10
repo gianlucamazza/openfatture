@@ -184,7 +184,7 @@ class BaseImporter(ABC):
 
         for encoding in encodings:
             try:
-                with open(self.file_path, "r", encoding=encoding) as f:
+                with open(self.file_path, encoding=encoding) as f:
                     f.read(1024)  # Try to read first 1KB
                 return encoding
             except UnicodeDecodeError:

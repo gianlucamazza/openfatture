@@ -93,7 +93,7 @@ class QIFImporter(BaseImporter):
         current_tx = {}
         account_type = None
 
-        with open(self.file_path, "r", encoding=encoding, errors="replace") as f:
+        with open(self.file_path, encoding=encoding, errors="replace") as f:
             for line_num, line in enumerate(f, start=1):
                 line = line.strip()
 
@@ -349,7 +349,7 @@ class QIFImporter(BaseImporter):
         super().validate_file()
 
         # Check QIF signature
-        with open(self.file_path, "r", encoding=self.detect_encoding()) as f:
+        with open(self.file_path, encoding=self.detect_encoding()) as f:
             sample = f.read(1024)
 
         # QIF files typically start with !Type: or !Account:

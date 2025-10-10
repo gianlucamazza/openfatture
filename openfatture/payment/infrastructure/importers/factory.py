@@ -238,7 +238,7 @@ class ImporterFactory:
             ImportError: If importer module not available
         """
         if format == FileFormat.CSV:
-            from .csv_importer import CSVImporter, CSVConfig
+            from .csv_importer import CSVConfig, CSVImporter
 
             # Load bank preset if specified
             if bank_preset:

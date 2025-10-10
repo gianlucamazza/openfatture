@@ -18,11 +18,11 @@ from ...domain.payment_allocation import PaymentAllocation
 from ...domain.value_objects import MatchResult, ReconciliationResult
 
 if TYPE_CHECKING:
+    from ....storage.database.models import Pagamento
     from ...infrastructure.repository import (
         BankTransactionRepository,
         PaymentRepository,
     )
-    from ....storage.database.models import Pagamento
     from .matching_service import MatchingService
 
 logger = structlog.get_logger()

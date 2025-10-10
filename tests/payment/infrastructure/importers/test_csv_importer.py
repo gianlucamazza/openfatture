@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 
 from openfatture.payment.infrastructure.importers import ImporterFactory
-from openfatture.payment.domain.models import BankAccount
 
 pytestmark = pytest.mark.unit
 

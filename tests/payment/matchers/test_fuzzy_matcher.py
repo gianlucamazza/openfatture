@@ -311,8 +311,9 @@ class TestFuzzyDescriptionMatcherPropertyBased:
 
 
 # Configure Hypothesis settings
-from hypothesis import Verbosity, settings
 import os
+
+from hypothesis import Verbosity, settings
 
 settings.register_profile("ci", max_examples=100, verbosity=Verbosity.verbose)
 settings.register_profile("dev", max_examples=30)

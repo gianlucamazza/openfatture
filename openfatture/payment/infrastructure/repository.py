@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..domain.enums import TransactionStatus
-from ..domain.models import BankAccount, BankTransaction, PaymentReminder
+from ..domain.models import BankAccount, BankTransaction
 from ..domain.payment_allocation import PaymentAllocation
 
 if TYPE_CHECKING:

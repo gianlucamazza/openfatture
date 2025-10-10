@@ -8,9 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from openfatture.payment.infrastructure.importers import ImporterFactory
-from openfatture.payment.domain.models import BankAccount
 from openfatture.payment.domain.enums import ImportSource
+from openfatture.payment.infrastructure.importers import ImporterFactory
 
 pytestmark = pytest.mark.unit
 
