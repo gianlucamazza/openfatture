@@ -42,6 +42,9 @@ class TestCSVImporterIntesa:
         importer = factory.create_from_file(csv_file, bank_preset="intesa")
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Verify first transaction date
         transactions = bank_account.transactions
@@ -58,6 +61,9 @@ class TestCSVImporterIntesa:
         importer = factory.create_from_file(csv_file, bank_preset="intesa")
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Verify amount parsing (comma → decimal point)
         transactions = sorted(bank_account.transactions, key=lambda t: t.amount, reverse=True)
@@ -70,7 +76,10 @@ class TestCSVImporterIntesa:
         csv_file = FIXTURES_DIR / "intesa_sanpaolo_sample.csv"
         importer = factory.create_from_file(csv_file, bank_preset="intesa")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check for negative amounts (debits)
         debits = [tx for tx in bank_account.transactions if tx.amount < 0]
@@ -85,7 +94,10 @@ class TestCSVImporterIntesa:
         csv_file = FIXTURES_DIR / "intesa_sanpaolo_sample.csv"
         importer = factory.create_from_file(csv_file, bank_preset="intesa")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Verify description contains expected text
         descriptions = [tx.description for tx in bank_account.transactions]
@@ -124,7 +136,10 @@ class TestCSVImporterUniCredit:
         csv_file = FIXTURES_DIR / "unicredit_sample.csv"
         importer = factory.create_from_file(csv_file, bank_preset="unicredit")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Verify date parsing
         first_tx = sorted(bank_account.transactions, key=lambda t: t.date)[0]
@@ -152,7 +167,10 @@ class TestCSVImporterRevolut:
         csv_file = FIXTURES_DIR / "revolut_sample.csv"
         importer = factory.create_from_file(csv_file, bank_preset="revolut")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # All transactions should be imported (EUR)
         assert len(bank_account.transactions) == 10
@@ -182,8 +200,14 @@ class TestCSVImporterGeneric:
 
         # First import
         result1 = importer.import_transactions(bank_account)
+        for tx in result1.transactions:
+            db_session.add(tx)
+        db_session.commit()
         assert result1.success_count == 10
 
         # Second import (same file)
         result2 = importer.import_transactions(bank_account)
+        for tx in result2.transactions:
+            db_session.add(tx)
+        db_session.commit()
         assert result2.duplicate_count > 0

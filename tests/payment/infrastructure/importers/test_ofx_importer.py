@@ -35,7 +35,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check for both positive (CREDIT) and negative (DEBIT) amounts
         transactions = bank_account.transactions
@@ -50,7 +53,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Verify first transaction date (20250115000000 → 2025-01-15)
         first_tx = sorted(bank_account.transactions, key=lambda t: t.date)[0]
@@ -63,7 +69,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # All transactions should have unique references from FITID
         transactions = bank_account.transactions
@@ -78,7 +87,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check descriptions contain expected text
         descriptions = [tx.description for tx in bank_account.transactions]
@@ -90,7 +102,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check counterparties
         counterparties = [tx.counterparty for tx in bank_account.transactions if tx.counterparty]
@@ -103,7 +118,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Find transaction with .50 amount
         tx_500_50 = next(
@@ -117,7 +135,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # All transactions should have OFX source
         assert all(tx.import_source == ImportSource.OFX for tx in bank_account.transactions)
@@ -127,7 +148,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check first transaction has raw_data
         first_tx = bank_account.transactions[0]
@@ -196,6 +220,9 @@ class TestOFXImporter:
         importer = factory.create_from_file(duplicate_ofx)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Only 1 transaction should be imported (duplicate skipped)
         assert result.success_count == 1
@@ -227,7 +254,10 @@ class TestOFXImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.ofx")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Find the DEBIT transaction (-150.00)
         debit_tx = next((tx for tx in bank_account.transactions if tx.amount < 0), None)

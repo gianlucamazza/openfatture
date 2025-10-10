@@ -25,6 +25,9 @@ class TestQIFImporter:
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.qif")
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         assert result.success_count == 10
         assert result.error_count == 0
@@ -35,7 +38,10 @@ class TestQIFImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.qif")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Verify first transaction date (01/15/2025 → 2025-01-15)
         first_tx = sorted(bank_account.transactions, key=lambda t: t.date)[0]
@@ -48,7 +54,10 @@ class TestQIFImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.qif")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check for both credits and debits
         credits = [tx for tx in bank_account.transactions if tx.amount > 0]
@@ -69,7 +78,10 @@ class TestQIFImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.qif")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check descriptions contain Payee and Memo
         descriptions = [tx.description for tx in bank_account.transactions]
@@ -82,7 +94,10 @@ class TestQIFImporter:
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.qif")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check counterparties
         counterparties = [tx.counterparty for tx in bank_account.transactions if tx.counterparty]
@@ -111,6 +126,9 @@ PTest Payee 2
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         assert result.success_count == 2
         assert len(bank_account.transactions) == 2
@@ -120,7 +138,10 @@ PTest Payee 2
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.qif")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # All transactions should have QIF source
         assert all(tx.import_source == ImportSource.QIF for tx in bank_account.transactions)
@@ -130,7 +151,10 @@ PTest Payee 2
         factory = ImporterFactory()
         importer = factory.create_from_file(FIXTURES_DIR / "sample_statement.qif")
 
-        importer.import_transactions(bank_account)
+        result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Check first transaction has raw_data
         first_tx = bank_account.transactions[0]
@@ -163,6 +187,9 @@ PISO format
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # All date formats should be parsed correctly
         assert result.success_count == 3
@@ -191,6 +218,9 @@ PLarge amount
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         assert result.success_count == 2
         amounts = [tx.amount for tx in bank_account.transactions]
@@ -217,6 +247,9 @@ PMinus sign negative
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         assert result.success_count == 2
         amounts = sorted(tx.amount for tx in bank_account.transactions)
@@ -243,6 +276,9 @@ $200.00
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Split should be combined into single transaction with total amount
         assert result.success_count == 1
@@ -271,6 +307,9 @@ PMissing date field
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         # Only valid transaction should be imported
         assert result.success_count == 1
@@ -292,6 +331,9 @@ PNo header
 
         # Should still parse (warning issued but continues)
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
         assert result.success_count == 1
 
     def test_qif_empty_file_returns_zero(self, db_session, bank_account, tmp_path):
@@ -303,6 +345,9 @@ PNo header
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         assert result.success_count == 0
         assert result.total_count == 0
@@ -323,6 +368,9 @@ MOnly memo field, no payee
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         assert result.success_count == 1
         tx = bank_account.transactions[0]
@@ -346,6 +394,9 @@ N1234
         importer = factory.create_from_file(qif_file)
 
         result = importer.import_transactions(bank_account)
+        for tx in result.transactions:
+            db_session.add(tx)
+        db_session.commit()
 
         assert result.success_count == 1
         tx = bank_account.transactions[0]
