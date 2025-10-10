@@ -1,9 +1,10 @@
 """Context enrichment utilities for AI agents."""
 
 from datetime import datetime
+from typing import Any
 
 from openfatture.ai.domain.context import AgentContext, ChatContext
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
 
@@ -67,11 +68,12 @@ def _get_current_year_stats() -> dict:
     Returns:
         Dictionary with year stats
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         current_year = datetime.now().year
 
-        stats = {
+        # Explicit type annotation for indexed assignment and += operations
+        stats: dict[str, Any] = {
             "anno": current_year,
             "totale_fatture": 0,
             "per_stato": {},
@@ -112,7 +114,7 @@ def _get_recent_invoices_summary(limit: int = 5) -> str:
     Returns:
         Formatted summary string
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         fatture = db.query(Fattura).order_by(Fattura.data_emissione.desc()).limit(limit).all()
 
@@ -146,7 +148,7 @@ def _get_recent_clients_summary(limit: int = 5) -> str:
     Returns:
         Formatted summary string
     """
-    db = SessionLocal()
+    db = get_session()
     try:
         # Get clients with most recent invoices
         clienti = db.query(Cliente).limit(limit).all()
@@ -278,7 +280,7 @@ async def enrich_with_rag(context: AgentContext, query: str) -> AgentContext:
     return context
 
 
-def _format_invoice_result(result) -> str:
+def _format_invoice_result(result: Any) -> str:
     """Create human-readable summary for invoice retrieval result."""
     client_name = result.client_name or "Cliente sconosciuto"
     snippet = result.document.replace("\n", " ")[:200]

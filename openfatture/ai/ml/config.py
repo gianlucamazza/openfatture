@@ -13,9 +13,9 @@ Environment Variables:
 """
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from openfatture.utils.logging import get_logger
@@ -236,13 +236,13 @@ class MLConfig(BaseSettings):
 
     @field_validator("prophet_weight", "xgboost_weight")
     @classmethod
-    def validate_weights_sum(cls, v, info):
+    def validate_weights_sum(cls: type["MLConfig"], v: Any, info: ValidationInfo) -> Any:
         """Ensure ensemble weights sum to 1.0."""
         # Note: This validator runs for each field individually
         # Full validation happens in __post_init__
         return v
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Post-initialization validation."""
         # Validate ensemble weights sum to 1.0
         total_weight = self.prophet_weight + self.xgboost_weight

@@ -16,6 +16,11 @@ from __future__ import annotations
 import inspect
 from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...storage.database.models import Pagamento
+    from ..domain.models import BankTransaction
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
@@ -54,7 +59,9 @@ class CompositeMatcher(IMatcherStrategy):
         self.weights: list[Decimal] = self._normalise_weights(weights)
         self.min_confidence = self._to_decimal(min_confidence)
 
-    async def match(self, transaction, payments) -> list[MatchResult]:  # type: ignore[override]
+    async def match(  # type: ignore[override]
+        self, transaction: BankTransaction, payments: list[Pagamento]
+    ) -> list[MatchResult]:
         """Execute configured strategies and merge their outputs."""
         if not self.strategies:
             return []

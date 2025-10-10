@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
 import structlog
+from sqlalchemy.orm import Session
 
 from ...domain.enums import ReminderStrategy
 from ...domain.models import PaymentReminder
@@ -26,7 +27,7 @@ class ReminderRepository:
     repository with SQLAlchemy models.
     """
 
-    def __init__(self, session):
+    def __init__(self, session: Session) -> None:
         """Initialize reminder repository.
 
         Args:

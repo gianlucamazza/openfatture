@@ -9,6 +9,7 @@ from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -258,7 +259,7 @@ def validate_batch(
 
 def send_batch(
     invoices: list[Fattura],
-    pec_sender,
+    pec_sender: Any,
     xml_paths: list[Path],
     max_concurrent: int = 5,
 ) -> BatchResult:

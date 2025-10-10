@@ -26,7 +26,7 @@ from openfatture.ai.agents.compliance.sdi_patterns import (
     SDIPatternDatabase,
     SDIRejectionPattern,
 )
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
@@ -178,6 +178,10 @@ class ComplianceChecker:
         # Initialize rules engine (always used)
         self.rules_engine = ComplianceRulesEngine()
 
+        # Type annotations for optional components
+        self.sdi_patterns: SDIPatternDatabase | None
+        self.ai_analyzer: AIHeuristicAnalyzer | None
+
         # Initialize SDI patterns (used for STANDARD and ADVANCED)
         if self.level in [ComplianceLevel.STANDARD, ComplianceLevel.ADVANCED]:
             self.sdi_patterns = SDIPatternDatabase()
@@ -215,7 +219,7 @@ class ComplianceChecker:
         Returns:
             ComplianceReport with all findings
         """
-        db = SessionLocal()
+        db = get_session()
 
         try:
             # Load invoice
@@ -284,6 +288,9 @@ class ComplianceChecker:
     def _match_sdi_patterns(self, fattura: Fattura, report: ComplianceReport) -> None:
         """Match invoice against known SDI rejection patterns."""
 
+        # Type guard: ensure sdi_patterns is initialized (called only when not None)
+        assert self.sdi_patterns is not None, "SDI patterns should be initialized"
+
         # Get all patterns
         all_patterns = self.sdi_patterns.get_all_patterns()
 
@@ -345,7 +352,7 @@ class ComplianceChecker:
 
         return False
 
-    def _get_client_history(self, db, fattura: Fattura, limit: int = 10) -> list[Fattura]:
+    def _get_client_history(self, db: Any, fattura: Fattura, limit: int = 10) -> list[Fattura]:
         """Get client invoice history."""
 
         return (
@@ -448,7 +455,7 @@ class ComplianceChecker:
         Returns:
             Dictionary with stats
         """
-        stats = {
+        stats: dict[str, Any] = {
             "level": self.level.value,
             "components": {
                 "rules_engine": True,

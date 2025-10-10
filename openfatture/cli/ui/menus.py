@@ -1,7 +1,14 @@
 """Interactive menu system for OpenFatture."""
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import questionary
+from questionary import Choice
 from rich.console import Console
+
+if TYPE_CHECKING:
+    from openfatture.storage.database.models import Fattura
 
 from openfatture.cli.ui.dashboard import show_dashboard
 from openfatture.cli.ui.helpers import (
@@ -32,7 +39,7 @@ def show_main_menu() -> str:
     """
     console.print("\n")
 
-    choices = [
+    choices: list[str | Choice] = [
         "🚀 Setup & Configurazione",
         "👤 Gestione Clienti",
         "🧾 Gestione Fatture",
@@ -97,7 +104,7 @@ def handle_main_menu(choice: str) -> bool:
 
 def show_setup_menu() -> str:
     """Show setup submenu."""
-    choices = [
+    choices: list[str | Choice] = [
         "🚀 Inizializza OpenFatture",
         "👁️  Mostra configurazione",
         "✏️  Modifica configurazione",
@@ -141,7 +148,7 @@ def handle_setup_menu() -> None:
 
 def show_clienti_menu() -> str:
     """Show clients submenu."""
-    choices = [
+    choices: list[str | Choice] = [
         "➕ Crea nuovo cliente",
         "📋 Lista tutti i clienti",
         "🔍 Cerca cliente",
@@ -188,7 +195,7 @@ def handle_clienti_menu() -> None:
 
 def show_fatture_menu() -> str:
     """Show invoices submenu."""
-    choices = [
+    choices: list[str | Choice] = [
         "➕ Crea nuova fattura (wizard)",
         "📋 Lista fatture",
         "🔍 Cerca fattura",
@@ -241,7 +248,7 @@ def handle_fatture_menu() -> None:
 
 def show_notifiche_menu() -> str:
     """Show SDI notifications submenu."""
-    choices = [
+    choices: list[str | Choice] = [
         "📬 Processa notifica da file",
         "📋 Lista tutte le notifiche",
         "👁️  Mostra dettagli notifica",
@@ -277,7 +284,7 @@ def handle_notifiche_menu() -> None:
 
 def show_email_menu() -> str:
     """Show email templates submenu."""
-    choices = [
+    choices: list[str | Choice] = [
         "📧 Invia email di test",
         "👁️  Anteprima template",
         "ℹ️  Info templates",
@@ -313,7 +320,7 @@ def handle_email_menu() -> None:
 
 def show_batch_menu() -> str:
     """Show batch operations submenu."""
-    choices = [
+    choices: list[str | Choice] = [
         "📤 Invia multiple fatture a SDI",
         "📥 Importa fatture da CSV",
         "💾 Esporta fatture selezionate",
@@ -355,7 +362,7 @@ def handle_batch_menu() -> None:
 
 def show_report_menu() -> str:
     """Show reports submenu."""
-    choices = [
+    choices: list[str | Choice] = [
         "📊 Dashboard Interattiva",
         "📈 Report mensile",
         "📅 Report annuale",
@@ -397,7 +404,7 @@ def handle_report_menu() -> None:
 
 def show_ai_menu() -> str:
     """Show AI assistant submenu."""
-    choices = [
+    choices: list[str | Choice] = [
         "💬 Chat con assistente AI",
         "💡 Suggerimenti fattura",
         questionary.Separator(),
@@ -720,7 +727,7 @@ def action_preview_template() -> None:
 
 def action_email_info() -> None:
     """Show email templates info."""
-    from openfatture.cli.commands.email import show_info
+    from openfatture.cli.commands.email import email_info as show_info
 
     try:
         show_info()
@@ -754,7 +761,7 @@ def action_batch_send() -> None:
     # Process with progress bar
     from openfatture.cli.commands.fattura import invia_fattura
 
-    def send_invoice(fattura) -> tuple[bool, str | None]:
+    def send_invoice(fattura: "Fattura") -> tuple[bool, str | None]:
         try:
             invia_fattura(fattura.id)
             return True, None
@@ -800,7 +807,7 @@ def action_batch_export() -> None:
         return
 
     # Show message with spinner
-    def export_invoices():
+    def export_invoices() -> Path:
         import csv
         from pathlib import Path
 
@@ -860,7 +867,7 @@ def action_batch_delete() -> None:
     # Process with progress bar
     from openfatture.cli.commands.fattura import delete_fattura
 
-    def delete_invoice(fattura) -> tuple[bool, str | None]:
+    def delete_invoice(fattura: "Fattura") -> tuple[bool, str | None]:
         try:
             delete_fattura(fattura.id, force=True)
             return True, None

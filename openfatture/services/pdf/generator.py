@@ -385,7 +385,7 @@ class PDFGenerator:
         canvas.drawString(15.5 * cm, 2 * cm, "Paga con QR Code")
 
 
-def create_pdf_generator(template: str = "minimalist", **kwargs) -> PDFGenerator:
+def create_pdf_generator(template: str = "minimalist", **kwargs: Any) -> PDFGenerator:
     """Factory function to create PDF generator.
 
     Args:

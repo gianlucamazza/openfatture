@@ -6,8 +6,8 @@ Levenshtein distance calculations.
 """
 
 import re
+from collections.abc import Callable
 from datetime import timedelta
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from rapidfuzz import fuzz
@@ -208,7 +208,7 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         if combined_payment_text:
             targets.append(combined_payment_text)
 
-        def best_similarity(source: str, scorer=fuzz.ratio) -> float:
+        def best_similarity(source: str, scorer: Callable[[str, str], float] = fuzz.ratio) -> float:
             if not source or not targets:
                 return 0.0
             return max(scorer(source, target) for target in targets)
@@ -352,7 +352,7 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
             f"amount_tolerance={self.amount_tolerance_pct}%)>"
         )
 
-    def _validate_confidence(self, confidence: float) -> Decimal:
+    def _validate_confidence(self, confidence: float) -> float:
         """Validate and clamp confidence to [0.0, 1.0] range.
 
         Args:
@@ -361,5 +361,4 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         Returns:
             Validated confidence between 0.0 and 1.0
         """
-        clamped = max(0.0, min(1.0, confidence))
-        return Decimal(str(clamped))
+        return max(0.0, min(1.0, confidence))

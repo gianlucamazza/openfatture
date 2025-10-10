@@ -146,7 +146,7 @@ class TemplateRenderer:
     def _add_global_context(self) -> None:
         """Add global context variables available in all templates."""
 
-        def translate(key: str, **kwargs) -> str:
+        def translate(key: str, **kwargs: Any) -> str:
             """
             Translate key using i18n.
 
@@ -168,7 +168,8 @@ class TemplateRenderer:
                 for k, v in kwargs.items():
                     value = value.replace(f"{{{{{k}}}}}", str(v))
 
-            return value
+            # Ensure return type is always str (value might still be dict if key points to nested object)
+            return value if isinstance(value, str) else key
 
         # Add global functions and variables
         self.env.globals["_"] = translate

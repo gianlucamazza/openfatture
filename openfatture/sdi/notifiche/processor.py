@@ -6,6 +6,7 @@ Optionally sends email notifications to configured recipients.
 """
 
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -33,7 +34,7 @@ class NotificationProcessor:
         TipoNotifica.NOTIFICA_ESITO: None,  # Depends on esito value
     }
 
-    def __init__(self, db_session: Session, email_sender=None):
+    def __init__(self, db_session: Session, email_sender: Any | None = None):
         """
         Initialize notification processor.
 
@@ -60,6 +61,9 @@ class NotificationProcessor:
 
         if not success:
             return False, f"Parsing failed: {error}", None
+
+        if notification is None:
+            return False, "Notification parsing returned None", None
 
         # Process notification
         return self.process_notification(notification)
