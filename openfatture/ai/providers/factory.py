@@ -174,9 +174,9 @@ def _create_ollama_provider(
     **kwargs: str | int | float,
 ) -> OllamaProvider:
     """Create Ollama provider."""
-    # Merge kwargs with settings (type-safe)
-    # Note: Ollama doesn't use api_key, only base_url
-    config: ProviderConfig = {
+    # Ollama doesn't use api_key, only base_url
+    # Build config dict without TypedDict to avoid api_key type error
+    config = {
         "base_url": settings.ollama_base_url,
         "model": settings.ollama_model,
         "temperature": settings.temperature,
@@ -185,9 +185,9 @@ def _create_ollama_provider(
     }
     # Update with kwargs, but remove api_key if present (Ollama doesn't use it)
     filtered_kwargs = {k: v for k, v in kwargs.items() if k != "api_key"}
-    config.update(filtered_kwargs)  # type: ignore[typeddict-item]
+    config.update(filtered_kwargs)
 
-    return OllamaProvider(**config)
+    return OllamaProvider(**config)  # type: ignore[arg-type]
 
 
 async def test_provider(provider: BaseLLMProvider) -> bool:

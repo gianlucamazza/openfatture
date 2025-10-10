@@ -35,7 +35,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from openfatture.ai.domain.message import Message
-from openfatture.ai.domain.response import AIResponse
+from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.utils.logging import get_logger
@@ -341,7 +341,7 @@ class ResilientProvider:
 
         # Circuit breaker for primary provider
         self.circuit_breaker = CircuitBreaker(
-            name=f"provider_{primary_provider.provider}",
+            name=f"provider_{primary_provider.provider_name}",
             config=self.policy.get_circuit_config(),
         )
 
@@ -350,7 +350,7 @@ class ResilientProvider:
 
         logger.info(
             "resilient_provider_initialized",
-            primary=primary_provider.provider,
+            primary=primary_provider.provider_name,
             fallbacks=self.policy.fallback_providers,
         )
 
@@ -375,7 +375,7 @@ class ResilientProvider:
         self,
         messages: list[Message],
         **kwargs: Any,
-    ) -> AIResponse:
+    ) -> AgentResponse:
         """Execute chat with retry, fallback, and circuit breaker.
 
         Args:
@@ -383,7 +383,7 @@ class ResilientProvider:
             **kwargs: Additional provider arguments
 
         Returns:
-            AIResponse from primary or fallback provider
+            AgentResponse from primary or fallback provider
 
         Raises:
             Exception: If all providers fail
@@ -395,7 +395,7 @@ class ResilientProvider:
             if not self.circuit_breaker.can_attempt():
                 logger.warning(
                     "circuit_breaker_open_skipping_primary",
-                    provider=self.primary_provider.provider,
+                    provider=self.primary_provider.provider_name,
                 )
                 break  # Skip to fallback
 
@@ -410,7 +410,7 @@ class ResilientProvider:
 
                 logger.info(
                     "primary_provider_success",
-                    provider=self.primary_provider.provider,
+                    provider=self.primary_provider.provider_name,
                     attempt=attempt + 1,
                 )
 
@@ -419,7 +419,7 @@ class ResilientProvider:
             except TimeoutError:
                 logger.warning(
                     "provider_timeout",
-                    provider=self.primary_provider.provider,
+                    provider=self.primary_provider.provider_name,
                     timeout=self.policy.operation_timeout_seconds,
                     attempt=attempt + 1,
                 )
@@ -428,7 +428,7 @@ class ResilientProvider:
             except Exception as e:
                 logger.warning(
                     "provider_error",
-                    provider=self.primary_provider.provider,
+                    provider=self.primary_provider.provider_name,
                     error=str(e),
                     attempt=attempt + 1,
                 )
@@ -443,7 +443,7 @@ class ResilientProvider:
         # Primary provider failed, try fallbacks
         logger.warning(
             "primary_provider_exhausted_trying_fallbacks",
-            provider=self.primary_provider.provider,
+            provider=self.primary_provider.provider_name,
         )
 
         self._initialize_fallback_providers()
@@ -452,7 +452,7 @@ class ResilientProvider:
             try:
                 logger.info(
                     "attempting_fallback_provider",
-                    fallback=fallback_provider.provider,
+                    fallback=fallback_provider.provider_name,
                 )
 
                 response = await asyncio.wait_for(
@@ -462,7 +462,7 @@ class ResilientProvider:
 
                 logger.info(
                     "fallback_provider_success",
-                    fallback=fallback_provider.provider,
+                    fallback=fallback_provider.provider_name,
                 )
 
                 return response
@@ -470,7 +470,7 @@ class ResilientProvider:
             except Exception as e:
                 logger.warning(
                     "fallback_provider_failed",
-                    fallback=fallback_provider.provider,
+                    fallback=fallback_provider.provider_name,
                     error=str(e),
                 )
                 continue
@@ -479,8 +479,8 @@ class ResilientProvider:
         error_msg = "All providers failed (primary + fallbacks)"
         logger.error(
             "all_providers_failed",
-            primary=self.primary_provider.provider,
-            fallbacks=[p.provider for p in self.fallback_providers],
+            primary=self.primary_provider.provider_name,
+            fallbacks=[p.provider_name for p in self.fallback_providers],
         )
 
         raise RuntimeError(error_msg)

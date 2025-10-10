@@ -59,7 +59,7 @@ class DashboardData:
         now = datetime.now()
         total = (
             self.db.query(func.sum(Fattura.totale))
-            .filter(extract("year", Fattura.data) == now.year)
+            .filter(extract("year", Fattura.data_emissione) == now.year)
             .scalar()
         )
         return total or Decimal("0")

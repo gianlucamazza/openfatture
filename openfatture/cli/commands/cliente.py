@@ -72,7 +72,12 @@ def add_cliente(
         telefono = Prompt.ask("Phone (optional)", default="")
     else:
         # Quick add mode - minimal data
-        indirizzo = cap = comune = provincia = email = telefono = None
+        indirizzo: str | None = None
+        cap: str | None = None
+        comune: str | None = None
+        provincia: str | None = None
+        email: str | None = None
+        telefono: str | None = None
 
     # Validate required fields
     if not denominazione:
