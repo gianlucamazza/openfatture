@@ -4,13 +4,13 @@ This module provides a wrapper around ChromaDB for persistent vector storage
 and semantic search.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Any
 
 import chromadb
-from chromadb.config import Settings
 from chromadb.api.models.Collection import Collection
+from chromadb.config import Settings
 
 from openfatture.ai.rag.config import RAGConfig
 from openfatture.ai.rag.embeddings import EmbeddingStrategy
@@ -88,10 +88,10 @@ class VectorStore:
 
     async def add_documents(
         self,
-        documents: List[str],
-        metadatas: Optional[List[Dict[str, Any]]] = None,
-        ids: Optional[List[str]] = None,
-    ) -> List[str]:
+        documents: list[str],
+        metadatas: list[dict[str, Any]] | None = None,
+        ids: list[str] | None = None,
+    ) -> list[str]:
         """Add documents to the vector store.
 
         Args:
@@ -146,10 +146,10 @@ class VectorStore:
     async def search(
         self,
         query: str,
-        top_k: Optional[int] = None,
-        filters: Optional[Dict[str, Any]] = None,
-        min_similarity: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
+        top_k: int | None = None,
+        filters: dict[str, Any] | None = None,
+        min_similarity: float | None = None,
+    ) -> list[dict[str, Any]]:
         """Search for similar documents.
 
         Args:
@@ -197,12 +197,14 @@ class VectorStore:
                 if similarity < min_similarity:
                     continue
 
-                processed_results.append({
-                    "id": doc_id,
-                    "document": results["documents"][0][i],
-                    "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
-                    "similarity": similarity,
-                })
+                processed_results.append(
+                    {
+                        "id": doc_id,
+                        "document": results["documents"][0][i],
+                        "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
+                        "similarity": similarity,
+                    }
+                )
 
         logger.info(
             "search_completed",
@@ -217,8 +219,8 @@ class VectorStore:
     async def update_document(
         self,
         doc_id: str,
-        document: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        document: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Update an existing document.
 
@@ -258,7 +260,7 @@ class VectorStore:
 
         logger.info("document_updated", doc_id=doc_id)
 
-    async def delete_documents(self, ids: List[str]) -> None:
+    async def delete_documents(self, ids: list[str]) -> None:
         """Delete documents by IDs.
 
         Args:
@@ -272,7 +274,7 @@ class VectorStore:
             total_count=self.collection.count(),
         )
 
-    async def delete_by_filter(self, filters: Dict[str, Any]) -> int:
+    async def delete_by_filter(self, filters: dict[str, Any]) -> int:
         """Delete documents matching filters.
 
         Args:
@@ -298,7 +300,7 @@ class VectorStore:
 
         return 0
 
-    def get_document(self, doc_id: str) -> Optional[Dict[str, Any]]:
+    def get_document(self, doc_id: str) -> dict[str, Any] | None:
         """Get a document by ID.
 
         Args:
@@ -343,7 +345,7 @@ class VectorStore:
 
         logger.info("collection_reset", collection=self.config.collection_name)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get collection statistics.
 
         Returns:

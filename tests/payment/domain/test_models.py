@@ -9,7 +9,6 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import exc
 from sqlalchemy.orm import Session
 
 from openfatture.payment.domain.enums import (
@@ -299,7 +298,9 @@ class TestPaymentReminder:
         db_session.commit()
 
         # Verify both are deleted
-        deleted_payment = db_session.query(type(payment_with_reminder)).filter_by(id=payment_id).first()
+        deleted_payment = (
+            db_session.query(type(payment_with_reminder)).filter_by(id=payment_id).first()
+        )
         deleted_reminder = db_session.query(PaymentReminder).filter_by(id=reminder_id).first()
         assert deleted_payment is None
         assert deleted_reminder is None

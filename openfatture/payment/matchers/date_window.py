@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy, payment_amount_for_matching
+from .base import IMatcherStrategy, as_match_results, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -49,7 +49,11 @@ class DateWindowMatcher(IMatcherStrategy):
     """
 
     def __init__(
-        self, date_tolerance_days: int = 7, amount_tolerance: Decimal = Decimal("1.00")
+        self,
+        date_tolerance_days: int = 7,
+        amount_tolerance: Decimal = Decimal("1.00"),
+        *,
+        window_days: int | None = None,
     ) -> None:
         """Initialize date window matcher.
 
@@ -57,6 +61,9 @@ class DateWindowMatcher(IMatcherStrategy):
             date_tolerance_days: Number of days ± from due date to consider
             amount_tolerance: Maximum amount difference to tolerate
         """
+        if window_days is not None:
+            date_tolerance_days = window_days
+
         self.date_tolerance_days = date_tolerance_days
         self.amount_tolerance = amount_tolerance
 
@@ -123,7 +130,7 @@ class DateWindowMatcher(IMatcherStrategy):
             )
         )
 
-        return results
+        return as_match_results(results)
 
     def _calculate_confidence(self, date_diff_days: int, amount_diff: Decimal) -> float:
         """Calculate confidence based on date proximity and amount accuracy.
@@ -147,7 +154,7 @@ class DateWindowMatcher(IMatcherStrategy):
         """
         # Base confidence from date proximity
         if date_diff_days == 0:
-            confidence = 0.85
+            confidence = 0.90
         elif date_diff_days == 1:
             confidence = 0.80
         elif date_diff_days <= 3:

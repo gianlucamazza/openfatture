@@ -1,7 +1,7 @@
 """AI module configuration settings."""
 
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -34,12 +34,12 @@ class AISettings(BaseSettings):
     )
 
     # API Credentials
-    openai_api_key: Optional[SecretStr] = Field(
+    openai_api_key: SecretStr | None = Field(
         default=None,
         description="OpenAI API key",
     )
 
-    anthropic_api_key: Optional[SecretStr] = Field(
+    anthropic_api_key: SecretStr | None = Field(
         default=None,
         description="Anthropic API key",
     )
@@ -265,7 +265,7 @@ class AISettings(BaseSettings):
             "ollama": self.ollama_model,
         }[self.provider]
 
-    def get_api_key_for_provider(self) -> Optional[str]:
+    def get_api_key_for_provider(self) -> str | None:
         """Get the API key for the current provider."""
         key_map = {
             "openai": self.openai_api_key,
@@ -306,7 +306,7 @@ class AISettings(BaseSettings):
 
 
 # Global settings instance
-_settings: Optional[AISettings] = None
+_settings: AISettings | None = None
 
 
 def get_ai_settings() -> AISettings:

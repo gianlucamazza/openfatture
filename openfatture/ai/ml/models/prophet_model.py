@@ -14,23 +14,24 @@ This wrapper adapts Prophet for payment delay prediction by:
 4. Providing prediction intervals for risk assessment
 """
 
-from dataclasses import dataclass
-from datetime import date, datetime
-from typing import Optional, List, Dict, Any
 import warnings
+from dataclasses import dataclass
+from typing import Any
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 try:
     from prophet import Prophet
-    from prophet.serialize import model_to_json, model_from_json
+    from prophet.serialize import model_from_json, model_to_json
+
     PROPHET_AVAILABLE = True
 except ImportError:
     PROPHET_AVAILABLE = False
     warnings.warn(
         "Prophet not installed. Install with: pip install prophet",
-        ImportWarning
+        ImportWarning,
+        stacklevel=2,
     )
 
 from openfatture.utils.logging import get_logger
@@ -39,20 +40,38 @@ logger = get_logger(__name__)
 
 
 # Italian public holidays for Prophet
-ITALIAN_HOLIDAYS_DF = pd.DataFrame({
-    'holiday': [
-        'Capodanno', 'Epifania', 'Festa della Liberazione',
-        'Festa del Lavoro', 'Festa della Repubblica', 'Ferragosto',
-        'Ognissanti', 'Immacolata Concezione', 'Natale', 'Santo Stefano'
-    ],
-    'ds': pd.to_datetime([
-        '2020-01-01', '2020-01-06', '2020-04-25',
-        '2020-05-01', '2020-06-02', '2020-08-15',
-        '2020-11-01', '2020-12-08', '2020-12-25', '2020-12-26'
-    ]),
-    'lower_window': 0,
-    'upper_window': 1,  # Holiday effect lasts 1 day
-})
+ITALIAN_HOLIDAYS_DF = pd.DataFrame(
+    {
+        "holiday": [
+            "Capodanno",
+            "Epifania",
+            "Festa della Liberazione",
+            "Festa del Lavoro",
+            "Festa della Repubblica",
+            "Ferragosto",
+            "Ognissanti",
+            "Immacolata Concezione",
+            "Natale",
+            "Santo Stefano",
+        ],
+        "ds": pd.to_datetime(
+            [
+                "2020-01-01",
+                "2020-01-06",
+                "2020-04-25",
+                "2020-05-01",
+                "2020-06-02",
+                "2020-08-15",
+                "2020-11-01",
+                "2020-12-08",
+                "2020-12-25",
+                "2020-12-26",
+            ]
+        ),
+        "lower_window": 0,
+        "upper_window": 1,  # Holiday effect lasts 1 day
+    }
+)
 
 
 @dataclass
@@ -109,14 +128,14 @@ class ProphetModel:
 
     def __init__(
         self,
-        seasonality_mode: str = 'multiplicative',
+        seasonality_mode: str = "multiplicative",
         yearly_seasonality: bool = True,
         weekly_seasonality: bool = True,
         daily_seasonality: bool = False,
         interval_width: float = 0.80,
         changepoint_prior_scale: float = 0.05,
         seasonality_prior_scale: float = 10.0,
-        holidays: Optional[pd.DataFrame] = None,
+        holidays: pd.DataFrame | None = None,
     ):
         """Initialize Prophet model.
 
@@ -144,7 +163,7 @@ class ProphetModel:
         # Use Italian holidays by default
         self.holidays = holidays if holidays is not None else ITALIAN_HOLIDAYS_DF
 
-        self.model: Optional[Prophet] = None
+        self.model: Prophet | None = None
         self.fitted_ = False
 
         logger.info(
@@ -158,7 +177,7 @@ class ProphetModel:
         self,
         X: pd.DataFrame,
         y: pd.Series,
-    ) -> 'ProphetModel':
+    ) -> "ProphetModel":
         """Fit Prophet model on training data.
 
         Args:
@@ -203,7 +222,7 @@ class ProphetModel:
     def predict(
         self,
         X: pd.DataFrame,
-    ) -> List[ProphetPrediction]:
+    ) -> list[ProphetPrediction]:
         """Generate predictions for new data.
 
         Args:
@@ -216,9 +235,7 @@ class ProphetModel:
             raise ValueError("Model must be fitted before prediction")
 
         # Convert to Prophet format (without target)
-        df_prophet = pd.DataFrame({
-            'ds': pd.to_datetime(X['data_emissione'])
-        })
+        df_prophet = pd.DataFrame({"ds": pd.to_datetime(X["data_emissione"])})
 
         # Generate forecast
         forecast = self.model.predict(df_prophet)
@@ -228,12 +245,12 @@ class ProphetModel:
 
         for idx, row in forecast.iterrows():
             pred = ProphetPrediction(
-                yhat=row['yhat'],
-                yhat_lower=row['yhat_lower'],
-                yhat_upper=row['yhat_upper'],
-                trend=row['trend'],
-                seasonal=row.get('weekly', 0) + row.get('yearly', 0),
-                holiday=row.get('holidays', 0),
+                yhat=row["yhat"],
+                yhat_lower=row["yhat_lower"],
+                yhat_upper=row["yhat_upper"],
+                trend=row["trend"],
+                seasonal=row.get("weekly", 0) + row.get("yearly", 0),
+                holiday=row.get("holidays", 0),
             )
             predictions.append(pred)
 
@@ -263,7 +280,7 @@ class ProphetModel:
     def _to_prophet_format(
         self,
         X: pd.DataFrame,
-        y: Optional[pd.Series] = None,
+        y: pd.Series | None = None,
     ) -> pd.DataFrame:
         """Convert data to Prophet's required format.
 
@@ -278,15 +295,13 @@ class ProphetModel:
         Returns:
             DataFrame in Prophet format
         """
-        if 'data_emissione' not in X.columns:
+        if "data_emissione" not in X.columns:
             raise ValueError("X must contain 'data_emissione' column")
 
-        df = pd.DataFrame({
-            'ds': pd.to_datetime(X['data_emissione'])
-        })
+        df = pd.DataFrame({"ds": pd.to_datetime(X["data_emissione"])})
 
         if y is not None:
-            df['y'] = y.values
+            df["y"] = y.values
 
         return df
 
@@ -315,19 +330,17 @@ class ProphetModel:
         forecast = self.model.predict(df_prophet)
 
         # Extract components
-        components = forecast[[
-            'ds', 'trend', 'yhat'
-        ]].copy()
+        components = forecast[["ds", "trend", "yhat"]].copy()
 
         # Add seasonality components if available
-        if 'weekly' in forecast.columns:
-            components['weekly'] = forecast['weekly']
+        if "weekly" in forecast.columns:
+            components["weekly"] = forecast["weekly"]
 
-        if 'yearly' in forecast.columns:
-            components['yearly'] = forecast['yearly']
+        if "yearly" in forecast.columns:
+            components["yearly"] = forecast["yearly"]
 
-        if 'holidays' in forecast.columns:
-            components['holidays'] = forecast['holidays']
+        if "holidays" in forecast.columns:
+            components["holidays"] = forecast["holidays"]
 
         return components
 
@@ -340,12 +353,11 @@ class ProphetModel:
         if not self.fitted_:
             raise ValueError("Model must be fitted before getting changepoints")
 
-        changepoints = pd.DataFrame({
-            'date': self.model.changepoints,
-            'delta': self.model.params['delta'].flatten()
-        })
+        changepoints = pd.DataFrame(
+            {"date": self.model.changepoints, "delta": self.model.params["delta"].flatten()}
+        )
 
-        return changepoints.sort_values('date')
+        return changepoints.sort_values("date")
 
     def save(self, filepath: str) -> None:
         """Save model to file.
@@ -356,13 +368,13 @@ class ProphetModel:
         if not self.fitted_:
             raise ValueError("Cannot save unfitted model")
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             f.write(model_to_json(self.model))
 
         logger.info("prophet_model_saved", filepath=filepath)
 
     @classmethod
-    def load(cls, filepath: str) -> 'ProphetModel':
+    def load(cls, filepath: str) -> "ProphetModel":
         """Load model from file.
 
         Args:
@@ -371,7 +383,7 @@ class ProphetModel:
         Returns:
             Loaded ProphetModel instance
         """
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             model_json = f.read()
 
         loaded_model = cls()
@@ -382,20 +394,20 @@ class ProphetModel:
 
         return loaded_model
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get model hyperparameters.
 
         Returns:
             Dictionary of hyperparameters
         """
         return {
-            'seasonality_mode': self.seasonality_mode,
-            'yearly_seasonality': self.yearly_seasonality,
-            'weekly_seasonality': self.weekly_seasonality,
-            'daily_seasonality': self.daily_seasonality,
-            'interval_width': self.interval_width,
-            'changepoint_prior_scale': self.changepoint_prior_scale,
-            'seasonality_prior_scale': self.seasonality_prior_scale,
+            "seasonality_mode": self.seasonality_mode,
+            "yearly_seasonality": self.yearly_seasonality,
+            "weekly_seasonality": self.weekly_seasonality,
+            "daily_seasonality": self.daily_seasonality,
+            "interval_width": self.interval_width,
+            "changepoint_prior_scale": self.changepoint_prior_scale,
+            "seasonality_prior_scale": self.seasonality_prior_scale,
         }
 
     def score(

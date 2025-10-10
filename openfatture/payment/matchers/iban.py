@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy, payment_amount_for_matching
+from .base import IMatcherStrategy, as_match_results, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -82,27 +82,33 @@ class IBANMatcher(IMatcherStrategy):
         """
         results: list[MatchResult] = []
 
-        # Extract IBANs from transaction text fields
         transaction_ibans = self._extract_ibans(transaction)
-
-        if not transaction_ibans:
-            # No IBANs found in transaction, cannot match
-            return results
+        transaction_text = self._collect_transaction_text(transaction)
 
         # Date filter
         date_min = transaction.date - timedelta(days=self.date_tolerance_days)
         date_max = transaction.date + timedelta(days=self.date_tolerance_days)
 
         for payment in payments:
-            # Skip if payment has no IBAN
-            if not payment.iban:
+            payment_iban_raw = self._get_payment_iban(payment)
+            if not payment_iban_raw:
                 continue
 
-            # Normalize payment IBAN
-            payment_iban = self._normalize_iban(payment.iban)
+            payment_iban = self._normalize_iban(payment_iban_raw)
+            if not payment_iban:
+                continue
 
-            # Check if payment IBAN is in transaction IBANs
-            if payment_iban not in transaction_ibans:
+            is_full_match = payment_iban in transaction_ibans
+            is_partial_match = False
+
+            if not is_full_match and payment_iban and transaction_text:
+                iban_tail = payment_iban[-4:]
+                if iban_tail and iban_tail.isdigit():
+                    tail_pattern = re.compile(rf"(?<!\d){iban_tail}(?!\d)")
+                    if tail_pattern.search(transaction_text):
+                        is_partial_match = True
+
+            if not is_full_match and not is_partial_match:
                 continue
 
             # Check date tolerance
@@ -110,7 +116,8 @@ class IBANMatcher(IMatcherStrategy):
                 continue
 
             # Calculate confidence based on amount and date match
-            confidence = self._calculate_confidence(transaction, payment)
+            base_confidence = 0.90 if is_full_match else 0.75
+            confidence = self._calculate_confidence(transaction, payment, base_confidence)
 
             # Calculate amount difference
             transaction_amount = abs(transaction.amount)
@@ -118,7 +125,13 @@ class IBANMatcher(IMatcherStrategy):
             amount_diff = abs(transaction_amount - payment_amount)
 
             # Build match reason
-            match_reason = self._build_match_reason(transaction, payment, payment_iban)
+            match_reason = self._build_match_reason(
+                transaction, payment, payment_iban, is_partial_match
+            )
+
+            matched_fields = ["iban"]
+            if is_partial_match:
+                matched_fields.append("iban_last4")
 
             results.append(
                 MatchResult(
@@ -127,7 +140,7 @@ class IBANMatcher(IMatcherStrategy):
                     confidence=self._validate_confidence(confidence),
                     match_reason=match_reason,
                     match_type=MatchType.IBAN,
-                    matched_fields=["iban"],
+                    matched_fields=matched_fields,
                     amount_diff=amount_diff,
                 )
             )
@@ -135,7 +148,7 @@ class IBANMatcher(IMatcherStrategy):
         # Sort by confidence descending
         results.sort(key=lambda r: r.confidence, reverse=True)
 
-        return results
+        return as_match_results(results)
 
     def _extract_ibans(self, transaction: "BankTransaction") -> set[str]:
         """Extract and normalize all IBANs from transaction text fields.
@@ -148,21 +161,67 @@ class IBANMatcher(IMatcherStrategy):
         """
         ibans = set()
 
-        # Search in reference field
-        if transaction.reference:
-            found = self.IBAN_PATTERN.findall(transaction.reference)
+        reference = self._get_text(transaction, "reference")
+        if reference:
+            found = self.IBAN_PATTERN.findall(reference)
             ibans.update(self._normalize_iban(iban) for iban in found)
 
         # Search in description field
-        if transaction.description:
-            found = self.IBAN_PATTERN.findall(transaction.description)
+        description = self._get_text(transaction, "description")
+        if description:
+            found = self.IBAN_PATTERN.findall(description)
+            ibans.update(self._normalize_iban(iban) for iban in found)
+
+        memo = self._get_text(transaction, "memo") or self._get_text(transaction, "note")
+        if memo:
+            found = self.IBAN_PATTERN.findall(memo)
             ibans.update(self._normalize_iban(iban) for iban in found)
 
         # Search in counterparty_iban field (if available)
-        if transaction.counterparty_iban:
-            ibans.add(self._normalize_iban(transaction.counterparty_iban))
+        counterparty_iban = self._get_text(transaction, "counterparty_iban")
+        if counterparty_iban:
+            ibans.add(self._normalize_iban(counterparty_iban))
 
         return ibans
+
+    def _collect_transaction_text(self, transaction: "BankTransaction") -> str:
+        """Collect normalized text blob for partial IBAN matching."""
+        parts = []
+        for attr in ("reference", "description", "memo", "note"):
+            value = self._get_text(transaction, attr)
+            if value:
+                parts.append(value)
+
+        return " ".join(parts).upper()
+
+    def _get_payment_iban(self, payment: "Pagamento") -> str | None:
+        """Extract IBAN from payment or related entities."""
+        candidates = [
+            getattr(payment, "iban", None),
+            getattr(payment, "beneficiary_iban", None),
+            getattr(payment, "counterparty_iban", None),
+        ]
+
+        fattura = getattr(payment, "fattura", None)
+        if fattura is not None:
+            candidates.append(getattr(fattura, "iban", None))
+            cliente = getattr(fattura, "cliente", None)
+            if cliente is not None:
+                candidates.append(getattr(cliente, "iban", None))
+                candidates.append(getattr(cliente, "conto_corrente", None))
+
+        for candidate in candidates:
+            if isinstance(candidate, str) and candidate.strip():
+                return candidate
+
+        return None
+
+    def _get_text(self, obj: object, attr: str) -> str:
+        """Safely retrieve a string attribute from an object."""
+        if obj is None:
+            return ""
+        value = getattr(obj, attr, "")
+        return value if isinstance(value, str) else ""
 
     def _normalize_iban(self, iban: str) -> str:
         """Normalize IBAN for comparison.
@@ -192,11 +251,16 @@ class IBANMatcher(IMatcherStrategy):
 
         return iban
 
-    def _calculate_confidence(self, transaction: "BankTransaction", payment: "Pagamento") -> float:
+    def _calculate_confidence(
+        self,
+        transaction: "BankTransaction",
+        payment: "Pagamento",
+        base_confidence: float,
+    ) -> float:
         """Calculate confidence score based on amount and date match quality.
 
         Scoring:
-        - Base confidence: 0.90 (IBAN found)
+        - Base confidence: provided base (full vs partial match)
         - +0.05 if amount matches exactly (within 1 cent)
         - +0.05 if date matches exactly
         - Max confidence: 0.95
@@ -206,31 +270,36 @@ class IBANMatcher(IMatcherStrategy):
             payment: Payment record
 
         Returns:
-            Confidence score (0.90-0.95)
+            Confidence score
         """
-        confidence = 0.90  # Base confidence for IBAN match
+        confidence = Decimal(str(base_confidence))
 
         # Check amount match
         transaction_amount = abs(transaction.amount)
         payment_amount = payment_amount_for_matching(payment)
         amount_diff = abs(transaction_amount - payment_amount)
-        amount_tolerance = payment_amount * (self.amount_tolerance_pct / 100)
+        tolerance_pct = Decimal(str(self.amount_tolerance_pct)) / Decimal("100")
+        amount_tolerance = payment_amount * tolerance_pct
         if amount_diff <= Decimal("0.01"):
-            confidence = min(0.95, confidence + 0.05)  # Exact amount
+            confidence = min(Decimal("1.0"), confidence + Decimal("0.05"))  # Exact amount
         elif amount_diff <= amount_tolerance:
-            confidence = min(0.95, confidence + 0.02)  # Close amount
+            confidence = min(Decimal("1.0"), confidence + Decimal("0.02"))  # Close amount
 
         # Check date match
         date_diff_days = abs((payment.data_scadenza - transaction.date).days)
         if date_diff_days == 0:
-            confidence = min(0.95, confidence + 0.05)  # Same date
+            confidence = min(Decimal("1.0"), confidence + Decimal("0.05"))  # Same date
         elif date_diff_days <= 3:
-            confidence = min(0.95, confidence + 0.02)  # Close date
+            confidence = min(Decimal("1.0"), confidence + Decimal("0.02"))  # Close date
 
         return confidence
 
     def _build_match_reason(
-        self, transaction: "BankTransaction", payment: "Pagamento", matched_iban: str
+        self,
+        transaction: "BankTransaction",
+        payment: "Pagamento",
+        matched_iban: str,
+        is_partial: bool = False,
     ) -> str:
         """Build human-readable explanation of IBAN match.
 
@@ -238,6 +307,7 @@ class IBANMatcher(IMatcherStrategy):
             transaction: Bank transaction
             payment: Payment record
             matched_iban: The IBAN that matched
+            is_partial: Whether the match used partial digits
 
         Returns:
             Human-readable match reason
@@ -249,7 +319,12 @@ class IBANMatcher(IMatcherStrategy):
         # Mask IBAN for privacy (show first 6 and last 4)
         masked_iban = f"{matched_iban[:6]}...{matched_iban[-4:]}"
 
-        reason = f"IBAN match: {masked_iban} found in transaction"
+        if is_partial:
+            reason = (
+                f"IBAN partial match: last 4 digits {matched_iban[-4:]} detected in transaction"
+            )
+        else:
+            reason = f"IBAN match: {masked_iban} found in transaction"
 
         if amount_diff <= Decimal("0.01"):
             reason += ", exact amount"
@@ -270,3 +345,12 @@ class IBANMatcher(IMatcherStrategy):
             f"date_tolerance={self.date_tolerance_days} days, "
             f"amount_tolerance={self.amount_tolerance_pct}%)>"
         )
+
+    def _validate_confidence(self, confidence: float | Decimal) -> Decimal:
+        """Clamp confidence to [0.0, 1.0] and return Decimal."""
+        value = Decimal(str(confidence))
+        if value < Decimal("0.0"):
+            return Decimal("0.0")
+        if value > Decimal("1.0"):
+            return Decimal("1.0")
+        return value

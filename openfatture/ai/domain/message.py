@@ -1,7 +1,7 @@
 """Message and role definitions for AI agents."""
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -25,8 +25,8 @@ class Message(BaseModel):
 
     role: Role
     content: str
-    name: Optional[str] = None  # For tool messages
-    tool_call_id: Optional[str] = None  # For tool responses
+    name: str | None = None  # For tool messages
+    tool_call_id: str | None = None  # For tool responses
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     def __str__(self) -> str:

@@ -31,21 +31,19 @@ Example:
     ...     pass
 """
 
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any, Callable
-from dataclasses import dataclass
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.panel import Panel
+from rich.prompt import Prompt
 from rich.table import Table
-from rich.prompt import Prompt, Confirm
 
 from openfatture.ai.orchestration.states import (
     ApprovalDecision,
     HumanReview,
-    WorkflowStatus,
 )
 from openfatture.utils.logging import get_logger
 
@@ -70,11 +68,11 @@ class ApprovalRequest:
     checkpoint_name: str
     workflow_id: str
     agent_type: str
-    data: Dict[str, Any]
-    confidence: Optional[float] = None
+    data: dict[str, Any]
+    confidence: float | None = None
     errors: list = None
     warnings: list = None
-    context: Optional[Dict[str, Any]] = None
+    context: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.errors is None:
@@ -89,8 +87,8 @@ class ApprovalResponse:
 
     approved: bool
     decision: ApprovalDecision
-    feedback: Optional[str] = None
-    modifications: Optional[Dict[str, Any]] = None
+    feedback: str | None = None
+    modifications: dict[str, Any] | None = None
     reviewer: str = "human"
     timestamp: datetime = None
 
@@ -128,7 +126,7 @@ class ApprovalCheckpoint:
         policy: ApprovalPolicy = ApprovalPolicy.SMART,
         confidence_threshold: float = 0.85,
         auto_approve_on_high_confidence: bool = True,
-        reviewer: Optional['HumanReviewer'] = None,
+        reviewer: Optional["HumanReviewer"] = None,
     ):
         """Initialize approval checkpoint.
 
@@ -181,8 +179,7 @@ class ApprovalCheckpoint:
             # Combination: low confidence OR errors/warnings
             has_issues = len(request.errors) > 0 or len(request.warnings) > 0
             low_confidence = (
-                request.confidence is not None and
-                request.confidence < self.confidence_threshold
+                request.confidence is not None and request.confidence < self.confidence_threshold
             )
 
             return has_issues or low_confidence
@@ -224,10 +221,10 @@ class ApprovalCheckpoint:
 
         # Auto-approve on high confidence if enabled
         if (
-            self.auto_approve_on_high_confidence and
-            request.confidence is not None and
-            request.confidence >= self.confidence_threshold and
-            len(request.errors) == 0
+            self.auto_approve_on_high_confidence
+            and request.confidence is not None
+            and request.confidence >= self.confidence_threshold
+            and len(request.errors) == 0
         ):
             logger.info(
                 "auto_approved",
@@ -274,7 +271,7 @@ class HumanReviewer:
         >>> response = await reviewer.review(request)
     """
 
-    def __init__(self, console: Optional[Console] = None):
+    def __init__(self, console: Console | None = None):
         """Initialize human reviewer.
 
         Args:
@@ -307,7 +304,11 @@ class HumanReviewer:
 
         # Display confidence if available
         if request.confidence is not None:
-            confidence_color = "green" if request.confidence >= 0.85 else "yellow" if request.confidence >= 0.7 else "red"
+            confidence_color = (
+                "green"
+                if request.confidence >= 0.85
+                else "yellow" if request.confidence >= 0.7 else "red"
+            )
             self.console.print(
                 f"[bold]Confidence Score:[/bold] [{confidence_color}]{request.confidence:.1%}[/{confidence_color}]\n"
             )
@@ -402,7 +403,7 @@ class ReviewDecisionLogger:
         >>> logger.log_decision(request, response)
     """
 
-    def __init__(self, log_file: Optional[str] = None):
+    def __init__(self, log_file: str | None = None):
         """Initialize decision logger.
 
         Args:

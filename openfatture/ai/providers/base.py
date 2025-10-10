@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
-from typing import Any, Optional
+from typing import Any
 
 from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import AgentResponse, UsageMetrics
@@ -25,8 +25,8 @@ class BaseLLMProvider(ABC):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
         model: str = "default",
         temperature: float = 0.7,
         max_tokens: int = 2000,
@@ -54,9 +54,9 @@ class BaseLLMProvider(ABC):
     async def generate(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AgentResponse:
         """
@@ -81,9 +81,9 @@ class BaseLLMProvider(ABC):
     async def stream(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """
@@ -164,7 +164,7 @@ class BaseLLMProvider(ABC):
     def _prepare_messages(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         Prepare messages for API call.
@@ -190,11 +190,11 @@ class BaseLLMProvider(ABC):
 
         return prepared
 
-    def _get_temperature(self, override: Optional[float] = None) -> float:
+    def _get_temperature(self, override: float | None = None) -> float:
         """Get temperature with optional override."""
         return override if override is not None else self.temperature
 
-    def _get_max_tokens(self, override: Optional[int] = None) -> int:
+    def _get_max_tokens(self, override: int | None = None) -> int:
         """Get max tokens with optional override."""
         return override if override is not None else self.max_tokens
 
@@ -206,7 +206,7 @@ class ProviderError(Exception):
         self,
         message: str,
         provider: str,
-        original_error: Optional[Exception] = None,
+        original_error: Exception | None = None,
     ) -> None:
         """
         Initialize provider error.

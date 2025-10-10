@@ -35,18 +35,25 @@ class MatchResult:
         amount_diff: Absolute difference between transaction and payment amounts
     """
 
-    transaction: "BankTransaction"
     payment: "Pagamento"
     confidence: float
     match_reason: str
     match_type: MatchType
+    transaction: "BankTransaction | None" = None
     matched_fields: list[str] = field(default_factory=list)
     amount_diff: Decimal = field(default=Decimal("0.00"))
 
     def __post_init__(self) -> None:
         """Validate match result constraints."""
-        if not 0.0 <= self.confidence <= 1.0:
-            raise ValueError(f"Confidence must be between 0.0 and 1.0, got {self.confidence}")
+        try:
+            confidence_value = float(self.confidence)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid confidence value: {self.confidence!r}") from exc
+
+        if not 0.0 <= confidence_value <= 1.0:
+            raise ValueError(f"Confidence must be between 0.0 and 1.0, got {confidence_value}")
+
+        object.__setattr__(self, "confidence", confidence_value)
 
         if self.amount_diff < 0:
             raise ValueError(f"Amount diff must be non-negative, got {self.amount_diff}")
@@ -83,7 +90,7 @@ class MatchResult:
     def to_dict(self) -> dict:
         """Convert match result to dictionary for serialization."""
         return {
-            "transaction_id": str(self.transaction.id),
+            "transaction_id": str(self.transaction.id) if self.transaction else None,
             "payment_id": self.payment.id,
             "confidence": float(self.confidence),
             "match_reason": self.match_reason,

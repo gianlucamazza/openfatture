@@ -33,12 +33,9 @@ from openfatture.payment import (
     BankAccount,
     BankTransaction,
     MatchType,
-    PaymentReminder,
-    ReminderStatus,
     TransactionStatus,
     record_reconciliation,
     record_transaction_import,
-    start_metrics_server,
 )
 from openfatture.payment.application.services.matching_service import MatchingService
 from openfatture.payment.application.services.reconciliation_service import ReconciliationService
@@ -46,15 +43,18 @@ from openfatture.payment.application.services.reminder_scheduler import Reminder
 from openfatture.payment.domain.enums import ImportSource, ReminderStrategy
 from openfatture.payment.infrastructure.importers.csv_importer import CSVConfig, CSVImporter
 from openfatture.payment.infrastructure.repository import (
-    BankAccountRepository,
     BankTransactionRepository,
     PaymentReminderRepository,
     PaymentRepository,
 )
-from openfatture.payment.matchers import CompositeMatcher, ExactMatcher, FuzzyMatcher, IBANMatcher
+from openfatture.payment.matchers import (
+    CompositeMatcher,
+    ExactAmountMatcher,
+    FuzzyDescriptionMatcher,
+    IBANMatcher,
+)
 from openfatture.storage.database import SessionManager, init_db
 from openfatture.storage.database.models import Pagamento
-from openfatture.utils.config import ConfigManager
 
 if TYPE_CHECKING:
     pass
@@ -225,9 +225,9 @@ async def example_1_basic_workflow():
         # Create composite matcher with all strategies
         matcher = CompositeMatcher(
             matchers=[
-                ExactMatcher(weight=1.0),  # Exact match gets highest priority
+                ExactAmountMatcher(weight=1.0),  # Exact match gets highest priority
                 IBANMatcher(weight=0.8),  # IBAN match is also strong
-                FuzzyMatcher(weight=0.6, threshold=0.7),  # Fuzzy for typos
+                FuzzyDescriptionMatcher(weight=0.6, threshold=0.7),  # Fuzzy for typos
             ]
         )
 
@@ -246,9 +246,7 @@ async def example_1_basic_workflow():
                 continue
 
             # Find matching payments
-            match_results = await matching_service.match_transaction(
-                tx, confidence_threshold=0.70
-            )
+            match_results = await matching_service.match_transaction(tx, confidence_threshold=0.70)
 
             if match_results:
                 best_match = match_results[0]
@@ -346,8 +344,8 @@ async def example_2_csv_import_configurations():
         skip_rows=1,  # Skip header row
     )
     print(f"   Delimiter: '{intesa_config.delimiter}'")
-    print(f"   Decimal format: 1.234,56 (European)")
-    print(f"   Date format: DD/MM/YYYY")
+    print("   Decimal format: 1.234,56 (European)")
+    print("   Date format: DD/MM/YYYY")
 
     # UniCredit format (CSV, ISO dates)
     print("\n🏦 Format 2: UniCredit")
@@ -365,9 +363,9 @@ async def example_2_csv_import_configurations():
         decimal_separator=".",
         skip_rows=0,
     )
-    print(f"   Delimiter: ',' (CSV)")
-    print(f"   Decimal format: 1234.56 (US)")
-    print(f"   Date format: YYYY-MM-DD (ISO)")
+    print("   Delimiter: ',' (CSV)")
+    print("   Decimal format: 1234.56 (US)")
+    print("   Date format: YYYY-MM-DD (ISO)")
 
     # BNL format (tab-separated)
     print("\n🏦 Format 3: BNL (Banca Nazionale del Lavoro)")
@@ -383,8 +381,8 @@ async def example_2_csv_import_configurations():
         decimal_separator=",",
         skip_footer=2,  # Skip footer summary rows
     )
-    print(f"   Delimiter: TAB")
-    print(f"   Skip footer: 2 rows (summary)")
+    print("   Delimiter: TAB")
+    print("   Skip footer: 2 rows (summary)")
 
     print("\n✅ Configured 3 different bank formats")
     print("   Use CSVImporter(file_path, config) to import with any format")
@@ -394,8 +392,8 @@ async def example_3_matching_strategies():
     """Example 3: Demonstration of all 5 matching strategies.
 
     Shows how each matcher works and when to use it:
-    - ExactMatcher: Exact invoice number match
-    - FuzzyMatcher: Handles typos and variations
+    - ExactAmountMatcher: Exact invoice number match
+    - FuzzyDescriptionMatcher: Handles typos and variations
     - IBANMatcher: Matches by client IBAN
     - DateWindowMatcher: Matches by date proximity
     - CompositeMatcher: Combines multiple strategies
@@ -453,8 +451,8 @@ async def example_3_matching_strategies():
         ]
 
         # Initialize matchers
-        exact_matcher = ExactMatcher(weight=1.0)
-        fuzzy_matcher = FuzzyMatcher(weight=0.8, threshold=0.65)
+        exact_matcher = ExactAmountMatcher(weight=1.0)
+        fuzzy_matcher = FuzzyDescriptionMatcher(weight=0.8, threshold=0.65)
         iban_matcher = IBANMatcher(weight=0.7)
 
         print("🔍 Testing matching strategies:\n")
@@ -480,17 +478,16 @@ async def example_3_matching_strategies():
             fuzzy_match = fuzzy_matcher.match(tx, payment)
             iban_match = iban_matcher.match(tx, payment)
 
-            print(f"   Results:")
-            print(f"      ExactMatcher:  {exact_match.confidence:.1%}")
-            print(f"      FuzzyMatcher:  {fuzzy_match.confidence:.1%}")
+            print("   Results:")
+            print(f"      ExactAmountMatcher:  {exact_match.confidence:.1%}")
+            print(f"      FuzzyDescriptionMatcher:  {fuzzy_match.confidence:.1%}")
             print(f"      IBANMatcher:   {iban_match.confidence:.1%}")
 
             # Show best match
             best = max([exact_match, fuzzy_match, iban_match], key=lambda m: m.confidence)
             if best.confidence > 0.5:
                 print(
-                    f"   ✅ Best: {best.match_type.value} "
-                    f"(confidence: {best.confidence:.1%})"
+                    f"   ✅ Best: {best.match_type.value} " f"(confidence: {best.confidence:.1%})"
                 )
             print()
 
@@ -550,9 +547,7 @@ async def example_4_manual_reconciliation():
         # Manual reconciliation
         print("\n🔍 Step 1: Manual reconciliation...")
 
-        matching_service = MatchingService(
-            tx_repo=tx_repo, payment_repo=payment_repo, matchers=[]
-        )
+        matching_service = MatchingService(tx_repo=tx_repo, payment_repo=payment_repo, matchers=[])
 
         reconciliation_service = ReconciliationService(
             tx_repo=tx_repo, payment_repo=payment_repo, matching_service=matching_service
@@ -567,7 +562,7 @@ async def example_4_manual_reconciliation():
 
         session.refresh(payment)
 
-        print(f"✅ Transaction matched!")
+        print("✅ Transaction matched!")
         print(f"   Status: {reconciled.status.value}")
         print(f"   Match type: {reconciled.match_type.value}")
         print(f"   Payment total paid: €{payment.importo_pagato}")
@@ -578,7 +573,7 @@ async def example_4_manual_reconciliation():
         reset_tx = await reconciliation_service.reset_transaction(tx.id)
         session.refresh(payment)
 
-        print(f"✅ Transaction unmatched!")
+        print("✅ Transaction unmatched!")
         print(f"   Status: {reset_tx.status.value}")
         print(f"   Payment total paid: €{payment.importo_pagato}")
 
@@ -592,7 +587,7 @@ async def example_4_manual_reconciliation():
             confidence=0.95,
         )
 
-        print(f"✅ Transaction re-matched!")
+        print("✅ Transaction re-matched!")
         print(f"   Match type: {rematched.match_type.value}")
         print(f"   Confidence: {rematched.match_confidence:.1%}")
 
@@ -618,12 +613,8 @@ async def example_5_batch_operations():
     try:
         # Create 2 accounts (simulating multi-account setup)
         accounts = [
-            BankAccount(
-                name="Business Account 1", iban="IT111", current_balance=Decimal("5000")
-            ),
-            BankAccount(
-                name="Business Account 2", iban="IT222", current_balance=Decimal("8000")
-            ),
+            BankAccount(name="Business Account 1", iban="IT111", current_balance=Decimal("5000")),
+            BankAccount(name="Business Account 2", iban="IT222", current_balance=Decimal("8000")),
         ]
 
         for acc in accounts:
@@ -665,9 +656,7 @@ async def example_5_batch_operations():
 
         tx_repo = BankTransactionRepository(session)
         payment_repo = PaymentRepository(session)
-        matching_service = MatchingService(
-            tx_repo=tx_repo, payment_repo=payment_repo, matchers=[]
-        )
+        matching_service = MatchingService(tx_repo=tx_repo, payment_repo=payment_repo, matchers=[])
         reconciliation_service = ReconciliationService(
             tx_repo=tx_repo, payment_repo=payment_repo, matching_service=matching_service
         )
@@ -720,10 +709,10 @@ async def example_6_prometheus_metrics():
 
     # Example metrics output:
     print("\n   Sample metrics:")
-    print("   payment_transactions_imported_total{source=\"csv\"} 50")
-    print("   payment_transactions_imported_total{source=\"ofx\"} 30")
-    print("   payment_reconciliations_total{match_type=\"exact\",status=\"success\"} 45")
-    print("   payment_reconciliations_total{match_type=\"fuzzy\",status=\"success\"} 15")
+    print('   payment_transactions_imported_total{source="csv"} 50')
+    print('   payment_transactions_imported_total{source="ofx"} 30')
+    print('   payment_reconciliations_total{match_type="exact",status="success"} 45')
+    print('   payment_reconciliations_total{match_type="fuzzy",status="success"} 15')
 
 
 async def example_7_error_handling():
@@ -769,9 +758,7 @@ async def example_7_error_handling():
 
         tx_repo = BankTransactionRepository(session)
         payment_repo = PaymentRepository(session)
-        matching_service = MatchingService(
-            tx_repo=tx_repo, payment_repo=payment_repo, matchers=[]
-        )
+        matching_service = MatchingService(tx_repo=tx_repo, payment_repo=payment_repo, matchers=[])
         reconciliation_service = ReconciliationService(
             tx_repo=tx_repo, payment_repo=payment_repo, matching_service=matching_service
         )
@@ -807,9 +794,7 @@ async def example_7_error_handling():
                 payment_id=payment.id,  # €100 payment vs €500 transaction
                 match_type=MatchType.MANUAL,
             )
-            print(
-                f"   ⚠️  Warning logged: Transaction (€500) exceeds payment (€100)"
-            )
+            print("   ⚠️  Warning logged: Transaction (€500) exceeds payment (€100)")
         except Exception as e:
             print(f"   Error: {e}")
 
@@ -825,7 +810,7 @@ async def example_7_error_handling():
             )
             print("   ❌ Should have raised ValueError")
         except ValueError as e:
-            print(f"   ✅ Caught expected error: Transaction ... not found")
+            print("   ✅ Caught expected error: Transaction ... not found")
 
         print("\n✅ All error handling tests completed")
 

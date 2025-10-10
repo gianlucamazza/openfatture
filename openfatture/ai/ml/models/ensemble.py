@@ -16,11 +16,10 @@ This approach provides:
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Dict, Any, Tuple
-import warnings
+from typing import Any
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from openfatture.ai.ml.models.prophet_model import ProphetModel, ProphetPrediction
 from openfatture.ai.ml.models.xgboost_model import XGBoostModel, XGBoostPrediction
@@ -66,23 +65,23 @@ class EnsemblePrediction:
         """Calculate prediction uncertainty (interval width)."""
         return self.yhat_upper - self.yhat_lower
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
-            'expected_days': float(self.yhat),
-            'lower_bound': float(self.yhat_lower),
-            'upper_bound': float(self.yhat_upper),
-            'uncertainty_days': float(self.uncertainty),
-            'confidence_score': float(self.confidence_score),
-            'risk_level': self.risk_level.value,
-            'model_agreement': float(self.model_agreement),
-            'prophet': {
-                'prediction': float(self.prophet_prediction.yhat),
-                'trend': float(self.prophet_prediction.trend),
-                'seasonal': float(self.prophet_prediction.seasonal),
+            "expected_days": float(self.yhat),
+            "lower_bound": float(self.yhat_lower),
+            "upper_bound": float(self.yhat_upper),
+            "uncertainty_days": float(self.uncertainty),
+            "confidence_score": float(self.confidence_score),
+            "risk_level": self.risk_level.value,
+            "model_agreement": float(self.model_agreement),
+            "prophet": {
+                "prediction": float(self.prophet_prediction.yhat),
+                "trend": float(self.prophet_prediction.trend),
+                "seasonal": float(self.prophet_prediction.seasonal),
             },
-            'xgboost': {
-                'prediction': float(self.xgboost_prediction.yhat),
+            "xgboost": {
+                "prediction": float(self.xgboost_prediction.yhat),
             },
         }
 
@@ -116,8 +115,8 @@ class CashFlowEnsemble:
         self,
         prophet_weight: float = 0.4,
         xgboost_weight: float = 0.6,
-        prophet_params: Optional[Dict[str, Any]] = None,
-        xgboost_params: Optional[Dict[str, Any]] = None,
+        prophet_params: dict[str, Any] | None = None,
+        xgboost_params: dict[str, Any] | None = None,
         optimize_weights: bool = False,
     ):
         """Initialize ensemble model.
@@ -154,9 +153,9 @@ class CashFlowEnsemble:
         self,
         X_train: pd.DataFrame,
         y_train: pd.Series,
-        X_val: Optional[pd.DataFrame] = None,
-        y_val: Optional[pd.Series] = None,
-    ) -> 'CashFlowEnsemble':
+        X_val: pd.DataFrame | None = None,
+        y_val: pd.Series | None = None,
+    ) -> "CashFlowEnsemble":
         """Fit both Prophet and XGBoost models.
 
         Args:
@@ -223,7 +222,7 @@ class CashFlowEnsemble:
         # Combine predictions
         ensemble_preds = []
 
-        for prophet_pred, xgboost_pred in zip(prophet_preds, xgboost_preds):
+        for prophet_pred, xgboost_pred in zip(prophet_preds, xgboost_preds, strict=False):
             ensemble_pred = self._combine_predictions(prophet_pred, xgboost_pred)
             ensemble_preds.append(ensemble_pred)
 
@@ -262,10 +261,7 @@ class CashFlowEnsemble:
             EnsemblePrediction object
         """
         # Weighted average for point prediction
-        yhat = (
-            self.prophet_weight * prophet_pred.yhat +
-            self.xgboost_weight * xgboost_pred.yhat
-        )
+        yhat = self.prophet_weight * prophet_pred.yhat + self.xgboost_weight * xgboost_pred.yhat
 
         # Combine prediction intervals (conservative approach: widest interval)
         yhat_lower = min(prophet_pred.yhat_lower, xgboost_pred.yhat_lower)
@@ -320,9 +316,7 @@ class CashFlowEnsemble:
         confidence = model_agreement
 
         # Penalize wide uncertainty intervals
-        avg_uncertainty = (
-            (prophet_pred.uncertainty + xgboost_pred.uncertainty) / 2
-        )
+        avg_uncertainty = (prophet_pred.uncertainty + xgboost_pred.uncertainty) / 2
 
         # Normalize uncertainty (assume 30 days is low confidence)
         uncertainty_penalty = min(1.0, avg_uncertainty / 30.0)
@@ -390,7 +384,7 @@ class CashFlowEnsemble:
         xgboost_values = np.array([p.yhat for p in xgboost_preds])
 
         # Grid search over weights
-        best_mae = float('inf')
+        best_mae = float("inf")
         best_weight = 0.5
 
         for prophet_w in np.arange(0.0, 1.01, 0.05):
@@ -440,7 +434,7 @@ class CashFlowEnsemble:
 
         return mae
 
-    def get_feature_importance(self) -> Dict[str, float]:
+    def get_feature_importance(self) -> dict[str, float]:
         """Get feature importance from XGBoost model.
 
         Note: Prophet doesn't provide feature importance since it
@@ -451,18 +445,18 @@ class CashFlowEnsemble:
         """
         return self.xgboost.get_feature_importance()
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get ensemble configuration.
 
         Returns:
             Dictionary with ensemble and model parameters
         """
         return {
-            'prophet_weight': self.prophet_weight,
-            'xgboost_weight': self.xgboost_weight,
-            'optimize_weights': self.optimize_weights,
-            'prophet_params': self.prophet.get_params(),
-            'xgboost_params': self.xgboost.get_params(),
+            "prophet_weight": self.prophet_weight,
+            "xgboost_weight": self.xgboost_weight,
+            "optimize_weights": self.optimize_weights,
+            "prophet_params": self.prophet.get_params(),
+            "xgboost_params": self.xgboost.get_params(),
         }
 
     def save(self, filepath_prefix: str) -> None:
@@ -488,7 +482,7 @@ class CashFlowEnsemble:
         )
 
     @classmethod
-    def load(cls, filepath_prefix: str) -> 'CashFlowEnsemble':
+    def load(cls, filepath_prefix: str) -> "CashFlowEnsemble":
         """Load ensemble models from files.
 
         Args:

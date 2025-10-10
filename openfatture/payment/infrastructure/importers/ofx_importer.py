@@ -8,6 +8,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ofxparse import OfxParser
+
 from ...domain.enums import ImportSource
 from ...domain.models import BankTransaction
 from .base import BaseImporter
@@ -69,16 +71,7 @@ class OFXImporter(BaseImporter):
 
         Raises:
             ValueError: If OFX parsing fails or account not found
-            ImportError: If ofxparse library not installed
         """
-        try:
-            from ofxparse import OfxParser
-        except ImportError as e:
-            raise ImportError(
-                "ofxparse library required for OFX import. "
-                "Install with: pip install ofxparse>=0.21"
-            ) from e
-
         # Parse OFX file
         with open(self.file_path, "rb") as f:
             try:

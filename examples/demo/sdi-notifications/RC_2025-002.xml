@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RicevutaConsegna>
+  <IdentificativoSdI>1234567890</IdentificativoSdI>
+  <DataOraRicezione>2025-01-23T10:15:00</DataOraRicezione>
+  <NomeFile>IT01234567890_FPA01.xml.p7m</NomeFile>
+  <CedentePrestatore>
+    <Denominazione>OpenFatture Demo Studio</Denominazione>
+    <IdFiscaleIVA>
+      <IdPaese>IT</IdPaese>
+      <IdCodice>04567890123</IdCodice>
+    </IdFiscaleIVA>
+  </CedentePrestatore>
+  <CessionarioCommittente>
+    <Denominazione>Studio Legale Aurora</Denominazione>
+    <IdFiscaleIVA>
+      <IdPaese>IT</IdPaese>
+      <IdCodice>01928374650</IdCodice>
+    </IdFiscaleIVA>
+  </CessionarioCommittente>
+  <Descrizione>Fattura 2025-002 consegnata correttamente al destinatario.</Descrizione>
+</RicevutaConsegna>

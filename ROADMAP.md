@@ -292,21 +292,20 @@ Build a modern, open-source electronic invoicing system for Italian freelancers 
 - [ ] Integration with `openfatture ai check` command (currently stub)
 - **Note:** Command exists but shows placeholder output
 
-*Complete RAG Implementation:*
-- [ ] ChromaDB vector store integration
-  - [ ] Setup persistent storage directory
-  - [ ] Collection management for sessions/invoices
-  - **Note:** ChromaDB dependency already installed (pyproject.toml)
-- [ ] Embeddings generation
-  - [ ] Choose embedding model (OpenAI/local)
-  - [ ] Embed invoice descriptions
-  - [ ] Embed conversation history
-- [ ] Semantic search functionality
-  - [ ] Query embedding
-  - [ ] Similarity search over invoice history
-  - [ ] Client-specific knowledge retrieval
-- [ ] Update `enrich_with_rag()` in `openfatture/ai/context/enrichment.py:193`
-  - **Note:** Currently placeholder with TODO comment
+*Complete RAG Implementation (✅ Completed in Phase 4.4):*
+- [x] ChromaDB vector store integration
+  - [x] Setup persistent storage directory (configurabile via `OPENFATTURE_RAG_PERSIST_DIR`)
+  - [x] Collezioni distinte per fatture e knowledge base (`openfatture_kb`)
+- [x] Embeddings generation
+  - [x] Supporto modelli OpenAI/Sentence-Transformers (`create_embeddings`)
+  - [x] Indicizzazione descrizioni fatture (`InvoiceIndexer`)
+  - [x] Indicizzazione documentazione normativa (`KnowledgeIndexer`)
+- [x] Semantic search functionality
+  - [x] Query embedding + similarity search
+  - [x] Recupero fatture storiche e note operative personalizzate
+  - [x] Tool CLI per diagnostics (`openfatture ai rag status/index/search`)
+- [x] Aggiornamento `enrich_with_rag()` con snippet e citazioni
+  - **Note:** Focus futuro su metriche di qualità e nuovi corpus (es. FAQ, circolari Agenzia Entrate)
 
 *✅ Streaming Response Support (COMPLETED):*
 - [x] Implement streaming in all providers
@@ -617,15 +616,14 @@ This section tracks code that exists but is incomplete or shows placeholder beha
 
 ### Code TODOs
 
-**RAG with ChromaDB** - `openfatture/ai/context/enrichment.py:193`
-- **TODO:** Implement RAG with ChromaDB
-- **Required:**
-  1. Embed query
-  2. Search similar conversations
-  3. Search similar invoice descriptions
-  4. Add to context.similar_conversations and context.relevant_documents
-- **Dependency:** ChromaDB already installed
-- **Target:** Phase 4.3 - Complete RAG Implementation
+**✅ RAG con ChromaDB** - `openfatture/ai/context/enrichment.py`
+- **Stato:** ✅ Completato (Chat/Invoice/Tax agent ora usano `enrich_with_rag`)
+- **Copertura:**
+  1. Recupero fatture simili via `RAGSystem`
+  2. Indicizzazione knowledge base da manifest (`openfatture/ai/rag/sources.json`)
+  3. Prompt con citazioni normative (formato `[numero]`)
+  4. Tool CLI dedicati (`openfatture ai rag status/index/search`)
+- **Passi successivi:** ampliare il manifest con nuove fonti e aggiungere test di retrieval automatici
 
 **✅ Streaming Responses** - ~~`openfatture/cli/ui/chat.py:124`~~ (COMPLETED)
 - **Status:** ~~TODO~~ ✅ Implemented in Phase 4.3

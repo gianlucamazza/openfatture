@@ -178,11 +178,7 @@ def get_invoice_stats(anno: int | None = None) -> dict[str, Any]:
         }
 
         for stato in StatoFattura:
-            count = (
-                db.query(Fattura)
-                .filter(Fattura.anno == year, Fattura.stato == stato)
-                .count()
-            )
+            count = db.query(Fattura).filter(Fattura.anno == year, Fattura.stato == stato).count()
             stats["per_stato"][stato.value] = count
             stats["totale_fatture"] += count
 

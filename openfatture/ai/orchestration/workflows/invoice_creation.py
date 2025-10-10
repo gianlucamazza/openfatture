@@ -29,27 +29,26 @@ Example:
 """
 
 from datetime import datetime
-from typing import Optional
 
-from langgraph.graph import StateGraph, END
 from langgraph.checkpoint import MemorySaver
+from langgraph.graph import END, StateGraph
 
-from openfatture.ai.orchestration.states import (
-    InvoiceCreationState,
-    AgentResult,
-    AgentType,
-    WorkflowStatus,
-    ApprovalDecision,
-)
 from openfatture.ai.agents import (
     InvoiceAssistantAgent,
     TaxAdvisorAgent,
 )
 from openfatture.ai.agents.compliance import ComplianceChecker, ComplianceLevel
 from openfatture.ai.domain.context import InvoiceContext, TaxContext
+from openfatture.ai.orchestration.states import (
+    AgentResult,
+    AgentType,
+    ApprovalDecision,
+    InvoiceCreationState,
+    WorkflowStatus,
+)
 from openfatture.ai.providers import create_provider
 from openfatture.storage.database.base import SessionLocal
-from openfatture.storage.database.models import Fattura, Cliente
+from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -200,20 +199,22 @@ class InvoiceCreationWorkflow:
         db = SessionLocal()
         try:
             # Load year-to-date statistics
-            from sqlalchemy import func, extract
+            from sqlalchemy import extract, func
 
             current_year = datetime.now().year
 
             state.context.total_invoices_ytd = (
                 db.query(func.count(Fattura.id))
                 .filter(extract("year", Fattura.data_emissione) == current_year)
-                .scalar() or 0
+                .scalar()
+                or 0
             )
 
             state.context.total_revenue_ytd = (
                 db.query(func.sum(Fattura.totale))
                 .filter(extract("year", Fattura.data_emissione) == current_year)
-                .scalar() or 0.0
+                .scalar()
+                or 0.0
             )
 
             state.status = WorkflowStatus.IN_PROGRESS
@@ -294,7 +295,10 @@ class InvoiceCreationWorkflow:
 
         # In real implementation, this would trigger UI or CLI prompt
         # For now, we simulate approval based on confidence
-        if state.description_result and state.description_result.confidence > self.confidence_threshold:
+        if (
+            state.description_result
+            and state.description_result.confidence > self.confidence_threshold
+        ):
             from openfatture.ai.orchestration.states import HumanReview
 
             state.description_review = HumanReview(
@@ -316,7 +320,9 @@ class InvoiceCreationWorkflow:
 
         try:
             # Get description from previous step
-            description = state.description_result.content if state.description_result else state.user_input
+            description = (
+                state.description_result.content if state.description_result else state.user_input
+            )
 
             # Create tax context
             tax_context = TaxContext(
@@ -481,7 +487,10 @@ class InvoiceCreationWorkflow:
         if not state.require_description_approval:
             return "skip"
 
-        if state.description_result and state.description_result.confidence > self.confidence_threshold:
+        if (
+            state.description_result
+            and state.description_result.confidence > self.confidence_threshold
+        ):
             return "skip"  # Auto-approve high confidence
 
         return "approve"

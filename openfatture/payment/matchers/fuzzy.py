@@ -1,27 +1,28 @@
-"""Fuzzy string matcher strategy using Levenshtein distance.
+"""Fuzzy description matcher strategy using Levenshtein distance.
 
-Matches bank transactions to payments based on fuzzy string similarity between
-descriptions, counterparty names, and references. Uses rapidfuzz library for
-efficient Levenshtein distance calculation.
+Matches bank transactions to payments based on fuzzy similarity between
+descriptions, counterparty names, and references. Uses rapidfuzz for efficient
+Levenshtein distance calculations.
 """
 
 import re
 from datetime import timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from rapidfuzz import fuzz
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy, payment_amount_for_matching
+from .base import IMatcherStrategy, as_match_results, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
     from ..domain.models import BankTransaction
 
 
-class FuzzyStringMatcher(IMatcherStrategy):
-    """Match transactions using fuzzy string similarity (Levenshtein distance).
+class FuzzyDescriptionMatcher(IMatcherStrategy):
+    """Match transactions using fuzzy text similarity (Levenshtein distance).
 
     This strategy compares text fields (description, counterparty, reference)
     using Levenshtein distance to find similar strings. Useful when:
@@ -42,7 +43,7 @@ class FuzzyStringMatcher(IMatcherStrategy):
         amount_tolerance_pct: Amount difference tolerance as percentage (default 5%)
 
     Example:
-        >>> matcher = FuzzyStringMatcher(min_similarity=90)
+        >>> matcher = FuzzyDescriptionMatcher(min_similarity=90)
         >>> results = matcher.match(transaction, payments)
         >>> for result in results:
         ...     print(f"Match: {result.confidence:.2f} - {result.match_reason}")
@@ -100,6 +101,9 @@ class FuzzyStringMatcher(IMatcherStrategy):
             # Calculate similarity scores for different fields
             similarity_scores = self._calculate_similarities(transaction, payment)
 
+            if not similarity_scores:
+                continue
+
             # Take maximum similarity as primary score
             max_similarity = max(similarity_scores.values())
 
@@ -108,7 +112,7 @@ class FuzzyStringMatcher(IMatcherStrategy):
                 continue
 
             # Convert similarity (0-100) to confidence (0.0-1.0)
-            confidence = self._similarity_to_confidence(max_similarity)
+            confidence = self._validate_confidence(self._similarity_to_confidence(max_similarity))
 
             # Calculate amount difference
             transaction_amount = abs(transaction.amount)
@@ -127,7 +131,7 @@ class FuzzyStringMatcher(IMatcherStrategy):
                 MatchResult(
                     transaction=transaction,
                     payment=payment,
-                    confidence=self._validate_confidence(confidence),
+                    confidence=confidence,
                     match_reason=match_reason,
                     match_type=MatchType.FUZZY,
                     matched_fields=matched_fields,
@@ -138,7 +142,7 @@ class FuzzyStringMatcher(IMatcherStrategy):
         # Sort by confidence descending
         results.sort(key=lambda r: r.confidence, reverse=True)
 
-        return results
+        return as_match_results(results)
 
     def _prefilter_candidates(
         self, transaction: "BankTransaction", payments: list["Pagamento"]
@@ -155,9 +159,12 @@ class FuzzyStringMatcher(IMatcherStrategy):
         date_min = transaction.date - timedelta(days=self.date_tolerance_days)
         date_max = transaction.date + timedelta(days=self.date_tolerance_days)
 
+        from decimal import Decimal as Dec
+
         transaction_amount = abs(transaction.amount)
-        amount_min = transaction_amount * (1 - self.amount_tolerance_pct / 100)
-        amount_max = transaction_amount * (1 + self.amount_tolerance_pct / 100)
+        tolerance_factor = Dec(str(self.amount_tolerance_pct)) / Dec("100")
+        amount_min = transaction_amount * (Dec("1") - tolerance_factor)
+        amount_max = transaction_amount * (Dec("1") + tolerance_factor)
 
         candidates = []
         for payment in payments:
@@ -186,37 +193,77 @@ class FuzzyStringMatcher(IMatcherStrategy):
         Returns:
             Dictionary of field name → similarity percentage (0-100)
         """
-        scores = {}
+        scores: dict[str, float] = {}
 
-        # Normalize transaction text
-        trans_desc = self._normalize_text(transaction.description)
-        trans_ref = self._normalize_text(transaction.reference or "")
-        trans_counterparty = self._normalize_text(transaction.counterparty or "")
+        trans_desc = self._normalize_text(getattr(transaction, "description", "") or "")
+        trans_ref = self._normalize_text(getattr(transaction, "reference", "") or "")
+        trans_counterparty = self._normalize_text(getattr(transaction, "counterparty", "") or "")
 
-        # Extract payment searchable text
-        # Note: In real implementation, would need to join with Fattura to get description
-        # For now, we'll use a simplified approach
-        payment_text = self._normalize_text(str(payment_amount_for_matching(payment)))  # Simplified
+        payment_targets = self._collect_payment_texts(payment)
+        if not payment_targets:
+            payment_targets = [self._normalize_text(str(payment_amount_for_matching(payment)))]
+        payment_targets = [t for t in payment_targets if t]
+        targets = payment_targets.copy()
+        combined_payment_text = " ".join(payment_targets).strip()
+        if combined_payment_text:
+            targets.append(combined_payment_text)
 
-        # Calculate description similarity
+        def best_similarity(source: str, scorer=fuzz.ratio) -> float:
+            if not source or not targets:
+                return 0.0
+            return max(scorer(source, target) for target in targets)
+
         if trans_desc:
-            scores["description"] = fuzz.ratio(trans_desc, payment_text)
-
-        # Calculate reference similarity (may contain invoice number)
+            scores["description"] = best_similarity(trans_desc)
+            partial_description = best_similarity(trans_desc, scorer=fuzz.partial_ratio)
+            scores["description_partial"] = partial_description * 0.85
         if trans_ref:
-            scores["reference"] = fuzz.ratio(trans_ref, payment_text)
-
-        # Calculate counterparty similarity
+            scores["reference"] = best_similarity(trans_ref)
+            partial_reference = best_similarity(trans_ref, scorer=fuzz.partial_ratio)
+            scores["reference_partial"] = partial_reference * 0.85
         if trans_counterparty:
-            scores["counterparty"] = fuzz.ratio(trans_counterparty, payment_text)
+            scores["counterparty"] = best_similarity(trans_counterparty)
 
-        # If we have a reference field, also try partial matching
-        if trans_ref:
-            scores["partial_reference"] = fuzz.partial_ratio(trans_ref, payment_text)
+        if trans_desc and combined_payment_text:
+            scores.setdefault("combined", fuzz.ratio(trans_desc, combined_payment_text))
 
         return scores
 
-    def _normalize_text(self, text: str) -> str:
+    def _collect_payment_texts(self, payment: "Pagamento") -> list[str]:
+        """Collect normalized textual representations from payment and related entities."""
+        texts: list[str] = []
+
+        def add_text(value: str | None) -> None:
+            if value:
+                normalized = self._normalize_text(str(value))
+                if normalized:
+                    texts.append(normalized)
+
+        add_text(getattr(payment, "description", None))
+        add_text(getattr(payment, "descrizione", None))
+        add_text(getattr(payment, "reference", None))
+        add_text(getattr(payment, "riferimento", None))
+        add_text(getattr(payment, "memo", None))
+        add_text(getattr(payment, "note", None))
+
+        fattura = getattr(payment, "fattura", None)
+        if fattura:
+            add_text(getattr(fattura, "numero", None))
+            add_text(getattr(fattura, "descrizione", None))
+
+            cliente = getattr(fattura, "cliente", None)
+            if cliente:
+                for attr in ("denominazione", "ragione_sociale", "nome", "cognome"):
+                    add_text(getattr(cliente, attr, None))
+                add_text(getattr(cliente, "email", None))
+                add_text(getattr(cliente, "pec", None))
+
+        iban = getattr(payment, "iban", None)
+        add_text(iban)
+
+        return list(dict.fromkeys(texts))
+
+    def _normalize_text(self, text: str | None) -> str:
         """Normalize text for fuzzy matching.
 
         Normalization steps:
@@ -226,27 +273,25 @@ class FuzzyStringMatcher(IMatcherStrategy):
         4. Strip leading/trailing whitespace
 
         Args:
-            text: Raw text string
+            text: Raw text string or None
 
         Returns:
             Normalized text string
         """
-        if not text:
+        if not text or not isinstance(text, str):
             return ""
 
         # Convert to lowercase
         text = text.lower()
 
-        # Remove special characters (keep alphanumeric, spaces, and basic punctuation)
-        text = re.sub(r"[^a-z0-9\s\-/]", "", text)
+        # Keep alphanumeric characters (any locale) plus basic punctuation
+        text = "".join(ch if (ch.isalnum() or ch in {" ", "-", "/", "_"}) else " " for ch in text)
 
-        # Remove extra whitespace
+        # Replace underscores with space then collapse whitespace
+        text = text.replace("_", " ")
         text = re.sub(r"\s+", " ", text)
 
-        # Strip edges
-        text = text.strip()
-
-        return text
+        return text.strip()
 
     def _similarity_to_confidence(self, similarity: float) -> float:
         """Convert similarity percentage (0-100) to confidence score (0.0-1.0).
@@ -301,13 +346,13 @@ class FuzzyStringMatcher(IMatcherStrategy):
     def __repr__(self) -> str:
         """Human-readable string representation."""
         return (
-            f"<FuzzyStringMatcher("
+            f"<FuzzyDescriptionMatcher("
             f"min_similarity={self.min_similarity}%, "
             f"date_tolerance={self.date_tolerance_days} days, "
             f"amount_tolerance={self.amount_tolerance_pct}%)>"
         )
 
-    def _validate_confidence(self, confidence: float) -> float:
+    def _validate_confidence(self, confidence: float) -> Decimal:
         """Validate and clamp confidence to [0.0, 1.0] range.
 
         Args:
@@ -316,9 +361,5 @@ class FuzzyStringMatcher(IMatcherStrategy):
         Returns:
             Validated confidence between 0.0 and 1.0
         """
-        return max(0.0, min(1.0, confidence))
-
-
-# Alias for backward compatibility with tests
-FuzzyDescriptionMatcher = FuzzyStringMatcher
-FuzzyMatcher = FuzzyStringMatcher
+        clamped = max(0.0, min(1.0, confidence))
+        return Decimal(str(clamped))

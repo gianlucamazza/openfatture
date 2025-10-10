@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from openfatture.ai.domain.context import ChatContext
+from openfatture.ai.domain.context import AgentContext, ChatContext
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
@@ -27,7 +27,10 @@ def enrich_chat_context(context: ChatContext) -> ChatContext:
         Enriched context
     """
     try:
-        logger.debug("enriching_chat_context", session_id=context.session_id)
+        logger.debug(
+            "enriching_chat_context",
+            session_id=getattr(context, "session_id", None),
+        )
 
         # Add current year stats
         context.current_year_stats = _get_current_year_stats()
@@ -43,7 +46,7 @@ def enrich_chat_context(context: ChatContext) -> ChatContext:
 
         logger.info(
             "chat_context_enriched",
-            session_id=context.session_id,
+            session_id=getattr(context, "session_id", None),
             has_stats=context.current_year_stats is not None,
         )
 
@@ -111,12 +114,7 @@ def _get_recent_invoices_summary(limit: int = 5) -> str:
     """
     db = SessionLocal()
     try:
-        fatture = (
-            db.query(Fattura)
-            .order_by(Fattura.data_emissione.desc())
-            .limit(limit)
-            .all()
-        )
+        fatture = db.query(Fattura).order_by(Fattura.data_emissione.desc()).limit(limit).all()
 
         if not fatture:
             return "Nessuna fattura trovata"
@@ -160,8 +158,7 @@ def _get_recent_clients_summary(limit: int = 5) -> str:
         for c in clienti:
             fatture_count = len(c.fatture)
             lines.append(
-                f"- {c.denominazione} ({c.partita_iva or 'N/A'}): "
-                f"{fatture_count} fatture"
+                f"- {c.denominazione} ({c.partita_iva or 'N/A'}): " f"{fatture_count} fatture"
             )
 
         return "\n".join(lines)
@@ -174,7 +171,7 @@ def _get_recent_clients_summary(limit: int = 5) -> str:
         db.close()
 
 
-async def enrich_with_rag(context: ChatContext, query: str) -> ChatContext:
+async def enrich_with_rag(context: AgentContext, query: str) -> AgentContext:
     """
     Enrich context with RAG (Retrieval-Augmented Generation).
 
@@ -189,9 +186,10 @@ async def enrich_with_rag(context: ChatContext, query: str) -> ChatContext:
         Enriched context with relevant documents
     """
     try:
-        from openfatture.ai.rag import RAGSystem
-        from openfatture.ai.rag.config import get_rag_config
         import os
+
+        from openfatture.ai.rag import KnowledgeIndexer, RAGSystem
+        from openfatture.ai.rag.config import get_rag_config
 
         # Check if RAG is enabled
         config = get_rag_config()
@@ -205,29 +203,63 @@ async def enrich_with_rag(context: ChatContext, query: str) -> ChatContext:
             logger.warning("openai_api_key_missing_for_rag")
             return context
 
-        # Initialize RAG system
+        # Reset previous RAG fields
+        context.relevant_documents = []
+        context.knowledge_snippets = []
+
+        # --- Invoice retrieval -------------------------------------------------
         rag = await RAGSystem.create(config, api_key=api_key)
 
-        # Search for relevant invoices
-        results = await rag.search(
+        invoice_results = await rag.search(
             query=query,
             top_k=config.top_k,
             min_similarity=config.similarity_threshold,
         )
 
-        # Add to context
-        if results:
+        if invoice_results:
             context.relevant_documents = [
-                f"{r.client_name} - {r.document[:200]}..." for r in results
+                _format_invoice_result(result) for result in invoice_results
             ]
 
             logger.info(
-                "rag_enrichment_completed",
-                results_count=len(results),
+                "rag_invoices_enriched",
+                results_count=len(invoice_results),
                 query_length=len(query),
             )
         else:
-            logger.debug("no_rag_results_found", query=query[:50])
+            logger.debug("rag_no_invoice_results", query=query[:50])
+
+        # --- Knowledge base retrieval -----------------------------------------
+        try:
+            knowledge_indexer = await KnowledgeIndexer.create(
+                config=config,
+                api_key=api_key,
+            )
+
+            knowledge_results = await knowledge_indexer.vector_store.search(
+                query=query,
+                top_k=config.top_k,
+                filters={"type": "knowledge"},
+            )
+
+            if knowledge_results:
+                context.knowledge_snippets = [
+                    _format_knowledge_result(result) for result in knowledge_results
+                ][: config.top_k]
+
+                logger.info(
+                    "rag_knowledge_enriched",
+                    results_count=len(context.knowledge_snippets),
+                    query_length=len(query),
+                )
+            else:
+                logger.debug("rag_no_knowledge_results", query=query[:50])
+
+        except FileNotFoundError:
+            logger.warning(
+                "knowledge_manifest_missing",
+                manifest=str(config.knowledge_manifest_path),
+            )
 
     except ImportError as e:
         logger.warning(
@@ -244,3 +276,32 @@ async def enrich_with_rag(context: ChatContext, query: str) -> ChatContext:
         )
 
     return context
+
+
+def _format_invoice_result(result) -> str:
+    """Create human-readable summary for invoice retrieval result."""
+    client_name = result.client_name or "Cliente sconosciuto"
+    snippet = result.document.replace("\n", " ")[:200]
+    return f"{client_name} — {snippet}..."
+
+
+def _format_knowledge_result(result: dict) -> dict[str, str | float | None]:
+    """Normalize knowledge result with citation metadata."""
+    metadata = result.get("metadata", {}) or {}
+    snippet = (result.get("document") or "").strip().replace("\n", " ")
+    excerpt = snippet[:200] + ("…" if len(snippet) > 200 else "")
+
+    citation = (
+        metadata.get("law_reference")
+        or metadata.get("section_title")
+        or metadata.get("knowledge_source")
+    )
+
+    return {
+        "source": metadata.get("knowledge_source", "unknown"),
+        "section": metadata.get("section_title", "N/A"),
+        "citation": citation,
+        "excerpt": excerpt,
+        "similarity": round(result.get("similarity", 0.0), 4),
+        "source_path": metadata.get("source_path"),
+    }

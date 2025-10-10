@@ -15,6 +15,8 @@ Architecture:
 """
 
 # Core domain models
+# Configuration
+from openfatture.ai.config import AISettings, get_ai_settings
 from openfatture.ai.domain import (
     AgentConfig,
     AgentContext,
@@ -26,9 +28,6 @@ from openfatture.ai.domain import (
     ResponseStatus,
     Role,
 )
-
-# Configuration
-from openfatture.ai.config import AISettings, get_ai_settings
 
 # Providers
 from openfatture.ai.providers import (

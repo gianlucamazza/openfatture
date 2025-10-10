@@ -6,6 +6,8 @@ reconciliation, and payment reminders.
 
 import asyncio
 import os
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
 
@@ -36,7 +38,7 @@ from ..infrastructure.repository import (
     BankTransactionRepository,
     PaymentRepository,
 )
-from ..matchers import CompositeMatcher, ExactAmountMatcher
+from ..matchers import CompositeMatcher, ExactAmountMatcher, IMatcherStrategy
 
 app = typer.Typer(name="payment", help="💰 Payment tracking & reconciliation")
 console = Console()
@@ -46,10 +48,19 @@ _INSIGHT_SERVICE: TransactionInsightService | None = None
 _INSIGHT_INITIALIZED = False
 
 
-def get_db_session():
-    """Get database session from context."""
-    # This will be provided by the main CLI context
-    return next(get_db())
+@contextmanager
+def get_db_session() -> Iterator[Session]:
+    """Provide a managed SQLAlchemy session using the shared generator helper."""
+    db_generator = get_db()
+    session = next(db_generator)
+    try:
+        yield session
+    finally:
+        try:
+            db_generator.close()
+        except RuntimeError:
+            # If the generator is already closed (e.g., during test mocks), ignore.
+            pass
 
 
 # ============================================================================
@@ -66,7 +77,7 @@ def import_statement(
     ),
     auto_match: bool = typer.Option(True, "--auto-match/--no-auto-match"),
     confidence: float = typer.Option(0.85, "--confidence", "-c", min=0.0, max=1.0),
-):
+) -> None:
     """📥 Import bank statement and auto-match transactions.
 
     Examples:
@@ -169,7 +180,7 @@ def match(
     confidence: float = typer.Option(0.60, "--confidence", "-c", min=0.0, max=1.0),
     auto_apply: bool = typer.Option(True, "--auto-apply/--manual-only"),
     limit: int | None = typer.Option(None, "--limit", "-l", help="Max transactions to match"),
-):
+) -> None:
     """🔍 Match unmatched transactions to payments.
 
     Examples:
@@ -245,7 +256,7 @@ def queue(
     interactive: bool = typer.Option(True, "--interactive/--list-only"),
     confidence_min: float = typer.Option(0.60, "--min", min=0.0, max=1.0),
     confidence_max: float = typer.Option(0.84, "--max", min=0.0, max=1.0),
-):
+) -> None:
     """📋 Review queue for manual reconciliation.
 
     Interactive mode allows approving/ignoring matches one by one.
@@ -379,7 +390,7 @@ def schedule_reminders(
     strategy: str = typer.Option(
         "default", "--strategy", "-s", help="Reminder strategy: default|aggressive|gentle|minimal"
     ),
-):
+) -> None:
     """⏰ Schedule payment reminders.
 
     Strategies:
@@ -426,10 +437,27 @@ def schedule_reminders(
             table.add_column("Status", style="dim")
 
             for reminder in reminders:
-                status = "⏰ Before due" if reminder.days_before_due > 0 else "❗ After due"
+                payment = getattr(reminder, "payment", None)
+                due_date = getattr(payment, "data_scadenza", None) if payment is not None else None
+                days_until_due: int | None
+                if due_date:
+                    reminder_date = getattr(reminder, "reminder_date", None)
+                    days_until_due = (due_date - reminder_date).days if reminder_date else None
+                else:
+                    days_until_due = getattr(reminder, "days_before_due", None)
+
+                if days_until_due is None:
+                    status = "❔ Unknown"
+                elif days_until_due > 0:
+                    status = "⏰ Before due"
+                elif days_until_due == 0:
+                    status = "📅 Due today"
+                else:
+                    status = "❗ After due"
+
                 table.add_row(
-                    reminder.scheduled_date.strftime("%d/%m/%Y"),
-                    str(reminder.days_before_due),
+                    getattr(reminder, "reminder_date", date.today()).strftime("%d/%m/%Y"),
+                    str(days_until_due) if days_until_due is not None else "-",
                     status,
                 )
 
@@ -450,7 +478,7 @@ def process_reminders(
     target_date: str | None = typer.Option(
         None, "--date", help="Date to process (YYYY-MM-DD), default: today"
     ),
-):
+) -> None:
     """📧 Process due reminders (background job).
 
     Run this daily via cron to send reminders.
@@ -499,7 +527,7 @@ def process_reminders(
 @app.command()
 def stats(
     account_id: int | None = typer.Option(None, "--account", "-a", help="Filter by account"),
-):
+) -> None:
     """📊 Payment tracking statistics.
 
     Examples:
@@ -589,10 +617,12 @@ def _get_transaction_insight_service() -> TransactionInsightService | None:
 def _build_matching_service(
     session: Session,
     *,
-    strategies: list = None,
+    strategies: Sequence[IMatcherStrategy] | None = None,
 ) -> MatchingService:
     """Factory to create MatchingService with optional AI insight."""
-    strategies = strategies or [ExactAmountMatcher(), CompositeMatcher()]
+    strategy_list: list[IMatcherStrategy] = (
+        list(strategies) if strategies is not None else [ExactAmountMatcher(), CompositeMatcher()]
+    )
     tx_repo = BankTransactionRepository(session)
     payment_repo = PaymentRepository(session)
     insight_service = _get_transaction_insight_service()
@@ -600,6 +630,6 @@ def _build_matching_service(
     return MatchingService(
         tx_repo=tx_repo,
         payment_repo=payment_repo,
-        strategies=strategies,
+        strategies=strategy_list,
         insight_service=insight_service,
     )

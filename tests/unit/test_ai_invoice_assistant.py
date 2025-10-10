@@ -1,7 +1,7 @@
 """Unit tests for Invoice Assistant agent."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -22,23 +22,22 @@ def mock_provider():
     # Mock the generate method to return a valid JSON response
     async def mock_generate(*args, **kwargs):
         return AgentResponse(
-            content=json.dumps({
-                "descrizione_completa": "Consulenza professionale per sviluppo web\n\nAttività svolte:\n- Analisi requisiti\n- Sviluppo codice\n- Testing",
-                "deliverables": ["Codice sorgente", "Documentazione"],
-                "competenze": ["Python", "FastAPI"],
-                "durata_ore": 3.0,
-                "note": "Progetto completato con successo"
-            }),
+            content=json.dumps(
+                {
+                    "descrizione_completa": "Consulenza professionale per sviluppo web\n\nAttività svolte:\n- Analisi requisiti\n- Sviluppo codice\n- Testing",
+                    "deliverables": ["Codice sorgente", "Documentazione"],
+                    "competenze": ["Python", "FastAPI"],
+                    "durata_ore": 3.0,
+                    "note": "Progetto completato con successo",
+                }
+            ),
             status=ResponseStatus.SUCCESS,
             model="mock-model",
             provider="mock",
             usage=UsageMetrics(
-                prompt_tokens=100,
-                completion_tokens=200,
-                total_tokens=300,
-                estimated_cost_usd=0.01
+                prompt_tokens=100, completion_tokens=200, total_tokens=300, estimated_cost_usd=0.01
             ),
-            latency_ms=500.0
+            latency_ms=500.0,
         )
 
     provider.generate = AsyncMock(side_effect=mock_generate)
@@ -54,7 +53,7 @@ def mock_prompt_manager():
     def mock_render(*args, **kwargs):
         return (
             "System prompt for invoice assistant",
-            "User prompt: Generate description for service"
+            "User prompt: Generate description for service",
         )
 
     manager.render_with_examples = MagicMock(side_effect=mock_render)
@@ -66,9 +65,7 @@ def mock_prompt_manager():
 def invoice_assistant(mock_provider, mock_prompt_manager):
     """Create Invoice Assistant agent with mocked dependencies."""
     agent = InvoiceAssistantAgent(
-        provider=mock_provider,
-        prompt_manager=mock_prompt_manager,
-        use_structured_output=True
+        provider=mock_provider, prompt_manager=mock_prompt_manager, use_structured_output=True
     )
     return agent
 
@@ -90,7 +87,7 @@ class TestInvoiceAssistantAgent:
         context = InvoiceContext(
             user_input="3 ore consulenza web",
             servizio_base="3 ore consulenza web",
-            ore_lavorate=3.0
+            ore_lavorate=3.0,
         )
 
         response = await invoice_assistant.execute(context)
@@ -105,7 +102,7 @@ class TestInvoiceAssistantAgent:
         context = InvoiceContext(
             user_input="5 ore sviluppo backend",
             servizio_base="5 ore sviluppo backend",
-            ore_lavorate=5.0
+            ore_lavorate=5.0,
         )
 
         response = await invoice_assistant.execute(context)
@@ -122,11 +119,7 @@ class TestInvoiceAssistantAgent:
     async def test_validation_required_fields(self, invoice_assistant):
         """Test validation of required fields."""
         # Missing servizio_base
-        context = InvoiceContext(
-            user_input="",
-            servizio_base="",
-            ore_lavorate=5.0
-        )
+        context = InvoiceContext(user_input="", servizio_base="", ore_lavorate=5.0)
 
         is_valid, error = await invoice_assistant.validate_input(context)
 
@@ -137,9 +130,7 @@ class TestInvoiceAssistantAgent:
         """Test validation of field lengths."""
         # servizio_base too long
         context = InvoiceContext(
-            user_input="test",
-            servizio_base="x" * 501,  # Max is 500
-            ore_lavorate=5.0
+            user_input="test", servizio_base="x" * 501, ore_lavorate=5.0  # Max is 500
         )
 
         is_valid, error = await invoice_assistant.validate_input(context)
@@ -150,9 +141,7 @@ class TestInvoiceAssistantAgent:
     async def test_validation_hours_positive(self, invoice_assistant):
         """Test validation of hours being positive."""
         context = InvoiceContext(
-            user_input="test",
-            servizio_base="Consulenza",
-            ore_lavorate=-5.0  # Invalid
+            user_input="test", servizio_base="Consulenza", ore_lavorate=-5.0  # Invalid
         )
 
         is_valid, error = await invoice_assistant.validate_input(context)
@@ -163,9 +152,7 @@ class TestInvoiceAssistantAgent:
     async def test_validation_hours_realistic(self, invoice_assistant):
         """Test validation of hours being realistic."""
         context = InvoiceContext(
-            user_input="test",
-            servizio_base="Consulenza",
-            ore_lavorate=10000.0  # Unrealistic
+            user_input="test", servizio_base="Consulenza", ore_lavorate=10000.0  # Unrealistic
         )
 
         is_valid, error = await invoice_assistant.validate_input(context)
@@ -179,7 +166,7 @@ class TestInvoiceAssistantAgent:
             user_input="sviluppo API",
             servizio_base="sviluppo API",
             ore_lavorate=8.0,
-            tecnologie=["Python", "FastAPI", "PostgreSQL"]
+            tecnologie=["Python", "FastAPI", "PostgreSQL"],
         )
 
         response = await invoice_assistant.execute(context)
@@ -195,7 +182,7 @@ class TestInvoiceAssistantAgent:
             servizio_base="sviluppo backend",
             ore_lavorate=10.0,
             progetto="Sistema E-commerce",
-            tariffa_oraria=100.0
+            tariffa_oraria=100.0,
         )
 
         response = await invoice_assistant.execute(context)
@@ -210,7 +197,7 @@ class TestInvoiceAssistantAgent:
             user_input="audit sicurezza",
             servizio_base="audit sicurezza",
             ore_lavorate=8.0,
-            deliverables=["Report audit", "Piano remediation"]
+            deliverables=["Report audit", "Piano remediation"],
         )
 
         response = await invoice_assistant.execute(context)
@@ -220,6 +207,7 @@ class TestInvoiceAssistantAgent:
 
     async def test_fallback_when_json_parse_fails(self, mock_provider, mock_prompt_manager):
         """Test fallback to plain text when JSON parsing fails."""
+
         # Mock provider to return invalid JSON
         async def mock_generate_invalid(*args, **kwargs):
             return AgentResponse(
@@ -227,26 +215,16 @@ class TestInvoiceAssistantAgent:
                 status=ResponseStatus.SUCCESS,
                 model="mock-model",
                 provider="mock",
-                usage=UsageMetrics(
-                    prompt_tokens=100,
-                    completion_tokens=50,
-                    total_tokens=150
-                )
+                usage=UsageMetrics(prompt_tokens=100, completion_tokens=50, total_tokens=150),
             )
 
         mock_provider.generate = AsyncMock(side_effect=mock_generate_invalid)
 
         agent = InvoiceAssistantAgent(
-            provider=mock_provider,
-            prompt_manager=mock_prompt_manager,
-            use_structured_output=True
+            provider=mock_provider, prompt_manager=mock_prompt_manager, use_structured_output=True
         )
 
-        context = InvoiceContext(
-            user_input="test",
-            servizio_base="test",
-            ore_lavorate=1.0
-        )
+        context = InvoiceContext(user_input="test", servizio_base="test", ore_lavorate=1.0)
 
         response = await agent.execute(context)
 
@@ -259,7 +237,7 @@ class TestInvoiceAssistantAgent:
             user_input="consulenza",
             servizio_base="consulenza IT",
             ore_lavorate=5.0,
-            lingua_preferita="it"
+            lingua_preferita="it",
         )
 
         response = await invoice_assistant.execute(context)
@@ -277,7 +255,7 @@ class TestInvoiceAssistantAgent:
             tariffa_oraria=80.0,
             progetto="Portale Aziendale",
             tecnologie=["React", "Node.js", "MongoDB"],
-            deliverables=["Codice", "Documentazione", "Tests"]
+            deliverables=["Codice", "Documentazione", "Tests"],
         )
 
         # Execute to trigger prompt building
@@ -305,16 +283,10 @@ class TestInvoiceAssistantAgent:
         )
 
         agent = InvoiceAssistantAgent(
-            provider=mock_provider,
-            prompt_manager=mock_pm,
-            use_structured_output=True
+            provider=mock_provider, prompt_manager=mock_pm, use_structured_output=True
         )
 
-        context = InvoiceContext(
-            user_input="test",
-            servizio_base="test service",
-            ore_lavorate=2.0
-        )
+        context = InvoiceContext(user_input="test", servizio_base="test service", ore_lavorate=2.0)
 
         response = await agent.execute(context)
 
@@ -323,11 +295,7 @@ class TestInvoiceAssistantAgent:
 
     async def test_cost_tracking(self, invoice_assistant):
         """Test cost tracking in agent metrics."""
-        context = InvoiceContext(
-            user_input="test",
-            servizio_base="test",
-            ore_lavorate=1.0
-        )
+        context = InvoiceContext(user_input="test", servizio_base="test", ore_lavorate=1.0)
 
         # Execute multiple times
         for _ in range(3):
@@ -352,7 +320,7 @@ class TestInvoiceDescriptionOutput:
             deliverables=["Codice", "Docs"],
             competenze=["Python", "FastAPI"],
             durata_ore=5.0,
-            note="Completato"
+            note="Completato",
         )
 
         assert model.descrizione_completa == "Consulenza professionale..."
@@ -366,16 +334,12 @@ class TestInvoiceDescriptionOutput:
         # This should fail validation
         with pytest.raises(ValueError):
             InvoiceDescriptionOutput(
-                descrizione_completa="x" * 1001,  # Over limit
-                deliverables=[],
-                competenze=[]
+                descrizione_completa="x" * 1001, deliverables=[], competenze=[]  # Over limit
             )
 
     def test_default_values(self):
         """Test default values are set correctly."""
-        model = InvoiceDescriptionOutput(
-            descrizione_completa="Test description"
-        )
+        model = InvoiceDescriptionOutput(descrizione_completa="Test description")
 
         assert model.deliverables == []
         assert model.competenze == []
@@ -388,7 +352,7 @@ class TestInvoiceDescriptionOutput:
             descrizione_completa="Test",
             deliverables=["A", "B"],
             competenze=["Python"],
-            durata_ore=3.0
+            durata_ore=3.0,
         )
 
         data = model.model_dump()
@@ -404,7 +368,7 @@ class TestInvoiceDescriptionOutput:
             descrizione_completa="Test description",
             deliverables=["Deliverable 1"],
             competenze=["Skill 1"],
-            durata_ore=2.5
+            durata_ore=2.5,
         )
 
         json_str = model.model_dump_json()

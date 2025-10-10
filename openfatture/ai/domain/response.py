@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -23,8 +23,8 @@ class ToolCall(BaseModel):
     id: str
     name: str
     arguments: dict[str, Any]
-    result: Optional[Any] = None
-    error: Optional[str] = None
+    result: Any | None = None
+    error: str | None = None
 
 
 class UsageMetrics(BaseModel):
@@ -57,23 +57,23 @@ class AgentResponse(BaseModel):
     tool_calls: list[ToolCall] = Field(default_factory=list)
 
     # Metadata
-    agent_name: Optional[str] = None
-    model: Optional[str] = None
-    provider: Optional[str] = None
+    agent_name: str | None = None
+    model: str | None = None
+    provider: str | None = None
 
     # Usage metrics
     usage: UsageMetrics = Field(default_factory=UsageMetrics)
 
     # Timing
     timestamp: datetime = Field(default_factory=datetime.now)
-    latency_ms: Optional[float] = None
+    latency_ms: float | None = None
 
     # Error handling
-    error: Optional[str] = None
+    error: str | None = None
     error_details: dict[str, Any] = Field(default_factory=dict)
 
     # Confidence/quality
-    confidence: Optional[float] = None  # 0.0 to 1.0
+    confidence: float | None = None  # 0.0 to 1.0
 
     # Additional data
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -121,8 +121,8 @@ class StreamChunk(BaseModel):
 
     content: str
     is_final: bool = False
-    tool_call: Optional[ToolCall] = None
-    finish_reason: Optional[str] = None
+    tool_call: ToolCall | None = None
+    finish_reason: str | None = None
 
     def __str__(self) -> str:
         """String representation."""

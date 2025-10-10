@@ -1,6 +1,6 @@
 """Factory for creating LLM providers."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from openfatture.ai.config import AISettings, get_ai_settings
 from openfatture.ai.providers.anthropic import AnthropicProvider
@@ -13,8 +13,8 @@ logger = get_logger(__name__)
 
 
 def create_provider(
-    provider_type: Optional[Literal["openai", "anthropic", "ollama"]] = None,
-    settings: Optional[AISettings] = None,
+    provider_type: Literal["openai", "anthropic", "ollama"] | None = None,
+    settings: AISettings | None = None,
     **kwargs,
 ) -> BaseLLMProvider:
     """
@@ -73,8 +73,7 @@ def create_provider(
 
         else:
             raise ProviderError(
-                f"Unknown provider: {provider}. "
-                f"Supported: openai, anthropic, ollama",
+                f"Unknown provider: {provider}. " f"Supported: openai, anthropic, ollama",
                 provider=provider,
             )
 

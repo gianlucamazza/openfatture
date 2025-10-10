@@ -1,10 +1,10 @@
 """Context models for AI agent execution."""
 
 import uuid
-from datetime import datetime
-from typing import Any, Optional
+from datetime import date, datetime
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from openfatture.ai.domain.message import ConversationHistory
 from openfatture.storage.database.models import Cliente, Fattura
@@ -27,22 +27,22 @@ class AgentContext(BaseModel):
     correlation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
     # Domain entities (optional)
-    cliente: Optional[Cliente] = None
-    fattura: Optional[Fattura] = None
+    cliente: Cliente | None = None
+    fattura: Fattura | None = None
     fatture_recenti: list[Fattura] = Field(default_factory=list)
 
     # Conversation management
     conversation_history: ConversationHistory = Field(default_factory=ConversationHistory)
 
     # Business context
-    regime_fiscale: Optional[str] = None
-    settore_attivita: Optional[str] = None
+    regime_fiscale: str | None = None
+    settore_attivita: str | None = None
     lingua_preferita: str = "it"
 
     # Execution metadata
     timestamp: datetime = Field(default_factory=datetime.now)
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
+    user_id: str | None = None
+    session_id: str | None = None
 
     # Feature flags
     enable_streaming: bool = False
@@ -55,9 +55,10 @@ class AgentContext(BaseModel):
 
     # Additional data
     metadata: dict[str, Any] = Field(default_factory=dict)
+    relevant_documents: list[str] = Field(default_factory=list)
+    knowledge_snippets: list[dict[str, Any]] = Field(default_factory=list)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def add_user_message(self, content: str) -> None:
         """Add a user message to conversation history."""
@@ -90,21 +91,20 @@ class InvoiceContext(AgentContext):
     """
 
     # Service details
-    servizio_base: Optional[str] = None
-    ore_lavorate: Optional[float] = None
-    tariffa_oraria: Optional[float] = None
-    giorni_lavoro: Optional[int] = None
+    servizio_base: str | None = None
+    ore_lavorate: float | None = None
+    tariffa_oraria: float | None = None
+    giorni_lavoro: int | None = None
 
     # Project details
-    progetto: Optional[str] = None
+    progetto: str | None = None
     deliverables: list[str] = Field(default_factory=list)
     tecnologie: list[str] = Field(default_factory=list)
 
     # Context from history
     descrizioni_simili: list[str] = Field(default_factory=list)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class TaxContext(AgentContext):
@@ -116,7 +116,7 @@ class TaxContext(AgentContext):
 
     # Service details
     tipo_servizio: str
-    categoria_servizio: Optional[str] = None
+    categoria_servizio: str | None = None
     importo: float = 0.0
 
     # Client details
@@ -127,14 +127,13 @@ class TaxContext(AgentContext):
     # Special cases
     reverse_charge: bool = False
     split_payment: bool = False
-    regime_speciale: Optional[str] = None
+    regime_speciale: str | None = None
 
     # Supporting evidence
-    codice_ateco: Optional[str] = None
-    contratto_tipo: Optional[str] = None
+    codice_ateco: str | None = None
+    contratto_tipo: str | None = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class CashFlowContext(AgentContext):
@@ -147,22 +146,52 @@ class CashFlowContext(AgentContext):
     # Invoice details
     importo_fattura: float
     data_emissione: datetime
-    giorni_pagamento_contratto: Optional[int] = None
+    giorni_pagamento_contratto: int | None = None
 
     # Client history
     pagamenti_cliente: list[dict[str, Any]] = Field(default_factory=list)
-    media_giorni_pagamento_cliente: Optional[float] = None
+    media_giorni_pagamento_cliente: float | None = None
 
     # Sector data
-    media_giorni_settore: Optional[float] = None
-    stagionalita: Optional[str] = None  # Month/quarter
+    media_giorni_settore: float | None = None
+    stagionalita: str | None = None  # Month/quarter
 
     # Risk factors
     importo_insolito: bool = False
     cliente_nuovo: bool = False
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class PaymentInsightContext(AgentContext):
+    """
+    Specialized context for analyzing bank transactions with AI support.
+
+    Provides transaction metadata and candidate payments that the agent can use
+    to infer possible matches and partial payment scenarios.
+    """
+
+    transaction_description: str | None = None
+    transaction_reference: str | None = None
+    transaction_amount: float
+    transaction_date: date
+    counterparty: str | None = None
+    counterparty_iban: str | None = None
+    candidate_payments: list[dict[str, Any]] = Field(default_factory=list)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Extend base serialization with payment insight specific fields."""
+        base = super().to_dict()
+        base.update(
+            {
+                "transaction_amount": self.transaction_amount,
+                "transaction_date": self.transaction_date.isoformat(),
+                "candidate_count": len(self.candidate_payments),
+            }
+        )
+        return base
 
 
 class ComplianceContext(AgentContext):
@@ -186,8 +215,7 @@ class ComplianceContext(AgentContext):
     # Severity threshold
     min_severity_to_report: str = "WARNING"
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class AgentResult(BaseModel):
@@ -199,7 +227,7 @@ class AgentResult(BaseModel):
 
     success: bool
     data: dict[str, Any]
-    error: Optional[str] = None
+    error: str | None = None
     warnings: list[str] = Field(default_factory=list)
     suggestions: list[str] = Field(default_factory=list)
     confidence: float = 1.0
@@ -229,9 +257,9 @@ class ChatContext(AgentContext):
     tool_results: list[dict[str, Any]] = Field(default_factory=list)
 
     # Business data enrichment
-    recent_invoices_summary: Optional[str] = None
-    recent_clients_summary: Optional[str] = None
-    current_year_stats: Optional[dict[str, Any]] = None
+    recent_invoices_summary: str | None = None
+    recent_clients_summary: str | None = None
+    current_year_stats: dict[str, Any] | None = None
 
     # User preferences
     preferred_response_style: str = "professional"  # professional, casual, technical
@@ -239,7 +267,5 @@ class ChatContext(AgentContext):
 
     # RAG context (if enabled)
     similar_conversations: list[str] = Field(default_factory=list)
-    relevant_documents: list[str] = Field(default_factory=list)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)

@@ -1,7 +1,5 @@
 """Invoice Assistant Agent - Generates professional invoice descriptions."""
 
-from typing import Optional
-
 from openfatture.ai.agents.models import InvoiceDescriptionOutput
 from openfatture.ai.domain import AgentConfig, BaseAgent, Message, Role
 from openfatture.ai.domain.context import InvoiceContext
@@ -35,7 +33,7 @@ class InvoiceAssistantAgent(BaseAgent):
     def __init__(
         self,
         provider: BaseLLMProvider,
-        prompt_manager: Optional[PromptManager] = None,
+        prompt_manager: PromptManager | None = None,
         use_structured_output: bool = True,
     ) -> None:
         """
@@ -55,7 +53,7 @@ class InvoiceAssistantAgent(BaseAgent):
             max_tokens=800,  # Enough for detailed descriptions
             tools_enabled=False,
             memory_enabled=False,
-            rag_enabled=False,  # Future: enable with ChromaDB
+            rag_enabled=True,
         )
 
         super().__init__(config=config, provider=provider)
@@ -71,7 +69,7 @@ class InvoiceAssistantAgent(BaseAgent):
             structured_output=use_structured_output,
         )
 
-    async def validate_input(self, context: InvoiceContext) -> tuple[bool, Optional[str]]:
+    async def validate_input(self, context: InvoiceContext) -> tuple[bool, str | None]:
         """
         Validate invoice context before processing.
 
@@ -148,6 +146,10 @@ class InvoiceAssistantAgent(BaseAgent):
             Message(role=Role.USER, content=user_prompt),
         ]
 
+        context_message = self._build_context_message(context)
+        if context_message:
+            messages.insert(1, Message(role=Role.SYSTEM, content=context_message))
+
         return messages
 
     async def _parse_response(
@@ -199,12 +201,42 @@ class InvoiceAssistantAgent(BaseAgent):
         else:
             response.metadata["is_structured"] = False
 
-        # Add context info to metadata
+        # Add context info to metadata (useful for auditing)
         response.metadata["servizio_base"] = context.servizio_base
         response.metadata["ore_lavorate"] = context.ore_lavorate
         response.metadata["lingua"] = context.lingua_preferita
 
         return response
+
+    def _build_context_message(self, context: InvoiceContext) -> str | None:
+        """
+        Build additional context message with RAG snippets if available.
+
+        Args:
+            context: Invoice context
+
+        Returns:
+            Context string or None
+        """
+        lines: list[str] = []
+
+        if context.relevant_documents:
+            lines.append("Documenti simili recuperati dal sistema:")
+            for doc in context.relevant_documents[:3]:
+                lines.append(f"- {doc}")
+
+        if context.knowledge_snippets:
+            lines.append("")
+            lines.append("Linee guida e note rilevanti (cita come [numero]):")
+            for idx, snippet in enumerate(context.knowledge_snippets[:3], 1):
+                citation = snippet.get("citation") or snippet.get("source") or f"Fonte {idx}"
+                excerpt = snippet.get("excerpt", "")
+                lines.append(f"[{idx}] {citation} — {excerpt}")
+            lines.append(
+                "Utilizza le fonti per motivare la descrizione e cita il numero corrispondente."
+            )
+
+        return "\n".join(lines).strip() if lines else None
 
     # Fallback prompts (if YAML not found)
 

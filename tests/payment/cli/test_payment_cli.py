@@ -403,11 +403,11 @@ class TestScheduleRemindersCommand:
     def test_schedule_reminders_success(self, mocker):
         """Test successful reminder scheduling."""
         mock_reminder1 = Mock()
-        mock_reminder1.scheduled_date = date.today() + timedelta(days=7)
+        mock_reminder1.reminder_date = date.today() + timedelta(days=7)
         mock_reminder1.days_before_due = 7
 
         mock_reminder2 = Mock()
-        mock_reminder2.scheduled_date = date.today() + timedelta(days=30)
+        mock_reminder2.reminder_date = date.today() + timedelta(days=30)
         mock_reminder2.days_before_due = 30
 
         with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
@@ -457,7 +457,7 @@ class TestScheduleRemindersCommand:
 
             with patch("asyncio.get_event_loop") as mock_loop:
                 mock_loop.return_value.run_until_complete.return_value = [
-                    Mock(scheduled_date=date.today(), days_before_due=0)
+                    Mock(reminder_date=date.today(), days_before_due=0)
                 ]
 
                 result = runner.invoke(

@@ -7,6 +7,7 @@ from openfatture.ai.domain.context import (
     CashFlowContext,
     ComplianceContext,
     InvoiceContext,
+    PaymentInsightContext,
     TaxContext,
 )
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
@@ -31,6 +32,7 @@ __all__ = [
     "TaxContext",
     "CashFlowContext",
     "ComplianceContext",
+    "PaymentInsightContext",
     # Message
     "Message",
     "Role",

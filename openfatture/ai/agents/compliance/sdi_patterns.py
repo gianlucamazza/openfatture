@@ -13,10 +13,10 @@ Each pattern includes:
 - Fix suggestions
 """
 
+import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Pattern
-import re
+from re import Pattern
 
 from openfatture.utils.logging import get_logger
 
@@ -92,8 +92,8 @@ class SDIRejectionPattern:
     error_code: str
     pattern_name: str
     description: str
-    regex_patterns: List[str] = None
-    field_checks: List[str] = None
+    regex_patterns: list[str] = None
+    field_checks: list[str] = None
     severity: str = "error"
     fix_suggestion: str = ""
     reference: str = ""
@@ -101,7 +101,7 @@ class SDIRejectionPattern:
     def __post_init__(self):
         """Compile regex patterns."""
         if self.regex_patterns:
-            self.compiled_patterns: List[Pattern] = [
+            self.compiled_patterns: list[Pattern] = [
                 re.compile(pattern, re.IGNORECASE) for pattern in self.regex_patterns
             ]
         else:
@@ -122,7 +122,7 @@ class SDIPatternDatabase:
         self.patterns = self._load_patterns()
         logger.info("sdi_pattern_database_initialized", patterns_count=len(self.patterns))
 
-    def _load_patterns(self) -> List[SDIRejectionPattern]:
+    def _load_patterns(self) -> list[SDIRejectionPattern]:
         """Load all SDI rejection patterns."""
 
         return [
@@ -182,7 +182,12 @@ class SDIPatternDatabase:
                 error_code=SDIErrorCode.E00501.value,
                 pattern_name="Indirizzo Incompleto",
                 description="Indirizzo del cliente incompleto (manca via, cap, comune o provincia)",
-                field_checks=["cliente.indirizzo", "cliente.cap", "cliente.comune", "cliente.provincia"],
+                field_checks=[
+                    "cliente.indirizzo",
+                    "cliente.cap",
+                    "cliente.comune",
+                    "cliente.provincia",
+                ],
                 severity="error",
                 fix_suggestion="Per clienti italiani sono obbligatori: Indirizzo, CAP, Comune, Provincia",
                 reference="FatturaPA v1.2.2 - Campo 1.4.2",
@@ -371,7 +376,7 @@ class SDIPatternDatabase:
             ),
         ]
 
-    def get_pattern_by_code(self, error_code: str) -> Optional[SDIRejectionPattern]:
+    def get_pattern_by_code(self, error_code: str) -> SDIRejectionPattern | None:
         """Get pattern by error code.
 
         Args:
@@ -385,7 +390,7 @@ class SDIPatternDatabase:
                 return pattern
         return None
 
-    def get_patterns_by_field(self, field_name: str) -> List[SDIRejectionPattern]:
+    def get_patterns_by_field(self, field_name: str) -> list[SDIRejectionPattern]:
         """Get all patterns related to a specific field.
 
         Args:
@@ -402,7 +407,7 @@ class SDIPatternDatabase:
 
         return matching_patterns
 
-    def search_patterns(self, text: str) -> List[SDIRejectionPattern]:
+    def search_patterns(self, text: str) -> list[SDIRejectionPattern]:
         """Search patterns by text matching.
 
         Args:
@@ -423,7 +428,7 @@ class SDIPatternDatabase:
 
         return matching_patterns
 
-    def get_all_patterns(self) -> List[SDIRejectionPattern]:
+    def get_all_patterns(self) -> list[SDIRejectionPattern]:
         """Get all patterns.
 
         Returns:

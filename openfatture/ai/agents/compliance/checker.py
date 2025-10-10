@@ -11,22 +11,20 @@ submission to SDI.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional, Dict, Any
 from enum import Enum
+from typing import Any
 
+from openfatture.ai.agents.compliance.heuristics import (
+    AIHeuristicAnalyzer,
+)
 from openfatture.ai.agents.compliance.rules import (
     ComplianceRulesEngine,
-    ValidationResult,
     ValidationIssue,
     ValidationSeverity,
 )
 from openfatture.ai.agents.compliance.sdi_patterns import (
     SDIPatternDatabase,
     SDIRejectionPattern,
-)
-from openfatture.ai.agents.compliance.heuristics import (
-    AIHeuristicAnalyzer,
-    HeuristicAnalysis,
 )
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura
@@ -67,13 +65,13 @@ class ComplianceReport:
     is_compliant: bool
     compliance_score: float
     risk_score: float = 0.0
-    validation_issues: List[ValidationIssue] = field(default_factory=list)
-    sdi_pattern_matches: List[SDIRejectionPattern] = field(default_factory=list)
-    heuristic_anomalies: List[ValidationIssue] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
+    validation_issues: list[ValidationIssue] = field(default_factory=list)
+    sdi_pattern_matches: list[SDIRejectionPattern] = field(default_factory=list)
+    heuristic_anomalies: list[ValidationIssue] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
     level: ComplianceLevel = ComplianceLevel.STANDARD
 
-    def get_errors(self) -> List[ValidationIssue]:
+    def get_errors(self) -> list[ValidationIssue]:
         """Get all ERROR-level issues."""
         return [
             issue
@@ -81,7 +79,7 @@ class ComplianceReport:
             if issue.severity == ValidationSeverity.ERROR
         ]
 
-    def get_warnings(self) -> List[ValidationIssue]:
+    def get_warnings(self) -> list[ValidationIssue]:
         """Get all WARNING-level issues."""
         return [
             issue
@@ -89,7 +87,7 @@ class ComplianceReport:
             if issue.severity == ValidationSeverity.WARNING
         ]
 
-    def get_info(self) -> List[ValidationIssue]:
+    def get_info(self) -> list[ValidationIssue]:
         """Get all INFO-level issues."""
         return [
             issue
@@ -97,7 +95,7 @@ class ComplianceReport:
             if issue.severity == ValidationSeverity.INFO
         ]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert report to dictionary."""
         return {
             "invoice_id": self.invoice_id,
@@ -165,7 +163,7 @@ class ComplianceChecker:
         level: ComplianceLevel = ComplianceLevel.STANDARD,
         ai_provider: str = "anthropic",
         ai_model: str = "claude-3-5-sonnet-20241022",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ) -> None:
         """Initialize compliance checker.
 
@@ -256,9 +254,7 @@ class ComplianceChecker:
             # 3. Run AI heuristic analysis (if enabled)
             if self.ai_analyzer and include_history:
                 client_history = self._get_client_history(db, fattura)
-                heuristic_analysis = await self.ai_analyzer.analyze_invoice(
-                    fattura, client_history
-                )
+                heuristic_analysis = await self.ai_analyzer.analyze_invoice(fattura, client_history)
 
                 report.heuristic_anomalies = heuristic_analysis.anomalies_found
                 report.risk_score = heuristic_analysis.risk_score
@@ -313,18 +309,18 @@ class ComplianceChecker:
                     else ValidationSeverity.WARNING
                 )
 
-                report.validation_issues.append(ValidationIssue(
-                    code=pattern.error_code,
-                    severity=severity,
-                    field=pattern.field_checks[0] if pattern.field_checks else "unknown",
-                    message=f"SDI Pattern: {pattern.pattern_name}",
-                    suggestion=pattern.fix_suggestion,
-                    reference=pattern.reference,
-                ))
+                report.validation_issues.append(
+                    ValidationIssue(
+                        code=pattern.error_code,
+                        severity=severity,
+                        field=pattern.field_checks[0] if pattern.field_checks else "unknown",
+                        message=f"SDI Pattern: {pattern.pattern_name}",
+                        suggestion=pattern.fix_suggestion,
+                        reference=pattern.reference,
+                    )
+                )
 
-    def _pattern_matches_fields(
-        self, fattura: Fattura, pattern: SDIRejectionPattern
-    ) -> bool:
+    def _pattern_matches_fields(self, fattura: Fattura, pattern: SDIRejectionPattern) -> bool:
         """Check if pattern matches invoice fields."""
 
         # Simplified pattern matching (in production, use more sophisticated logic)
@@ -349,9 +345,7 @@ class ComplianceChecker:
 
         return False
 
-    def _get_client_history(
-        self, db, fattura: Fattura, limit: int = 10
-    ) -> List[Fattura]:
+    def _get_client_history(self, db, fattura: Fattura, limit: int = 10) -> list[Fattura]:
         """Get client invoice history."""
 
         return (
@@ -391,24 +385,16 @@ class ComplianceChecker:
         issue_codes = {issue.code for issue in report.validation_issues}
 
         if "FPA012" in issue_codes or "FPA013" in issue_codes:
-            report.recommendations.append(
-                "📋 Verificare i dati fiscali del cliente (P.IVA/CF)"
-            )
+            report.recommendations.append("📋 Verificare i dati fiscali del cliente (P.IVA/CF)")
 
         if "FPA018" in issue_codes:
-            report.recommendations.append(
-                "📬 Richiedere Codice Destinatario o PEC al cliente"
-            )
+            report.recommendations.append("📬 Richiedere Codice Destinatario o PEC al cliente")
 
         if any("FPA03" in code for code in issue_codes):
-            report.recommendations.append(
-                "📅 Controllare le date (emissione, scadenza)"
-            )
+            report.recommendations.append("📅 Controllare le date (emissione, scadenza)")
 
         if any("FPA04" in code or "FPA07" in code for code in issue_codes):
-            report.recommendations.append(
-                "💰 Ricalcolare gli importi e verificare i totali"
-            )
+            report.recommendations.append("💰 Ricalcolare gli importi e verificare i totali")
 
     def _calculate_final_scores(self, report: ComplianceReport) -> None:
         """Calculate final compliance and risk scores."""
@@ -426,8 +412,8 @@ class ComplianceChecker:
 
     async def check_batch(
         self,
-        invoice_ids: List[int],
-    ) -> Dict[int, ComplianceReport]:
+        invoice_ids: list[int],
+    ) -> dict[int, ComplianceReport]:
         """Check multiple invoices.
 
         Args:
@@ -456,7 +442,7 @@ class ComplianceChecker:
 
         return results
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get compliance checker statistics.
 
         Returns:

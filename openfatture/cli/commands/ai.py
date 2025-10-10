@@ -2,7 +2,10 @@
 
 import asyncio
 import json
-from typing import Optional
+import os
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -11,22 +14,176 @@ from rich.panel import Panel
 from rich.table import Table
 
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
+from openfatture.ai.context import enrich_with_rag
 from openfatture.ai.domain.context import InvoiceContext, TaxContext
 from openfatture.ai.providers.factory import create_provider
+from openfatture.ai.rag import KnowledgeIndexer, get_rag_config
 from openfatture.utils.logging import get_logger
 
 app = typer.Typer()
 console = Console()
 logger = get_logger(__name__)
 
+rag_app = typer.Typer(help="Gestione knowledge base RAG")
+
+
+@rag_app.command("status")
+def rag_status() -> None:
+    """Mostra stato knowledge base e collezione vettoriale."""
+    asyncio.run(_rag_status())
+
+
+@rag_app.command("index")
+def rag_index(
+    sources: list[str] | None = typer.Option(
+        None,
+        "--source",
+        "-s",
+        help="ID sorgente definito nel manifest (opzione ripetibile)",
+    )
+) -> None:
+    """Indicizza le sorgenti della knowledge base."""
+    asyncio.run(_rag_index(sources))
+
+
+@rag_app.command("search")
+def rag_search(
+    query: str = typer.Argument(..., help="Query semantica da eseguire sulla knowledge base"),
+    top: int = typer.Option(5, "--top", "-k", help="Numero massimo di risultati da mostrare"),
+    source: str | None = typer.Option(
+        None, "--source", "-s", help="Limita la ricerca a una singola sorgente"
+    ),
+) -> None:
+    """Esegue una ricerca semantica nella knowledge base."""
+    asyncio.run(_rag_search(query, top, source))
+
+
+async def _create_knowledge_indexer() -> KnowledgeIndexer:
+    """Helper per inizializzare KnowledgeIndexer con configurazione corrente."""
+    config = get_rag_config()
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if config.embedding_provider == "openai" and not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY non impostata. Impostare la chiave per generare embedding."
+        )
+
+    indexer = await KnowledgeIndexer.create(
+        config=config,
+        api_key=api_key,
+        manifest_path=config.knowledge_manifest_path,
+        base_path=Path(".").resolve(),
+    )
+    return indexer
+
+
+async def _rag_status() -> None:
+    """Mostra stato attuale della knowledge base."""
+    try:
+        indexer = await _create_knowledge_indexer()
+    except Exception as exc:  # pragma: no cover - CLI diagnostics
+        console.print(f"[bold red]Errore:[/bold red] {exc}")
+        return
+
+    stats = indexer.vector_store.get_stats()
+
+    table = Table(title="Knowledge Base Sources", box=None)
+    table.add_column("ID", style="cyan")
+    table.add_column("Enabled", style="green")
+    table.add_column("Percorso", style="white")
+    table.add_column("Tags", style="magenta")
+
+    for source in indexer.sources:
+        tags = ", ".join(source.tags or [])
+        table.add_row(
+            source.id,
+            "✅" if source.enabled else "❌",
+            str(source.path),
+            tags,
+        )
+
+    console.print(table)
+    console.print()
+
+    console.print(
+        Panel.fit(
+            f"[bold]Collection:[/bold] {stats['collection_name']}\n"
+            f"[bold]Documenti indicizzati:[/bold] {stats['document_count']}\n"
+            f"[bold]Persist directory:[/bold] {stats['persist_directory']}",
+            title="Vector Store",
+            border_style="blue",
+        )
+    )
+
+
+async def _rag_index(sources: Iterable[str] | None) -> None:
+    """Indicizza le sorgenti specificate (o tutte se None)."""
+    try:
+        indexer = await _create_knowledge_indexer()
+    except Exception as exc:  # pragma: no cover - CLI diagnostics
+        console.print(f"[bold red]Errore:[/bold red] {exc}")
+        return
+
+    source_ids = list(sources) if sources else None
+
+    with console.status("[bold green]Indicizzazione conoscenza in corso..."):
+        chunks = await indexer.index_sources(source_ids=source_ids)
+
+    console.print(
+        f"\n[bold green]✅ Indicizzazione completata:[/bold green] {chunks} chunk aggiornati."
+    )
+
+
+async def _rag_search(query: str, top: int, source: str | None) -> None:
+    """Esegue ricerca semantica nella knowledge base."""
+    try:
+        indexer = await _create_knowledge_indexer()
+    except Exception as exc:  # pragma: no cover - CLI diagnostics
+        console.print(f"[bold red]Errore:[/bold red] {exc}")
+        return
+
+    filters: dict[str, Any] = {"type": "knowledge"}
+    if source:
+        filters["knowledge_source"] = source
+
+    results = await indexer.vector_store.search(
+        query=query,
+        top_k=top,
+        filters=filters,
+    )
+
+    if not results:
+        console.print("[yellow]Nessun risultato trovato.[/yellow]")
+        return
+
+    results_table = Table(title=f'Risultati per "{query}"', box=None)
+    results_table.add_column("Fonte", style="cyan")
+    results_table.add_column("Sezione", style="white")
+    results_table.add_column("Similarity", style="green")
+    results_table.add_column("Estratto", style="magenta")
+
+    for item in results:
+        metadata = item.get("metadata", {})
+        snippet = item.get("document", "")[:180] + (
+            "…" if len(item.get("document", "")) > 180 else ""
+        )
+        results_table.add_row(
+            metadata.get("knowledge_source", "n/a"),
+            metadata.get("section_title", "n/a"),
+            f"{item.get('similarity', 0):.2f}",
+            snippet,
+        )
+
+    console.print(results_table)
+
 
 @app.command("describe")
 def ai_describe(
     text: str = typer.Argument(..., help="Service description to expand"),
-    hours: Optional[float] = typer.Option(None, "--hours", "-h", help="Hours worked"),
-    rate: Optional[float] = typer.Option(None, "--rate", "-r", help="Hourly rate (€)"),
-    project: Optional[str] = typer.Option(None, "--project", "-p", help="Project name"),
-    technologies: Optional[str] = typer.Option(
+    hours: float | None = typer.Option(None, "--hours", "-h", help="Hours worked"),
+    rate: float | None = typer.Option(None, "--rate", "-r", help="Hourly rate (€)"),
+    project: str | None = typer.Option(None, "--project", "-p", help="Project name"),
+    technologies: str | None = typer.Option(
         None, "--tech", "-t", help="Technologies used (comma-separated)"
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
@@ -43,10 +200,10 @@ def ai_describe(
 
 async def _run_invoice_assistant(
     text: str,
-    hours: Optional[float],
-    rate: Optional[float],
-    project: Optional[str],
-    technologies: Optional[str],
+    hours: float | None,
+    rate: float | None,
+    project: str | None,
+    technologies: str | None,
     json_output: bool,
 ) -> None:
     """Run the Invoice Assistant agent."""
@@ -67,6 +224,13 @@ async def _run_invoice_assistant(
             progetto=project,
             tecnologie=tech_list,
         )
+
+        # Optional RAG enrichment (invoice history + knowledge snippets)
+        context.enable_rag = True
+        try:
+            context = await enrich_with_rag(context, text)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning("invoice_context_rag_failed", error=str(exc))
 
         # Show input
         _display_input(context)
@@ -128,6 +292,9 @@ def _display_input(context: InvoiceContext) -> None:
 
     console.print(table)
     console.print()
+
+
+app.add_typer(rag_app, name="rag")
 
 
 def _display_result(response) -> None:
@@ -206,10 +373,12 @@ def ai_suggest_vat(
     description: str = typer.Argument(..., help="Service/product description"),
     pa: bool = typer.Option(False, "--pa", help="Client is Public Administration"),
     estero: bool = typer.Option(False, "--estero", help="Foreign client"),
-    paese: Optional[str] = typer.Option(None, "--paese", help="Client country code (IT, FR, US, etc.)"),
-    categoria: Optional[str] = typer.Option(None, "--categoria", "-c", help="Service category"),
-    importo: Optional[float] = typer.Option(None, "--importo", "-i", help="Amount in EUR"),
-    ateco: Optional[str] = typer.Option(None, "--ateco", help="ATECO code"),
+    paese: str | None = typer.Option(
+        None, "--paese", help="Client country code (IT, FR, US, etc.)"
+    ),
+    categoria: str | None = typer.Option(None, "--categoria", "-c", help="Service category"),
+    importo: float | None = typer.Option(None, "--importo", "-i", help="Amount in EUR"),
+    ateco: str | None = typer.Option(None, "--ateco", help="ATECO code"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """
@@ -221,17 +390,19 @@ def ai_suggest_vat(
         openfatture ai suggest-vat "formazione professionale" --pa
         openfatture ai suggest-vat "consulenza" --estero --paese US
     """
-    asyncio.run(_run_tax_advisor(description, pa, estero, paese, categoria, importo, ateco, json_output))
+    asyncio.run(
+        _run_tax_advisor(description, pa, estero, paese, categoria, importo, ateco, json_output)
+    )
 
 
 async def _run_tax_advisor(
     description: str,
     pa: bool,
     estero: bool,
-    paese: Optional[str],
-    categoria: Optional[str],
-    importo: Optional[float],
-    ateco: Optional[str],
+    paese: str | None,
+    categoria: str | None,
+    importo: float | None,
+    ateco: str | None,
     json_output: bool,
 ) -> None:
     """Run the Tax Advisor agent."""
@@ -253,6 +424,12 @@ async def _run_tax_advisor(
             paese_cliente=paese or ("IT" if not estero else "XX"),
             codice_ateco=ateco,
         )
+
+        context.enable_rag = True
+        try:
+            context = await enrich_with_rag(context, description)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning("tax_context_rag_failed", error=str(exc))
 
         # Show input
         _display_tax_input(context)
@@ -333,7 +510,7 @@ def _display_tax_result(response) -> None:
             tax_info += f"\n[bold]Natura IVA:[/bold]      {data['codice_natura']}"
 
         if data.get("split_payment"):
-            tax_info += f"\n[bold]Split Payment:[/bold]   ✓ SI"
+            tax_info += "\n[bold]Split Payment:[/bold]   ✓ SI"
 
         if data.get("regime_speciale"):
             tax_info += f"\n[bold]Regime Speciale:[/bold] {data['regime_speciale']}"
@@ -349,21 +526,21 @@ def _display_tax_result(response) -> None:
         )
 
         # Spiegazione
-        console.print(f"\n[bold cyan]📋 Spiegazione:[/bold cyan]")
+        console.print("\n[bold cyan]📋 Spiegazione:[/bold cyan]")
         console.print(f"{data['spiegazione']}\n")
 
         # Riferimento normativo
-        console.print(f"[bold cyan]📜 Riferimento normativo:[/bold cyan]")
+        console.print("[bold cyan]📜 Riferimento normativo:[/bold cyan]")
         console.print(f"{data['riferimento_normativo']}\n")
 
         # Nota fattura
         if data.get("note_fattura"):
-            console.print(f"[bold cyan]📝 Nota per fattura:[/bold cyan]")
+            console.print("[bold cyan]📝 Nota per fattura:[/bold cyan]")
             console.print(f'"{data["note_fattura"]}"\n')
 
         # Raccomandazioni
         if data.get("raccomandazioni") and len(data["raccomandazioni"]) > 0:
-            console.print(f"[bold cyan]💡 Raccomandazioni:[/bold cyan]")
+            console.print("[bold cyan]💡 Raccomandazioni:[/bold cyan]")
             for racc in data["raccomandazioni"]:
                 console.print(f"  • {racc}")
             console.print()
@@ -382,7 +559,7 @@ def _display_tax_result(response) -> None:
 @app.command("forecast")
 def ai_forecast(
     months: int = typer.Option(3, "--months", "-m", help="Months to forecast"),
-    client_id: Optional[int] = typer.Option(None, "--client", "-c", help="Filter by client ID"),
+    client_id: int | None = typer.Option(None, "--client", "-c", help="Filter by client ID"),
     retrain: bool = typer.Option(False, "--retrain", help="Force model retraining"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
@@ -402,7 +579,7 @@ def ai_forecast(
 
 async def _run_cash_flow_forecast(
     months: int,
-    client_id: Optional[int],
+    client_id: int | None,
     retrain: bool,
     json_output: bool,
 ) -> None:
@@ -476,7 +653,7 @@ def _display_forecast(forecast) -> None:
 
     for month_data in forecast.monthly_forecast:
         # Color based on amount
-        amount = month_data['expected']
+        amount = month_data["expected"]
         if amount > 0:
             amount_str = f"€{amount:,.2f}"
             amount_style = "green bold" if amount > 1000 else "green"
@@ -485,7 +662,7 @@ def _display_forecast(forecast) -> None:
             amount_style = "dim"
 
         table.add_row(
-            month_data['month'],
+            month_data["month"],
             f"[{amount_style}]{amount_str}[/{amount_style}]",
         )
 
@@ -616,18 +793,22 @@ def _display_compliance_report(report, verbose: bool) -> None:
     scores_table.add_column("Value")
 
     # Compliance score with color
-    score_color = "green" if report.compliance_score >= 80 else "yellow" if report.compliance_score >= 60 else "red"
+    score_color = (
+        "green"
+        if report.compliance_score >= 80
+        else "yellow" if report.compliance_score >= 60 else "red"
+    )
     scores_table.add_row(
-        "Compliance Score:",
-        f"[{score_color}]{report.compliance_score:.1f}/100[/{score_color}]"
+        "Compliance Score:", f"[{score_color}]{report.compliance_score:.1f}/100[/{score_color}]"
     )
 
     # Risk score with color (if available)
     if report.risk_score > 0:
-        risk_color = "red" if report.risk_score >= 70 else "yellow" if report.risk_score >= 40 else "green"
+        risk_color = (
+            "red" if report.risk_score >= 70 else "yellow" if report.risk_score >= 40 else "green"
+        )
         scores_table.add_row(
-            "Risk Score:",
-            f"[{risk_color}]{report.risk_score:.1f}/100[/{risk_color}]"
+            "Risk Score:", f"[{risk_color}]{report.risk_score:.1f}/100[/{risk_color}]"
         )
 
     console.print(scores_table)
@@ -649,7 +830,7 @@ def _display_compliance_report(report, verbose: bool) -> None:
     if report.sdi_pattern_matches:
         summary_table.add_row(
             "[magenta]SDI Patterns Matched:",
-            f"[magenta]{len(report.sdi_pattern_matches)}[/magenta]"
+            f"[magenta]{len(report.sdi_pattern_matches)}[/magenta]",
         )
 
     console.print(summary_table)

@@ -19,7 +19,7 @@ The Invoice Assistant is included in the OpenFatture AI module:
 
 ```bash
 # Already installed if you have openfatture
-pip install openfatture
+uv pip install openfatture
 ```
 
 ### 2. Configuration

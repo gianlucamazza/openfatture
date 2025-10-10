@@ -1,359 +1,161 @@
-"""Composite matcher strategy combining multiple matching signals.
+"""Composite matcher that merges results from multiple strategies.
 
-Implements a weighted scoring algorithm that combines:
-- Amount similarity (40% weight)
-- Date proximity (30% weight)
-- Description similarity (30% weight)
+The composite matcher coordinates a list of individual strategies (exact amount, date
+window, fuzzy description, IBAN detection, etc.) and produces a single deduplicated
+list of matches by weighting each strategy's confidence score.
 
-This is the recommended default matcher for production use.
+Key features:
+    • Strategies can be synchronous or asynchronous.
+    • Weights are normalised automatically if not provided.
+    • Results are deduplicated per payment and confidence is a weighted average.
+    • Matched fields and reasons are merged to aid explainability.
 """
 
-from datetime import timedelta
-from decimal import Decimal
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
-from rapidfuzz import fuzz
+import inspect
+from collections.abc import Sequence
+from decimal import Decimal, InvalidOperation
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy, payment_amount_for_matching
-
-if TYPE_CHECKING:
-    from ...storage.database.models import Pagamento
-    from ..domain.models import BankTransaction
+from .base import IMatcherStrategy
+from .date_window import DateWindowMatcher
+from .exact import ExactAmountMatcher
+from .fuzzy import FuzzyDescriptionMatcher
+from .iban import IBANMatcher
 
 
 class CompositeMatcher(IMatcherStrategy):
-    """Match transactions using weighted combination of multiple signals.
-
-    This matcher combines:
-    1. **Amount similarity (40% weight)**:
-       - Exact match (within 1 cent) → 1.0
-       - Within 1% → 0.95
-       - Within 5% → 0.85
-       - Within 10% → 0.70
-       - > 10% → 0.0
-
-    2. **Date proximity (30% weight)**:
-       - Same date → 1.0
-       - ±1 day → 0.95
-       - ±3 days → 0.85
-       - ±7 days → 0.70
-       - ±14 days → 0.50
-       - > 14 days → 0.0
-
-    3. **Description similarity (30% weight)**:
-       - Fuzzy string matching using Levenshtein distance
-       - >= 95% → 1.0
-       - >= 85% → 0.85
-       - >= 75% → 0.70
-       - >= 60% → 0.50
-       - < 60% → 0.0
-
-    Final confidence = (amount_score * 0.4) + (date_score * 0.3) + (desc_score * 0.3)
-
-    Attributes:
-        amount_weight: Weight for amount similarity (default 0.4)
-        date_weight: Weight for date proximity (default 0.3)
-        description_weight: Weight for description similarity (default 0.3)
-        min_confidence: Minimum confidence threshold to return (default 0.6)
-        date_tolerance_days: Maximum date difference to consider (default 30 days)
-
-    Example:
-        >>> matcher = CompositeMatcher()
-        >>> results = matcher.match(transaction, payments)
-        >>> best_match = max(results, key=lambda r: r.confidence)
-        >>> print(f"Confidence: {best_match.confidence:.2f}")
-    """
+    """Combine multiple strategies using weighted averaging."""
 
     def __init__(
         self,
-        amount_weight: float = 0.4,
-        date_weight: float = 0.3,
-        description_weight: float = 0.3,
-        min_confidence: float = 0.6,
-        date_tolerance_days: int = 30,
+        strategies: Sequence[IMatcherStrategy] | None = None,
+        weights: Sequence[Decimal | float] | None = None,
+        min_confidence: Decimal | float = Decimal("0.60"),
     ) -> None:
-        """Initialize composite matcher.
+        """Create a composite matcher.
 
         Args:
-            amount_weight: Weight for amount similarity (0.0-1.0)
-            date_weight: Weight for date proximity (0.0-1.0)
-            description_weight: Weight for description similarity (0.0-1.0)
-            min_confidence: Minimum confidence to return a match
-            date_tolerance_days: Maximum days difference to consider
-
-        Raises:
-            ValueError: If weights don't sum to 1.0
+            strategies: Strategies to execute (defaults to the built-in ones).
+            weights: Optional per-strategy weights (same length as strategies).
+            min_confidence: Minimum aggregated confidence required to return a match.
         """
-        if abs((amount_weight + date_weight + description_weight) - 1.0) > 0.01:
-            raise ValueError(
-                f"Weights must sum to 1.0, got {amount_weight + date_weight + description_weight}"
+        if strategies is None:
+            strategies = (
+                ExactAmountMatcher(),
+                DateWindowMatcher(),
+                FuzzyDescriptionMatcher(),
+                IBANMatcher(),
             )
 
-        self.amount_weight = amount_weight
-        self.date_weight = date_weight
-        self.description_weight = description_weight
-        self.min_confidence = min_confidence
-        self.date_tolerance_days = date_tolerance_days
+        self.strategies: list[IMatcherStrategy] = list(strategies)
+        self.weights: list[Decimal] = self._normalise_weights(weights)
+        self.min_confidence = self._to_decimal(min_confidence)
 
-    def match(
-        self, transaction: "BankTransaction", payments: list["Pagamento"]
-    ) -> list["MatchResult"]:
-        """Match transaction using weighted composite scoring.
+    async def match(self, transaction, payments) -> list[MatchResult]:  # type: ignore[override]
+        """Execute configured strategies and merge their outputs."""
+        if not self.strategies:
+            return []
 
-        Algorithm:
-        1. Pre-filter by date (within tolerance)
-        2. For each payment:
-           a. Calculate amount score (0.0-1.0)
-           b. Calculate date score (0.0-1.0)
-           c. Calculate description score (0.0-1.0)
-           d. Calculate weighted final score
-        3. Filter by min_confidence
-        4. Sort by confidence descending
+        aggregated: dict[int, dict] = {}
 
-        Args:
-            transaction: Bank transaction to match
-            payments: List of candidate payments
+        for weight, strategy in zip(self.weights, self.strategies, strict=True):
+            raw_results = strategy.match(transaction, payments)
+            if inspect.isawaitable(raw_results):
+                raw_results = await raw_results
 
-        Returns:
-            List of matches with confidence >= min_confidence,
-            sorted by confidence descending
-        """
-        results: list[MatchResult] = []
+            for result in raw_results or []:
+                payment = result.payment
+                key = getattr(payment, "id", None)
+                if key is None:
+                    key = id(payment)
 
-        # Pre-filter by date
-        date_min = transaction.date - timedelta(days=self.date_tolerance_days)
-        date_max = transaction.date + timedelta(days=self.date_tolerance_days)
+                entry = aggregated.setdefault(
+                    key,
+                    {
+                        "payment": payment,
+                        "transaction": result.transaction or transaction,
+                        "weighted_confidence": Decimal("0"),
+                        "total_weight": Decimal("0"),
+                        "reasons": [],
+                        "matched_fields": set(),
+                        "types": [],
+                        "amount_weighted": Decimal("0"),
+                    },
+                )
 
-        candidates = [p for p in payments if date_min <= p.data_scadenza <= date_max]
+                confidence = self._to_decimal(result.confidence)
+                entry["weighted_confidence"] += confidence * weight
+                entry["total_weight"] += weight
+                entry["reasons"].append(result.match_reason)
+                entry["matched_fields"].update(result.matched_fields)
+                entry["types"].append((weight, result.match_type))
+                entry["amount_weighted"] += self._to_decimal(result.amount_diff) * weight
 
-        for payment in candidates:
-            # Calculate individual scores
-            amount_score = self._calculate_amount_score(transaction, payment)
-            date_score = self._calculate_date_score(transaction, payment)
-            description_score = self._calculate_description_score(transaction, payment)
+        merged_results: list[MatchResult] = []
+        for entry in aggregated.values():
+            total_weight: Decimal = entry["total_weight"]
+            if total_weight <= 0:
+                continue
 
-            # Calculate weighted confidence
-            confidence = (
-                (amount_score * self.amount_weight)
-                + (date_score * self.date_weight)
-                + (description_score * self.description_weight)
-            )
-
-            # Filter by minimum confidence
+            confidence = (entry["weighted_confidence"] / total_weight).quantize(Decimal("0.01"))
             if confidence < self.min_confidence:
                 continue
 
-            # Build match reason
-            match_reason = self._build_match_reason(
-                amount_score, date_score, description_score, confidence
+            amount_diff = (entry["amount_weighted"] / total_weight).quantize(Decimal("0.01"))
+            match_type = (
+                max(entry["types"], key=lambda t: t[0])[1]
+                if entry["types"]
+                else MatchType.COMPOSITE
             )
+            match_reason = "; ".join(dict.fromkeys(entry["reasons"]))
 
-            # Identify matched fields
-            matched_fields = []
-            if amount_score >= 0.85:
-                matched_fields.append("amount")
-            if date_score >= 0.85:
-                matched_fields.append("date")
-            if description_score >= 0.85:
-                matched_fields.append("description")
-
-            # Calculate amount difference
-            transaction_amount = abs(transaction.amount)
-            payment_amount = payment_amount_for_matching(payment)
-            amount_diff = abs(transaction_amount - payment_amount)
-
-            results.append(
+            merged_results.append(
                 MatchResult(
-                    transaction=transaction,
-                    payment=payment,
-                    confidence=self._validate_confidence(confidence),
+                    transaction=entry["transaction"],
+                    payment=entry["payment"],
+                    confidence=confidence,
                     match_reason=match_reason,
-                    match_type=MatchType.COMPOSITE,
-                    matched_fields=matched_fields,
+                    match_type=match_type,
+                    matched_fields=sorted(entry["matched_fields"]),
                     amount_diff=amount_diff,
                 )
             )
 
-        # Sort by confidence descending
-        results.sort(key=lambda r: r.confidence, reverse=True)
+        merged_results.sort(key=lambda r: r.confidence, reverse=True)
+        return merged_results
 
-        return results
+    def _normalise_weights(self, weights: Sequence[Decimal | float] | None) -> list[Decimal]:
+        """Normalise weights so they sum to 1."""
+        count = len(self.strategies)
+        if count == 0:
+            return []
 
-    def _calculate_amount_score(
-        self, transaction: "BankTransaction", payment: "Pagamento"
-    ) -> float:
-        """Calculate amount similarity score (0.0-1.0).
+        if weights is None:
+            base = Decimal("1") / Decimal(count)
+            return [base] * count
 
-        Scoring:
-        - Exact match (within 1 cent) → 1.0
-        - Within 1% → 0.95
-        - Within 5% → 0.85
-        - Within 10% → 0.70
-        - > 10% → 0.0
+        if len(weights) != count:
+            raise ValueError("Weights must match the number of strategies.")
 
-        Args:
-            transaction: Bank transaction
-            payment: Payment record
+        decimals = [self._to_decimal(w) for w in weights]
+        total = sum(decimals)
+        if total <= 0:
+            raise ValueError("Weights must sum to a positive value.")
 
-        Returns:
-            Amount score (0.0-1.0)
-        """
-        transaction_amount = abs(transaction.amount)
-        payment_amount = payment_amount_for_matching(payment)
-        amount_diff = abs(transaction_amount - payment_amount)
+        return [w / total for w in decimals]
 
-        if payment_amount == 0:
-            return 0.0
-
-        # Exact match (within 1 cent)
-        if amount_diff <= Decimal("0.01"):
-            return 1.0
-
-        # Calculate percentage difference
-        pct_diff = float(amount_diff / payment_amount * 100)
-
-        if pct_diff <= 1.0:
-            return 0.95
-        elif pct_diff <= 5.0:
-            return 0.85
-        elif pct_diff <= 10.0:
-            return 0.70
-        else:
-            return 0.0
-
-    def _calculate_date_score(self, transaction: "BankTransaction", payment: "Pagamento") -> float:
-        """Calculate date proximity score (0.0-1.0).
-
-        Scoring:
-        - Same date → 1.0
-        - ±1 day → 0.95
-        - ±3 days → 0.85
-        - ±7 days → 0.70
-        - ±14 days → 0.50
-        - > 14 days → 0.0
-
-        Args:
-            transaction: Bank transaction
-            payment: Payment record
-
-        Returns:
-            Date score (0.0-1.0)
-        """
-        date_diff_days = abs((payment.data_scadenza - transaction.date).days)
-
-        if date_diff_days == 0:
-            return 1.0
-        elif date_diff_days <= 1:
-            return 0.95
-        elif date_diff_days <= 3:
-            return 0.85
-        elif date_diff_days <= 7:
-            return 0.70
-        elif date_diff_days <= 14:
-            return 0.50
-        else:
-            return 0.0
-
-    def _calculate_description_score(
-        self, transaction: "BankTransaction", payment: "Pagamento"
-    ) -> float:
-        """Calculate description similarity score using fuzzy matching.
-
-        Scoring:
-        - >= 95% similarity → 1.0
-        - >= 85% similarity → 0.85
-        - >= 75% similarity → 0.70
-        - >= 60% similarity → 0.50
-        - < 60% similarity → 0.0
-
-        Args:
-            transaction: Bank transaction
-            payment: Payment record
-
-        Returns:
-            Description score (0.0-1.0)
-        """
-        # Normalize descriptions
-        trans_desc = self._normalize_text(transaction.description)
-        trans_ref = self._normalize_text(transaction.reference or "")
-
-        # For payment, we'd ideally join with Fattura to get description
-        # Simplified: use payment amount as identifier
-        payment_amount = payment_amount_for_matching(payment)
-        payment_text = self._normalize_text(str(payment_amount))
-
-        # Calculate similarity scores
-        desc_similarity = fuzz.ratio(trans_desc, payment_text) if trans_desc else 0
-        ref_similarity = fuzz.ratio(trans_ref, payment_text) if trans_ref else 0
-
-        # Take best similarity
-        max_similarity = max(desc_similarity, ref_similarity)
-
-        # Convert to score
-        if max_similarity >= 95:
-            return 1.0
-        elif max_similarity >= 85:
-            return 0.85
-        elif max_similarity >= 75:
-            return 0.70
-        elif max_similarity >= 60:
-            return 0.50
-        else:
-            return 0.0
-
-    def _normalize_text(self, text: str) -> str:
-        """Normalize text for comparison (lowercase, strip whitespace).
-
-        Args:
-            text: Raw text
-
-        Returns:
-            Normalized text
-        """
-        if not text:
-            return ""
-        return text.lower().strip()
-
-    def _build_match_reason(
-        self,
-        amount_score: float,
-        date_score: float,
-        description_score: float,
-        confidence: float,
-    ) -> str:
-        """Build human-readable match reason.
-
-        Args:
-            amount_score: Amount similarity score
-            date_score: Date proximity score
-            description_score: Description similarity score
-            confidence: Final weighted confidence
-
-        Returns:
-            Match reason string
-        """
-        components = []
-
-        if amount_score >= 0.85:
-            components.append(f"amount {amount_score:.0%}")
-        if date_score >= 0.85:
-            components.append(f"date {date_score:.0%}")
-        if description_score >= 0.85:
-            components.append(f"desc {description_score:.0%}")
-
-        if components:
-            return f"Composite match ({', '.join(components)}) → {confidence:.0%}"
-        else:
-            return f"Composite match: {confidence:.0%} weighted score"
+    @staticmethod
+    def _to_decimal(value: Decimal | float | int) -> Decimal:
+        """Convert numeric input to Decimal."""
+        if isinstance(value, Decimal):
+            return value
+        try:
+            return Decimal(str(value))
+        except (InvalidOperation, ValueError, TypeError) as exc:  # pragma: no cover - defensive
+            raise ValueError(f"Cannot convert {value!r} to Decimal") from exc
 
     def __repr__(self) -> str:
-        """Human-readable string representation."""
-        return (
-            f"<CompositeMatcher("
-            f"weights=[amt:{self.amount_weight:.0%}, "
-            f"date:{self.date_weight:.0%}, "
-            f"desc:{self.description_weight:.0%}], "
-            f"min_confidence={self.min_confidence:.0%})>"
-        )
+        return f"<CompositeMatcher(strategies={len(self.strategies)}, min_confidence={self.min_confidence})>"

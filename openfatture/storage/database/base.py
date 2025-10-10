@@ -1,9 +1,11 @@
 """Database base configuration and session management."""
 
+from collections.abc import Generator
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import DateTime, MetaData, create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 # Naming convention for constraints (helps with Alembic migrations)
@@ -41,8 +43,8 @@ class Base(DeclarativeBase):
 
 
 # Database engine and session (will be configured at runtime)
-engine = None
-SessionLocal = None
+engine: Engine | None = None
+SessionLocal: sessionmaker[Session] | None = None
 
 
 def init_db(database_url: str = "sqlite:///./openfatture.db") -> None:
@@ -61,11 +63,12 @@ def init_db(database_url: str = "sqlite:///./openfatture.db") -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def get_db() -> Session:
+def get_db() -> Generator[Session, None, None]:
     """Dependency for getting database sessions."""
     if SessionLocal is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
 
+    assert SessionLocal is not None
     db = SessionLocal()
     try:
         yield db

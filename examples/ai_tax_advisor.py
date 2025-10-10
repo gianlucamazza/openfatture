@@ -33,10 +33,7 @@ async def example_1_standard_vat():
     agent = TaxAdvisorAgent(provider=provider)
 
     # Create context
-    context = TaxContext(
-        user_input="consulenza IT",
-        tipo_servizio="consulenza IT"
-    )
+    context = TaxContext(user_input="consulenza IT", tipo_servizio="consulenza IT")
 
     # Execute agent
     response = await agent.execute(context)
@@ -65,7 +62,7 @@ async def example_2_reverse_charge():
     context = TaxContext(
         user_input="consulenza IT per azienda edile",
         tipo_servizio="consulenza IT per azienda edile",
-        importo=5000.0
+        importo=5000.0,
     )
 
     response = await agent.execute(context)
@@ -90,7 +87,7 @@ async def example_3_split_payment():
         user_input="consulenza IT per Comune di Milano",
         tipo_servizio="consulenza IT",
         cliente_pa=True,
-        importo=3000.0
+        importo=3000.0,
     )
 
     response = await agent.execute(context)
@@ -121,7 +118,7 @@ async def example_4_exempt_services():
         user_input="corso di formazione professionale",
         tipo_servizio="formazione professionale",
         categoria_servizio="Educazione",
-        importo=1500.0
+        importo=1500.0,
     )
 
     response = await agent.execute(context)
@@ -147,7 +144,7 @@ async def example_5_reduced_vat():
         user_input="vendita libri scolastici",
         tipo_servizio="libri scolastici",
         categoria_servizio="Editoria",
-        importo=250.0
+        importo=250.0,
     )
 
     response = await agent.execute(context)
@@ -172,7 +169,7 @@ async def example_6_export():
         tipo_servizio="consulenza IT",
         cliente_estero=True,
         paese_cliente="US",
-        importo=10000.0
+        importo=10000.0,
     )
 
     response = await agent.execute(context)
@@ -182,7 +179,7 @@ async def example_6_export():
         print(f"Aliquota IVA: {model['aliquota_iva']}%")
         print(f"Codice Natura: {model.get('codice_natura', 'N/A')}")
         print(f"\nSpiegazione:\n{model['spiegazione']}")
-        print(f"\nRaccomandazioni:")
+        print("\nRaccomandazioni:")
         for racc in model.get("raccomandazioni", []):
             print(f"  • {racc}")
 
@@ -207,9 +204,7 @@ async def example_7_batch_analysis():
 
     for service in services:
         context = TaxContext(
-            user_input=service["tipo"],
-            tipo_servizio=service["tipo"],
-            importo=service["importo"]
+            user_input=service["tipo"], tipo_servizio=service["tipo"], importo=service["importo"]
         )
 
         response = await agent.execute(context)
@@ -241,7 +236,7 @@ async def example_8_complex_scenario():
         tipo_servizio="servizi di pulizia e manutenzione",
         categoria_servizio="Edilizia",
         importo=8000.0,
-        codice_ateco="81.21.00"
+        codice_ateco="81.21.00",
     )
 
     response = await agent.execute(context)
@@ -257,19 +252,19 @@ async def example_8_complex_scenario():
         print(f"Regime Speciale:     {model.get('regime_speciale', 'N/A')}")
         print(f"Confidence:          {int(model['confidence'] * 100)}%")
 
-        print(f"\n📋 SPIEGAZIONE:")
-        print(model['spiegazione'])
+        print("\n📋 SPIEGAZIONE:")
+        print(model["spiegazione"])
 
-        print(f"\n📜 RIFERIMENTO NORMATIVO:")
-        print(model['riferimento_normativo'])
+        print("\n📜 RIFERIMENTO NORMATIVO:")
+        print(model["riferimento_normativo"])
 
-        if model.get('note_fattura'):
-            print(f"\n📝 NOTA PER FATTURA:")
+        if model.get("note_fattura"):
+            print("\n📝 NOTA PER FATTURA:")
             print(f'"{model["note_fattura"]}"')
 
-        if model.get('raccomandazioni'):
-            print(f"\n💡 RACCOMANDAZIONI:")
-            for racc in model['raccomandazioni']:
+        if model.get("raccomandazioni"):
+            print("\n💡 RACCOMANDAZIONI:")
+            for racc in model["raccomandazioni"]:
                 print(f"  • {racc}")
 
 

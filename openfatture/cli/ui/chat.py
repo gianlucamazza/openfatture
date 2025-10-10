@@ -1,8 +1,5 @@
 """Interactive chat UI for AI assistant."""
 
-import asyncio
-from typing import Optional
-
 import questionary
 from rich.console import Console
 from rich.live import Live
@@ -11,9 +8,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from openfatture.ai.agents.chat_agent import ChatAgent
-from openfatture.ai.context import enrich_chat_context
+from openfatture.ai.context import enrich_chat_context, enrich_with_rag
 from openfatture.ai.domain.context import ChatContext
-from openfatture.ai.domain.message import Role
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.session import ChatSession, SessionManager
 from openfatture.cli.ui.styles import openfatture_style
@@ -38,8 +34,8 @@ class InteractiveChatUI:
 
     def __init__(
         self,
-        session: Optional[ChatSession] = None,
-        session_manager: Optional[SessionManager] = None,
+        session: ChatSession | None = None,
+        session_manager: SessionManager | None = None,
     ) -> None:
         """
         Initialize chat UI.
@@ -50,7 +46,7 @@ class InteractiveChatUI:
         """
         self.session = session or ChatSession()
         self.session_manager = session_manager or SessionManager()
-        self.agent: Optional[ChatAgent] = None
+        self.agent: ChatAgent | None = None
         self.provider = None
 
         # Commands
@@ -189,7 +185,7 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         self.session.add_user_message(user_input)
 
         # Build context
-        context = self._build_context(user_input)
+        context = await self._build_context(user_input)
 
         try:
             # Check if streaming is enabled
@@ -288,7 +284,7 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
                 logger.error("non_streaming_failed", error=str(e))
                 console.print(f"\n[red]Errore nell'elaborazione: {e}[/red]\n")
 
-    def _build_context(self, user_input: str) -> ChatContext:
+    async def _build_context(self, user_input: str) -> ChatContext:
         """
         Build chat context for agent.
 
@@ -316,6 +312,17 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         # Enrich with business data
         context = enrich_chat_context(context)
 
+        # Optional RAG enrichment (knowledge + invoices)
+        cleaned_input = user_input.strip()
+        if self.agent and self.agent.config.rag_enabled and len(cleaned_input) >= 4:
+            try:
+                context = await enrich_with_rag(context, cleaned_input)
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.warning(
+                    "rag_enrichment_skipped",
+                    error=str(exc),
+                )
+
         return context
 
     def _display_response(self, content: str) -> None:
@@ -341,7 +348,7 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         )
         console.print(stats)
 
-    async def _handle_command(self, command: str) -> Optional[str]:
+    async def _handle_command(self, command: str) -> str | None:
         """
         Handle chat command.
 
@@ -505,7 +512,7 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 
 
 async def start_interactive_chat(
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
 ) -> None:
     """
     Start interactive chat session.

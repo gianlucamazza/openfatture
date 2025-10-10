@@ -6,7 +6,7 @@ Get started with OpenFatture in 5 minutes!
 
 ### Prerequisites
 - Python 3.12 or higher
-- [Poetry](https://python-poetry.org/docs/#installation) (recommended) or pip
+- [uv](https://docs.astral.sh/uv/) (recommended package manager)
 - PEC account (for sending invoices)
 
 ### Install OpenFatture
@@ -16,13 +16,13 @@ Get started with OpenFatture in 5 minutes!
 git clone https://github.com/venerelabs/openfatture.git
 cd openfatture
 
-# Install dependencies with Poetry
-poetry install
+# Install dependencies with uv
+uv sync --all-extras
 
-# Or with pip (in a virtual environment)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -e .
+# Or manage the virtual environment manually with uv
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e .
 ```
 
 ## Initial Setup
@@ -30,7 +30,7 @@ pip install -e .
 Run the setup wizard:
 
 ```bash
-poetry run openfatture init
+uv run openfatture init
 ```
 
 This will:
@@ -38,16 +38,33 @@ This will:
 - Set up data directories
 - Guide you through configuration (company data, PEC settings)
 
+### Enable AI & Knowledge Base (Optional but Recommended)
+
+If vuoi sfruttare gli agenti AI con citazioni normative:
+
+```bash
+# 1. Imposta le credenziali per il provider di embedding (es. OpenAI)
+export OPENAI_API_KEY=sk-...
+
+# 2. Popola la knowledge base con le fonti incluse nel manifest
+uv run openfatture ai rag index
+
+# 3. Verifica stato e documenti indicizzati
+uv run openfatture ai rag status
+```
+
+Puoi esplorare rapidamente il contenuto indicizzato con `uv run openfatture ai rag search "reverse charge edilizia"`.
+
 ## Basic Workflow
 
 ### 1. Add Your First Client
 
 ```bash
 # Interactive mode (recommended for first time)
-poetry run openfatture cliente add "Acme Corp" --interactive
+uv run openfatture cliente add "Acme Corp" --interactive
 
 # Or quick mode
-poetry run openfatture cliente add "Acme Corp" \
+uv run openfatture cliente add "Acme Corp" \
   --piva 12345678901 \
   --sdi ABC1234
 ```
@@ -56,7 +73,7 @@ poetry run openfatture cliente add "Acme Corp" \
 
 ```bash
 # Interactive wizard
-poetry run openfatture fattura crea
+uv run openfatture fattura crea
 
 # Follow the prompts:
 # - Select client
@@ -69,7 +86,7 @@ poetry run openfatture fattura crea
 
 ```bash
 # Generate FatturaPA XML
-poetry run openfatture fattura xml 1
+uv run openfatture fattura xml 1
 
 # Output will be saved to ~/.openfatture/archivio/xml/
 ```
@@ -78,10 +95,10 @@ poetry run openfatture fattura xml 1
 
 ```bash
 # Test PEC configuration first
-poetry run openfatture pec test
+uv run openfatture pec test
 
 # Send invoice
-poetry run openfatture fattura invia 1
+uv run openfatture fattura invia 1
 ```
 
 ## Common Commands

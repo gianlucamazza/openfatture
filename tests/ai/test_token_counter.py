@@ -1,11 +1,12 @@
 """Tests for token counter optimization."""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from openfatture.ai.providers.anthropic import AnthropicProvider
-from openfatture.ai.providers.openai import OpenAIProvider
 from openfatture.ai.providers.ollama import OllamaProvider
+from openfatture.ai.providers.openai import OpenAIProvider
 
 
 class TestAnthropicTokenCounter:
@@ -32,9 +33,7 @@ class TestAnthropicTokenCounter:
         provider = AnthropicProvider(api_key="test-key", model="claude-4.5-sonnet")
 
         # Mock client to raise error
-        provider.client.count_tokens = MagicMock(
-            side_effect=Exception("API Error")
-        )
+        provider.client.count_tokens = MagicMock(side_effect=Exception("API Error"))
 
         text = "Test message"
         count = provider.count_tokens(text)

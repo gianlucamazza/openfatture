@@ -21,17 +21,16 @@ Example:
     ...     print(f"{month['month']}: €{month['expected']:.2f}")
 """
 
-from datetime import datetime, date, timedelta
-from typing import Optional, List
+from datetime import date, datetime, timedelta
 
-from langgraph.graph import StateGraph, END
 from langgraph.checkpoint import MemorySaver
+from langgraph.graph import END, StateGraph
 
+from openfatture.ai.agents.cash_flow_predictor import CashFlowPredictorAgent
 from openfatture.ai.orchestration.states import (
     CashFlowAnalysisState,
     WorkflowStatus,
 )
-from openfatture.ai.agents.cash_flow_predictor import CashFlowPredictorAgent
 from openfatture.ai.providers import create_provider
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura, StatoFattura
@@ -79,7 +78,7 @@ class CashFlowAnalysisWorkflow:
         self.ai_provider = create_provider()
 
         # Cash flow predictor agent
-        self.cash_flow_agent: Optional[CashFlowPredictorAgent] = None
+        self.cash_flow_agent: CashFlowPredictorAgent | None = None
 
         # Build graph
         self.graph = self._build_graph()
@@ -188,11 +187,13 @@ class CashFlowAnalysisWorkflow:
         try:
             # Query unpaid invoices
             query = db.query(Fattura).filter(
-                Fattura.stato.in_([
-                    StatoFattura.DA_INVIARE,
-                    StatoFattura.INVIATA,
-                    StatoFattura.CONSEGNATA,
-                ])
+                Fattura.stato.in_(
+                    [
+                        StatoFattura.DA_INVIARE,
+                        StatoFattura.INVIATA,
+                        StatoFattura.CONSEGNATA,
+                    ]
+                )
             )
 
             # Filter by client if specified
@@ -253,14 +254,16 @@ class CashFlowAnalysisWorkflow:
                     )
 
                     # Store prediction
-                    state.predictions.append({
-                        "invoice_id": invoice_id,
-                        "expected_days": result.expected_days,
-                        "confidence_score": result.confidence_score,
-                        "risk_level": result.risk_level,
-                        "lower_bound": result.lower_bound,
-                        "upper_bound": result.upper_bound,
-                    })
+                    state.predictions.append(
+                        {
+                            "invoice_id": invoice_id,
+                            "expected_days": result.expected_days,
+                            "confidence_score": result.confidence_score,
+                            "risk_level": result.risk_level,
+                            "lower_bound": result.lower_bound,
+                            "upper_bound": result.upper_bound,
+                        }
+                    )
 
                     # Track high-risk invoices
                     if result.risk_level == "high":
@@ -315,7 +318,7 @@ class CashFlowAnalysisWorkflow:
                 invoice_map = {f.id: f for f in invoices}
 
                 # Initialize monthly totals
-                monthly_totals = {i: 0.0 for i in range(state.forecast_months)}
+                monthly_totals = dict.fromkeys(range(state.forecast_months), 0.0)
 
                 today = date.today()
 
@@ -328,14 +331,15 @@ class CashFlowAnalysisWorkflow:
                         continue
 
                     # Calculate expected payment date
-                    expected_payment_date = (
-                        fattura.data_emissione + timedelta(days=prediction["expected_days"])
+                    expected_payment_date = fattura.data_emissione + timedelta(
+                        days=prediction["expected_days"]
                     )
 
                     # Determine which month this falls into
                     month_diff = (
-                        (expected_payment_date.year - today.year) * 12 +
-                        expected_payment_date.month - today.month
+                        (expected_payment_date.year - today.year) * 12
+                        + expected_payment_date.month
+                        - today.month
                     )
 
                     # Add to appropriate month
@@ -347,11 +351,13 @@ class CashFlowAnalysisWorkflow:
                     month_date = today + timedelta(days=30 * (i + 1))
                     month_str = month_date.strftime("%B %Y")
 
-                    state.monthly_forecast.append({
-                        "month": month_str,
-                        "month_index": i + 1,
-                        "expected": monthly_totals[i],
-                    })
+                    state.monthly_forecast.append(
+                        {
+                            "month": month_str,
+                            "month_index": i + 1,
+                            "expected": monthly_totals[i],
+                        }
+                    )
 
                 state.total_expected_revenue = sum(monthly_totals.values())
 
@@ -384,11 +390,13 @@ class CashFlowAnalysisWorkflow:
             # Identify overdue predictions (expected_days > 30)
             for prediction in state.predictions:
                 if prediction["expected_days"] > 30:
-                    state.overdue_predictions.append({
-                        "invoice_id": prediction["invoice_id"],
-                        "expected_days": prediction["expected_days"],
-                        "confidence": prediction["confidence_score"],
-                    })
+                    state.overdue_predictions.append(
+                        {
+                            "invoice_id": prediction["invoice_id"],
+                            "expected_days": prediction["expected_days"],
+                            "confidence": prediction["confidence_score"],
+                        }
+                    )
 
             logger.info(
                 "risk_analysis_completed",
@@ -415,10 +423,9 @@ class CashFlowAnalysisWorkflow:
 
         try:
             # Use cash flow agent to generate insights
-            monthly_summary = "\n".join([
-                f"- {m['month']}: €{m['expected']:.2f}"
-                for m in state.monthly_forecast
-            ])
+            monthly_summary = "\n".join(
+                [f"- {m['month']}: €{m['expected']:.2f}" for m in state.monthly_forecast]
+            )
 
             # Generate insights using AI
             from openfatture.ai.domain.message import UserMessage
@@ -446,7 +453,7 @@ Rispondi in italiano, conciso e professionale."""
 
             # Parse response
             content = response.content
-            lines = content.strip().split('\n')
+            lines = content.strip().split("\n")
             insights_lines = []
             recommendations = []
             in_recommendations = False
@@ -456,18 +463,18 @@ Rispondi in italiano, conciso e professionale."""
                 if not line:
                     continue
 
-                if 'raccomandaz' in line.lower() or 'suggerim' in line.lower():
+                if "raccomandaz" in line.lower() or "suggerim" in line.lower():
                     in_recommendations = True
                     continue
 
-                if in_recommendations and line.startswith(('-', '•', '*')):
-                    rec = line.lstrip('-•* 123.')
+                if in_recommendations and line.startswith(("-", "•", "*")):
+                    rec = line.lstrip("-•* 123.")
                     if rec:
                         recommendations.append(rec)
                 else:
                     insights_lines.append(line)
 
-            state.insights = ' '.join(insights_lines)
+            state.insights = " ".join(insights_lines)
             state.recommendations = recommendations
 
             logger.info(
@@ -524,8 +531,8 @@ Rispondi in italiano, conciso e professionale."""
     async def execute(
         self,
         months: int = 3,
-        client_id: Optional[int] = None,
-        invoice_ids: Optional[List[int]] = None,
+        client_id: int | None = None,
+        invoice_ids: list[int] | None = None,
     ) -> CashFlowAnalysisState:
         """Execute cash flow analysis workflow.
 

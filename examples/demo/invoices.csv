@@ -1,0 +1,4 @@
+numero,anno,data_emissione,cliente_id,imponibile,iva,totale,note
+2025-001,2025,2025-01-18,1,1520.00,334.40,1854.40,"Scenario A+B demo - consulenza GDPR e sviluppo backend"
+2025-002,2025,2024-12-22,2,1760.00,387.20,2147.20,"Scenario C demo - workshop AI + follow-up"
+2025-003,2024,2024-11-28,3,1080.00,237.60,1317.60,"Scenario D/E demo - progetto backend continuativo"

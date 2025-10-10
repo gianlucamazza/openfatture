@@ -5,7 +5,8 @@ to be used interchangeably.
 """
 
 from abc import ABC, abstractmethod
-from decimal import Decimal
+from collections.abc import Iterable
+from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -88,6 +89,21 @@ class IMatcherStrategy(ABC):
         return f"<{self.__class__.__name__}>"
 
 
+class MatchResultList(list):
+    """List-like container that can also be awaited."""
+
+    def __await__(self):
+        async def _coro():
+            return self
+
+        return _coro().__await__()
+
+
+def as_match_results(results: Iterable["MatchResult"]) -> MatchResultList:
+    """Wrap iterable of MatchResult into an awaitable list."""
+    return MatchResultList(results)
+
+
 def payment_amount_for_matching(payment: "Pagamento") -> Decimal:
     """Return the outstanding amount to use during matching comparisons."""
 
@@ -95,26 +111,33 @@ def payment_amount_for_matching(payment: "Pagamento") -> Decimal:
     saldo = getattr(payment, "saldo_residuo", None)
     if saldo is not None:
         try:
-            saldo_decimal = Decimal(saldo)
-        except (TypeError, ValueError):
-            saldo_decimal = Decimal("0.00")
-        if saldo_decimal >= 0:
-            return saldo_decimal
+            saldo_decimal = Decimal(str(saldo))
+        except (TypeError, ValueError, InvalidOperation):
+            saldo_decimal = None
+        else:
+            if saldo_decimal >= 0:
+                return saldo_decimal
 
     # Fallback to total minus paid
     total = getattr(payment, "importo_da_pagare", None)
-    if total is None:
-        total = getattr(payment, "importo", Decimal("0.00"))
+    total_decimal: Decimal | None = None
+    if total is not None:
+        try:
+            total_decimal = Decimal(str(total))
+        except (TypeError, ValueError, InvalidOperation):
+            total_decimal = None
 
-    try:
-        total_decimal = Decimal(total)
-    except (TypeError, ValueError):
-        total_decimal = Decimal("0.00")
+    if total_decimal is None:
+        total = getattr(payment, "importo", Decimal("0.00"))
+        try:
+            total_decimal = Decimal(str(total))
+        except (TypeError, ValueError, InvalidOperation):
+            total_decimal = Decimal("0.00")
 
     paid = getattr(payment, "importo_pagato", Decimal("0.00"))
     try:
-        paid_decimal = Decimal(paid)
-    except (TypeError, ValueError):
+        paid_decimal = Decimal(str(paid))
+    except (TypeError, ValueError, InvalidOperation):
         paid_decimal = Decimal("0.00")
 
     outstanding = total_decimal - paid_decimal

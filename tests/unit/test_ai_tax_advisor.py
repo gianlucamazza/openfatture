@@ -22,28 +22,27 @@ def mock_provider():
     # Mock the generate method to return a valid JSON response
     async def mock_generate(*args, **kwargs):
         return AgentResponse(
-            content=json.dumps({
-                "aliquota_iva": 22.0,
-                "codice_natura": None,
-                "reverse_charge": False,
-                "split_payment": False,
-                "regime_speciale": None,
-                "spiegazione": "Aliquota ordinaria 22%",
-                "riferimento_normativo": "Art. 1, DPR 633/72",
-                "note_fattura": None,
-                "confidence": 0.95,
-                "raccomandazioni": []
-            }),
+            content=json.dumps(
+                {
+                    "aliquota_iva": 22.0,
+                    "codice_natura": None,
+                    "reverse_charge": False,
+                    "split_payment": False,
+                    "regime_speciale": None,
+                    "spiegazione": "Aliquota ordinaria 22%",
+                    "riferimento_normativo": "Art. 1, DPR 633/72",
+                    "note_fattura": None,
+                    "confidence": 0.95,
+                    "raccomandazioni": [],
+                }
+            ),
             status=ResponseStatus.SUCCESS,
             model="mock-model",
             provider="mock",
             usage=UsageMetrics(
-                prompt_tokens=100,
-                completion_tokens=150,
-                total_tokens=250,
-                estimated_cost_usd=0.005
+                prompt_tokens=100, completion_tokens=150, total_tokens=250, estimated_cost_usd=0.005
             ),
-            latency_ms=400.0
+            latency_ms=400.0,
         )
 
     provider.generate = AsyncMock(side_effect=mock_generate)
@@ -57,10 +56,7 @@ def mock_prompt_manager():
     manager = MagicMock()
 
     def mock_render(*args, **kwargs):
-        return (
-            "System prompt for tax advisor",
-            "User prompt: Analyze fiscal treatment"
-        )
+        return ("System prompt for tax advisor", "User prompt: Analyze fiscal treatment")
 
     manager.render_with_examples = MagicMock(side_effect=mock_render)
 
@@ -71,9 +67,7 @@ def mock_prompt_manager():
 def tax_advisor(mock_provider, mock_prompt_manager):
     """Create Tax Advisor agent with mocked dependencies."""
     agent = TaxAdvisorAgent(
-        provider=mock_provider,
-        prompt_manager=mock_prompt_manager,
-        use_structured_output=True
+        provider=mock_provider, prompt_manager=mock_prompt_manager, use_structured_output=True
     )
     return agent
 
@@ -92,10 +86,7 @@ class TestTaxAdvisorAgent:
 
     async def test_basic_vat_suggestion(self, tax_advisor):
         """Test basic VAT rate suggestion."""
-        context = TaxContext(
-            user_input="consulenza IT",
-            tipo_servizio="consulenza IT"
-        )
+        context = TaxContext(user_input="consulenza IT", tipo_servizio="consulenza IT")
 
         response = await tax_advisor.execute(context)
 
@@ -105,10 +96,7 @@ class TestTaxAdvisorAgent:
 
     async def test_structured_output_parsing(self, tax_advisor):
         """Test structured output is parsed correctly."""
-        context = TaxContext(
-            user_input="consulenza",
-            tipo_servizio="consulenza IT"
-        )
+        context = TaxContext(user_input="consulenza", tipo_servizio="consulenza IT")
 
         response = await tax_advisor.execute(context)
 
@@ -124,10 +112,7 @@ class TestTaxAdvisorAgent:
     async def test_validation_required_fields(self, tax_advisor):
         """Test validation of required fields."""
         # Missing tipo_servizio
-        context = TaxContext(
-            user_input="",
-            tipo_servizio=""
-        )
+        context = TaxContext(user_input="", tipo_servizio="")
 
         is_valid, error = await tax_advisor.validate_input(context)
 
@@ -137,10 +122,7 @@ class TestTaxAdvisorAgent:
     async def test_validation_field_length(self, tax_advisor):
         """Test validation of field lengths."""
         # tipo_servizio too long
-        context = TaxContext(
-            user_input="test",
-            tipo_servizio="x" * 501  # Max is 500
-        )
+        context = TaxContext(user_input="test", tipo_servizio="x" * 501)  # Max is 500
 
         is_valid, error = await tax_advisor.validate_input(context)
 
@@ -149,11 +131,7 @@ class TestTaxAdvisorAgent:
 
     async def test_validation_negative_amount(self, tax_advisor):
         """Test validation rejects negative amounts."""
-        context = TaxContext(
-            user_input="test",
-            tipo_servizio="consulenza",
-            importo=-100.0
-        )
+        context = TaxContext(user_input="test", tipo_servizio="consulenza", importo=-100.0)
 
         is_valid, error = await tax_advisor.validate_input(context)
 
@@ -163,9 +141,7 @@ class TestTaxAdvisorAgent:
     async def test_validation_unrealistic_amount(self, tax_advisor):
         """Test validation flags unrealistic amounts."""
         context = TaxContext(
-            user_input="test",
-            tipo_servizio="consulenza",
-            importo=2_000_000.0  # Over 1M
+            user_input="test", tipo_servizio="consulenza", importo=2_000_000.0  # Over 1M
         )
 
         is_valid, error = await tax_advisor.validate_input(context)
@@ -178,7 +154,7 @@ class TestTaxAdvisorAgent:
         context = TaxContext(
             user_input="test",
             tipo_servizio="consulenza",
-            paese_cliente="ITALY"  # Should be 2 letters
+            paese_cliente="ITALY",  # Should be 2 letters
         )
 
         is_valid, error = await tax_advisor.validate_input(context)
@@ -189,9 +165,7 @@ class TestTaxAdvisorAgent:
     async def test_context_with_pa(self, tax_advisor):
         """Test context with Public Administration client."""
         context = TaxContext(
-            user_input="consulenza PA",
-            tipo_servizio="consulenza IT",
-            cliente_pa=True
+            user_input="consulenza PA", tipo_servizio="consulenza IT", cliente_pa=True
         )
 
         response = await tax_advisor.execute(context)
@@ -205,7 +179,7 @@ class TestTaxAdvisorAgent:
             user_input="consulenza export",
             tipo_servizio="consulenza IT",
             cliente_estero=True,
-            paese_cliente="US"
+            paese_cliente="US",
         )
 
         response = await tax_advisor.execute(context)
@@ -217,9 +191,7 @@ class TestTaxAdvisorAgent:
     async def test_context_with_ateco(self, tax_advisor):
         """Test context includes ATECO code."""
         context = TaxContext(
-            user_input="consulenza",
-            tipo_servizio="consulenza IT",
-            codice_ateco="62.01.00"
+            user_input="consulenza", tipo_servizio="consulenza IT", codice_ateco="62.01.00"
         )
 
         response = await tax_advisor.execute(context)
@@ -229,6 +201,7 @@ class TestTaxAdvisorAgent:
 
     async def test_fallback_when_json_parse_fails(self, mock_provider, mock_prompt_manager):
         """Test fallback to plain text when JSON parsing fails."""
+
         # Mock provider to return invalid JSON
         async def mock_generate_invalid(*args, **kwargs):
             return AgentResponse(
@@ -236,25 +209,16 @@ class TestTaxAdvisorAgent:
                 status=ResponseStatus.SUCCESS,
                 model="mock-model",
                 provider="mock",
-                usage=UsageMetrics(
-                    prompt_tokens=100,
-                    completion_tokens=50,
-                    total_tokens=150
-                )
+                usage=UsageMetrics(prompt_tokens=100, completion_tokens=50, total_tokens=150),
             )
 
         mock_provider.generate = AsyncMock(side_effect=mock_generate_invalid)
 
         agent = TaxAdvisorAgent(
-            provider=mock_provider,
-            prompt_manager=mock_prompt_manager,
-            use_structured_output=True
+            provider=mock_provider, prompt_manager=mock_prompt_manager, use_structured_output=True
         )
 
-        context = TaxContext(
-            user_input="test",
-            tipo_servizio="test service"
-        )
+        context = TaxContext(user_input="test", tipo_servizio="test service")
 
         response = await agent.execute(context)
 
@@ -267,7 +231,7 @@ class TestTaxAdvisorAgent:
             user_input="consulenza",
             tipo_servizio="consulenza IT",
             cliente_pa=True,
-            cliente_estero=False
+            cliente_estero=False,
         )
 
         response = await tax_advisor.execute(context)
@@ -286,7 +250,7 @@ class TestTaxAdvisorAgent:
             cliente_pa=True,
             cliente_estero=False,
             paese_cliente="IT",
-            codice_ateco="62.01.00"
+            codice_ateco="62.01.00",
         )
 
         # Execute to trigger prompt building
@@ -313,15 +277,10 @@ class TestTaxAdvisorAgent:
         )
 
         agent = TaxAdvisorAgent(
-            provider=mock_provider,
-            prompt_manager=mock_pm,
-            use_structured_output=True
+            provider=mock_provider, prompt_manager=mock_pm, use_structured_output=True
         )
 
-        context = TaxContext(
-            user_input="test",
-            tipo_servizio="test service"
-        )
+        context = TaxContext(user_input="test", tipo_servizio="test service")
 
         response = await agent.execute(context)
 
@@ -330,10 +289,7 @@ class TestTaxAdvisorAgent:
 
     async def test_cost_tracking(self, tax_advisor):
         """Test cost tracking in agent metrics."""
-        context = TaxContext(
-            user_input="test",
-            tipo_servizio="test"
-        )
+        context = TaxContext(user_input="test", tipo_servizio="test")
 
         # Execute multiple times
         for _ in range(3):
@@ -357,7 +313,7 @@ class TestTaxSuggestionOutput:
             aliquota_iva=22.0,
             spiegazione="Aliquota ordinaria",
             riferimento_normativo="Art. 1, DPR 633/72",
-            confidence=0.95
+            confidence=0.95,
         )
 
         assert model.aliquota_iva == 22.0
@@ -373,7 +329,7 @@ class TestTaxSuggestionOutput:
             reverse_charge=True,
             spiegazione="Reverse charge edilizia",
             riferimento_normativo="Art. 17, c. 6, lett. a-ter, DPR 633/72",
-            note_fattura="Inversione contabile"
+            note_fattura="Inversione contabile",
         )
 
         assert model.reverse_charge is True
@@ -386,7 +342,7 @@ class TestTaxSuggestionOutput:
             aliquota_iva=22.0,
             split_payment=True,
             spiegazione="Split payment PA",
-            riferimento_normativo="Art. 17-ter, DPR 633/72"
+            riferimento_normativo="Art. 17-ter, DPR 633/72",
         )
 
         assert model.split_payment is True
@@ -395,33 +351,23 @@ class TestTaxSuggestionOutput:
         """Test VAT rate must be in valid range."""
         with pytest.raises(ValueError):
             TaxSuggestionOutput(
-                aliquota_iva=150.0,  # Over 100
-                spiegazione="Test",
-                riferimento_normativo="Test"
+                aliquota_iva=150.0, spiegazione="Test", riferimento_normativo="Test"  # Over 100
             )
 
         with pytest.raises(ValueError):
             TaxSuggestionOutput(
-                aliquota_iva=-5.0,  # Negative
-                spiegazione="Test",
-                riferimento_normativo="Test"
+                aliquota_iva=-5.0, spiegazione="Test", riferimento_normativo="Test"  # Negative
             )
 
     def test_codice_natura_pattern_validation(self):
         """Test natura code pattern validation."""
         # Valid patterns
         TaxSuggestionOutput(
-            aliquota_iva=0.0,
-            codice_natura="N1",
-            spiegazione="Test",
-            riferimento_normativo="Test"
+            aliquota_iva=0.0, codice_natura="N1", spiegazione="Test", riferimento_normativo="Test"
         )
 
         TaxSuggestionOutput(
-            aliquota_iva=0.0,
-            codice_natura="N6.2",
-            spiegazione="Test",
-            riferimento_normativo="Test"
+            aliquota_iva=0.0, codice_natura="N6.2", spiegazione="Test", riferimento_normativo="Test"
         )
 
         # Invalid pattern should fail
@@ -430,7 +376,7 @@ class TestTaxSuggestionOutput:
                 aliquota_iva=0.0,
                 codice_natura="X99",  # Invalid
                 spiegazione="Test",
-                riferimento_normativo="Test"
+                riferimento_normativo="Test",
             )
 
     def test_model_serialization(self):
@@ -440,7 +386,7 @@ class TestTaxSuggestionOutput:
             reverse_charge=True,
             spiegazione="Test",
             riferimento_normativo="Art. 17",
-            raccomandazioni=["Verifica cliente", "Non addebitare IVA"]
+            raccomandazioni=["Verifica cliente", "Non addebitare IVA"],
         )
 
         data = model.model_dump()
@@ -456,7 +402,7 @@ class TestTaxSuggestionOutput:
             codice_natura="N4",
             spiegazione="Aliquota ridotta",
             riferimento_normativo="Tabella A, DPR 633/72",
-            confidence=0.85
+            confidence=0.85,
         )
 
         json_str = model.model_dump_json()

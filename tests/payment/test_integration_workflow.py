@@ -53,7 +53,7 @@ from openfatture.storage.database.models import (
 @pytest.fixture(scope="function")
 def db_session():
     """Create a test database session."""
-    init_db()
+    init_db("sqlite:///:memory:")
     session = next(get_db())
     yield session
     session.rollback()

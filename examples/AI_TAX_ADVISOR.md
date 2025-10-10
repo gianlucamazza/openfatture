@@ -19,7 +19,7 @@ Il **Tax Advisor** è un agente AI che suggerisce automaticamente il corretto tr
 Il Tax Advisor è incluso nel modulo AI di OpenFatture:
 
 ```bash
-pip install openfatture
+uv pip install openfatture
 ```
 
 ### 2. Configurazione

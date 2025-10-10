@@ -30,7 +30,10 @@ class TestExactAmountMatcher:
         # Create candidate payment with exact amount (within 3-day tolerance)
         payment = Mock()
         payment.id = 1
-        payment.importo_da_pagare = Decimal("1000.00")
+        payment.importo = Decimal("1000.00")  # Actual field name in Pagamento model
+        payment.importo_pagato = Decimal(
+            "0.00"
+        )  # Required for payment_amount_for_matching calculation
         payment.data_scadenza = date(2025, 1, 17)  # 2 days later, within tolerance
 
         candidates = [payment]
@@ -53,7 +56,8 @@ class TestExactAmountMatcher:
         # Candidate with different amount
         payment = Mock()
         payment.id = 1
-        payment.importo_da_pagare = Decimal("1500.00")  # Different
+        payment.importo = Decimal("1500.00")  # Different
+        payment.importo_pagato = Decimal("0.00")
         payment.data_scadenza = date.today()
 
         candidates = [payment]
@@ -73,17 +77,20 @@ class TestExactAmountMatcher:
         # Multiple payments with same amount
         payment1 = Mock()
         payment1.id = 1
-        payment1.importo_da_pagare = Decimal("500.00")
+        payment1.importo = Decimal("500.00")
+        payment1.importo_pagato = Decimal("0.00")
         payment1.data_scadenza = date.today()
 
         payment2 = Mock()
         payment2.id = 2
-        payment2.importo_da_pagare = Decimal("500.00")
-        payment2.data_scadenza = date.today() + timedelta(days=10)
+        payment2.importo = Decimal("500.00")
+        payment2.importo_pagato = Decimal("0.00")
+        payment2.data_scadenza = date.today() + timedelta(days=2)  # Within 3-day tolerance
 
         payment3 = Mock()
         payment3.id = 3
-        payment3.importo_da_pagare = Decimal("600.00")  # Different
+        payment3.importo = Decimal("600.00")  # Different
+        payment3.importo_pagato = Decimal("0.00")
 
         candidates = [payment1, payment2, payment3]
 
@@ -105,13 +112,15 @@ class TestExactAmountMatcher:
         # Payment within date window
         payment_in_window = Mock()
         payment_in_window.id = 1
-        payment_in_window.importo_da_pagare = Decimal("1000.00")
+        payment_in_window.importo = Decimal("1000.00")
+        payment_in_window.importo_pagato = Decimal("0.00")
         payment_in_window.data_scadenza = date(2025, 1, 20)  # 5 days later
 
         # Payment outside date window
         payment_out_window = Mock()
         payment_out_window.id = 2
-        payment_out_window.importo_da_pagare = Decimal("1000.00")
+        payment_out_window.importo = Decimal("1000.00")
+        payment_out_window.importo_pagato = Decimal("0.00")
         payment_out_window.data_scadenza = date(2025, 3, 15)  # 60 days later
 
         candidates = [payment_in_window, payment_out_window]
@@ -133,12 +142,14 @@ class TestExactAmountMatcher:
         # Payment with same value but different precision representation
         payment1 = Mock()
         payment1.id = 1
-        payment1.importo_da_pagare = Decimal("100.0")  # One decimal place
+        payment1.importo = Decimal("100.0")  # One decimal place
+        payment1.importo_pagato = Decimal("0.00")
         payment1.data_scadenza = date.today()
 
         payment2 = Mock()
         payment2.id = 2
-        payment2.importo_da_pagare = Decimal("100.000")  # Three decimal places
+        payment2.importo = Decimal("100.000")  # Three decimal places
+        payment2.importo_pagato = Decimal("0.00")
         payment2.data_scadenza = date.today()
 
         candidates = [payment1, payment2]
@@ -161,16 +172,21 @@ class TestExactAmountMatcher:
         assert results == []
 
     def test_exact_amount_negative_amounts(self):
-        """Test matching with negative amounts (debits)."""
+        """Test matching with negative amounts (debits).
+
+        Note: Matcher uses abs(transaction.amount) and payment amounts are clamped to >= 0,
+        so we test that negative transaction amounts are handled correctly.
+        """
         matcher = ExactAmountMatcher()
 
         transaction = Mock()
-        transaction.amount = Decimal("-500.00")  # Debit
+        transaction.amount = Decimal("-500.00")  # Debit (negative)
         transaction.date = date.today()
 
         payment = Mock()
         payment.id = 1
-        payment.importo_da_pagare = Decimal("-500.00")
+        payment.importo = Decimal("500.00")  # Payment amounts are always positive
+        payment.importo_pagato = Decimal("0.00")
         payment.data_scadenza = date.today()
 
         candidates = [payment]
@@ -190,12 +206,13 @@ class TestExactAmountMatcher:
 
         payment = Mock()
         payment.id = 1
-        payment.importo_da_pagare = Decimal("1234.56")
+        payment.importo = Decimal("1234.56")
+        payment.importo_pagato = Decimal("0.00")
         payment.data_scadenza = date.today()
 
         candidates = [payment]
 
         results = matcher.match(transaction, candidates)
 
-        assert "Exact amount" in results[0].match_reason
+        assert "exact amount" in results[0].match_reason.lower()
         assert "1234.56" in results[0].match_reason or "exact" in results[0].match_reason.lower()

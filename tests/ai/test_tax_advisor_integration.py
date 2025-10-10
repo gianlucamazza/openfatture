@@ -34,9 +34,9 @@ def mock_provider_with_response():
                     prompt_tokens=150,
                     completion_tokens=200,
                     total_tokens=350,
-                    estimated_cost_usd=0.008
+                    estimated_cost_usd=0.008,
                 ),
-                latency_ms=450.0
+                latency_ms=450.0,
             )
 
         provider.generate = AsyncMock(side_effect=mock_generate)
@@ -63,16 +63,13 @@ class TestTaxAdvisorIntegration:
             "riferimento_normativo": "Art. 1, DPR 633/72",
             "note_fattura": None,
             "confidence": 1.0,
-            "raccomandazioni": []
+            "raccomandazioni": [],
         }
 
         provider = mock_provider_with_response(mock_response)
         agent = TaxAdvisorAgent(provider=provider)
 
-        context = TaxContext(
-            user_input="consulenza IT",
-            tipo_servizio="consulenza IT"
-        )
+        context = TaxContext(user_input="consulenza IT", tipo_servizio="consulenza IT")
 
         response = await agent.execute(context)
 
@@ -97,8 +94,8 @@ class TestTaxAdvisorIntegration:
             "confidence": 0.95,
             "raccomandazioni": [
                 "Verificare che il cliente operi nel settore edile",
-                "Non addebitare IVA in fattura"
-            ]
+                "Non addebitare IVA in fattura",
+            ],
         }
 
         provider = mock_provider_with_response(mock_response)
@@ -106,7 +103,7 @@ class TestTaxAdvisorIntegration:
 
         context = TaxContext(
             user_input="consulenza IT per azienda edile",
-            tipo_servizio="consulenza IT per azienda edile"
+            tipo_servizio="consulenza IT per azienda edile",
         )
 
         response = await agent.execute(context)
@@ -131,17 +128,15 @@ class TestTaxAdvisorIntegration:
             "confidence": 1.0,
             "raccomandazioni": [
                 "Indicare IVA in fattura normalmente",
-                "La PA verserà IVA all'Erario"
-            ]
+                "La PA verserà IVA all'Erario",
+            ],
         }
 
         provider = mock_provider_with_response(mock_response)
         agent = TaxAdvisorAgent(provider=provider)
 
         context = TaxContext(
-            user_input="consulenza IT per Comune",
-            tipo_servizio="consulenza IT",
-            cliente_pa=True
+            user_input="consulenza IT per Comune", tipo_servizio="consulenza IT", cliente_pa=True
         )
 
         response = await agent.execute(context)
@@ -163,17 +158,14 @@ class TestTaxAdvisorIntegration:
             "riferimento_normativo": "Art. 10, comma 1, n. 20, DPR 633/72",
             "note_fattura": "Operazione esente IVA ai sensi dell'art. 10, c. 1, n. 20, DPR 633/72",
             "confidence": 0.90,
-            "raccomandazioni": [
-                "Verificare finalità educative riconosciute"
-            ]
+            "raccomandazioni": ["Verificare finalità educative riconosciute"],
         }
 
         provider = mock_provider_with_response(mock_response)
         agent = TaxAdvisorAgent(provider=provider)
 
         context = TaxContext(
-            user_input="formazione professionale",
-            tipo_servizio="formazione professionale"
+            user_input="formazione professionale", tipo_servizio="formazione professionale"
         )
 
         response = await agent.execute(context)
@@ -195,16 +187,13 @@ class TestTaxAdvisorIntegration:
             "riferimento_normativo": "Tabella A, parte II, n. 18, DPR 633/72",
             "note_fattura": None,
             "confidence": 1.0,
-            "raccomandazioni": []
+            "raccomandazioni": [],
         }
 
         provider = mock_provider_with_response(mock_response)
         agent = TaxAdvisorAgent(provider=provider)
 
-        context = TaxContext(
-            user_input="libri scolastici",
-            tipo_servizio="libri scolastici"
-        )
+        context = TaxContext(user_input="libri scolastici", tipo_servizio="libri scolastici")
 
         response = await agent.execute(context)
 
@@ -224,9 +213,7 @@ class TestTaxAdvisorIntegration:
             "riferimento_normativo": "Art. 1, commi 54-89, Legge 190/2014",
             "note_fattura": "Operazione senza applicazione dell'IVA ai sensi dell'art. 1, comma 58, L. 190/2014",
             "confidence": 1.0,
-            "raccomandazioni": [
-                "Verificare requisiti regime forfettario"
-            ]
+            "raccomandazioni": ["Verificare requisiti regime forfettario"],
         }
 
         provider = mock_provider_with_response(mock_response)
@@ -235,7 +222,7 @@ class TestTaxAdvisorIntegration:
         context = TaxContext(
             user_input="consulenza regime forfettario",
             tipo_servizio="consulenza commerciale",
-            regime_speciale="FORFETTARIO"
+            regime_speciale="FORFETTARIO",
         )
 
         response = await agent.execute(context)
@@ -259,8 +246,8 @@ class TestTaxAdvisorIntegration:
             "confidence": 0.85,
             "raccomandazioni": [
                 "Verificare residenza fiscale committente",
-                "Conservare documentazione"
-            ]
+                "Conservare documentazione",
+            ],
         }
 
         provider = mock_provider_with_response(mock_response)
@@ -270,7 +257,7 @@ class TestTaxAdvisorIntegration:
             user_input="consulenza IT",
             tipo_servizio="consulenza IT",
             cliente_estero=True,
-            paese_cliente="US"
+            paese_cliente="US",
         )
 
         response = await agent.execute(context)
@@ -286,10 +273,7 @@ class TestTaxAdvisorIntegration:
         agent = TaxAdvisorAgent(provider=provider)
 
         # Invalid context (empty tipo_servizio)
-        context = TaxContext(
-            user_input="",
-            tipo_servizio=""
-        )
+        context = TaxContext(user_input="", tipo_servizio="")
 
         response = await agent.execute(context)
 
@@ -307,10 +291,7 @@ class TestTaxAdvisorIntegration:
 
         agent = TaxAdvisorAgent(provider=provider)
 
-        context = TaxContext(
-            user_input="test",
-            tipo_servizio="test service"
-        )
+        context = TaxContext(user_input="test", tipo_servizio="test service")
 
         response = await agent.execute(context)
 
@@ -325,7 +306,7 @@ class TestTaxAdvisorIntegration:
             "spiegazione": "Standard rate",
             "riferimento_normativo": "Art. 1, DPR 633/72",
             "confidence": 0.95,
-            "raccomandazioni": []
+            "raccomandazioni": [],
         }
 
         provider = mock_provider_with_response(mock_response)
@@ -333,10 +314,7 @@ class TestTaxAdvisorIntegration:
 
         # Execute 3 times
         for i in range(3):
-            context = TaxContext(
-                user_input=f"test {i}",
-                tipo_servizio=f"test service {i}"
-            )
+            context = TaxContext(user_input=f"test {i}", tipo_servizio=f"test service {i}")
             await agent.execute(context)
 
         # Check metrics
@@ -352,16 +330,13 @@ class TestTaxAdvisorIntegration:
             "spiegazione": "Test",
             "riferimento_normativo": "Test",
             "confidence": 1.0,
-            "raccomandazioni": []
+            "raccomandazioni": [],
         }
 
         provider = mock_provider_with_response(mock_response)
         agent = TaxAdvisorAgent(provider=provider)
 
-        context = TaxContext(
-            user_input="test",
-            tipo_servizio="test"
-        )
+        context = TaxContext(user_input="test", tipo_servizio="test")
 
         await agent.execute(context)
 

@@ -82,16 +82,18 @@
 ### 🚧 Partially Implemented
 
 - 🔄 RAG / Vector Store
-  - ChromaDB dependency installed
-  - Placeholder implementation in enrichment.py
-  - Not yet functional
+  - ChromaDB persistence for invoices + knowledge base (`openfatture/ai/rag/**`)
+  - Async enrichment pipeline (`enrich_with_rag`) per chat, invoice e tax advisor
+  - CLI management commands (`openfatture ai rag status|index|search`)
+  - Knowledge base manifest (`openfatture/ai/rag/sources.json`) e indicizzatore dedicato
+  - Citazioni normative disponibili negli agent (Chat/Tax/Invoice)
 
 ### ⏳ Planned (Phase 4.3 & 4.4)
 
 - [ ] Cash Flow Predictor agent (ML-based)
 - [ ] Compliance Checker agent
 - [ ] LangGraph orchestration for multi-agent workflows
-- [ ] Complete RAG implementation with ChromaDB
+- [x] Complete RAG implementation with ChromaDB (fatture + knowledge base)
 - [ ] Streaming response support
 - [ ] Advanced caching strategies
 - [ ] Metrics and observability dashboards
@@ -1114,7 +1116,7 @@ ai_latency_seconds = Histogram(
 ### 🚧 Phase 4.3: Advanced Features (IN PROGRESS)
 - [ ] Cash Flow Predictor (ML-based)
 - [ ] Compliance Checker agent
-- [ ] Complete RAG implementation
+- [x] Complete RAG implementation
   - [ ] Vector store integration (ChromaDB)
   - [ ] Embeddings generation
   - [ ] Semantic search

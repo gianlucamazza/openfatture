@@ -5,9 +5,9 @@ used in the OpenFatture AI system.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, TypeVar, Generic
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -30,7 +30,7 @@ class CacheEntry(Generic[T]):
     created_at: datetime
     accessed_at: datetime
     access_count: int = 0
-    ttl_seconds: Optional[int] = None
+    ttl_seconds: int | None = None
 
     def is_expired(self) -> bool:
         """Check if entry has expired based on TTL.
@@ -58,7 +58,7 @@ class CacheStrategy(ABC, Generic[T]):
     """
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[T]:
+    async def get(self, key: str) -> T | None:
         """Retrieve value from cache.
 
         Args:
@@ -70,7 +70,7 @@ class CacheStrategy(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: T, ttl: int | None = None) -> None:
         """Store value in cache.
 
         Args:

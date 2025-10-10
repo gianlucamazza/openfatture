@@ -1,6 +1,6 @@
 """Central registry for AI tools and function calling."""
 
-from typing import Any, Optional
+from typing import Any
 
 from openfatture.ai.tools.models import Tool, ToolResult
 from openfatture.utils.logging import get_logger
@@ -74,7 +74,7 @@ class ToolRegistry:
 
         return False
 
-    def get_tool(self, name: str) -> Optional[Tool]:
+    def get_tool(self, name: str) -> Tool | None:
         """
         Get a tool by name.
 
@@ -88,7 +88,7 @@ class ToolRegistry:
 
     def list_tools(
         self,
-        category: Optional[str] = None,
+        category: str | None = None,
         enabled_only: bool = True,
     ) -> list[Tool]:
         """
@@ -117,7 +117,7 @@ class ToolRegistry:
 
     def get_openai_functions(
         self,
-        category: Optional[str] = None,
+        category: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         Get tools in OpenAI function calling format.
@@ -133,7 +133,7 @@ class ToolRegistry:
 
     def get_anthropic_tools(
         self,
-        category: Optional[str] = None,
+        category: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         Get tools in Anthropic tool calling format.
@@ -222,14 +222,12 @@ class ToolRegistry:
             "total_tools": len(self._tools),
             "enabled_tools": len([t for t in self._tools.values() if t.enabled]),
             "categories": len(self._categories),
-            "tools_by_category": {
-                cat: len(tools) for cat, tools in self._categories.items()
-            },
+            "tools_by_category": {cat: len(tools) for cat, tools in self._categories.items()},
         }
 
 
 # Global registry instance
-_global_registry: Optional[ToolRegistry] = None
+_global_registry: ToolRegistry | None = None
 
 
 def get_tool_registry() -> ToolRegistry:
@@ -259,7 +257,7 @@ def _register_default_tools(registry: ToolRegistry) -> None:
     """
     # Import and register tools
     try:
-        from openfatture.ai.tools import client_tools, invoice_tools
+        from openfatture.ai.tools import client_tools, invoice_tools, knowledge_tools
 
         # Register invoice tools
         for tool in invoice_tools.get_invoice_tools():
@@ -267,6 +265,10 @@ def _register_default_tools(registry: ToolRegistry) -> None:
 
         # Register client tools
         for tool in client_tools.get_client_tools():
+            registry.register(tool)
+
+        # Register knowledge tools
+        for tool in knowledge_tools.get_knowledge_tools():
             registry.register(tool)
 
         logger.info("default_tools_registered")

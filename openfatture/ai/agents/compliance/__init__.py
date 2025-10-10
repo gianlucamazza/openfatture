@@ -26,23 +26,23 @@ Example Usage:
 
 from openfatture.ai.agents.compliance.checker import (
     ComplianceChecker,
-    ComplianceReport,
     ComplianceLevel,
-)
-from openfatture.ai.agents.compliance.rules import (
-    ComplianceRulesEngine,
-    ValidationResult,
-    ValidationIssue,
-    ValidationSeverity,
-)
-from openfatture.ai.agents.compliance.sdi_patterns import (
-    SDIPatternDatabase,
-    SDIRejectionPattern,
-    SDIErrorCode,
+    ComplianceReport,
 )
 from openfatture.ai.agents.compliance.heuristics import (
     AIHeuristicAnalyzer,
     HeuristicAnalysis,
+)
+from openfatture.ai.agents.compliance.rules import (
+    ComplianceRulesEngine,
+    ValidationIssue,
+    ValidationResult,
+    ValidationSeverity,
+)
+from openfatture.ai.agents.compliance.sdi_patterns import (
+    SDIErrorCode,
+    SDIPatternDatabase,
+    SDIRejectionPattern,
 )
 
 __all__ = [

@@ -28,19 +28,18 @@ Example Usage:
 """
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
-from typing import Optional, Dict, Any, List
+from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
-import numpy as np
 
-from openfatture.ai.ml.config import get_ml_config, MLConfig
-from openfatture.ai.ml.features import FeaturePipeline
-from openfatture.ai.ml.data_loader import InvoiceDataLoader, Dataset
-from openfatture.ai.ml.models import CashFlowEnsemble, RiskLevel
-from openfatture.ai.providers import create_provider, AIProvider
 from openfatture.ai.domain.message import UserMessage
+from openfatture.ai.ml.config import MLConfig, get_ml_config
+from openfatture.ai.ml.data_loader import InvoiceDataLoader
+from openfatture.ai.ml.features import FeaturePipeline
+from openfatture.ai.ml.models import CashFlowEnsemble
+from openfatture.ai.providers import AIProvider, create_provider
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
@@ -70,21 +69,21 @@ class PredictionResult:
     lower_bound: float
     upper_bound: float
     insights: str
-    recommendations: List[str]
+    recommendations: list[str]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
-            'invoice_id': self.invoice_id,
-            'expected_days': float(self.expected_days),
-            'confidence_score': float(self.confidence_score),
-            'risk_level': self.risk_level,
-            'prediction_interval': {
-                'lower': float(self.lower_bound),
-                'upper': float(self.upper_bound),
+            "invoice_id": self.invoice_id,
+            "expected_days": float(self.expected_days),
+            "confidence_score": float(self.confidence_score),
+            "risk_level": self.risk_level,
+            "prediction_interval": {
+                "lower": float(self.lower_bound),
+                "upper": float(self.upper_bound),
             },
-            'insights': self.insights,
-            'recommendations': self.recommendations,
+            "insights": self.insights,
+            "recommendations": self.recommendations,
         }
 
 
@@ -101,19 +100,19 @@ class ForecastResult:
     """
 
     months: int
-    monthly_forecast: List[Dict[str, Any]]
+    monthly_forecast: list[dict[str, Any]]
     total_expected: float
     insights: str
-    recommendations: List[str]
+    recommendations: list[str]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
-            'months': self.months,
-            'monthly': self.monthly_forecast,
-            'total_expected': float(self.total_expected),
-            'insights': self.insights,
-            'recommendations': self.recommendations,
+            "months": self.months,
+            "monthly": self.monthly_forecast,
+            "total_expected": float(self.total_expected),
+            "insights": self.insights,
+            "recommendations": self.recommendations,
         }
 
 
@@ -136,8 +135,8 @@ class CashFlowPredictorAgent:
 
     def __init__(
         self,
-        config: Optional[MLConfig] = None,
-        ai_provider: Optional[AIProvider] = None,
+        config: MLConfig | None = None,
+        ai_provider: AIProvider | None = None,
     ):
         """Initialize Cash Flow Predictor Agent.
 
@@ -149,9 +148,9 @@ class CashFlowPredictorAgent:
         self.ai_provider = ai_provider or create_provider()
 
         # ML components
-        self.ensemble: Optional[CashFlowEnsemble] = None
-        self.feature_pipeline: Optional[FeaturePipeline] = None
-        self.data_loader: Optional[InvoiceDataLoader] = None
+        self.ensemble: CashFlowEnsemble | None = None
+        self.feature_pipeline: FeaturePipeline | None = None
+        self.data_loader: InvoiceDataLoader | None = None
 
         # State
         self.initialized_ = False
@@ -174,9 +173,7 @@ class CashFlowPredictorAgent:
         self.data_loader = InvoiceDataLoader(**self.config.get_data_loader_params())
 
         # Initialize feature pipeline
-        self.feature_pipeline = FeaturePipeline(
-            **self.config.get_feature_pipeline_params()
-        )
+        self.feature_pipeline = FeaturePipeline(**self.config.get_feature_pipeline_params())
 
         # Initialize ensemble
         self.ensemble = CashFlowEnsemble(
@@ -188,7 +185,7 @@ class CashFlowPredictorAgent:
         )
 
         # Load or train models
-        model_path = self.config.get_model_filepath('cash_flow')
+        model_path = self.config.get_model_filepath("cash_flow")
 
         if not force_retrain and self._models_exist(model_path):
             logger.info("loading_existing_models", path=model_path)
@@ -242,9 +239,7 @@ class CashFlowPredictorAgent:
 
             # Generate insights if requested
             if include_insights:
-                insights, recommendations = await self._generate_insights(
-                    fattura, prediction
-                )
+                insights, recommendations = await self._generate_insights(fattura, prediction)
             else:
                 insights = ""
                 recommendations = []
@@ -276,7 +271,7 @@ class CashFlowPredictorAgent:
     async def forecast_cash_flow(
         self,
         months: int = 3,
-        client_id: Optional[int] = None,
+        client_id: int | None = None,
     ) -> ForecastResult:
         """Forecast cash flow for upcoming months.
 
@@ -296,11 +291,13 @@ class CashFlowPredictorAgent:
         db = SessionLocal()
         try:
             query = db.query(Fattura).filter(
-                Fattura.stato.in_([
-                    StatoFattura.DA_INVIARE,
-                    StatoFattura.INVIATA,
-                    StatoFattura.CONSEGNATA,
-                ])
+                Fattura.stato.in_(
+                    [
+                        StatoFattura.DA_INVIARE,
+                        StatoFattura.INVIATA,
+                        StatoFattura.CONSEGNATA,
+                    ]
+                )
             )
 
             if client_id:
@@ -315,26 +312,24 @@ class CashFlowPredictorAgent:
             )
 
             # Predict payment dates for all invoices
-            monthly_totals = {i: 0.0 for i in range(months)}
+            monthly_totals = dict.fromkeys(range(months), 0.0)
 
             for fattura in unpaid_invoices:
                 try:
                     # Get prediction
-                    result = await self.predict_invoice(
-                        fattura.id,
-                        include_insights=False
-                    )
+                    result = await self.predict_invoice(fattura.id, include_insights=False)
 
                     # Calculate expected payment date
-                    expected_payment_date = (
-                        fattura.data_emissione + timedelta(days=result.expected_days)
+                    expected_payment_date = fattura.data_emissione + timedelta(
+                        days=result.expected_days
                     )
 
                     # Determine which month this falls into
                     today = date.today()
                     month_diff = (
-                        (expected_payment_date.year - today.year) * 12 +
-                        expected_payment_date.month - today.month
+                        (expected_payment_date.year - today.year) * 12
+                        + expected_payment_date.month
+                        - today.month
                     )
 
                     if 0 <= month_diff < months:
@@ -355,11 +350,13 @@ class CashFlowPredictorAgent:
                 month_date = today + timedelta(days=30 * (i + 1))
                 month_str = month_date.strftime("%B %Y")
 
-                monthly_forecast.append({
-                    'month': month_str,
-                    'month_index': i + 1,
-                    'expected': monthly_totals[i],
-                })
+                monthly_forecast.append(
+                    {
+                        "month": month_str,
+                        "month_index": i + 1,
+                        "expected": monthly_totals[i],
+                    }
+                )
 
             total_expected = sum(monthly_totals.values())
 
@@ -426,7 +423,7 @@ class CashFlowPredictorAgent:
         logger.info("models_trained", test_mae=test_mae)
 
         # Save models
-        model_path = self.config.get_model_filepath('cash_flow')
+        model_path = self.config.get_model_filepath("cash_flow")
         await self._save_models(model_path)
 
         self.model_trained_ = True
@@ -451,30 +448,30 @@ class CashFlowPredictorAgent:
 
         return prophet_path.exists() and xgboost_path.exists()
 
-    def _invoice_to_features(self, fattura: Fattura) -> Dict[str, Any]:
+    def _invoice_to_features(self, fattura: Fattura) -> dict[str, Any]:
         """Convert invoice to feature dictionary."""
         return {
-            'cliente_id': fattura.cliente_id,
-            'data_emissione': fattura.data_emissione,
-            'totale': float(fattura.totale),
-            'imponibile': float(fattura.imponibile),
-            'iva': float(fattura.iva),
-            'ritenuta_acconto': float(fattura.ritenuta_acconto or 0),
-            'aliquota_ritenuta': float(fattura.aliquota_ritenuta or 0),
-            'importo_bollo': float(fattura.importo_bollo),
-            'tipo_documento': fattura.tipo_documento.value,
-            'stato': fattura.stato.value,
-            'payment_date': None,
-            'payment_due_date': None,
-            'payment_amount': None,
-            'righe': len(fattura.righe) if fattura.righe else 0,
+            "cliente_id": fattura.cliente_id,
+            "data_emissione": fattura.data_emissione,
+            "totale": float(fattura.totale),
+            "imponibile": float(fattura.imponibile),
+            "iva": float(fattura.iva),
+            "ritenuta_acconto": float(fattura.ritenuta_acconto or 0),
+            "aliquota_ritenuta": float(fattura.aliquota_ritenuta or 0),
+            "importo_bollo": float(fattura.importo_bollo),
+            "tipo_documento": fattura.tipo_documento.value,
+            "stato": fattura.stato.value,
+            "payment_date": None,
+            "payment_due_date": None,
+            "payment_amount": None,
+            "righe": len(fattura.righe) if fattura.righe else 0,
         }
 
     async def _generate_insights(
         self,
         fattura: Fattura,
         prediction: Any,
-    ) -> tuple[str, List[str]]:
+    ) -> tuple[str, list[str]]:
         """Generate AI-powered insights for invoice prediction."""
 
         prompt = f"""Analyze questa previsione di pagamento per fattura:
@@ -508,7 +505,7 @@ Rispondi in italiano, conciso e professionale."""
             content = response.content
 
             # Split into insights and recommendations (heuristic parsing)
-            lines = content.strip().split('\n')
+            lines = content.strip().split("\n")
             insights_lines = []
             recommendations = []
 
@@ -519,20 +516,20 @@ Rispondi in italiano, conciso e professionale."""
                 if not line:
                     continue
 
-                if 'raccomandaz' in line.lower() or 'suggerim' in line.lower():
+                if "raccomandaz" in line.lower() or "suggerim" in line.lower():
                     in_recommendations = True
                     continue
 
                 if in_recommendations:
                     # Extract bullet points
-                    if line.startswith(('-', '•', '*', '1.', '2.', '3.')):
-                        rec = line.lstrip('-•*123. ')
+                    if line.startswith(("-", "•", "*", "1.", "2.", "3.")):
+                        rec = line.lstrip("-•*123. ")
                         if rec:
                             recommendations.append(rec)
                 else:
                     insights_lines.append(line)
 
-            insights = ' '.join(insights_lines)
+            insights = " ".join(insights_lines)
 
             return insights, recommendations
 
@@ -542,16 +539,15 @@ Rispondi in italiano, conciso e professionale."""
 
     async def _generate_forecast_insights(
         self,
-        monthly_forecast: List[Dict],
+        monthly_forecast: list[dict],
         total_expected: float,
         months: int,
-    ) -> tuple[str, List[str]]:
+    ) -> tuple[str, list[str]]:
         """Generate AI insights for cash flow forecast."""
 
-        monthly_summary = "\n".join([
-            f"- {m['month']}: €{m['expected']:.2f}"
-            for m in monthly_forecast
-        ])
+        monthly_summary = "\n".join(
+            [f"- {m['month']}: €{m['expected']:.2f}" for m in monthly_forecast]
+        )
 
         prompt = f"""Analyze this cash flow forecast for the next {months} months:
 
@@ -573,7 +569,7 @@ Respond in Italian, concise and professional."""
             )
 
             content = response.content
-            lines = content.strip().split('\n')
+            lines = content.strip().split("\n")
             insights_lines = []
             recommendations = []
             in_recommendations = False
@@ -583,18 +579,18 @@ Respond in Italian, concise and professional."""
                 if not line:
                     continue
 
-                if 'raccomandaz' in line.lower() or 'suggerim' in line.lower():
+                if "raccomandaz" in line.lower() or "suggerim" in line.lower():
                     in_recommendations = True
                     continue
 
-                if in_recommendations and line.startswith(('-', '•', '*')):
-                    rec = line.lstrip('-•* 123.')
+                if in_recommendations and line.startswith(("-", "•", "*")):
+                    rec = line.lstrip("-•* 123.")
                     if rec:
                         recommendations.append(rec)
                 else:
                     insights_lines.append(line)
 
-            insights = ' '.join(insights_lines)
+            insights = " ".join(insights_lines)
 
             return insights, recommendations
 

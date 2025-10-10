@@ -12,18 +12,17 @@ All data splits are chronological to prevent data leakage and ensure
 realistic evaluation of time series models.
 """
 
-from dataclasses import dataclass
-from datetime import datetime, date, timedelta
-from typing import Optional, Tuple, Dict, List
-from pathlib import Path
 import pickle
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
+from pathlib import Path
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sqlalchemy import and_
 
 from openfatture.storage.database.base import SessionLocal
-from openfatture.storage.database.models import Fattura, Cliente, Pagamento, StatoFattura
+from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -50,7 +49,7 @@ class DatasetMetadata:
     train_size: int
     val_size: int
     test_size: int
-    date_range: Tuple[date, date]
+    date_range: tuple[date, date]
     target_mean: float
     target_std: float
     missing_payment_ratio: float
@@ -100,7 +99,7 @@ class InvoiceDataLoader:
 
     def __init__(
         self,
-        cache_dir: Optional[Path] = None,
+        cache_dir: Path | None = None,
         min_payment_data_ratio: float = 0.3,
     ):
         """Initialize data loader.
@@ -120,8 +119,8 @@ class InvoiceDataLoader:
 
     def load_dataset(
         self,
-        min_date: Optional[date] = None,
-        max_date: Optional[date] = None,
+        min_date: date | None = None,
+        max_date: date | None = None,
         val_split: float = 0.15,
         test_split: float = 0.15,
         force_reload: bool = False,
@@ -162,7 +161,7 @@ class InvoiceDataLoader:
 
         if cache_path.exists() and not force_reload:
             logger.info("loading_from_cache", cache_path=str(cache_path))
-            with open(cache_path, 'rb') as f:
+            with open(cache_path, "rb") as f:
                 return pickle.load(f)
 
         # Load from database
@@ -175,7 +174,7 @@ class InvoiceDataLoader:
         df = self._create_target_variable(df)
 
         # Remove rows without target (no payment data)
-        df_with_target = df[df['target'].notna()].copy()
+        df_with_target = df[df["target"].notna()].copy()
 
         logger.info(
             "dataset_loaded",
@@ -200,7 +199,7 @@ class InvoiceDataLoader:
         )
 
         # Cache dataset
-        with open(cache_path, 'wb') as f:
+        with open(cache_path, "wb") as f:
             pickle.dump(dataset, f)
 
         logger.info("dataset_cached", cache_path=str(cache_path))
@@ -257,35 +256,37 @@ class InvoiceDataLoader:
                     payment_due_date = first_payment.data_scadenza
                     payment_amount = float(first_payment.importo)
 
-                records.append({
-                    # Invoice data
-                    'invoice_id': fattura.id,
-                    'cliente_id': fattura.cliente_id,
-                    'data_emissione': fattura.data_emissione,
-                    'totale': float(fattura.totale),
-                    'imponibile': float(fattura.imponibile),
-                    'iva': float(fattura.iva),
-                    'ritenuta_acconto': float(fattura.ritenuta_acconto or 0),
-                    'aliquota_ritenuta': float(fattura.aliquota_ritenuta or 0),
-                    'importo_bollo': float(fattura.importo_bollo),
-                    'tipo_documento': fattura.tipo_documento.value,
-                    'stato': fattura.stato.value,
-                    # Payment data
-                    'payment_date': payment_date,
-                    'payment_due_date': payment_due_date,
-                    'payment_amount': payment_amount,
-                    # Will be populated by feature engineering
-                    'righe': len(fattura.righe) if fattura.righe else 0,
-                })
+                records.append(
+                    {
+                        # Invoice data
+                        "invoice_id": fattura.id,
+                        "cliente_id": fattura.cliente_id,
+                        "data_emissione": fattura.data_emissione,
+                        "totale": float(fattura.totale),
+                        "imponibile": float(fattura.imponibile),
+                        "iva": float(fattura.iva),
+                        "ritenuta_acconto": float(fattura.ritenuta_acconto or 0),
+                        "aliquota_ritenuta": float(fattura.aliquota_ritenuta or 0),
+                        "importo_bollo": float(fattura.importo_bollo),
+                        "tipo_documento": fattura.tipo_documento.value,
+                        "stato": fattura.stato.value,
+                        # Payment data
+                        "payment_date": payment_date,
+                        "payment_due_date": payment_due_date,
+                        "payment_amount": payment_amount,
+                        # Will be populated by feature engineering
+                        "righe": len(fattura.righe) if fattura.righe else 0,
+                    }
+                )
 
             df = pd.DataFrame(records)
 
             # Convert dates to datetime
-            df['data_emissione'] = pd.to_datetime(df['data_emissione'])
-            if 'payment_date' in df.columns:
-                df['payment_date'] = pd.to_datetime(df['payment_date'])
-            if 'payment_due_date' in df.columns:
-                df['payment_due_date'] = pd.to_datetime(df['payment_due_date'])
+            df["data_emissione"] = pd.to_datetime(df["data_emissione"])
+            if "payment_date" in df.columns:
+                df["payment_date"] = pd.to_datetime(df["payment_date"])
+            if "payment_due_date" in df.columns:
+                df["payment_due_date"] = pd.to_datetime(df["payment_due_date"])
 
             return df
 
@@ -309,22 +310,22 @@ class InvoiceDataLoader:
         df = df.copy()
 
         # Calculate payment delay
-        df['target'] = np.nan
+        df["target"] = np.nan
 
         # Only calculate for invoices with both payment_date and payment_due_date
-        mask = df['payment_date'].notna() & df['payment_due_date'].notna()
+        mask = df["payment_date"].notna() & df["payment_due_date"].notna()
 
         if mask.any():
-            df.loc[mask, 'target'] = (
-                df.loc[mask, 'payment_date'] - df.loc[mask, 'payment_due_date']
+            df.loc[mask, "target"] = (
+                df.loc[mask, "payment_date"] - df.loc[mask, "payment_due_date"]
             ).dt.days.astype(float)
 
         logger.info(
             "target_variable_created",
             total_invoices=len(df),
             with_target=mask.sum(),
-            target_mean=df['target'].mean(),
-            target_std=df['target'].std(),
+            target_mean=df["target"].mean(),
+            target_std=df["target"].std(),
         )
 
         return df
@@ -350,7 +351,7 @@ class InvoiceDataLoader:
             Dataset with train/val/test splits
         """
         # Sort by date to ensure chronological order
-        df = df.sort_values('data_emissione').reset_index(drop=True)
+        df = df.sort_values("data_emissione").reset_index(drop=True)
 
         # Calculate split indices
         n = len(df)
@@ -360,23 +361,22 @@ class InvoiceDataLoader:
 
         # Split chronologically
         train_df = df.iloc[:train_size].copy()
-        val_df = df.iloc[train_size:train_size + val_size].copy()
-        test_df = df.iloc[train_size + val_size:].copy()
+        val_df = df.iloc[train_size : train_size + val_size].copy()
+        test_df = df.iloc[train_size + val_size :].copy()
 
         # Separate features and target
         feature_cols = [
-            col for col in df.columns
-            if col not in ['target', 'invoice_id', 'payment_date']
+            col for col in df.columns if col not in ["target", "invoice_id", "payment_date"]
         ]
 
         X_train = train_df[feature_cols]
-        y_train = train_df['target']
+        y_train = train_df["target"]
 
         X_val = val_df[feature_cols]
-        y_val = val_df['target']
+        y_val = val_df["target"]
 
         X_test = test_df[feature_cols]
-        y_test = test_df['target']
+        y_test = test_df["target"]
 
         # Create metadata
         metadata = DatasetMetadata(
@@ -385,13 +385,10 @@ class InvoiceDataLoader:
             train_size=len(X_train),
             val_size=len(X_val),
             test_size=len(X_test),
-            date_range=(
-                df['data_emissione'].min().date(),
-                df['data_emissione'].max().date()
-            ),
-            target_mean=float(df['target'].mean()),
-            target_std=float(df['target'].std()),
-            missing_payment_ratio=float(df['target'].isna().mean()),
+            date_range=(df["data_emissione"].min().date(), df["data_emissione"].max().date()),
+            target_mean=float(df["target"].mean()),
+            target_std=float(df["target"].std()),
+            missing_payment_ratio=float(df["target"].isna().mean()),
         )
 
         logger.info(
@@ -400,12 +397,12 @@ class InvoiceDataLoader:
             val_size=len(X_val),
             test_size=len(X_test),
             train_date_range=(
-                train_df['data_emissione'].min().date(),
-                train_df['data_emissione'].max().date(),
+                train_df["data_emissione"].min().date(),
+                train_df["data_emissione"].max().date(),
             ),
             test_date_range=(
-                test_df['data_emissione'].min().date(),
-                test_df['data_emissione'].max().date(),
+                test_df["data_emissione"].min().date(),
+                test_df["data_emissione"].max().date(),
             ),
         )
 
@@ -433,10 +430,10 @@ class InvoiceDataLoader:
 
         # Check for required columns
         required_cols = [
-            'cliente_id',
-            'data_emissione',
-            'totale',
-            'imponibile',
+            "cliente_id",
+            "data_emissione",
+            "totale",
+            "imponibile",
         ]
 
         missing_cols = set(required_cols) - set(df.columns)
@@ -447,28 +444,25 @@ class InvoiceDataLoader:
         logger.info(
             "data_quality_metrics",
             total_invoices=len(df),
-            unique_clients=df['cliente_id'].nunique(),
-            date_range=(
-                df['data_emissione'].min().date(),
-                df['data_emissione'].max().date()
-            ),
-            missing_payment_ratio=df['payment_date'].isna().mean(),
-            avg_invoice_amount=df['totale'].mean(),
+            unique_clients=df["cliente_id"].nunique(),
+            date_range=(df["data_emissione"].min().date(), df["data_emissione"].max().date()),
+            missing_payment_ratio=df["payment_date"].isna().mean(),
+            avg_invoice_amount=df["totale"].mean(),
         )
 
         # Warnings for potential issues
-        if df['payment_date'].isna().mean() > 0.7:
+        if df["payment_date"].isna().mean() > 0.7:
             logger.warning(
                 "high_missing_payment_ratio",
-                ratio=df['payment_date'].isna().mean(),
-                message="Many invoices lack payment data - model may be less accurate"
+                ratio=df["payment_date"].isna().mean(),
+                message="Many invoices lack payment data - model may be less accurate",
             )
 
         if len(df) < 100:
             logger.warning(
                 "low_sample_count",
                 count=len(df),
-                message="Low sample count may affect model performance"
+                message="Low sample count may affect model performance",
             )
 
     def _get_cache_key(

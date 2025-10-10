@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy, payment_amount_for_matching
+from .base import IMatcherStrategy, as_match_results, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -119,7 +119,7 @@ class ExactAmountMatcher(IMatcherStrategy):
             )
         )
 
-        return results
+        return as_match_results(results)
 
     def _build_match_reason(
         self, transaction: "BankTransaction", payment: "Pagamento", amount_diff: Decimal

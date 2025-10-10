@@ -154,9 +154,7 @@ def get_client_stats() -> dict[str, Any]:
     try:
         stats = {
             "totale_clienti": db.query(Cliente).count(),
-            "con_partita_iva": db.query(Cliente)
-            .filter(Cliente.partita_iva.isnot(None))
-            .count(),
+            "con_partita_iva": db.query(Cliente).filter(Cliente.partita_iva.isnot(None)).count(),
             "con_email": db.query(Cliente).filter(Cliente.email.isnot(None)).count(),
             "con_pec": db.query(Cliente).filter(Cliente.pec.isnot(None)).count(),
         }

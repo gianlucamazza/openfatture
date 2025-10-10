@@ -25,18 +25,17 @@ Example:
 """
 
 from datetime import datetime
-from typing import Optional
 
-from langgraph.graph import StateGraph, END
 from langgraph.checkpoint import MemorySaver
+from langgraph.graph import END, StateGraph
 
-from openfatture.ai.orchestration.states import (
-    ComplianceCheckState,
-    WorkflowStatus,
-)
 from openfatture.ai.agents.compliance import (
     ComplianceChecker,
     ComplianceLevel,
+)
+from openfatture.ai.orchestration.states import (
+    ComplianceCheckState,
+    WorkflowStatus,
 )
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura
@@ -246,7 +245,9 @@ class ComplianceCheckWorkflow:
                 if issue.severity.value in ["ERROR", "WARNING"]
             ]
 
-            state.rules_passed = len([i for i in state.rules_issues if i["severity"] == "ERROR"]) == 0
+            state.rules_passed = (
+                len([i for i in state.rules_issues if i["severity"] == "ERROR"]) == 0
+            )
 
             state.compliance_score = report.compliance_score
             state.is_compliant = report.is_compliant
@@ -341,9 +342,7 @@ class ComplianceCheckWorkflow:
 
             # Generate fix suggestions
             state.fix_suggestions = [
-                issue["suggestion"]
-                for issue in state.rules_issues
-                if issue.get("suggestion")
+                issue["suggestion"] for issue in state.rules_issues if issue.get("suggestion")
             ]
 
             # Estimate SDI approval probability
@@ -414,10 +413,7 @@ class ComplianceCheckWorkflow:
             return "skip"
 
         # Skip if critical errors found (no point checking patterns)
-        critical_errors = [
-            i for i in state.rules_issues
-            if i["severity"] == "ERROR"
-        ]
+        critical_errors = [i for i in state.rules_issues if i["severity"] == "ERROR"]
         if critical_errors:
             return "skip"
 
@@ -430,10 +426,7 @@ class ComplianceCheckWorkflow:
             return "skip"
 
         # Skip if critical errors (AI won't help)
-        critical_errors = [
-            i for i in state.rules_issues
-            if i["severity"] == "ERROR"
-        ]
+        critical_errors = [i for i in state.rules_issues if i["severity"] == "ERROR"]
         if critical_errors:
             return "skip"
 

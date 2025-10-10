@@ -1,11 +1,11 @@
 """Prompt template management."""
 
-import yaml
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from jinja2 import Environment, FileSystemLoader, Template, TemplateNotFound
-from pydantic import BaseModel, Field
+import yaml
+from jinja2 import Environment, FileSystemLoader, Template
+from pydantic import BaseModel, ConfigDict, Field
 
 from openfatture.utils.logging import get_logger
 
@@ -40,15 +40,14 @@ class PromptTemplate(BaseModel):
     )
 
     # Optional settings
-    temperature: Optional[float] = Field(default=None, description="Recommended temperature")
-    max_tokens: Optional[int] = Field(default=None, description="Recommended max tokens")
+    temperature: float | None = Field(default=None, description="Recommended temperature")
+    max_tokens: int | None = Field(default=None, description="Recommended max tokens")
 
     # Metadata
     tags: list[str] = Field(default_factory=list, description="Template tags")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class PromptManager:
@@ -331,7 +330,7 @@ class PromptManager:
         return self.load_template(name)
 
 
-def create_prompt_manager(templates_dir: Optional[Path] = None) -> PromptManager:
+def create_prompt_manager(templates_dir: Path | None = None) -> PromptManager:
     """
     Create a prompt manager instance.
 

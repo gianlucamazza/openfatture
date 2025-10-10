@@ -1,0 +1,53 @@
+{
+  "sources": [
+    {
+      "id": "tax_guides",
+      "description": "Tabelle aliquote IVA, codici e note fiscali dalla documentazione principale",
+      "type": "markdown",
+      "path": "docs/CONFIGURATION.md",
+      "enabled": true,
+      "tags": ["iva", "tax", "configuration"],
+      "chunking": {
+        "max_chars": 1800,
+        "overlap": 200
+      },
+      "metadata": {
+        "source": "TAX_GUIDE",
+        "jurisdiction": "IT",
+        "law_reference": "DPR 633/72"
+      }
+    },
+    {
+      "id": "tax_prompt",
+      "description": "Prompt YAML del Tax Advisor con riferimenti normativi espliciti",
+      "type": "yaml",
+      "path": "openfatture/ai/prompts/tax_advisor.yaml",
+      "enabled": true,
+      "tags": ["iva", "tax", "prompt"],
+      "chunking": {
+        "max_chars": 1200,
+        "overlap": 150
+      },
+      "metadata": {
+        "source": "PROMPT_TAX_ADVISOR",
+        "jurisdiction": "IT"
+      }
+    },
+    {
+      "id": "ai_architecture",
+      "description": "Sezione AI Architecture con informazioni sui workflow e su RAG",
+      "type": "markdown",
+      "path": "docs/AI_ARCHITECTURE.md",
+      "enabled": false,
+      "tags": ["ai", "architecture", "rag"],
+      "chunking": {
+        "max_chars": 2000,
+        "overlap": 200
+      },
+      "metadata": {
+        "source": "AI_ARCHITECTURE",
+        "jurisdiction": "IT"
+      }
+    }
+  ]
+}

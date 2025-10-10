@@ -200,7 +200,7 @@ logger.info(
 **Never log secrets**:
 ```python
 # Automatic redaction
-logger.info("pec_configured", 
+logger.info("pec_configured",
             address="test@pec.it",
             password="secret123")
 

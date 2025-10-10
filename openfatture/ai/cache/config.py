@@ -3,8 +3,9 @@
 This module defines cache settings and configuration using Pydantic.
 """
 
-from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CacheConfig(BaseModel):
@@ -37,7 +38,7 @@ class CacheConfig(BaseModel):
         description="Maximum number of cache entries",
     )
 
-    default_ttl: Optional[int] = Field(
+    default_ttl: int | None = Field(
         default=3600,
         ge=0,
         description="Default TTL in seconds (None = no expiration)",
@@ -78,11 +79,10 @@ class CacheConfig(BaseModel):
         description="Log cache misses (verbose, for debugging)",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        frozen = False  # Allow modification
-        extra = "forbid"  # Reject unknown fields
+    model_config = ConfigDict(
+        frozen=False,  # Allow modification
+        extra="forbid",  # Reject unknown fields
+    )
 
 
 # Default configuration
@@ -110,15 +110,9 @@ def get_cache_config() -> CacheConfig:
         max_size=int(os.getenv("OPENFATTURE_CACHE_MAX_SIZE", "1000")),
         default_ttl=int(os.getenv("OPENFATTURE_CACHE_DEFAULT_TTL", "3600")),
         cleanup_interval=int(os.getenv("OPENFATTURE_CACHE_CLEANUP_INTERVAL", "300")),
-        similarity_threshold=float(
-            os.getenv("OPENFATTURE_CACHE_SIMILARITY_THRESHOLD", "0.85")
-        ),
-        embedding_model=os.getenv(
-            "OPENFATTURE_CACHE_EMBEDDING_MODEL", "text-embedding-3-small"
-        ),
-        enable_stats=os.getenv("OPENFATTURE_CACHE_ENABLE_STATS", "true").lower()
-        == "true",
+        similarity_threshold=float(os.getenv("OPENFATTURE_CACHE_SIMILARITY_THRESHOLD", "0.85")),
+        embedding_model=os.getenv("OPENFATTURE_CACHE_EMBEDDING_MODEL", "text-embedding-3-small"),
+        enable_stats=os.getenv("OPENFATTURE_CACHE_ENABLE_STATS", "true").lower() == "true",
         log_hits=os.getenv("OPENFATTURE_CACHE_LOG_HITS", "false").lower() == "true",
-        log_misses=os.getenv("OPENFATTURE_CACHE_LOG_MISSES", "false").lower()
-        == "true",
+        log_misses=os.getenv("OPENFATTURE_CACHE_LOG_MISSES", "false").lower() == "true",
     )

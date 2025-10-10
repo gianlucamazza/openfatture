@@ -5,8 +5,7 @@ agents, and the UI layer.
 """
 
 import asyncio
-from typing import AsyncIterator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -184,9 +183,7 @@ class TestBaseAgentStreaming:
             max_retries=0,  # No retries for this test
         )
 
-        agent = DummyStreamingAgent(
-            config=config, provider=mock_error_streaming_provider
-        )
+        agent = DummyStreamingAgent(config=config, provider=mock_error_streaming_provider)
         context = AgentContext(user_input="Test")
 
         # Should yield partial response then error
@@ -248,9 +245,7 @@ class TestBaseAgentStreaming:
 class TestChatAgentStreaming:
     """Tests for ChatAgent streaming."""
 
-    async def test_chat_agent_streaming_enabled_by_default(
-        self, mock_streaming_provider
-    ):
+    async def test_chat_agent_streaming_enabled_by_default(self, mock_streaming_provider):
         """Test that ChatAgent has streaming enabled by default."""
         agent = ChatAgent(provider=mock_streaming_provider)
 
@@ -370,9 +365,7 @@ class TestStreamingPerformance:
 
     async def test_streaming_memory_efficiency(self, mock_streaming_provider):
         """Test that streaming doesn't accumulate all chunks in memory."""
-        config = AgentConfig(
-            name="memory_test", description="Memory test", streaming_enabled=True
-        )
+        config = AgentConfig(name="memory_test", description="Memory test", streaming_enabled=True)
 
         agent = DummyStreamingAgent(config=config, provider=mock_streaming_provider)
         context = AgentContext(user_input="Test memory")

@@ -2,7 +2,8 @@
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -28,13 +29,13 @@ class AgentConfig(BaseModel):
     version: str = Field(default="1.0.0", description="Agent version")
 
     # LLM Settings
-    model: Optional[str] = Field(default=None, description="Model to use (overrides provider default)")
+    model: str | None = Field(default=None, description="Model to use (overrides provider default)")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="Temperature (0.0-2.0)")
     max_tokens: int = Field(default=2000, ge=1, description="Max tokens to generate")
 
     # Prompts
-    system_prompt: Optional[str] = Field(default=None, description="System prompt template")
-    prompt_template: Optional[str] = Field(default=None, description="Prompt template name")
+    system_prompt: str | None = Field(default=None, description="System prompt template")
+    prompt_template: str | None = Field(default=None, description="Prompt template name")
 
     # Features
     tools_enabled: bool = Field(default=False, description="Enable tool/function calling")
@@ -47,7 +48,9 @@ class AgentConfig(BaseModel):
     timeout_seconds: int = Field(default=30, ge=1, description="Request timeout")
 
     # Cost controls
-    max_cost_per_request: float = Field(default=0.5, ge=0.0, description="Max cost per request (USD)")
+    max_cost_per_request: float = Field(
+        default=0.5, ge=0.0, description="Max cost per request (USD)"
+    )
 
     # Metadata
     tags: list[str] = Field(default_factory=list, description="Agent tags/categories")
@@ -90,7 +93,7 @@ class AgentProtocol(ABC):
         pass
 
     @abstractmethod
-    async def validate_input(self, context: AgentContext) -> tuple[bool, Optional[str]]:
+    async def validate_input(self, context: AgentContext) -> tuple[bool, str | None]:
         """
         Validate input before execution.
 
@@ -131,7 +134,7 @@ class BaseAgent(AgentProtocol):
         self,
         config: AgentConfig,
         provider: BaseLLMProvider,
-        logger_instance: Optional[Any] = None,
+        logger_instance: Any | None = None,
     ) -> None:
         """
         Initialize base agent.
@@ -352,7 +355,7 @@ class BaseAgent(AgentProtocol):
 
             yield f"\n\n[Error: {str(e)}]"
 
-    async def validate_input(self, context: AgentContext) -> tuple[bool, Optional[str]]:
+    async def validate_input(self, context: AgentContext) -> tuple[bool, str | None]:
         """
         Default validation - can be overridden by subclasses.
 

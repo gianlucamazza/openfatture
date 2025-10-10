@@ -10,21 +10,19 @@ The ensemble approach provides:
 - XGBoost (60%): Client behavior, invoice characteristics
 """
 
-from openfatture.ai.ml.models.prophet_model import (
-    ProphetModel,
-    ProphetPrediction,
-)
-
-from openfatture.ai.ml.models.xgboost_model import (
-    XGBoostModel,
-    XGBoostPrediction,
-    asymmetric_mae_loss,
-)
-
 from openfatture.ai.ml.models.ensemble import (
     CashFlowEnsemble,
     EnsemblePrediction,
     RiskLevel,
+)
+from openfatture.ai.ml.models.prophet_model import (
+    ProphetModel,
+    ProphetPrediction,
+)
+from openfatture.ai.ml.models.xgboost_model import (
+    XGBoostModel,
+    XGBoostPrediction,
+    asymmetric_mae_loss,
 )
 
 __all__ = [

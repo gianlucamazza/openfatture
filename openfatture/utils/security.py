@@ -25,14 +25,14 @@ class SecretsManager:
     - Azure Key Vault (future)
     """
 
-    def __init__(self, backend: str = "env"):
+    def __init__(self, backend: str = "env") -> None:
         """
         Initialize secrets manager.
 
         Args:
             backend: Secrets backend to use (env, vault, aws, azure)
         """
-        self.backend = backend
+        self.backend: str = backend
 
         if backend != "env":
             raise NotImplementedError(f"Backend '{backend}' not yet implemented")
@@ -55,7 +55,8 @@ class SecretsManager:
             3. Using backend-specific secret retrieval methods
         """
         if self.backend == "env":
-            return os.getenv(key, default)
+            value = os.getenv(key)
+            return value if value is not None else default
 
         # Additional backends not yet implemented
         # Raise early to help developers identify missing backend support
@@ -84,7 +85,7 @@ class DataEncryption:
     Use this for encrypting PII/sensitive data before storing in database.
     """
 
-    def __init__(self, encryption_key: bytes | None = None):
+    def __init__(self, encryption_key: bytes | None = None) -> None:
         """
         Initialize encryption.
 
@@ -92,16 +93,19 @@ class DataEncryption:
             encryption_key: Fernet encryption key (32 bytes, base64 encoded).
                           If None, reads from ENCRYPTION_KEY env var.
         """
+        key_bytes: bytes
         if encryption_key is None:
             # Try to load from environment
             key_str = os.getenv("ENCRYPTION_KEY")
             if key_str:
-                encryption_key = key_str.encode()
+                key_bytes = key_str.encode()
             else:
                 # Generate a new key (NOT recommended for production)
-                encryption_key = Fernet.generate_key()
+                key_bytes = Fernet.generate_key()
+        else:
+            key_bytes = encryption_key
 
-        self.cipher = Fernet(encryption_key)
+        self.cipher: Fernet = Fernet(key_bytes)
 
     def encrypt(self, plaintext: str) -> str:
         """
@@ -148,8 +152,8 @@ def validate_env_vars(required_vars: list[str]) -> dict[str, str]:
     Raises:
         ValueError: If any required variables are missing
     """
-    missing = []
-    values = {}
+    missing: list[str] = []
+    values: dict[str, str] = {}
 
     for var in required_vars:
         value = os.getenv(var)
@@ -196,7 +200,7 @@ def check_secrets_in_code(directory: Path) -> list[str]:
     Returns:
         List of potential issues found
     """
-    issues = []
+    issues: list[str] = []
     sensitive_patterns = [
         "password",
         "api_key",
@@ -227,8 +231,8 @@ class SecureConfig:
         pec_password = config.get_secret("PEC_PASSWORD")
     """
 
-    def __init__(self):
-        self.secrets_manager = SecretsManager()
+    def __init__(self) -> None:
+        self.secrets_manager: SecretsManager = SecretsManager()
 
     def get_secret(self, key: str, required: bool = True) -> str | None:
         """Get a secret value."""

@@ -96,13 +96,14 @@ https://github.com/user-attachments/assets/scenario_e_pec.mp4
 - ✅ **Smart Descriptions** - Auto-generate invoice descriptions from natural language
 - ✅ **Tax Suggestions** - AI recommends correct VAT rates and deductions
 - ✅ **Tool Calling** - AI can search invoices, query clients, and retrieve statistics
+- ✅ **Knowledge Retrieval** - RAG-powered normative snippets with citations (`openfatture ai rag`)
 - ✅ **Session Management** - Persistent conversations with context tracking
 - ✅ **Multi-Provider Support** - OpenAI, Anthropic, or local Ollama models
 - 📈 **Cash Flow Forecasting** - ML-based payment predictions (CLI stub available)
 - 🔍 **Compliance Checker** - AI validates invoices before SDI submission (CLI stub available)
 - 🧠 **Multi-Agent System** - LangGraph orchestration for complex workflows (planned)
 
-> **Status**: AI features are **now functional**! Access via interactive mode (`openfatture -i` → "AI Assistant" → "Chat") or CLI commands (`openfatture ai describe`, `openfatture ai suggest-vat`). Full LangGraph orchestration and advanced agents planned for Phase 4.3-4.4.
+> **Status**: AI features are **now functional**! Access via interactive mode (`openfatture -i` → "AI Assistant" → "Chat") or CLI commands (`openfatture ai describe`, `openfatture ai suggest-vat`, `openfatture ai rag ...`). Full LangGraph orchestration and advanced agents planned for Phase 4.3-4.4.
 
 ### Developer Experience
 - ⚡ **CLI-First** - Fast, keyboard-driven workflow

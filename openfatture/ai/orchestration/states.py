@@ -29,10 +29,10 @@ Example:
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkflowStatus(Enum):
@@ -82,24 +82,22 @@ class AgentResult(BaseModel):
     success: bool
     content: str
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence score (0-1)")
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    error: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class HumanReview(BaseModel):
     """Human review decision."""
 
     decision: ApprovalDecision
-    feedback: Optional[str] = None
-    reviewer: Optional[str] = None
+    feedback: str | None = None
+    reviewer: str | None = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class SharedContext(BaseModel):
@@ -115,11 +113,11 @@ class SharedContext(BaseModel):
     unpaid_invoices_value: float = 0.0
 
     # Recent data summaries
-    recent_clients: List[Dict[str, Any]] = Field(default_factory=list)
-    recent_invoices: List[Dict[str, Any]] = Field(default_factory=list)
+    recent_clients: list[dict[str, Any]] = Field(default_factory=list)
+    recent_invoices: list[dict[str, Any]] = Field(default_factory=list)
 
     # User preferences
-    default_tax_regime: Optional[str] = None
+    default_tax_regime: str | None = None
     default_payment_terms: int = 30  # days
 
     # Metadata
@@ -134,26 +132,25 @@ class BaseWorkflowState(BaseModel):
 
     # Workflow tracking
     workflow_id: str = Field(default_factory=lambda: str(uuid4()))
-    correlation_id: Optional[str] = None
+    correlation_id: str | None = None
     status: WorkflowStatus = WorkflowStatus.PENDING
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
 
     # Shared context
     context: SharedContext = Field(default_factory=SharedContext)
 
     # Error handling
-    errors: List[str] = Field(default_factory=list)
-    warnings: List[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
     # Metadata for extensibility
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     def add_error(self, error: str) -> None:
         """Add error and update status."""
@@ -198,22 +195,22 @@ class InvoiceCreationState(BaseWorkflowState):
     # User inputs
     user_input: str
     client_id: int
-    invoice_date: Optional[datetime] = None
-    payment_due_date: Optional[datetime] = None
+    invoice_date: datetime | None = None
+    payment_due_date: datetime | None = None
 
     # Agent results (populated by workflow)
-    description_result: Optional[AgentResult] = None
-    tax_result: Optional[AgentResult] = None
-    compliance_result: Optional[AgentResult] = None
+    description_result: AgentResult | None = None
+    tax_result: AgentResult | None = None
+    compliance_result: AgentResult | None = None
 
     # Human reviews (if checkpoints enabled)
-    description_review: Optional[HumanReview] = None
-    tax_review: Optional[HumanReview] = None
-    compliance_review: Optional[HumanReview] = None
+    description_review: HumanReview | None = None
+    tax_review: HumanReview | None = None
+    compliance_review: HumanReview | None = None
 
     # Final output
-    invoice_id: Optional[int] = None
-    invoice_xml_path: Optional[str] = None
+    invoice_id: int | None = None
+    invoice_xml_path: str | None = None
 
     # Configuration
     require_description_approval: bool = False
@@ -268,13 +265,13 @@ class ComplianceCheckState(BaseWorkflowState):
 
     # Check results
     rules_passed: bool = False
-    rules_issues: List[Dict[str, Any]] = Field(default_factory=list)
+    rules_issues: list[dict[str, Any]] = Field(default_factory=list)
 
     sdi_patterns_checked: bool = False
-    sdi_warnings: List[Dict[str, Any]] = Field(default_factory=list)
+    sdi_warnings: list[dict[str, Any]] = Field(default_factory=list)
 
     ai_analysis_performed: bool = False
-    ai_insights: Optional[str] = None
+    ai_insights: str | None = None
 
     # Final assessment
     is_compliant: bool = False
@@ -282,11 +279,11 @@ class ComplianceCheckState(BaseWorkflowState):
     risk_score: float = Field(default=0.0, ge=0.0, le=100.0)
 
     # Recommendations
-    fix_suggestions: List[str] = Field(default_factory=list)
-    sdi_approval_probability: Optional[float] = None
+    fix_suggestions: list[str] = Field(default_factory=list)
+    sdi_approval_probability: float | None = None
 
     # Human review (if critical issues found)
-    review: Optional[HumanReview] = None
+    review: HumanReview | None = None
     require_review_on_warnings: bool = True
 
 
@@ -307,26 +304,26 @@ class CashFlowAnalysisState(BaseWorkflowState):
     """
 
     # Input filters
-    client_id: Optional[int] = None
-    invoice_ids: Optional[List[int]] = None
+    client_id: int | None = None
+    invoice_ids: list[int] | None = None
     forecast_months: int = 3
 
     # ML model results
-    predictions: List[Dict[str, Any]] = Field(default_factory=list)
+    predictions: list[dict[str, Any]] = Field(default_factory=list)
     total_invoices_analyzed: int = 0
     failed_predictions: int = 0
 
     # Aggregated forecast
-    monthly_forecast: List[Dict[str, Any]] = Field(default_factory=list)
+    monthly_forecast: list[dict[str, Any]] = Field(default_factory=list)
     total_expected_revenue: float = 0.0
 
     # Risk analysis
-    high_risk_invoices: List[int] = Field(default_factory=list)
-    overdue_predictions: List[Dict[str, Any]] = Field(default_factory=list)
+    high_risk_invoices: list[int] = Field(default_factory=list)
+    overdue_predictions: list[dict[str, Any]] = Field(default_factory=list)
 
     # AI insights
-    insights: Optional[str] = None
-    recommendations: List[str] = Field(default_factory=list)
+    insights: str | None = None
+    recommendations: list[str] = Field(default_factory=list)
 
     # Model performance
     average_confidence: float = 0.0
@@ -352,7 +349,7 @@ class BatchProcessingState(BaseWorkflowState):
 
     # Batch configuration
     operation_type: str  # "validate", "generate_xml", "compliance_check", etc.
-    item_ids: List[int]  # Invoice IDs or Client IDs
+    item_ids: list[int]  # Invoice IDs or Client IDs
     batch_size: int = 10
     max_parallel: int = 5
 
@@ -363,16 +360,16 @@ class BatchProcessingState(BaseWorkflowState):
     failed_items: int = 0
 
     # Results
-    results: List[Dict[str, Any]] = Field(default_factory=list)
-    errors_detail: List[Dict[str, Any]] = Field(default_factory=list)
+    results: list[dict[str, Any]] = Field(default_factory=list)
+    errors_detail: list[dict[str, Any]] = Field(default_factory=list)
 
     # Performance
-    started_at: Optional[datetime] = None
+    started_at: datetime | None = None
     items_per_second: float = 0.0
-    estimated_completion: Optional[datetime] = None
+    estimated_completion: datetime | None = None
 
     # Resume support
-    checkpoint_ids: List[int] = Field(default_factory=list)  # Completed IDs
+    checkpoint_ids: list[int] = Field(default_factory=list)  # Completed IDs
     can_resume: bool = True
 
     @property
@@ -440,7 +437,7 @@ def create_compliance_workflow(
 
 def create_cash_flow_workflow(
     months: int = 3,
-    client_id: Optional[int] = None,
+    client_id: int | None = None,
 ) -> CashFlowAnalysisState:
     """Create a new cash flow analysis workflow state.
 
@@ -459,7 +456,7 @@ def create_cash_flow_workflow(
 
 def create_batch_workflow(
     operation_type: str,
-    item_ids: List[int],
+    item_ids: list[int],
     batch_size: int = 10,
 ) -> BatchProcessingState:
     """Create a new batch processing workflow state.

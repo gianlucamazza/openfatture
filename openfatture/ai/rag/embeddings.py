@@ -5,10 +5,11 @@ This module provides embedding generation using different providers:
 - Sentence Transformers (local models)
 """
 
-from abc import ABC, abstractmethod
-from typing import List, Optional
 import hashlib
 import json
+from abc import ABC, abstractmethod
+
+from sentence_transformers import SentenceTransformer
 
 from openfatture.ai.rag.config import RAGConfig
 from openfatture.utils.logging import get_logger
@@ -23,7 +24,7 @@ class EmbeddingStrategy(ABC):
     """
 
     @abstractmethod
-    async def embed_text(self, text: str) -> List[float]:
+    async def embed_text(self, text: str) -> list[float]:
         """Generate embedding for a single text.
 
         Args:
@@ -35,7 +36,7 @@ class EmbeddingStrategy(ABC):
         pass
 
     @abstractmethod
-    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts.
 
         Args:
@@ -82,7 +83,7 @@ class OpenAIEmbeddings(EmbeddingStrategy):
         self,
         api_key: str,
         model: str = "text-embedding-3-small",
-        cache: Optional[any] = None,
+        cache: any | None = None,
     ) -> None:
         """Initialize OpenAI embeddings.
 
@@ -106,7 +107,7 @@ class OpenAIEmbeddings(EmbeddingStrategy):
             dimension=self.dimension,
         )
 
-    async def embed_text(self, text: str) -> List[float]:
+    async def embed_text(self, text: str) -> list[float]:
         """Generate embedding for a single text."""
         # Check cache first
         if self.cache:
@@ -145,7 +146,7 @@ class OpenAIEmbeddings(EmbeddingStrategy):
             )
             raise
 
-    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts."""
         try:
             # Batch API call
@@ -219,7 +220,7 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
     def __init__(
         self,
         model_name: str = "all-MiniLM-L6-v2",
-        device: Optional[str] = None,
+        device: str | None = None,
     ) -> None:
         """Initialize Sentence Transformers embeddings.
 
@@ -229,15 +230,6 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
         """
         self.model_name_str = model_name
         self.device = device
-
-        # Lazy import (optional dependency)
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            raise ImportError(
-                "sentence-transformers not installed. "
-                "Install with: pip install sentence-transformers"
-            )
 
         # Load model
         self.model = SentenceTransformer(model_name, device=device)
@@ -249,16 +241,14 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
             device=device or "auto",
         )
 
-    async def embed_text(self, text: str) -> List[float]:
+    async def embed_text(self, text: str) -> list[float]:
         """Generate embedding for a single text."""
         try:
             # Encode (runs in thread pool to avoid blocking)
             import asyncio
 
             loop = asyncio.get_event_loop()
-            embedding = await loop.run_in_executor(
-                None, self.model.encode, text
-            )
+            embedding = await loop.run_in_executor(None, self.model.encode, text)
 
             logger.debug(
                 "embedding_generated",
@@ -276,16 +266,14 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
             )
             raise
 
-    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts."""
         try:
             # Batch encode
             import asyncio
 
             loop = asyncio.get_event_loop()
-            embeddings = await loop.run_in_executor(
-                None, self.model.encode, texts
-            )
+            embeddings = await loop.run_in_executor(None, self.model.encode, texts)
 
             logger.info(
                 "batch_embeddings_generated",
@@ -315,7 +303,9 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
         return self.model_name_str
 
 
-def create_embeddings(config: RAGConfig, api_key: Optional[str] = None, cache: Optional[any] = None) -> EmbeddingStrategy:
+def create_embeddings(
+    config: RAGConfig, api_key: str | None = None, cache: any | None = None
+) -> EmbeddingStrategy:
     """Factory function to create embedding strategy.
 
     Args:
@@ -345,6 +335,4 @@ def create_embeddings(config: RAGConfig, api_key: Optional[str] = None, cache: O
         )
 
     else:
-        raise ValueError(
-            f"Unsupported embedding provider: {config.embedding_provider}"
-        )
+        raise ValueError(f"Unsupported embedding provider: {config.embedding_provider}")

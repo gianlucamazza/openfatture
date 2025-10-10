@@ -262,6 +262,9 @@ class Pagamento(Base):
 
     # Importo
     importo: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    importo_pagato: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False, default=Decimal("0.00")
+    )
 
     # Date
     data_scadenza: Mapped[date] = mapped_column(Date, nullable=False)
@@ -289,6 +292,45 @@ class Pagamento(Base):
 
     def __repr__(self) -> str:
         return f"<Pagamento(id={self.id}, fattura_id={self.fattura_id}, importo={self.importo}, stato='{self.stato.value}')>"
+
+    @property
+    def importo_da_pagare(self) -> Decimal:
+        """Total amount due for the payment (alias of importo column)."""
+        return self.importo
+
+    @importo_da_pagare.setter
+    def importo_da_pagare(self, value: Decimal | float | str) -> None:
+        """Allow assignments using semantic name expected by services/tests."""
+        self.importo = Decimal(str(value))
+
+    @property
+    def saldo_residuo(self) -> Decimal:
+        """Outstanding balance still to be paid."""
+        outstanding = Decimal(self.importo_da_pagare) - Decimal(self.importo_pagato or 0)
+        if outstanding < Decimal("0.00"):
+            return Decimal("0.00")
+        return outstanding
+
+    def apply_payment(self, amount: Decimal, pagamento_effective_date: date | None = None) -> None:
+        """Record a payment allocation against this Pagamento."""
+        amount_decimal = Decimal(str(amount))
+        if amount_decimal <= Decimal("0.00"):
+            raise ValueError("Payment amount must be positive")
+
+        nuovo_pagato = Decimal(self.importo_pagato or 0) + amount_decimal
+        if nuovo_pagato > Decimal(self.importo_da_pagare):
+            nuovo_pagato = Decimal(self.importo_da_pagare)
+
+        self.importo_pagato = nuovo_pagato
+
+        if self.importo_pagato >= self.importo_da_pagare:
+            self.stato = StatoPagamento.PAGATO
+            if pagamento_effective_date:
+                self.data_pagamento = pagamento_effective_date
+        elif self.importo_pagato > Decimal("0.00"):
+            self.stato = StatoPagamento.PAGATO_PARZIALE
+            if pagamento_effective_date and self.data_pagamento is None:
+                self.data_pagamento = pagamento_effective_date
 
 
 class LogSDI(Base):

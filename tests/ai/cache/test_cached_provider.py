@@ -1,9 +1,10 @@
 """Tests for CachedProvider wrapper."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from openfatture.ai.cache import CachedProvider, CacheConfig, LRUCache
+import pytest
+
+from openfatture.ai.cache import CacheConfig, CachedProvider, LRUCache
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 from openfatture.ai.providers.base import BaseLLMProvider
@@ -266,9 +267,7 @@ class TestCachedProvider:
         cached = CachedProvider(mock_provider)
 
         try:
-            usage = UsageMetrics(
-                prompt_tokens=10, completion_tokens=5, total_tokens=15
-            )
+            usage = UsageMetrics(prompt_tokens=10, completion_tokens=5, total_tokens=15)
             cost = cached.estimate_cost(usage)
             assert cost == 0.001
             mock_provider.estimate_cost.assert_called_once_with(usage)

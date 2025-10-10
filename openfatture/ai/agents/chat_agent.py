@@ -1,10 +1,10 @@
 """Conversational Chat Agent with tool calling capabilities."""
 
-from typing import Any, Optional
+from typing import Any
 
 from openfatture.ai.domain import AgentConfig, BaseAgent, Message, Role
 from openfatture.ai.domain.context import ChatContext
-from openfatture.ai.domain.response import AgentResponse, ResponseStatus
+from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers import BaseLLMProvider
 from openfatture.ai.tools import ToolRegistry, get_tool_registry
 from openfatture.utils.logging import get_logger
@@ -39,7 +39,7 @@ class ChatAgent(BaseAgent):
     def __init__(
         self,
         provider: BaseLLMProvider,
-        tool_registry: Optional[ToolRegistry] = None,
+        tool_registry: ToolRegistry | None = None,
         enable_tools: bool = True,
         enable_streaming: bool = True,
     ) -> None:
@@ -61,6 +61,7 @@ class ChatAgent(BaseAgent):
             max_tokens=1500,  # Enough for detailed responses
             tools_enabled=enable_tools,
             memory_enabled=True,
+            rag_enabled=True,
             streaming_enabled=enable_streaming,
         )
 
@@ -78,7 +79,7 @@ class ChatAgent(BaseAgent):
             streaming_enabled=enable_streaming,
         )
 
-    async def validate_input(self, context: ChatContext) -> tuple[bool, Optional[str]]:
+    async def validate_input(self, context: ChatContext) -> tuple[bool, str | None]:
         """
         Validate chat context before processing.
 
@@ -187,6 +188,35 @@ class ChatAgent(BaseAgent):
                 ]
             )
 
+        if context.relevant_documents:
+            parts.extend(
+                [
+                    "",
+                    "Documenti rilevanti dal sistema (fatture correlate):",
+                ]
+            )
+            for doc in context.relevant_documents[:5]:
+                parts.append(f"- {doc}")
+
+        if context.knowledge_snippets:
+            parts.extend(
+                [
+                    "",
+                    "Fonti normative e note operative da consultare (cita come [numero]):",
+                ]
+            )
+            for idx, snippet in enumerate(context.knowledge_snippets[:5], 1):
+                citation = snippet.get("citation") or snippet.get("source") or f"Fonte {idx}"
+                excerpt = snippet.get("excerpt", "")
+                parts.append(f"[{idx}] {citation} — {excerpt}")
+
+            parts.extend(
+                [
+                    "",
+                    "Usa le fonti sopra per supportare la risposta e indica il riferimento con [numero].",
+                ]
+            )
+
         return "\n".join(parts)
 
     async def _parse_response(
@@ -290,7 +320,7 @@ class ChatAgent(BaseAgent):
 
         return results
 
-    def get_available_tools(self, category: Optional[str] = None) -> list[str]:
+    def get_available_tools(self, category: str | None = None) -> list[str]:
         """
         Get list of available tool names.
 

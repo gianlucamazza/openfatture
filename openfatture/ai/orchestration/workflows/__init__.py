@@ -27,19 +27,17 @@ Example:
     >>> print(f"Invoice created: {result.invoice_id}")
 """
 
-from openfatture.ai.orchestration.workflows.invoice_creation import (
-    InvoiceCreationWorkflow,
-    create_invoice_workflow,
+from openfatture.ai.orchestration.workflows.cash_flow_analysis import (
+    CashFlowAnalysisWorkflow,
+    create_cash_flow_workflow,
 )
-
 from openfatture.ai.orchestration.workflows.compliance_check import (
     ComplianceCheckWorkflow,
     create_compliance_workflow,
 )
-
-from openfatture.ai.orchestration.workflows.cash_flow_analysis import (
-    CashFlowAnalysisWorkflow,
-    create_cash_flow_workflow,
+from openfatture.ai.orchestration.workflows.invoice_creation import (
+    InvoiceCreationWorkflow,
+    create_invoice_workflow,
 )
 
 __all__ = [

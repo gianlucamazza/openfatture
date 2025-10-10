@@ -21,17 +21,19 @@ Example Usage:
     >>> similar = await rag.find_similar_invoices(invoice_id=123)
 """
 
-from typing import List, Optional
-from openfatture.ai.rag.config import RAGConfig, get_rag_config, DEFAULT_RAG_CONFIG
+from typing import Optional
+
+from openfatture.ai.rag.config import DEFAULT_RAG_CONFIG, RAGConfig, get_rag_config
 from openfatture.ai.rag.embeddings import (
     EmbeddingStrategy,
     OpenAIEmbeddings,
     SentenceTransformerEmbeddings,
     create_embeddings,
 )
-from openfatture.ai.rag.vector_store import VectorStore
 from openfatture.ai.rag.indexing import InvoiceIndexer
-from openfatture.ai.rag.retrieval import SemanticRetriever, RetrievalResult
+from openfatture.ai.rag.knowledge_indexer import KnowledgeIndexer
+from openfatture.ai.rag.retrieval import RetrievalResult, SemanticRetriever
+from openfatture.ai.rag.vector_store import VectorStore
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -76,8 +78,8 @@ class RAGSystem:
     @classmethod
     async def create(
         cls,
-        config: Optional[RAGConfig] = None,
-        api_key: Optional[str] = None,
+        config: RAGConfig | None = None,
+        api_key: str | None = None,
     ) -> "RAGSystem":
         """Create and initialize RAG system.
 
@@ -106,7 +108,7 @@ class RAGSystem:
     async def index_all_invoices(
         self,
         batch_size: int = 100,
-        year: Optional[int] = None,
+        year: int | None = None,
     ) -> int:
         """Index all invoices.
 
@@ -137,9 +139,9 @@ class RAGSystem:
         self,
         query: str,
         top_k: int = 5,
-        client_id: Optional[int] = None,
-        min_similarity: Optional[float] = None,
-    ) -> List[RetrievalResult]:
+        client_id: int | None = None,
+        min_similarity: float | None = None,
+    ) -> list[RetrievalResult]:
         """Semantic search for invoices.
 
         Args:
@@ -162,7 +164,7 @@ class RAGSystem:
         self,
         invoice_id: int,
         top_k: int = 5,
-    ) -> List[RetrievalResult]:
+    ) -> list[RetrievalResult]:
         """Find invoices similar to a given invoice.
 
         Args:
@@ -180,9 +182,9 @@ class RAGSystem:
     async def get_client_invoices(
         self,
         client_id: int,
-        query: Optional[str] = None,
+        query: str | None = None,
         top_k: int = 5,
-    ) -> List[RetrievalResult]:
+    ) -> list[RetrievalResult]:
         """Get invoices for a specific client.
 
         Args:
@@ -229,6 +231,7 @@ __all__ = [
     # Components
     "VectorStore",
     "InvoiceIndexer",
+    "KnowledgeIndexer",
     "SemanticRetriever",
     "RetrievalResult",
     # Embeddings

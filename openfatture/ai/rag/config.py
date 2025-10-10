@@ -4,8 +4,9 @@ This module defines configuration settings for the RAG system using Pydantic.
 """
 
 from pathlib import Path
-from typing import Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RAGConfig(BaseModel):
@@ -34,6 +35,16 @@ class RAGConfig(BaseModel):
     collection_name: str = Field(
         default="openfatture",
         description="ChromaDB collection name",
+    )
+
+    knowledge_collection_name: str = Field(
+        default="openfatture_kb",
+        description="ChromaDB collection name for knowledge base",
+    )
+
+    knowledge_manifest_path: Path = Field(
+        default=Path("openfatture/ai/rag/sources.json"),
+        description="Manifest file containing knowledge base sources",
     )
 
     # Embedding settings
@@ -100,11 +111,7 @@ class RAGConfig(BaseModel):
         v.mkdir(parents=True, exist_ok=True)
         return v
 
-    class Config:
-        """Pydantic config."""
-
-        frozen = False
-        extra = "forbid"
+    model_config = ConfigDict(frozen=False, extra="forbid")
 
 
 # Default configuration
@@ -130,20 +137,18 @@ def get_rag_config() -> RAGConfig:
 
     return RAGConfig(
         enabled=os.getenv("OPENFATTURE_RAG_ENABLED", "true").lower() == "true",
-        persist_directory=Path(
-            os.getenv("OPENFATTURE_RAG_PERSIST_DIR", ".chroma")
-        ),
+        persist_directory=Path(os.getenv("OPENFATTURE_RAG_PERSIST_DIR", ".chroma")),
         collection_name=os.getenv("OPENFATTURE_RAG_COLLECTION", "openfatture"),
-        embedding_provider=os.getenv(
-            "OPENFATTURE_RAG_EMBEDDING_PROVIDER", "openai"
+        knowledge_collection_name=os.getenv("OPENFATTURE_RAG_KB_COLLECTION", "openfatture_kb"),
+        knowledge_manifest_path=Path(
+            os.getenv(
+                "OPENFATTURE_RAG_KB_MANIFEST",
+                "openfatture/ai/rag/sources.json",
+            )
         ),
-        embedding_model=os.getenv(
-            "OPENFATTURE_RAG_EMBEDDING_MODEL", "text-embedding-3-small"
-        ),
+        embedding_provider=os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER", "openai"),
+        embedding_model=os.getenv("OPENFATTURE_RAG_EMBEDDING_MODEL", "text-embedding-3-small"),
         top_k=int(os.getenv("OPENFATTURE_RAG_TOP_K", "5")),
-        similarity_threshold=float(
-            os.getenv("OPENFATTURE_RAG_SIMILARITY_THRESHOLD", "0.7")
-        ),
-        enable_caching=os.getenv("OPENFATTURE_RAG_ENABLE_CACHING", "true").lower()
-        == "true",
+        similarity_threshold=float(os.getenv("OPENFATTURE_RAG_SIMILARITY_THRESHOLD", "0.7")),
+        enable_caching=os.getenv("OPENFATTURE_RAG_ENABLE_CACHING", "true").lower() == "true",
     )

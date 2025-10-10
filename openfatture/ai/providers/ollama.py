@@ -2,7 +2,7 @@
 
 import time
 from collections.abc import AsyncIterator
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -65,9 +65,9 @@ class OllamaProvider(BaseLLMProvider):
     async def generate(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AgentResponse:
         """Generate response using Ollama API."""
@@ -178,9 +178,9 @@ class OllamaProvider(BaseLLMProvider):
     async def stream(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """Stream response tokens from Ollama."""
@@ -296,7 +296,7 @@ class OllamaProvider(BaseLLMProvider):
     def _messages_to_prompt(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
     ) -> str:
         """
         Convert messages to a single prompt string.

@@ -7,7 +7,7 @@ with TTL support.
 import asyncio
 from collections import OrderedDict
 from datetime import datetime
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from openfatture.ai.cache.strategy import CacheEntry, CacheStrategy
 from openfatture.utils.logging import get_logger
@@ -37,7 +37,7 @@ class LRUCache(CacheStrategy[T]):
     def __init__(
         self,
         max_size: int = 1000,
-        default_ttl: Optional[int] = 3600,
+        default_ttl: int | None = 3600,
         cleanup_interval: int = 300,
     ) -> None:
         """Initialize LRU cache.
@@ -63,7 +63,7 @@ class LRUCache(CacheStrategy[T]):
         self._lock = asyncio.Lock()
 
         # Cleanup task
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
         self._start_cleanup_task()
 
     def _start_cleanup_task(self) -> None:
@@ -88,7 +88,7 @@ class LRUCache(CacheStrategy[T]):
             except Exception as e:
                 logger.error("cache_cleanup_error", error=str(e))
 
-    async def get(self, key: str) -> Optional[T]:
+    async def get(self, key: str) -> T | None:
         """Retrieve value from cache.
 
         Args:
@@ -127,7 +127,7 @@ class LRUCache(CacheStrategy[T]):
 
             return entry.value
 
-    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: T, ttl: int | None = None) -> None:
         """Store value in cache.
 
         Args:
@@ -242,9 +242,7 @@ class LRUCache(CacheStrategy[T]):
             Number of entries removed
         """
         async with self._lock:
-            expired_keys = [
-                key for key, entry in self._cache.items() if entry.is_expired()
-            ]
+            expired_keys = [key for key, entry in self._cache.items() if entry.is_expired()]
 
             for key in expired_keys:
                 self._cache.pop(key)

@@ -3,8 +3,8 @@
 This module provides semantic search and retrieval functionality.
 """
 
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from typing import Any
 
 from openfatture.ai.rag.vector_store import VectorStore
 from openfatture.utils.logging import get_logger
@@ -25,10 +25,10 @@ class RetrievalResult:
     """
 
     document: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     similarity: float
-    invoice_id: Optional[int] = None
-    client_name: Optional[str] = None
+    invoice_id: int | None = None
+    client_name: str | None = None
 
     def __post_init__(self):
         """Extract common fields from metadata."""
@@ -70,10 +70,10 @@ class SemanticRetriever:
         self,
         query: str,
         top_k: int = 5,
-        client_id: Optional[int] = None,
-        min_similarity: Optional[float] = None,
-        filters: Optional[Dict[str, Any]] = None,
-    ) -> List[RetrievalResult]:
+        client_id: int | None = None,
+        min_similarity: float | None = None,
+        filters: dict[str, Any] | None = None,
+    ) -> list[RetrievalResult]:
         """Retrieve relevant documents.
 
         Args:
@@ -126,7 +126,7 @@ class SemanticRetriever:
         self,
         invoice_id: int,
         top_k: int = 5,
-    ) -> List[RetrievalResult]:
+    ) -> list[RetrievalResult]:
         """Find invoices similar to a given invoice.
 
         Args:
@@ -157,9 +157,9 @@ class SemanticRetriever:
     async def retrieve_by_client(
         self,
         client_id: int,
-        query: Optional[str] = None,
+        query: str | None = None,
         top_k: int = 5,
-    ) -> List[RetrievalResult]:
+    ) -> list[RetrievalResult]:
         """Retrieve invoices for a specific client.
 
         Args:
@@ -199,7 +199,7 @@ class SemanticRetriever:
         start_date: str,
         end_date: str,
         top_k: int = 5,
-    ) -> List[RetrievalResult]:
+    ) -> list[RetrievalResult]:
         """Retrieve invoices within a date range.
 
         Args:
@@ -240,7 +240,7 @@ class SemanticRetriever:
         query: str,
         min_amount: float,
         top_k: int = 5,
-    ) -> List[RetrievalResult]:
+    ) -> list[RetrievalResult]:
         """Retrieve high-value invoices.
 
         Args:
@@ -258,11 +258,7 @@ class SemanticRetriever:
         )
 
         # Filter by amount
-        filtered_results = [
-            r
-            for r in results
-            if r.metadata.get("amount", 0) >= min_amount
-        ]
+        filtered_results = [r for r in results if r.metadata.get("amount", 0) >= min_amount]
 
         # Sort by amount (descending)
         filtered_results.sort(
@@ -278,7 +274,7 @@ class SemanticRetriever:
 
         return filtered_results[:top_k]
 
-    def format_results(self, results: List[RetrievalResult]) -> str:
+    def format_results(self, results: list[RetrievalResult]) -> str:
         """Format retrieval results as text.
 
         Args:

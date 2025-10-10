@@ -3,12 +3,9 @@
 This module handles indexing of invoices and related documents into the vector store.
 """
 
-from typing import Dict, List, Optional
-from datetime import datetime
-
 from openfatture.ai.rag.vector_store import VectorStore
 from openfatture.storage.database.base import SessionLocal
-from openfatture.storage.database.models import Fattura, Cliente
+from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -42,7 +39,7 @@ class InvoiceIndexer:
     async def index_all_invoices(
         self,
         batch_size: int = 100,
-        year: Optional[int] = None,
+        year: int | None = None,
     ) -> int:
         """Index all invoices in the database.
 
@@ -162,7 +159,7 @@ class InvoiceIndexer:
         finally:
             db.close()
 
-    async def _index_invoice_batch(self, fatture: List[Fattura]) -> List[str]:
+    async def _index_invoice_batch(self, fatture: list[Fattura]) -> list[str]:
         """Index a batch of invoices.
 
         Args:
@@ -218,7 +215,7 @@ class InvoiceIndexer:
 
         return "\n".join(parts)
 
-    def _create_invoice_metadata(self, fattura: Fattura) -> Dict:
+    def _create_invoice_metadata(self, fattura: Fattura) -> dict:
         """Create metadata for invoice document.
 
         Args:

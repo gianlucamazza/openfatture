@@ -2,9 +2,9 @@
 
 from collections.abc import Callable
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ToolParameterType(str, Enum):
@@ -29,9 +29,9 @@ class ToolParameter(BaseModel):
     type: ToolParameterType
     description: str
     required: bool = True
-    enum: Optional[list[str]] = None
-    default: Optional[Any] = None
-    items: Optional[dict[str, Any]] = None  # For array types
+    enum: list[str] | None = None
+    default: Any | None = None
+    items: dict[str, Any] | None = None  # For array types
 
     def to_openai_schema(self) -> dict[str, Any]:
         """Convert to OpenAI function parameter schema."""
@@ -79,10 +79,7 @@ class Tool(BaseModel):
     examples: list[str] = Field(default_factory=list, description="Usage examples")
     tags: list[str] = Field(default_factory=list)
 
-    class Config:
-        """Pydantic configuration."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_openai_function(self) -> dict[str, Any]:
         """
@@ -185,8 +182,8 @@ class ToolResult(BaseModel):
 
     success: bool
     data: Any = None
-    error: Optional[str] = None
-    error_type: Optional[str] = None
+    error: str | None = None
+    error_type: str | None = None
     tool_name: str
     metadata: dict[str, Any] = Field(default_factory=dict)
 

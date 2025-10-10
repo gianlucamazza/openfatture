@@ -155,7 +155,9 @@ class Settings(BaseSettings):
     # Vector Store (for AI)
     vector_store_path: Path = Field(default=Path.home() / ".openfatture" / "vector_store")
 
-    @field_validator("data_dir", "archivio_dir", "certificates_dir", "vector_store_path", "ai_chat_sessions_dir")
+    @field_validator(
+        "data_dir", "archivio_dir", "certificates_dir", "vector_store_path", "ai_chat_sessions_dir"
+    )
     @classmethod
     def create_dir_if_not_exists(cls, v: Path) -> Path:
         """Create directory if it doesn't exist."""

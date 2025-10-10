@@ -9,6 +9,8 @@ from pathlib import Path
 
 from cryptography import x509
 from cryptography.hazmat.primitives.serialization import pkcs7
+from pyasn1.codec.der import decoder
+from pyasn1_modules import rfc2315
 
 
 class SignatureVerifier:
@@ -105,10 +107,6 @@ class SignatureVerifier:
             # PKCS7 SignedData structure contains the original content
             # This is a simplified approach - works for standard CAdES-BES enveloped signatures
 
-            # Try to parse as ASN.1 DER
-            from pyasn1.codec.der import decoder
-            from pyasn1_modules import rfc2315
-
             content_info, _ = decoder.decode(signed_data, asn1Spec=rfc2315.ContentInfo())
 
             # Check if it's signed data
@@ -133,14 +131,6 @@ class SignatureVerifier:
 
             return True, None, original_content
 
-        except ImportError:
-            # Fallback: if pyasn1 not available, try basic binary extraction
-            # This is a very basic fallback that may not work in all cases
-            return (
-                False,
-                "Content extraction requires pyasn1 library. Install with: pip install pyasn1 pyasn1-modules",
-                None,
-            )
         except Exception as e:
             return False, f"Content extraction failed: {e}", None
 

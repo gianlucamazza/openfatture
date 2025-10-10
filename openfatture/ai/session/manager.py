@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from typing import Optional
 
 from openfatture.ai.session.models import ChatSession, SessionStatus
 from openfatture.utils.config import get_settings
@@ -26,7 +25,7 @@ class SessionManager:
     Format: {session_id}.json
     """
 
-    def __init__(self, sessions_dir: Optional[Path] = None) -> None:
+    def __init__(self, sessions_dir: Path | None = None) -> None:
         """
         Initialize session manager.
 
@@ -93,7 +92,7 @@ class SessionManager:
             )
             return False
 
-    def load_session(self, session_id: str) -> Optional[ChatSession]:
+    def load_session(self, session_id: str) -> ChatSession | None:
         """
         Load session from disk.
 
@@ -180,8 +179,8 @@ class SessionManager:
 
     def list_sessions(
         self,
-        status: Optional[SessionStatus] = None,
-        limit: Optional[int] = None,
+        status: SessionStatus | None = None,
+        limit: int | None = None,
     ) -> list[ChatSession]:
         """
         List all sessions.
@@ -340,8 +339,8 @@ class SessionManager:
         self,
         session_id: str,
         format: str = "markdown",
-        output_path: Optional[Path] = None,
-    ) -> Optional[str]:
+        output_path: Path | None = None,
+    ) -> str | None:
         """
         Export session to file.
 

@@ -2,13 +2,11 @@
 
 import time
 from collections.abc import AsyncIterator
-from typing import Any, Optional
+from typing import Any
 
 from anthropic import (
-    HUMAN_PROMPT,
-    AI_PROMPT,
-    AsyncAnthropic,
     AnthropicError,
+    AsyncAnthropic,
     RateLimitError,
 )
 
@@ -55,7 +53,7 @@ class AnthropicProvider(BaseLLMProvider):
         temperature: float = 0.7,
         max_tokens: int = 2000,
         timeout: int = 30,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
         enable_prompt_caching: bool = True,
     ) -> None:
         """
@@ -91,9 +89,9 @@ class AnthropicProvider(BaseLLMProvider):
     async def generate(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AgentResponse:
         """Generate response using Anthropic API."""
@@ -206,9 +204,9 @@ class AnthropicProvider(BaseLLMProvider):
     async def stream(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """Stream response tokens from Anthropic."""
@@ -257,6 +255,7 @@ class AnthropicProvider(BaseLLMProvider):
             # Use official Anthropic token counter (synchronous)
             # Note: Anthropic's count_tokens is a sync method
             import asyncio
+
             loop = asyncio.get_event_loop()
 
             if loop.is_running():

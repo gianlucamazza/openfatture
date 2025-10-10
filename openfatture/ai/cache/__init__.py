@@ -24,8 +24,8 @@ Example Usage:
 """
 
 from openfatture.ai.cache.config import (
-    CacheConfig,
     DEFAULT_CACHE_CONFIG,
+    CacheConfig,
     get_cache_config,
 )
 from openfatture.ai.cache.memory import LRUCache

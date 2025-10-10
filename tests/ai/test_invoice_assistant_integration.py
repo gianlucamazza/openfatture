@@ -5,14 +5,13 @@ that simulate real LLM API behavior.
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
 from openfatture.ai.config import AISettings
 from openfatture.ai.domain.context import InvoiceContext
-from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.storage.database.models import Cliente
@@ -26,7 +25,7 @@ def ai_settings():
         openai_api_key="sk-test-key",
         openai_model="gpt-5",
         temperature=0.7,
-        max_tokens=800
+        max_tokens=800,
     )
 
 
@@ -37,7 +36,7 @@ def sample_cliente_ai():
         id=1,
         denominazione="Acme Corporation",
         partita_iva="12345678901",
-        codice_destinatario="ABC1234"
+        codice_destinatario="ABC1234",
     )
 
 
@@ -60,9 +59,9 @@ def mock_provider_with_response():
                     prompt_tokens=150,
                     completion_tokens=250,
                     total_tokens=400,
-                    estimated_cost_usd=0.01
+                    estimated_cost_usd=0.01,
                 ),
-                latency_ms=500.0
+                latency_ms=500.0,
             )
 
         provider.generate = AsyncMock(side_effect=mock_generate)
@@ -92,15 +91,11 @@ class TestInvoiceAssistantIntegration:
             "deliverables": [
                 "Documentazione architetturale",
                 "Codice sorgente",
-                "Specifiche tecniche"
+                "Specifiche tecniche",
             ],
-            "competenze": [
-                "Architettura software",
-                "Sviluppo web",
-                "API REST"
-            ],
+            "competenze": ["Architettura software", "Sviluppo web", "API REST"],
             "durata_ore": 3.0,
-            "note": "Consulenza tecnica per definizione architettura"
+            "note": "Consulenza tecnica per definizione architettura",
         }
 
         # Create provider and agent
@@ -111,7 +106,7 @@ class TestInvoiceAssistantIntegration:
         context = InvoiceContext(
             user_input="3 ore consulenza web",
             servizio_base="3 ore consulenza web",
-            ore_lavorate=3.0
+            ore_lavorate=3.0,
         )
 
         # Execute
@@ -139,14 +134,10 @@ class TestInvoiceAssistantIntegration:
                 "- Sistema di autenticazione JWT\n\n"
                 "Durata: 8 ore"
             ),
-            "deliverables": [
-                "Codice backend",
-                "API REST",
-                "Documentazione OpenAPI"
-            ],
+            "deliverables": ["Codice backend", "API REST", "Documentazione OpenAPI"],
             "competenze": ["Python", "FastAPI", "PostgreSQL", "JWT"],
             "durata_ore": 8.0,
-            "note": "Implementazione completa backend"
+            "note": "Implementazione completa backend",
         }
 
         provider = mock_provider_with_response(mock_response)
@@ -160,7 +151,7 @@ class TestInvoiceAssistantIntegration:
             progetto="Sistema E-commerce",
             tecnologie=["Python", "FastAPI", "PostgreSQL"],
             cliente=sample_cliente_ai,
-            deliverables=["API REST", "Documentazione"]
+            deliverables=["API REST", "Documentazione"],
         )
 
         response = await agent.execute(context)
@@ -176,11 +167,7 @@ class TestInvoiceAssistantIntegration:
         agent = InvoiceAssistantAgent(provider=provider)
 
         # Invalid context (empty servizio_base)
-        context = InvoiceContext(
-            user_input="",
-            servizio_base="",
-            ore_lavorate=5.0
-        )
+        context = InvoiceContext(user_input="", servizio_base="", ore_lavorate=5.0)
 
         response = await agent.execute(context)
 
@@ -198,11 +185,7 @@ class TestInvoiceAssistantIntegration:
 
         agent = InvoiceAssistantAgent(provider=provider)
 
-        context = InvoiceContext(
-            user_input="test",
-            servizio_base="test service",
-            ore_lavorate=1.0
-        )
+        context = InvoiceContext(user_input="test", servizio_base="test service", ore_lavorate=1.0)
 
         response = await agent.execute(context)
 
@@ -216,7 +199,7 @@ class TestInvoiceAssistantIntegration:
             "descrizione_completa": "Test description",
             "deliverables": ["Test"],
             "competenze": ["Testing"],
-            "durata_ore": 1.0
+            "durata_ore": 1.0,
         }
 
         provider = mock_provider_with_response(mock_response)
@@ -225,9 +208,7 @@ class TestInvoiceAssistantIntegration:
         # Execute 3 times
         for i in range(3):
             context = InvoiceContext(
-                user_input=f"test {i}",
-                servizio_base=f"test service {i}",
-                ore_lavorate=1.0 + i
+                user_input=f"test {i}", servizio_base=f"test service {i}", ore_lavorate=1.0 + i
             )
             await agent.execute(context)
 
@@ -243,7 +224,7 @@ class TestInvoiceAssistantIntegration:
             "descrizione_completa": "Professional web consulting",
             "deliverables": ["Code", "Documentation"],
             "competenze": ["Web Development"],
-            "durata_ore": 2.0
+            "durata_ore": 2.0,
         }
 
         provider = mock_provider_with_response(mock_response)
@@ -253,7 +234,7 @@ class TestInvoiceAssistantIntegration:
             user_input="web consulting",
             servizio_base="web consulting",
             ore_lavorate=2.0,
-            lingua_preferita="en"
+            lingua_preferita="en",
         )
 
         response = await agent.execute(context)
@@ -267,17 +248,13 @@ class TestInvoiceAssistantIntegration:
             "descrizione_completa": "Test",
             "deliverables": [],
             "competenze": [],
-            "durata_ore": 1.0
+            "durata_ore": 1.0,
         }
 
         provider = mock_provider_with_response(mock_response)
         agent = InvoiceAssistantAgent(provider=provider)
 
-        context = InvoiceContext(
-            user_input="test",
-            servizio_base="test",
-            ore_lavorate=1.0
-        )
+        context = InvoiceContext(user_input="test", servizio_base="test", ore_lavorate=1.0)
 
         await agent.execute(context)
 

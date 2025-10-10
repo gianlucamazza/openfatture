@@ -25,7 +25,9 @@ def interactive_config_wizard() -> None:
     env_file = Path(".env")
     if not env_file.exists():
         console.print("[red]File .env non trovato![/red]")
-        console.print("[yellow]Esegui prima l'inizializzazione: Setup > Inizializza OpenFatture[/yellow]\n")
+        console.print(
+            "[yellow]Esegui prima l'inizializzazione: Setup > Inizializza OpenFatture[/yellow]\n"
+        )
         return
 
     # Load current settings
@@ -284,7 +286,11 @@ def edit_ai_config(env_file: Path, settings) -> None:
     provider = questionary.select(
         "Provider AI",
         choices=["anthropic", "openai", "ollama"],
-        default=current_provider if current_provider in ["anthropic", "openai", "ollama"] else "anthropic",
+        default=(
+            current_provider
+            if current_provider in ["anthropic", "openai", "ollama"]
+            else "anthropic"
+        ),
         style=openfatture_style,
     ).ask()
     if provider:
@@ -297,22 +303,22 @@ def edit_ai_config(env_file: Path, settings) -> None:
     if provider == "anthropic":
         model_choices = [
             "claude-3-5-sonnet-20241022",  # Latest, best quality
-            "claude-3-5-haiku-20241022",   # Fast & cheap
-            "claude-3-opus-20240229",      # Most powerful
+            "claude-3-5-haiku-20241022",  # Fast & cheap
+            "claude-3-opus-20240229",  # Most powerful
         ]
     elif provider == "openai":
         model_choices = [
-            "gpt-4o",          # Latest multimodal
-            "gpt-4o-mini",     # Cost-effective
-            "gpt-4-turbo",     # Powerful
+            "gpt-4o",  # Latest multimodal
+            "gpt-4o-mini",  # Cost-effective
+            "gpt-4-turbo",  # Powerful
         ]
     else:  # ollama
         model_choices = [
-            "llama3.2",        # Latest Llama
-            "llama3.1",        # Stable
-            "mistral",         # Good alternative
-            "codellama",       # Code-focused
-            "Custom...",       # Allow manual input
+            "llama3.2",  # Latest Llama
+            "llama3.1",  # Stable
+            "mistral",  # Good alternative
+            "codellama",  # Code-focused
+            "Custom...",  # Allow manual input
         ]
 
     model = questionary.select(
@@ -355,7 +361,9 @@ def edit_ai_config(env_file: Path, settings) -> None:
 
     # Show helpful info based on provider
     if provider == "anthropic":
-        console.print("\n[dim]💡 Anthropic API key: https://console.anthropic.com/settings/keys[/dim]")
+        console.print(
+            "\n[dim]💡 Anthropic API key: https://console.anthropic.com/settings/keys[/dim]"
+        )
     elif provider == "openai":
         console.print("\n[dim]💡 OpenAI API key: https://platform.openai.com/api-keys[/dim]")
     else:  # ollama
@@ -426,10 +434,7 @@ def edit_ai_config(env_file: Path, settings) -> None:
             "get_client_stats",
         ]
 
-        current_tools_str = env_dict.get(
-            "AI_ENABLED_TOOLS",
-            ",".join(all_tools)
-        )
+        current_tools_str = env_dict.get("AI_ENABLED_TOOLS", ",".join(all_tools))
         current_tools = [t.strip() for t in current_tools_str.split(",")]
 
         selected_tools = questionary.checkbox(

@@ -30,18 +30,17 @@ Example Usage:
     >>> print(f"Expected payment delay: {prediction.expected_days:.1f} days")
 """
 
-from openfatture.ai.ml.features import (
-    FeaturePipeline,
-    TemporalFeatureExtractor,
-    ClientBehaviorFeatureExtractor,
-    InvoiceFeatureExtractor,
-    FeatureSchema,
-)
-
 from openfatture.ai.ml.data_loader import (
-    InvoiceDataLoader,
     Dataset,
     DatasetMetadata,
+    InvoiceDataLoader,
+)
+from openfatture.ai.ml.features import (
+    ClientBehaviorFeatureExtractor,
+    FeaturePipeline,
+    FeatureSchema,
+    InvoiceFeatureExtractor,
+    TemporalFeatureExtractor,
 )
 
 __all__ = [

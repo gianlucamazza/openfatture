@@ -2,7 +2,7 @@
 
 import time
 from collections.abc import AsyncIterator
-from typing import Any, Optional, Type
+from typing import Any
 
 from openai import AsyncOpenAI, OpenAIError, RateLimitError
 from pydantic import BaseModel
@@ -15,7 +15,6 @@ from openfatture.ai.providers.base import (
     ProviderError,
     ProviderRateLimitError,
     ProviderTimeoutError,
-    ProviderUnavailableError,
 )
 from openfatture.utils.logging import get_logger
 
@@ -64,7 +63,7 @@ class OpenAIProvider(BaseLLMProvider):
         temperature: float = 0.7,
         max_tokens: int = 2000,
         timeout: int = 30,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
     ) -> None:
         """
         Initialize OpenAI provider.
@@ -110,9 +109,9 @@ class OpenAIProvider(BaseLLMProvider):
     async def generate(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AgentResponse:
         """Generate response using OpenAI API."""
@@ -218,9 +217,9 @@ class OpenAIProvider(BaseLLMProvider):
     async def stream(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """Stream response tokens from OpenAI."""
@@ -294,12 +293,12 @@ class OpenAIProvider(BaseLLMProvider):
     async def generate_structured(
         self,
         messages: list[Message],
-        response_model: Type[BaseModel],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        response_model: type[BaseModel],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
-    ) -> tuple[AgentResponse, Optional[BaseModel]]:
+    ) -> tuple[AgentResponse, BaseModel | None]:
         """
         Generate a structured response using Pydantic model.
 

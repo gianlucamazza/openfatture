@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from openfatture.core.batch.processor import BatchResult
 from openfatture.sdi.notifiche.parser import NotificaSDI, TipoNotifica
@@ -30,10 +30,7 @@ class EmailAttachment(BaseModel):
             raise ValueError("Filename cannot be empty")
         return v.strip()
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class EmailMessage(BaseModel):
@@ -80,10 +77,7 @@ class FatturaInvioContext(BaseModel):
     is_signed: bool = Field(default=False, description="Whether the XML is digitally signed")
     xml_filename: str = Field(..., description="Attached XML filename")
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class NotificaSDIContext(BaseModel):
@@ -99,10 +93,7 @@ class NotificaSDIContext(BaseModel):
     tipo_notifica: TipoNotifica = Field(..., description="Notification type")
     timestamp: datetime = Field(default_factory=datetime.now, description="Notification timestamp")
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class BatchSummaryContext(BaseModel):
@@ -150,10 +141,7 @@ class BatchSummaryContext(BaseModel):
         """Get formatted success rate."""
         return f"{self.result.success_rate:.1f}%"
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class EmailTestContext(BaseModel):
@@ -168,10 +156,7 @@ class EmailTestContext(BaseModel):
     pec_address: str = Field(..., description="PEC email address")
     test_time: datetime = Field(default_factory=datetime.now, description="Test timestamp")
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class InvoiceSummary(BaseModel):
@@ -228,7 +213,4 @@ class ErrorDetail(BaseModel):
     message: str = Field(..., description="Error message")
     context: str | None = Field(None, description="Additional context")
 
-    class Config:
-        """Pydantic config."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)

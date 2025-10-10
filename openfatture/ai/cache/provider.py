@@ -6,7 +6,7 @@ This module provides a wrapper that adds caching to any LLM provider.
 import hashlib
 import json
 from collections.abc import AsyncIterator
-from typing import Any, Optional
+from typing import Any
 
 from openfatture.ai.cache.config import CacheConfig, get_cache_config
 from openfatture.ai.cache.memory import LRUCache
@@ -49,8 +49,8 @@ class CachedProvider:
     def __init__(
         self,
         provider: BaseLLMProvider,
-        config: Optional[CacheConfig] = None,
-        cache: Optional[CacheStrategy] = None,
+        config: CacheConfig | None = None,
+        cache: CacheStrategy | None = None,
     ) -> None:
         """Initialize cached provider.
 
@@ -89,9 +89,9 @@ class CachedProvider:
     def _generate_cache_key(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> str:
         """Generate cache key from request parameters.
@@ -129,9 +129,9 @@ class CachedProvider:
     async def generate(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         bypass_cache: bool = False,
         **kwargs: Any,
     ) -> AgentResponse:
@@ -210,9 +210,9 @@ class CachedProvider:
     async def stream(
         self,
         messages: list[Message],
-        system_prompt: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """Stream response (bypasses cache).
@@ -300,7 +300,5 @@ class CachedProvider:
     def __repr__(self) -> str:
         """String representation."""
         return (
-            f"CachedProvider("
-            f"provider={self.provider.provider_name}, "
-            f"cache={self._cache})"
+            f"CachedProvider(" f"provider={self.provider.provider_name}, " f"cache={self._cache})"
         )

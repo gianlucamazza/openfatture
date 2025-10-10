@@ -108,7 +108,9 @@ def init(
 
         # AI Configuration (optional)
         console.print("\n[bold]🤖 AI Configuration (Optional)[/bold]")
-        console.print("[dim]Configure AI features for smart invoice descriptions, tax suggestions, and chat assistant.[/dim]")
+        console.print(
+            "[dim]Configure AI features for smart invoice descriptions, tax suggestions, and chat assistant.[/dim]"
+        )
 
         configure_ai = Confirm.ask(
             "Configure AI features now? (You can do this later via config wizard)",
@@ -129,13 +131,17 @@ def init(
                     ai_model = "claude-3-5-sonnet-20241022"
                     console.print("\n[cyan]Anthropic Claude selected - get API key from:[/cyan]")
                     console.print("  https://console.anthropic.com/settings/keys")
-                    ai_key = Prompt.ask("API Key (or leave empty to set later)", default="", password=True)
+                    ai_key = Prompt.ask(
+                        "API Key (or leave empty to set later)", default="", password=True
+                    )
 
                 elif ai_provider == "openai":
                     ai_model = "gpt-4o"
                     console.print("\n[cyan]OpenAI selected - get API key from:[/cyan]")
                     console.print("  https://platform.openai.com/api-keys")
-                    ai_key = Prompt.ask("API Key (or leave empty to set later)", default="", password=True)
+                    ai_key = Prompt.ask(
+                        "API Key (or leave empty to set later)", default="", password=True
+                    )
 
                 else:  # ollama
                     ai_model = "llama3.2"
@@ -161,19 +167,21 @@ def init(
                     ai_lines.append("AI_BASE_URL=http://localhost:11434")
 
                 # Add chat defaults
-                ai_lines.extend([
-                    "",
-                    "# AI Chat Assistant",
-                    "AI_CHAT_ENABLED=true",
-                    "AI_CHAT_AUTO_SAVE=true",
-                    "AI_CHAT_MAX_MESSAGES=100",
-                    "AI_CHAT_MAX_TOKENS=8000",
-                    "",
-                    "# AI Tools",
-                    "AI_TOOLS_ENABLED=true",
-                    "AI_ENABLED_TOOLS=search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats",
-                    "AI_TOOLS_REQUIRE_CONFIRMATION=true",
-                ])
+                ai_lines.extend(
+                    [
+                        "",
+                        "# AI Chat Assistant",
+                        "AI_CHAT_ENABLED=true",
+                        "AI_CHAT_AUTO_SAVE=true",
+                        "AI_CHAT_MAX_MESSAGES=100",
+                        "AI_CHAT_MAX_TOKENS=8000",
+                        "",
+                        "# AI Tools",
+                        "AI_TOOLS_ENABLED=true",
+                        "AI_ENABLED_TOOLS=search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats",
+                        "AI_TOOLS_REQUIRE_CONFIRMATION=true",
+                    ]
+                )
             else:
                 # User chose "Skip for now"
                 ai_lines = [

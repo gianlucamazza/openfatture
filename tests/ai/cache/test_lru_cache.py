@@ -1,10 +1,11 @@
 """Tests for LRU cache implementation."""
 
 import asyncio
-import pytest
 from datetime import datetime, timedelta
 
-from openfatture.ai.cache import LRUCache, CacheEntry
+import pytest
+
+from openfatture.ai.cache import CacheEntry, LRUCache
 
 
 class TestCacheEntry:

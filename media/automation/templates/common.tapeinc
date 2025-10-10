@@ -1,0 +1,135 @@
+# Common VHS Tape Snippets for OpenFatture Media Automation
+# Include these in scenario tapes with the appropriate VHS syntax
+#
+# NOTE: VHS doesn't support includes natively in v0.10.0
+# Use this file as a reference for copy-paste into scenario tapes
+
+# ============================================================================
+# Common Settings (copy to beginning of tape)
+# ============================================================================
+# Set Shell "zsh"
+# Set FontFamily "JetBrains Mono"
+# Set FontSize 22
+# Set Width 1920
+# Set Height 1080
+# Set Theme "Dracula"
+# Set CursorBlink true
+# Set TypingSpeed 100ms
+
+# ============================================================================
+# Common Commands
+# ============================================================================
+
+# Clear Screen
+#   Type "clear"
+#   Enter
+#   Sleep 500ms
+
+# Print Colored Header
+#   Type "printf '\e[1;36mYOUR TITLE HERE\e[0m\\n'"
+#   Enter
+#   Sleep 1s
+
+# Show Git Branch
+#   Type "git rev-parse --abbrev-ref HEAD"
+#   Enter
+#   Sleep 800ms
+
+# Reset Demo Environment
+#   Type "./scripts/reset_demo.sh"
+#   Enter
+#   Sleep 8s
+
+# Copy Demo Config
+#   Type "cp .env.demo .env"
+#   Enter
+#   Sleep 600ms
+
+# Show Config (first 18 lines)
+#   Type "sed -n '1,18p' .env"
+#   Enter
+#   Sleep 2s
+
+# OpenFatture Config Show
+#   Type "uv run openfatture config show"
+#   Enter
+#   Sleep 2.5s
+
+# OpenFatture Version
+#   Type "uv run openfatture --version"
+#   Enter
+#   Sleep 800ms
+
+# OpenFatture Help
+#   Type "uv run openfatture --help"
+#   Enter
+#   Sleep 2s
+
+# List Clients
+#   Type "uv run openfatture cliente list"
+#   Enter
+#   Sleep 1.5s
+
+# List Invoices
+#   Type "uv run openfatture fattura list"
+#   Enter
+#   Sleep 1.5s
+
+# Show Invoice Details (ID 1)
+#   Type "uv run openfatture fattura show 1"
+#   Enter
+#   Sleep 2s
+
+# AI Chat Command
+#   Type "uv run openfatture ai chat 'YOUR PROMPT HERE'"
+#   Enter
+#   Sleep 3s
+
+# Interactive Mode Launch
+#   Type "uv run openfatture --interactive"
+#   Enter
+#   Sleep 2s
+
+# Batch Import (dry-run)
+#   Type "uv run openfatture batch import examples/batch/invoices.csv --dry-run"
+#   Enter
+#   Sleep 3s
+
+# PEC Test
+#   Type "uv run openfatture pec test"
+#   Enter
+#   Sleep 2s
+
+# ============================================================================
+# Timing Guidelines
+# ============================================================================
+# - Short commands (version, help): 800ms - 1.5s
+# - Medium commands (list, show): 1.5s - 2.5s
+# - Long commands (AI, batch, reset): 3s - 8s
+# - Screen transitions: 500ms - 1s
+# - Text reading time: ~1.2s per sentence
+
+# ============================================================================
+# Theme Colors Reference (for printf)
+# ============================================================================
+# Cyan (info):    \e[1;36m
+# Green (success): \e[1;32m
+# Yellow (warning): \e[1;33m
+# Red (error):    \e[1;31m
+# Blue (primary): \e[1;34m
+# Reset color:    \e[0m
+
+# ============================================================================
+# Example Scenario Structure
+# ============================================================================
+# Output media/output/scenario_X_name.mp4
+# [Common Settings Here]
+#
+# Sleep 1s
+# [Clear Screen]
+# [Print Header]
+# [Step 1: Setup]
+# [Step 2: Main Actions]
+# [Step 3: Results]
+# [Final Frame]
+# Sleep 1.5s

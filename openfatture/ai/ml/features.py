@@ -14,20 +14,18 @@ All features are engineered to be:
 - Explained (SHAP-compatible)
 """
 
+import statistics
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
-from decimal import Decimal
-from typing import Dict, List, Optional, Any
-import statistics
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from openfatture.storage.database.base import SessionLocal
-from openfatture.storage.database.models import Fattura, Cliente, Pagamento
+from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -35,14 +33,14 @@ logger = get_logger(__name__)
 
 # Italian public holidays (fixed dates)
 ITALIAN_HOLIDAYS = [
-    (1, 1),    # Capodanno
-    (1, 6),    # Epifania
-    (4, 25),   # Festa della Liberazione
-    (5, 1),    # Festa del Lavoro
-    (6, 2),    # Festa della Repubblica
-    (8, 15),   # Ferragosto
-    (11, 1),   # Ognissanti
-    (12, 8),   # Immacolata Concezione
+    (1, 1),  # Capodanno
+    (1, 6),  # Epifania
+    (4, 25),  # Festa della Liberazione
+    (5, 1),  # Festa del Lavoro
+    (6, 2),  # Festa della Repubblica
+    (8, 15),  # Ferragosto
+    (11, 1),  # Ognissanti
+    (12, 8),  # Immacolata Concezione
     (12, 25),  # Natale
     (12, 26),  # Santo Stefano
 ]
@@ -60,9 +58,9 @@ class FeatureSchema:
     """
 
     version: str = "1.0.0"
-    features: List[str] = field(default_factory=list)
-    dtypes: Dict[str, str] = field(default_factory=dict)
-    nullable: Dict[str, bool] = field(default_factory=dict)
+    features: list[str] = field(default_factory=list)
+    dtypes: dict[str, str] = field(default_factory=dict)
+    nullable: dict[str, bool] = field(default_factory=dict)
 
     def validate(self, df: pd.DataFrame) -> bool:
         """Validate dataframe against schema."""
@@ -108,14 +106,14 @@ class TemporalFeatureExtractor(BaseEstimator, TransformerMixin):
     def __init__(self):
         """Initialize temporal feature extractor."""
         self.feature_names_ = [
-            'day_of_week',
-            'day_of_month',
-            'month',
-            'quarter',
-            'is_weekend',
-            'is_holiday',
-            'days_until_month_end',
-            'week_of_year',
+            "day_of_week",
+            "day_of_month",
+            "month",
+            "quarter",
+            "is_weekend",
+            "is_holiday",
+            "days_until_month_end",
+            "week_of_year",
         ]
 
     def fit(self, X, y=None):
@@ -127,33 +125,35 @@ class TemporalFeatureExtractor(BaseEstimator, TransformerMixin):
         X = X.copy()
 
         # Ensure we have a date column
-        if 'data_emissione' not in X.columns:
+        if "data_emissione" not in X.columns:
             raise ValueError("Missing 'data_emissione' column")
 
         # Convert to datetime if needed
-        if not pd.api.types.is_datetime64_any_dtype(X['data_emissione']):
-            X['data_emissione'] = pd.to_datetime(X['data_emissione'])
+        if not pd.api.types.is_datetime64_any_dtype(X["data_emissione"]):
+            X["data_emissione"] = pd.to_datetime(X["data_emissione"])
 
         # Extract temporal features
-        X['day_of_week'] = X['data_emissione'].dt.dayofweek
-        X['day_of_month'] = X['data_emissione'].dt.day
-        X['month'] = X['data_emissione'].dt.month
-        X['quarter'] = X['data_emissione'].dt.quarter
-        X['week_of_year'] = X['data_emissione'].dt.isocalendar().week
+        X["day_of_week"] = X["data_emissione"].dt.dayofweek
+        X["day_of_month"] = X["data_emissione"].dt.day
+        X["month"] = X["data_emissione"].dt.month
+        X["quarter"] = X["data_emissione"].dt.quarter
+        X["week_of_year"] = X["data_emissione"].dt.isocalendar().week
 
         # Weekend detection
-        X['is_weekend'] = X['day_of_week'].isin([5, 6]).astype(int)
+        X["is_weekend"] = X["day_of_week"].isin([5, 6]).astype(int)
 
         # Holiday detection
-        X['is_holiday'] = X['data_emissione'].apply(
-            lambda d: (d.month, d.day) in ITALIAN_HOLIDAYS
-        ).astype(int)
+        X["is_holiday"] = (
+            X["data_emissione"].apply(lambda d: (d.month, d.day) in ITALIAN_HOLIDAYS).astype(int)
+        )
 
         # Days until month end
-        X['days_until_month_end'] = X['data_emissione'].apply(
-            lambda d: (date(d.year, d.month + 1, 1) - timedelta(days=1)).day - d.day
-            if d.month < 12
-            else (date(d.year + 1, 1, 1) - timedelta(days=1)).day - d.day
+        X["days_until_month_end"] = X["data_emissione"].apply(
+            lambda d: (
+                (date(d.year, d.month + 1, 1) - timedelta(days=1)).day - d.day
+                if d.month < 12
+                else (date(d.year + 1, 1, 1) - timedelta(days=1)).day - d.day
+            )
         )
 
         logger.debug(
@@ -186,28 +186,26 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
     def __init__(self):
         """Initialize client behavior extractor."""
         self.feature_names_ = [
-            'avg_payment_delay_30d',
-            'avg_payment_delay_90d',
-            'avg_payment_delay_all',
-            'payment_velocity',
-            'overdue_ratio',
-            'client_age_days',
-            'total_invoices_count',
-            'total_amount_paid',
+            "avg_payment_delay_30d",
+            "avg_payment_delay_90d",
+            "avg_payment_delay_all",
+            "payment_velocity",
+            "overdue_ratio",
+            "client_age_days",
+            "total_invoices_count",
+            "total_amount_paid",
         ]
         self.client_stats_cache_ = {}
 
     def fit(self, X, y=None):
         """Fit transformer by computing client statistics."""
         # Compute stats for each unique client
-        unique_clients = X['cliente_id'].unique()
+        unique_clients = X["cliente_id"].unique()
 
         db = SessionLocal()
         try:
             for client_id in unique_clients:
-                self.client_stats_cache_[client_id] = self._compute_client_stats(
-                    db, client_id
-                )
+                self.client_stats_cache_[client_id] = self._compute_client_stats(db, client_id)
         finally:
             db.close()
 
@@ -224,8 +222,10 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
 
         # Apply cached stats to each row
         for feature in self.feature_names_:
-            X[feature] = X['cliente_id'].apply(
-                lambda cid: self.client_stats_cache_.get(cid, {}).get(feature, 0.0)
+            X[feature] = X["cliente_id"].apply(
+                lambda cid, feature_name=feature: self.client_stats_cache_.get(cid, {}).get(
+                    feature_name, 0.0
+                )
             )
 
         logger.debug(
@@ -235,7 +235,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
 
         return X
 
-    def _compute_client_stats(self, db, client_id: int) -> Dict[str, float]:
+    def _compute_client_stats(self, db, client_id: int) -> dict[str, float]:
         """Compute historical statistics for a client."""
         # Get all invoices for client
         fatture = (
@@ -246,7 +246,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
         )
 
         if not fatture:
-            return {feature: 0.0 for feature in self.feature_names_}
+            return dict.fromkeys(self.feature_names_, 0.0)
 
         # Get payment data
         payment_delays = []
@@ -260,9 +260,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
                 for pagamento in fattura.pagamenti:
                     if pagamento.data_pagamento:
                         # Calculate delay (positive = late, negative = early)
-                        delay_days = (
-                            pagamento.data_pagamento - pagamento.data_scadenza
-                        ).days
+                        delay_days = (pagamento.data_pagamento - pagamento.data_scadenza).days
                         payment_delays.append(delay_days)
 
                         if delay_days > 0:
@@ -275,22 +273,22 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
 
         # Last 30 days
         recent_delays_30 = [
-            d for d, f in zip(payment_delays, fatture)
+            d
+            for d, f in zip(payment_delays, fatture, strict=False)
             if (now - f.data_emissione).days <= 30
         ]
         avg_delay_30 = statistics.mean(recent_delays_30) if recent_delays_30 else avg_delay_all
 
         # Last 90 days
         recent_delays_90 = [
-            d for d, f in zip(payment_delays, fatture)
+            d
+            for d, f in zip(payment_delays, fatture, strict=False)
             if (now - f.data_emissione).days <= 90
         ]
         avg_delay_90 = statistics.mean(recent_delays_90) if recent_delays_90 else avg_delay_all
 
         # Overdue ratio
-        overdue_ratio = (
-            paid_late_count / len(payment_delays) if payment_delays else 0.0
-        )
+        overdue_ratio = paid_late_count / len(payment_delays) if payment_delays else 0.0
 
         # Client age
         first_invoice_date = min(f.data_emissione for f in fatture)
@@ -301,14 +299,14 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
         payment_velocity = len(fatture) / months_active
 
         return {
-            'avg_payment_delay_30d': avg_delay_30,
-            'avg_payment_delay_90d': avg_delay_90,
-            'avg_payment_delay_all': avg_delay_all,
-            'payment_velocity': payment_velocity,
-            'overdue_ratio': overdue_ratio,
-            'client_age_days': float(client_age_days),
-            'total_invoices_count': float(len(fatture)),
-            'total_amount_paid': total_paid,
+            "avg_payment_delay_30d": avg_delay_30,
+            "avg_payment_delay_90d": avg_delay_90,
+            "avg_payment_delay_all": avg_delay_all,
+            "payment_velocity": payment_velocity,
+            "overdue_ratio": overdue_ratio,
+            "client_age_days": float(client_age_days),
+            "total_invoices_count": float(len(fatture)),
+            "total_amount_paid": total_paid,
         }
 
     def get_feature_names_out(self, input_features=None):
@@ -335,21 +333,21 @@ class InvoiceFeatureExtractor(BaseEstimator, TransformerMixin):
     def __init__(self):
         """Initialize invoice feature extractor."""
         self.feature_names_ = [
-            'amount',
-            'amount_log',
-            'amount_zscore',
-            'has_ritenuta',
-            'ritenuta_percentage',
-            'has_bollo',
-            'iva_rate',
-            'line_item_count',
+            "amount",
+            "amount_log",
+            "amount_zscore",
+            "has_ritenuta",
+            "ritenuta_percentage",
+            "has_bollo",
+            "iva_rate",
+            "line_item_count",
         ]
         self.amount_mean_ = 0.0
         self.amount_std_ = 1.0
 
     def fit(self, X, y=None):
         """Fit transformer by computing amount statistics."""
-        amounts = X['totale'].astype(float)
+        amounts = X["totale"].astype(float)
         self.amount_mean_ = amounts.mean()
         self.amount_std_ = amounts.std()
 
@@ -366,30 +364,28 @@ class InvoiceFeatureExtractor(BaseEstimator, TransformerMixin):
         X = X.copy()
 
         # Amount features
-        X['amount'] = X['totale'].astype(float)
-        X['amount_log'] = np.log1p(X['amount'])  # log(1 + x) for stability
-        X['amount_zscore'] = (X['amount'] - self.amount_mean_) / self.amount_std_
+        X["amount"] = X["totale"].astype(float)
+        X["amount_log"] = np.log1p(X["amount"])  # log(1 + x) for stability
+        X["amount_zscore"] = (X["amount"] - self.amount_mean_) / self.amount_std_
 
         # Ritenuta features
-        X['has_ritenuta'] = (X['ritenuta_acconto'] > 0).astype(int)
-        X['ritenuta_percentage'] = X['aliquota_ritenuta'].fillna(0).astype(float)
+        X["has_ritenuta"] = (X["ritenuta_acconto"] > 0).astype(int)
+        X["ritenuta_percentage"] = X["aliquota_ritenuta"].fillna(0).astype(float)
 
         # Bollo
-        X['has_bollo'] = (X['importo_bollo'] > 0).astype(int)
+        X["has_bollo"] = (X["importo_bollo"] > 0).astype(int)
 
         # IVA rate (main rate - most common in invoice)
-        X['iva_rate'] = X['iva'].astype(float) / X['imponibile'].astype(float) * 100
-        X['iva_rate'] = X['iva_rate'].fillna(0)
+        X["iva_rate"] = X["iva"].astype(float) / X["imponibile"].astype(float) * 100
+        X["iva_rate"] = X["iva_rate"].fillna(0)
 
         # Line item count (proxy for complexity)
         # Note: This requires righe relationship to be loaded
         # For now, set to 0 if not available
-        if 'righe' not in X.columns:
-            X['line_item_count'] = 0
+        if "righe" not in X.columns:
+            X["line_item_count"] = 0
         else:
-            X['line_item_count'] = X['righe'].apply(
-                lambda righe: len(righe) if righe else 0
-            )
+            X["line_item_count"] = X["righe"].apply(lambda righe: len(righe) if righe else 0)
 
         logger.debug(
             "invoice_features_extracted",
@@ -440,13 +436,13 @@ class FeaturePipeline:
         steps = []
 
         if include_temporal:
-            steps.append(('temporal', TemporalFeatureExtractor()))
+            steps.append(("temporal", TemporalFeatureExtractor()))
 
         if include_client_behavior:
-            steps.append(('client_behavior', ClientBehaviorFeatureExtractor()))
+            steps.append(("client_behavior", ClientBehaviorFeatureExtractor()))
 
         if include_invoice:
-            steps.append(('invoice', InvoiceFeatureExtractor()))
+            steps.append(("invoice", InvoiceFeatureExtractor()))
 
         # Note: Scaling applied separately to avoid scaling categorical features
 
@@ -460,7 +456,7 @@ class FeaturePipeline:
             scale_features=scale_features,
         )
 
-    def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None):
+    def fit(self, X: pd.DataFrame, y: pd.Series | None = None):
         """Fit all feature extractors.
 
         Args:
@@ -505,9 +501,7 @@ class FeaturePipeline:
         # Apply scaling if enabled
         if self.scaler:
             numerical_features = self._get_numerical_features(X_features)
-            X_features[numerical_features] = self.scaler.transform(
-                X_features[numerical_features]
-            )
+            X_features[numerical_features] = self.scaler.transform(X_features[numerical_features])
 
         logger.debug(
             "features_transformed",
@@ -517,11 +511,11 @@ class FeaturePipeline:
 
         return X_features
 
-    def fit_transform(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> pd.DataFrame:
+    def fit_transform(self, X: pd.DataFrame, y: pd.Series | None = None) -> pd.DataFrame:
         """Fit and transform in one step."""
         return self.fit(X, y).transform(X)
 
-    def _get_numerical_features(self, X: pd.DataFrame) -> List[str]:
+    def _get_numerical_features(self, X: pd.DataFrame) -> list[str]:
         """Get list of numerical feature columns."""
         numerical_features = []
 
@@ -531,7 +525,7 @@ class FeaturePipeline:
 
         return numerical_features
 
-    def get_feature_names(self) -> List[str]:
+    def get_feature_names(self) -> list[str]:
         """Get all feature names in order."""
         if not self.fitted_:
             raise ValueError("Pipeline must be fitted before getting feature names")
@@ -539,7 +533,7 @@ class FeaturePipeline:
         feature_names = []
 
         for name, transformer in self.pipeline.steps:
-            if hasattr(transformer, 'feature_names_'):
+            if hasattr(transformer, "feature_names_"):
                 feature_names.extend(transformer.feature_names_)
 
         return feature_names
@@ -554,14 +548,14 @@ class FeaturePipeline:
 
         for feature in feature_names:
             # Determine expected dtype
-            if feature.startswith('is_') or feature.startswith('has_'):
-                dtypes[feature] = 'int'
+            if feature.startswith("is_") or feature.startswith("has_"):
+                dtypes[feature] = "int"
                 nullable[feature] = False
-            elif 'count' in feature:
-                dtypes[feature] = 'int'
+            elif "count" in feature:
+                dtypes[feature] = "int"
                 nullable[feature] = False
             else:
-                dtypes[feature] = 'float'
+                dtypes[feature] = "float"
                 nullable[feature] = False
 
         return FeatureSchema(

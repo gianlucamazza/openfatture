@@ -125,10 +125,10 @@ async def example_3_with_client():
 
         print(f"Cliente: {cliente.denominazione}")
         print(f"\nDescrizione:\n{model['descrizione_completa']}")
-        print(f"\nDeliverables:")
+        print("\nDeliverables:")
         for item in model["deliverables"]:
             print(f"  • {item}")
-        print(f"\nCompetenze:")
+        print("\nCompetenze:")
         for skill in model["competenze"]:
             print(f"  • {skill}")
 
@@ -191,14 +191,14 @@ async def example_4_batch_descriptions():
     total_tokens = sum(r.usage.total_tokens for r in results)
     total_cost = sum(r.usage.estimated_cost_usd for r in results)
 
-    print(f"\n📊 Batch Statistics:")
+    print("\n📊 Batch Statistics:")
     print(f"   Total requests: {len(results)}")
     print(f"   Total tokens: {total_tokens}")
     print(f"   Total cost: ${total_cost:.4f}")
 
     # Show agent metrics
     metrics = agent.get_metrics()
-    print(f"\n🤖 Agent Metrics:")
+    print("\n🤖 Agent Metrics:")
     print(f"   Avg tokens/request: {metrics['avg_tokens_per_request']:.0f}")
     print(f"   Avg cost/request: ${metrics['avg_cost_per_request']:.4f}")
 
@@ -247,7 +247,9 @@ async def example_5_error_handling():
     response = await agent.execute(context)
     print(f"Status: {response.status.value}")
     if response.metadata.get("is_structured"):
-        print(f"Success! Generated {len(response.metadata['parsed_model']['deliverables'])} deliverables")
+        print(
+            f"Success! Generated {len(response.metadata['parsed_model']['deliverables'])} deliverables"
+        )
 
 
 async def main():

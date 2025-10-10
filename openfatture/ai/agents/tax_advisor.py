@@ -1,7 +1,5 @@
 """Tax Advisor Agent - Suggests correct VAT treatment for Italian invoices."""
 
-from typing import Optional
-
 from openfatture.ai.agents.models import TaxSuggestionOutput
 from openfatture.ai.domain import AgentConfig, BaseAgent, Message, Role
 from openfatture.ai.domain.context import TaxContext
@@ -44,7 +42,7 @@ class TaxAdvisorAgent(BaseAgent):
     def __init__(
         self,
         provider: BaseLLMProvider,
-        prompt_manager: Optional[PromptManager] = None,
+        prompt_manager: PromptManager | None = None,
         use_structured_output: bool = True,
     ) -> None:
         """
@@ -64,7 +62,7 @@ class TaxAdvisorAgent(BaseAgent):
             max_tokens=800,
             tools_enabled=False,
             memory_enabled=False,
-            rag_enabled=False,
+            rag_enabled=True,
         )
 
         super().__init__(config=config, provider=provider)
@@ -80,7 +78,7 @@ class TaxAdvisorAgent(BaseAgent):
             structured_output=use_structured_output,
         )
 
-    async def validate_input(self, context: TaxContext) -> tuple[bool, Optional[str]]:
+    async def validate_input(self, context: TaxContext) -> tuple[bool, str | None]:
         """
         Validate tax context before processing.
 
@@ -165,6 +163,10 @@ class TaxAdvisorAgent(BaseAgent):
             Message(role=Role.USER, content=user_prompt),
         ]
 
+        context_message = self._build_context_message(context)
+        if context_message:
+            messages.insert(1, Message(role=Role.SYSTEM, content=context_message))
+
         return messages
 
     async def _parse_response(
@@ -224,6 +226,29 @@ class TaxAdvisorAgent(BaseAgent):
         response.metadata["cliente_estero"] = context.cliente_estero
 
         return response
+
+    def _build_context_message(self, context: TaxContext) -> str | None:
+        """Build RAG context message with normative references."""
+
+        lines: list[str] = []
+
+        if context.relevant_documents:
+            lines.append("Casi simili individuati nel database fatture:")
+            for doc in context.relevant_documents[:3]:
+                lines.append(f"- {doc}")
+
+        if context.knowledge_snippets:
+            lines.append("")
+            lines.append("Riferimenti normativi e note operative (cita come [numero]):")
+            for idx, snippet in enumerate(context.knowledge_snippets[:3], 1):
+                citation = snippet.get("citation") or snippet.get("source") or f"Fonte {idx}"
+                excerpt = snippet.get("excerpt", "")
+                lines.append(f"[{idx}] {citation} — {excerpt}")
+            lines.append(
+                "Assicurati di citare le fonti normative usando il formato [numero] e non inventare riferimenti."
+            )
+
+        return "\n".join(lines).strip() if lines else None
 
     # Fallback prompts (if YAML not found)
 

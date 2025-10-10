@@ -16,21 +16,23 @@ This wrapper provides:
 5. Calibrated prediction intervals
 """
 
-from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
 import warnings
+from dataclasses import dataclass
+from typing import Any
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 try:
     import xgboost as xgb
+
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
     warnings.warn(
         "XGBoost not installed. Install with: pip install xgboost",
-        ImportWarning
+        ImportWarning,
+        stacklevel=2,
     )
 
 from openfatture.utils.logging import get_logger
@@ -50,12 +52,12 @@ class XGBoostPrediction:
     """
 
     yhat: float
-    yhat_lower: Optional[float] = None
-    yhat_upper: Optional[float] = None
-    feature_importance: Optional[Dict[str, float]] = None
+    yhat_lower: float | None = None
+    yhat_upper: float | None = None
+    feature_importance: dict[str, float] | None = None
 
     @property
-    def uncertainty(self) -> Optional[float]:
+    def uncertainty(self) -> float | None:
         """Calculate prediction uncertainty (interval width)."""
         if self.yhat_lower is not None and self.yhat_upper is not None:
             return self.yhat_upper - self.yhat_lower
@@ -168,8 +170,8 @@ class XGBoostModel:
         self.use_asymmetric_loss = use_asymmetric_loss
         self.random_state = random_state
 
-        self.model: Optional[xgb.Booster] = None
-        self.feature_names_: Optional[List[str]] = None
+        self.model: xgb.Booster | None = None
+        self.feature_names_: list[str] | None = None
         self.fitted_ = False
 
         # For prediction intervals
@@ -187,10 +189,10 @@ class XGBoostModel:
         self,
         X: pd.DataFrame,
         y: pd.Series,
-        eval_set: Optional[List[tuple]] = None,
-        early_stopping_rounds: Optional[int] = None,
+        eval_set: list[tuple] | None = None,
+        early_stopping_rounds: int | None = None,
         verbose: bool = False,
-    ) -> 'XGBoostModel':
+    ) -> "XGBoostModel":
         """Fit XGBoost model on training data.
 
         Args:
@@ -213,34 +215,34 @@ class XGBoostModel:
 
         # Prepare parameters
         params = {
-            'max_depth': self.max_depth,
-            'eta': self.learning_rate,
-            'min_child_weight': self.min_child_weight,
-            'subsample': self.subsample,
-            'colsample_bytree': self.colsample_bytree,
-            'gamma': self.gamma,
-            'alpha': self.reg_alpha,
-            'lambda': self.reg_lambda,
-            'seed': self.random_state,
-            'verbosity': 1 if verbose else 0,
+            "max_depth": self.max_depth,
+            "eta": self.learning_rate,
+            "min_child_weight": self.min_child_weight,
+            "subsample": self.subsample,
+            "colsample_bytree": self.colsample_bytree,
+            "gamma": self.gamma,
+            "alpha": self.reg_alpha,
+            "lambda": self.reg_lambda,
+            "seed": self.random_state,
+            "verbosity": 1 if verbose else 0,
         }
 
         # Set objective
         if self.use_asymmetric_loss:
-            params['disable_default_eval_metric'] = 1
+            params["disable_default_eval_metric"] = 1
             obj_func = asymmetric_mae_loss
         else:
-            params['objective'] = 'reg:squarederror'
-            params['eval_metric'] = 'mae'
+            params["objective"] = "reg:squarederror"
+            params["eval_metric"] = "mae"
             obj_func = None
 
         # Prepare eval sets
-        evals = [(dtrain, 'train')]
+        evals = [(dtrain, "train")]
 
         if eval_set:
             for i, (X_val, y_val) in enumerate(eval_set):
                 dval = xgb.DMatrix(X_val, label=y_val, feature_names=self.feature_names_)
-                evals.append((dval, f'val_{i}'))
+                evals.append((dval, f"val_{i}"))
 
         # Train model
         self.model = xgb.train(
@@ -262,7 +264,9 @@ class XGBoostModel:
 
         logger.info(
             "xgboost_model_fitted",
-            best_iteration=self.model.best_iteration if early_stopping_rounds else self.n_estimators,
+            best_iteration=(
+                self.model.best_iteration if early_stopping_rounds else self.n_estimators
+            ),
             residuals_std=self.residuals_std_,
         )
 
@@ -272,7 +276,7 @@ class XGBoostModel:
         self,
         X: pd.DataFrame,
         include_intervals: bool = True,
-    ) -> List[XGBoostPrediction]:
+    ) -> list[XGBoostPrediction]:
         """Generate predictions for new data.
 
         Args:
@@ -301,11 +305,13 @@ class XGBoostModel:
         predictions = []
 
         for i, pred in enumerate(y_pred):
-            predictions.append(XGBoostPrediction(
-                yhat=float(pred),
-                yhat_lower=float(y_lower[i]) if y_lower is not None else None,
-                yhat_upper=float(y_upper[i]) if y_upper is not None else None,
-            ))
+            predictions.append(
+                XGBoostPrediction(
+                    yhat=float(pred),
+                    yhat_lower=float(y_lower[i]) if y_lower is not None else None,
+                    yhat_upper=float(y_upper[i]) if y_upper is not None else None,
+                )
+            )
 
         logger.debug("xgboost_predictions_generated", count=len(predictions))
 
@@ -343,8 +349,8 @@ class XGBoostModel:
 
     def get_feature_importance(
         self,
-        importance_type: str = 'weight',
-    ) -> Dict[str, float]:
+        importance_type: str = "weight",
+    ) -> dict[str, float]:
         """Get feature importance scores.
 
         Args:
@@ -365,18 +371,14 @@ class XGBoostModel:
         # Normalize to sum to 1.0
         total = sum(importance_dict.values())
         if total > 0:
-            importance_dict = {
-                k: v / total for k, v in importance_dict.items()
-            }
+            importance_dict = {k: v / total for k, v in importance_dict.items()}
 
         # Sort by importance
-        importance_dict = dict(
-            sorted(importance_dict.items(), key=lambda x: x[1], reverse=True)
-        )
+        importance_dict = dict(sorted(importance_dict.items(), key=lambda x: x[1], reverse=True))
 
         return importance_dict
 
-    def get_top_features(self, n: int = 10) -> List[tuple]:
+    def get_top_features(self, n: int = 10) -> list[tuple]:
         """Get top N most important features.
 
         Args:
@@ -402,7 +404,7 @@ class XGBoostModel:
         logger.info("xgboost_model_saved", filepath=filepath)
 
     @classmethod
-    def load(cls, filepath: str) -> 'XGBoostModel':
+    def load(cls, filepath: str) -> "XGBoostModel":
         """Load model from file.
 
         Args:
@@ -420,24 +422,24 @@ class XGBoostModel:
 
         return loaded_model
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get model hyperparameters.
 
         Returns:
             Dictionary of hyperparameters
         """
         return {
-            'max_depth': self.max_depth,
-            'learning_rate': self.learning_rate,
-            'n_estimators': self.n_estimators,
-            'min_child_weight': self.min_child_weight,
-            'subsample': self.subsample,
-            'colsample_bytree': self.colsample_bytree,
-            'gamma': self.gamma,
-            'reg_alpha': self.reg_alpha,
-            'reg_lambda': self.reg_lambda,
-            'use_asymmetric_loss': self.use_asymmetric_loss,
-            'random_state': self.random_state,
+            "max_depth": self.max_depth,
+            "learning_rate": self.learning_rate,
+            "n_estimators": self.n_estimators,
+            "min_child_weight": self.min_child_weight,
+            "subsample": self.subsample,
+            "colsample_bytree": self.colsample_bytree,
+            "gamma": self.gamma,
+            "reg_alpha": self.reg_alpha,
+            "reg_lambda": self.reg_lambda,
+            "use_asymmetric_loss": self.use_asymmetric_loss,
+            "random_state": self.random_state,
         }
 
     def score(

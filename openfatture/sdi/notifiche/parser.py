@@ -14,7 +14,7 @@ from enum import Enum
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TipoNotifica(str, Enum):
@@ -44,10 +44,7 @@ class NotificaSDI(BaseModel):
         None, description="Recipient outcome: EC01=accepted, EC02=rejected"
     )
 
-    class Config:
-        """Pydantic config."""
-
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class SDINotificationParser:

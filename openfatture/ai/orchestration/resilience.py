@@ -27,16 +27,16 @@ Example:
 
 import asyncio
 import random
-from datetime import datetime, timedelta
-from enum import Enum
-from typing import Optional, List, Callable, Any
 from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from openfatture.ai.providers import AIProvider, create_provider
 from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import AIResponse
+from openfatture.ai.providers import AIProvider, create_provider
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -77,7 +77,7 @@ class CircuitBreakerState:
     state: CircuitState = CircuitState.CLOSED
     failure_count: int = 0
     success_count: int = 0
-    last_failure_time: Optional[datetime] = None
+    last_failure_time: datetime | None = None
     last_state_change: datetime = field(default_factory=datetime.utcnow)
     half_open_calls: int = 0
 
@@ -170,7 +170,7 @@ class CircuitBreaker:
     def __init__(
         self,
         name: str,
-        config: Optional[CircuitBreakerConfig] = None,
+        config: CircuitBreakerConfig | None = None,
     ):
         """Initialize circuit breaker.
 
@@ -257,7 +257,7 @@ class RetryConfig:
     def get_delay(self, attempt: int) -> float:
         """Calculate delay for given attempt number."""
         delay = min(
-            self.initial_delay_seconds * (self.exponential_base ** attempt),
+            self.initial_delay_seconds * (self.exponential_base**attempt),
             self.max_delay_seconds,
         )
 
@@ -286,7 +286,7 @@ class ResiliencePolicy(BaseModel):
     circuit_timeout_seconds: int = Field(default=60, ge=10)
 
     # Fallback providers (in order of preference)
-    fallback_providers: List[str] = Field(default_factory=list)
+    fallback_providers: list[str] = Field(default_factory=list)
 
     # Timeout
     operation_timeout_seconds: int = Field(default=120, ge=10)
@@ -327,7 +327,7 @@ class ResilientProvider:
     def __init__(
         self,
         primary_provider: AIProvider,
-        policy: Optional[ResiliencePolicy] = None,
+        policy: ResiliencePolicy | None = None,
     ):
         """Initialize resilient provider.
 
@@ -345,7 +345,7 @@ class ResilientProvider:
         )
 
         # Fallback providers (lazily initialized)
-        self.fallback_providers: List[AIProvider] = []
+        self.fallback_providers: list[AIProvider] = []
 
         logger.info(
             "resilient_provider_initialized",
@@ -372,7 +372,7 @@ class ResilientProvider:
 
     async def chat_with_resilience(
         self,
-        messages: List[Message],
+        messages: list[Message],
         **kwargs: Any,
     ) -> AIResponse:
         """Execute chat with retry, fallback, and circuit breaker.
@@ -415,7 +415,7 @@ class ResilientProvider:
 
                 return response
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     "provider_timeout",
                     provider=self.primary_provider.provider,
@@ -487,7 +487,7 @@ class ResilientProvider:
 
 def create_resilient_provider(
     primary_provider_name: str = "anthropic",
-    fallback_providers: Optional[List[str]] = None,
+    fallback_providers: list[str] | None = None,
 ) -> ResilientProvider:
     """Create resilient provider with fallback chain.
 

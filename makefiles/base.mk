@@ -3,6 +3,7 @@
 # ============================================================================
 
 .PHONY: install install-prod install-dev sync clean clean-all format lint lint-check type-check pre-commit
+.PHONY: check-uv
 
 # Installation targets
 # ============================================================================
@@ -90,3 +91,6 @@ pre-commit-install: ## Install pre-commit hooks
 	@echo "$(BLUE)Installing pre-commit hooks...$(NC)"
 	$(UV) run pre-commit install
 	@echo "$(GREEN)✓ Pre-commit hooks installed$(NC)"
+
+check-uv:
+	@command -v $(UV) >/dev/null 2>&1 || (echo "$(RED)✗ uv not installed. Install from https://docs.astral.sh/uv/$(NC)" && exit 1)

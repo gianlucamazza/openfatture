@@ -13,8 +13,7 @@ Environment Variables:
 """
 
 from pathlib import Path
-from typing import Optional, Literal
-import os
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,20 +42,20 @@ class MLConfig(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_prefix='OPENFATTURE_ML_',
-        env_file='.env',
-        env_file_encoding='utf-8',
+        env_prefix="OPENFATTURE_ML_",
+        env_file=".env",
+        env_file_encoding="utf-8",
         case_sensitive=False,
     )
 
     # Model Storage
     model_path: Path = Field(
-        default=Path('.models'),
+        default=Path(".models"),
         description="Directory for storing trained models",
     )
 
     cache_path: Path = Field(
-        default=Path('.cache/ml_data'),
+        default=Path(".cache/ml_data"),
         description="Directory for caching preprocessed datasets",
     )
 
@@ -81,8 +80,8 @@ class MLConfig(BaseSettings):
     )
 
     # Prophet Hyperparameters
-    prophet_seasonality_mode: Literal['additive', 'multiplicative'] = Field(
-        default='multiplicative',
+    prophet_seasonality_mode: Literal["additive", "multiplicative"] = Field(
+        default="multiplicative",
         description="Prophet seasonality mode",
     )
 
@@ -235,7 +234,7 @@ class MLConfig(BaseSettings):
         description="Log model performance metrics",
     )
 
-    @field_validator('prophet_weight', 'xgboost_weight')
+    @field_validator("prophet_weight", "xgboost_weight")
     @classmethod
     def validate_weights_sum(cls, v, info):
         """Ensure ensemble weights sum to 1.0."""
@@ -272,13 +271,13 @@ class MLConfig(BaseSettings):
             Dictionary of Prophet parameters
         """
         return {
-            'seasonality_mode': self.prophet_seasonality_mode,
-            'changepoint_prior_scale': self.prophet_changepoint_prior_scale,
-            'seasonality_prior_scale': self.prophet_seasonality_prior_scale,
-            'interval_width': self.prophet_interval_width,
-            'yearly_seasonality': True,
-            'weekly_seasonality': True,
-            'daily_seasonality': False,
+            "seasonality_mode": self.prophet_seasonality_mode,
+            "changepoint_prior_scale": self.prophet_changepoint_prior_scale,
+            "seasonality_prior_scale": self.prophet_seasonality_prior_scale,
+            "interval_width": self.prophet_interval_width,
+            "yearly_seasonality": True,
+            "weekly_seasonality": True,
+            "daily_seasonality": False,
         }
 
     def get_xgboost_params(self) -> dict:
@@ -288,12 +287,12 @@ class MLConfig(BaseSettings):
             Dictionary of XGBoost parameters
         """
         return {
-            'max_depth': self.xgboost_max_depth,
-            'learning_rate': self.xgboost_learning_rate,
-            'n_estimators': self.xgboost_n_estimators,
-            'subsample': self.xgboost_subsample,
-            'colsample_bytree': self.xgboost_colsample_bytree,
-            'use_asymmetric_loss': self.xgboost_use_asymmetric_loss,
+            "max_depth": self.xgboost_max_depth,
+            "learning_rate": self.xgboost_learning_rate,
+            "n_estimators": self.xgboost_n_estimators,
+            "subsample": self.xgboost_subsample,
+            "colsample_bytree": self.xgboost_colsample_bytree,
+            "use_asymmetric_loss": self.xgboost_use_asymmetric_loss,
         }
 
     def get_feature_pipeline_params(self) -> dict:
@@ -303,10 +302,10 @@ class MLConfig(BaseSettings):
             Dictionary of feature pipeline parameters
         """
         return {
-            'include_temporal': self.include_temporal_features,
-            'include_client_behavior': self.include_client_behavior_features,
-            'include_invoice': self.include_invoice_features,
-            'scale_features': self.scale_features,
+            "include_temporal": self.include_temporal_features,
+            "include_client_behavior": self.include_client_behavior_features,
+            "include_invoice": self.include_invoice_features,
+            "scale_features": self.scale_features,
         }
 
     def get_data_loader_params(self) -> dict:
@@ -316,11 +315,11 @@ class MLConfig(BaseSettings):
             Dictionary of data loader parameters
         """
         return {
-            'cache_dir': self.cache_path,
-            'min_payment_data_ratio': self.min_payment_data_ratio,
+            "cache_dir": self.cache_path,
+            "min_payment_data_ratio": self.min_payment_data_ratio,
         }
 
-    def get_model_filepath(self, model_name: str = 'cash_flow') -> str:
+    def get_model_filepath(self, model_name: str = "cash_flow") -> str:
         """Get filepath for saving/loading models.
 
         Args:
@@ -333,7 +332,7 @@ class MLConfig(BaseSettings):
 
 
 # Global config instance (singleton pattern)
-_config: Optional[MLConfig] = None
+_config: MLConfig | None = None
 
 
 def get_ml_config(force_reload: bool = False) -> MLConfig:

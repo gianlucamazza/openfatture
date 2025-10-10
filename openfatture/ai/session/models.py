@@ -3,9 +3,9 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from openfatture.ai.domain.message import Role
 
@@ -39,12 +39,12 @@ class ChatMessage(BaseModel):
     estimated_cost_usd: float = 0.0
 
     # Provider info
-    provider: Optional[str] = None
-    model: Optional[str] = None
+    provider: str | None = None
+    model: str | None = None
 
     # Tool calls (for function calling)
     tool_calls: list[dict[str, Any]] = Field(default_factory=list)
-    tool_call_id: Optional[str] = None
+    tool_call_id: str | None = None
 
     # Metadata
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -86,13 +86,13 @@ class SessionMetadata(BaseModel):
 
     # Session info
     title: str = "New Chat"
-    description: Optional[str] = None
+    description: str | None = None
     tags: list[str] = Field(default_factory=list)
 
     # User context
-    user_id: Optional[str] = None
-    regime_fiscale: Optional[str] = None
-    settore_attivita: Optional[str] = None
+    user_id: str | None = None
+    regime_fiscale: str | None = None
+    settore_attivita: str | None = None
 
     # Session stats
     message_count: int = 0
@@ -107,11 +107,11 @@ class SessionMetadata(BaseModel):
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
-    last_message_at: Optional[datetime] = None
+    last_message_at: datetime | None = None
 
     # Provider info
-    primary_provider: Optional[str] = None
-    primary_model: Optional[str] = None
+    primary_provider: str | None = None
+    primary_model: str | None = None
 
     def update_stats(self, message: ChatMessage) -> None:
         """Update metadata stats with new message."""
@@ -157,10 +157,7 @@ class ChatSession(BaseModel):
     max_tokens: int = 8000
     auto_save: bool = True
 
-    class Config:
-        """Pydantic configuration."""
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def add_message(
         self,
@@ -198,8 +195,8 @@ class ChatSession(BaseModel):
     def add_assistant_message(
         self,
         content: str,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
+        provider: str | None = None,
+        model: str | None = None,
         tokens: int = 0,
         cost: float = 0.0,
         **kwargs: Any,
@@ -222,7 +219,7 @@ class ChatSession(BaseModel):
     def get_messages(
         self,
         include_system: bool = False,
-        limit: Optional[int] = None,
+        limit: int | None = None,
     ) -> list[ChatMessage]:
         """
         Get messages from the session.
