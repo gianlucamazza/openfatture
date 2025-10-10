@@ -90,8 +90,8 @@ dev = [
     "hypothesis>=6.98.0",
 
     # Code Quality
-    "black>=24.1.1",
-    "ruff>=0.2.1",
+    "black>=25.9.0",
+    "ruff>=0.14.0",
     "mypy>=1.8.0",
     "isort>=5.13.2",
 
@@ -138,8 +138,6 @@ ignore = [
     "C901",  # too complex
     "B904",  # raise from err (TODO: fix in future)
     "F841",  # unused variable (TODO: fix in future)
-    "UP046", # Generic type parameters (TODO: migrate when ready)
-    "UP047", # Generic type parameters (TODO: migrate when ready)
     "E731",  # lambda assignment (TODO: fix in future)
     "E402",  # module level import (test files)
     "B007",  # unused loop variable (TODO: fix in future)
@@ -160,6 +158,9 @@ minversion = "8.0"
 addopts = "-ra -q --cov=openfatture --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "streaming: tests that exercise streaming-capable components",
+]
 
 [tool.coverage.run]
 source = ["openfatture"]

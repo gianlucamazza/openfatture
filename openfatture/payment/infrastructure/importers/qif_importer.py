@@ -4,10 +4,10 @@ Supports legacy Quicken format used by older financial software.
 """
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from ...domain.enums import ImportSource
 from ...domain.models import BankTransaction
@@ -90,7 +90,7 @@ class QIFImporter(BaseImporter):
         """
         encoding = self.detect_encoding()
         transactions = []
-        current_tx = {}
+        current_tx: dict[str, str | list[str]] = {}
         account_type = None
 
         with open(self.file_path, encoding=encoding, errors="replace") as f:
@@ -150,8 +150,11 @@ class QIFImporter(BaseImporter):
                 elif field_code == "$":
                     # Split amount (accumulate into total)
                     if "split_amounts" not in current_tx:
-                        current_tx["split_amounts"] = []
-                    current_tx["split_amounts"].append(field_value)
+                        current_tx["split_amounts"] = [field_value]
+                    else:
+                        split_list = current_tx["split_amounts"]
+                        if isinstance(split_list, list):
+                            split_list.append(field_value)
 
         # Handle last transaction if file doesn't end with ^
         if current_tx:
@@ -163,7 +166,9 @@ class QIFImporter(BaseImporter):
 
         return transactions
 
-    def _parse_transaction(self, account: "BankAccount", tx_data: dict) -> BankTransaction:
+    def _parse_transaction(
+        self, account: "BankAccount", tx_data: dict[str, str | list[str]]
+    ) -> BankTransaction:
         """Parse accumulated QIF transaction fields into BankTransaction.
 
         Args:
@@ -182,15 +187,16 @@ class QIFImporter(BaseImporter):
         if "amount" not in tx_data:
             raise ValueError("Missing required field: Amount (T)")
 
-        # Parse date
-        transaction_date = self._parse_date(tx_data["date"])
+        # Parse date (always string)
+        transaction_date = self._parse_date(cast(str, tx_data["date"]))
 
         # Parse amount (handle split transactions)
         if "split_amounts" in tx_data and tx_data["split_amounts"]:
-            # Sum split amounts
-            amount = sum(self._parse_decimal(amt) for amt in tx_data["split_amounts"])
+            # Sum split amounts (list of strings)
+            split_amounts = cast(list[str], tx_data["split_amounts"])
+            amount = sum(self._parse_decimal(amt) for amt in split_amounts)
         else:
-            amount = self._parse_decimal(tx_data["amount"])
+            amount = self._parse_decimal(cast(str, tx_data["amount"]))
 
         # Build description (Payee + Memo)
         description = self._build_description(tx_data)
@@ -224,7 +230,7 @@ class QIFImporter(BaseImporter):
             raw_data=raw_data,
         )
 
-    def _parse_date(self, date_str: str) -> datetime.date:
+    def _parse_date(self, date_str: str) -> date:
         """Parse QIF date with format detection.
 
         Supports:
@@ -256,13 +262,27 @@ class QIFImporter(BaseImporter):
         if len(parts) != 3:
             raise ValueError(f"Invalid date format: {date_str}")
 
-        # Convert 2-digit years to 4-digit
-        parts = [p.zfill(2) for p in parts]
+        # Identify year position and convert 2-digit years to 4-digit
+        # Year is typically the longest part or the last/first part with value > 31
+        year_idx = None
         for i, part in enumerate(parts):
-            if len(part) == 2 and part.isdigit():
+            if len(part) == 4:
+                year_idx = i
+                break
+            elif len(part) == 2 and int(part) > 31:
+                # Likely a 2-digit year
+                year_idx = i
                 year_int = int(part)
-                # Assume 20xx for years < 50, 19xx for years >= 50
                 parts[i] = f"20{part}" if year_int < 50 else f"19{part}"
+                break
+
+        # If no year found yet, assume standard formats: US (M/D/Y) or EU (D/M/Y)
+        if year_idx is None:
+            # Check if last part looks like a 2-digit year (all parts have 2 digits)
+            if all(len(p) == 2 for p in parts):
+                year_idx = 2
+                year_int = int(parts[2])
+                parts[2] = f"20{parts[2]}" if year_int < 50 else f"19{parts[2]}"
 
         # Try to detect format
         if self.date_format == "US" or (
@@ -316,7 +336,7 @@ class QIFImporter(BaseImporter):
         except (InvalidOperation, ValueError) as e:
             raise ValueError(f"Could not parse amount: {amount_str}") from e
 
-    def _build_description(self, tx_data: dict) -> str:
+    def _build_description(self, tx_data: dict[str, str | list[str]]) -> str:
         """Build transaction description from Payee and Memo.
 
         Args:
@@ -325,8 +345,8 @@ class QIFImporter(BaseImporter):
         Returns:
             Description string
         """
-        payee = tx_data.get("payee", "").strip()
-        memo = tx_data.get("memo", "").strip()
+        payee = cast(str, tx_data.get("payee", "")).strip()
+        memo = cast(str, tx_data.get("memo", "")).strip()
 
         # Combine Payee and Memo
         if payee and memo:
