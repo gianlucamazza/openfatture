@@ -9,6 +9,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import exc
 from sqlalchemy.orm import Session
 
 from openfatture.payment.domain.enums import (
@@ -52,7 +53,7 @@ class TestBankAccount:
 
         db_session.add(account)
 
-        with pytest.raises(Exception):  # SQLAlchemy integrity error
+        with pytest.raises(exc.IntegrityError):  # SQLAlchemy integrity error
             db_session.commit()
 
     def test_bank_account_relationships_with_transactions(
