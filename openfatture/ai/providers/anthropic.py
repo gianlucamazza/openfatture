@@ -246,14 +246,50 @@ class AnthropicProvider(BaseLLMProvider):
 
     def count_tokens(self, text: str) -> int:
         """
-        Count tokens for Claude.
+        Count tokens for Claude using official Anthropic token counter.
 
-        Claude uses a similar tokenizer to GPT, so we use
-        the same approximation.
+        Uses the client's count_tokens method for accurate token counting,
+        which is model-specific and accounts for Claude's tokenization.
+
+        Falls back to approximation if API call fails.
         """
-        # Simple approximation: ~4 chars per token
-        # TODO: Use official Anthropic token counter when available
-        return len(text) // 4
+        try:
+            # Use official Anthropic token counter (synchronous)
+            # Note: Anthropic's count_tokens is a sync method
+            import asyncio
+            loop = asyncio.get_event_loop()
+
+            if loop.is_running():
+                # If in async context, use approximation to avoid blocking
+                # This is acceptable since count_tokens is primarily used for
+                # pre-flight estimation, not billing
+                logger.debug(
+                    "count_tokens_approximation",
+                    reason="async_context",
+                    model=self.model,
+                )
+                return len(text) // 4
+
+            # Sync context: use official counter
+            token_count = self.client.count_tokens(text)
+
+            logger.debug(
+                "count_tokens_official",
+                model=self.model,
+                count=token_count,
+                text_length=len(text),
+            )
+
+            return token_count
+
+        except Exception as e:
+            # Fallback to approximation if API call fails
+            logger.warning(
+                "count_tokens_fallback",
+                error=str(e),
+                model=self.model,
+            )
+            return len(text) // 4
 
     def estimate_cost(self, usage: UsageMetrics) -> float:
         """Estimate cost based on token usage."""
