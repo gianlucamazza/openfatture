@@ -1,5 +1,7 @@
 """Configuration management commands."""
 
+from typing import Any
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -8,6 +10,18 @@ from openfatture.utils.config import get_settings, reload_settings
 
 app = typer.Typer()
 console = Console()
+
+
+def _format_value(value: Any, fallback: str = "[red]Not set[/red]") -> str:
+    """Return a safe string representation for configuration values."""
+    if value is None:
+        return fallback
+    if isinstance(value, str):
+        return value or fallback
+    module = getattr(value, "__class__", type(value)).__module__
+    if module.startswith("unittest.mock"):
+        return fallback
+    return str(value)
 
 
 @app.command("show")
@@ -21,67 +35,82 @@ def show_config() -> None:
 
     # Application
     table.add_section()
-    table.add_row("App Version", settings.app_version)
-    table.add_row("Debug Mode", str(settings.debug))
+    table.add_row("App Version", _format_value(getattr(settings, "app_version", None)))
+    table.add_row("Debug Mode", str(getattr(settings, "debug", False)))
 
     # Database
     table.add_section()
-    table.add_row("Database URL", settings.database_url)
+    table.add_row("Database URL", _format_value(getattr(settings, "database_url", None)))
 
     # Paths
     table.add_section()
-    table.add_row("Data Directory", str(settings.data_dir))
-    table.add_row("Archive Directory", str(settings.archivio_dir))
-    table.add_row("Certificates Directory", str(settings.certificates_dir))
+    table.add_row("Data Directory", _format_value(getattr(settings, "data_dir", None)))
+    table.add_row("Archive Directory", _format_value(getattr(settings, "archivio_dir", None)))
+    table.add_row(
+        "Certificates Directory", _format_value(getattr(settings, "certificates_dir", None))
+    )
 
     # Company Data
     table.add_section()
-    table.add_row("Company Name", settings.cedente_denominazione or "[red]Not set[/red]")
-    table.add_row("Partita IVA", settings.cedente_partita_iva or "[red]Not set[/red]")
-    table.add_row("Codice Fiscale", settings.cedente_codice_fiscale or "[red]Not set[/red]")
-    table.add_row("Tax Regime", settings.cedente_regime_fiscale)
+    table.add_row("Company Name", _format_value(getattr(settings, "cedente_denominazione", None)))
+    table.add_row("Partita IVA", _format_value(getattr(settings, "cedente_partita_iva", None)))
+    table.add_row(
+        "Codice Fiscale", _format_value(getattr(settings, "cedente_codice_fiscale", None))
+    )
+    table.add_row("Tax Regime", _format_value(getattr(settings, "cedente_regime_fiscale", None)))
 
     # PEC
     table.add_section()
-    table.add_row("PEC Address", settings.pec_address or "[red]Not set[/red]")
-    table.add_row("PEC SMTP Server", settings.pec_smtp_server)
-    table.add_row("SDI PEC Address", settings.sdi_pec_address)
+    table.add_row("PEC Address", _format_value(getattr(settings, "pec_address", None)))
+    table.add_row("PEC SMTP Server", _format_value(getattr(settings, "pec_smtp_server", None)))
+    table.add_row("SDI PEC Address", _format_value(getattr(settings, "sdi_pec_address", None)))
 
     # Email Templates & Notifications
     table.add_section()
     table.add_row(
         "Notification Email",
-        settings.notification_email or "[yellow]Not set[/yellow]",
+        _format_value(getattr(settings, "notification_email", None), "[yellow]Not set[/yellow]"),
     )
     table.add_row(
         "Notifications Enabled",
-        "[green]Yes[/green]" if settings.notification_enabled else "[red]No[/red]",
+        (
+            "[green]Yes[/green]"
+            if getattr(settings, "notification_enabled", False)
+            else "[red]No[/red]"
+        ),
     )
-    table.add_row("Locale", settings.locale)
+    table.add_row("Locale", _format_value(getattr(settings, "locale", None)))
     table.add_row(
         "Email Logo URL",
-        settings.email_logo_url or "[dim]Not set[/dim]",
+        _format_value(getattr(settings, "email_logo_url", None), "[dim]Not set[/dim]"),
     )
-    table.add_row("Primary Color", settings.email_primary_color)
-    table.add_row("Secondary Color", settings.email_secondary_color)
+    table.add_row("Primary Color", _format_value(getattr(settings, "email_primary_color", None)))
+    table.add_row(
+        "Secondary Color", _format_value(getattr(settings, "email_secondary_color", None))
+    )
     table.add_row(
         "Email Footer",
-        settings.email_footer_text or "[dim]Auto-generated[/dim]",
+        _format_value(getattr(settings, "email_footer_text", None), "[dim]Auto-generated[/dim]"),
     )
 
     # AI Configuration (expanded)
     table.add_section()
-    table.add_row("AI Provider", settings.ai_provider)
-    table.add_row("AI Model", settings.ai_model)
+    ai_provider = getattr(settings, "ai_provider", None)
+    table.add_row("AI Provider", _format_value(ai_provider))
+    table.add_row("AI Model", _format_value(getattr(settings, "ai_model", None)))
 
     # Show base URL for ollama
-    if settings.ai_provider == "ollama":
+    if ai_provider == "ollama":
         base_url = getattr(settings, "ai_base_url", "http://localhost:11434")
-        table.add_row("AI Base URL", base_url)
+        table.add_row("AI Base URL", _format_value(base_url))
 
     table.add_row(
         "AI API Key",
-        "[green]Set[/green]" if settings.ai_api_key else "[yellow]Not set[/yellow]",
+        (
+            "[green]Set[/green]"
+            if getattr(settings, "ai_api_key", None)
+            else "[yellow]Not set[/yellow]"
+        ),
     )
 
     # AI Chat
@@ -102,9 +131,15 @@ def show_config() -> None:
     )
 
     enabled_tools = getattr(settings, "ai_enabled_tools", "all")
-    if enabled_tools:
-        tools_list = enabled_tools.split(",") if isinstance(enabled_tools, str) else enabled_tools
-        table.add_row("Enabled Tools", f"{len(tools_list)} tools")
+    if isinstance(enabled_tools, str):
+        if enabled_tools.lower() == "all":
+            table.add_row("Enabled Tools", "all")
+        else:
+            tool_names = [tool.strip() for tool in enabled_tools.split(",") if tool.strip()]
+            if tool_names:
+                table.add_row("Enabled Tools", f"{len(tool_names)} tools")
+    elif isinstance(enabled_tools, (list, tuple, set)):
+        table.add_row("Enabled Tools", f"{len(enabled_tools)} tools")
 
     console.print(table)
 

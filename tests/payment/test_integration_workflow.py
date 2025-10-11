@@ -18,6 +18,7 @@ from tempfile import NamedTemporaryFile
 from uuid import uuid4
 
 import pytest
+from structlog.testing import capture_logs
 
 from openfatture.payment import (
     BankAccount,
@@ -30,8 +31,11 @@ from openfatture.payment import (
     ReminderStatus,
     TransactionStatus,
 )
-from openfatture.payment.application.services.matching_service import MatchingService
-from openfatture.payment.application.services.reconciliation_service import ReconciliationService
+from openfatture.payment.application import (
+    MatchingService,
+    ReconciliationService,
+    create_event_bus,
+)
 from openfatture.payment.domain.enums import ImportSource, ReminderStrategy
 from openfatture.payment.infrastructure.importers.csv_importer import CSVConfig, CSVImporter
 from openfatture.payment.infrastructure.repository import (
@@ -220,24 +224,34 @@ class TestCompletePaymentWorkflow:
         assert len(all_matches) >= 2  # At least 2 should match
 
         # STEP 5: Reconcile high-confidence matches
+        event_bus = create_event_bus()
+
         reconciliation_service = ReconciliationService(
             tx_repo=tx_repo,
             payment_repo=payment_repo,
             matching_service=matching_service,
+            event_bus=event_bus,
         )
 
         reconciled_count = 0
-        for tx, matches in all_matches:
-            if matches[0].confidence >= 0.80:
-                await reconciliation_service.reconcile(
-                    transaction_id=tx.id,
-                    payment_id=matches[0].payment.id,
-                    match_type=matches[0].match_type,
-                    confidence=matches[0].confidence,
-                )
-                reconciled_count += 1
+        with capture_logs() as logs:
+            for tx, matches in all_matches:
+                if matches[0].confidence >= 0.80:
+                    await reconciliation_service.reconcile(
+                        transaction_id=tx.id,
+                        payment_id=matches[0].payment.id,
+                        match_type=matches[0].match_type,
+                        confidence=matches[0].confidence,
+                    )
+                    reconciled_count += 1
+        captured_logs = list(logs)
 
         assert reconciled_count >= 2
+        assert any(
+            log.get("event") == "payment_event"
+            and log.get("event_type") == "TransactionMatchedEvent"
+            for log in captured_logs
+        )
 
         # STEP 6: Verify payments updated
         for payment in sample_payments:
@@ -501,21 +515,27 @@ class TestCompletePaymentWorkflow:
             strategies=[ExactAmountMatcher(date_tolerance_days=30)],
         )
 
+        event_bus = create_event_bus()
+
         reconciliation_service = ReconciliationService(
             tx_repo=tx_repo,
             payment_repo=payment_repo,
             matching_service=matching_service,
+            event_bus=event_bus,
         )
 
         # Batch reconcile
-        result = await reconciliation_service.reconcile_batch(
-            account_id=sample_bank_account.id,
-            auto_apply=True,
-            auto_apply_threshold=0.85,
-        )
+        with capture_logs() as logs:
+            result = await reconciliation_service.reconcile_batch(
+                account_id=sample_bank_account.id,
+                auto_apply=True,
+                auto_apply_threshold=0.85,
+            )
+        captured_logs = list(logs)
 
         assert result.total_count >= 2
         assert result.matched_count >= 1  # At least one should auto-match
+        assert any(log.get("event_type") == "TransactionMatchedEvent" for log in captured_logs)
 
 
 class TestCSVImportVariants:

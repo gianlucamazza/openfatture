@@ -18,10 +18,9 @@
 6. [Reconciliation Engine](#reconciliation-engine)
 7. [Payment Reminders](#payment-reminders)
 8. [CLI Commands](#cli-commands)
-9. [Monitoring & Metrics](#monitoring--metrics)
-10. [API Reference](#api-reference)
-11. [Examples](#examples)
-12. [Best Practices](#best-practices)
+9. [API Reference](#api-reference)
+10. [Examples](#examples)
+11. [Best Practices](#best-practices)
 
 ---
 
@@ -32,7 +31,6 @@ OpenFatture's **Payment Tracking** module provides enterprise-grade automated ba
 - 🏦 **Multi-Bank Support** - Import from CSV, OFX, QIF formats
 - 🤖 **AI-Powered Matching** - 5 fuzzy matching strategies with confidence scoring
 - 📧 **Automated Reminders** - Smart notification system with 4 strategies
-- 📊 **Real-time Analytics** - Prometheus metrics for monitoring
 - 🔄 **Auto-Reconciliation** - Match transactions to invoices automatically
 - 🎯 **High Accuracy** - 95%+ matching accuracy with composite matcher
 
@@ -69,6 +67,7 @@ OpenFatture's **Payment Tracking** module provides enterprise-grade automated ba
 - **Audit Trail**: Full history of match decisions
 - **Partial Ledger**: Split transactions across multiple payments with allocation history
 - **AI Insights (optional)**: LLM-assisted causale analysis to detect partial payments and references
+- **Event Bus**: In-memory event bus dispatches `TransactionMatchedEvent` / `TransactionUnmatchedEvent` with default audit logging; custom listeners can be registered via `register_default_payment_listeners()` or configured via the `PAYMENT_EVENT_LISTENERS` setting (`comma`-separated dotted paths).
 
 #### Partial Payments & AI Insights (2025.10)
 
@@ -91,18 +90,6 @@ OpenFatture's **Payment Tracking** module provides enterprise-grade automated ba
 - **Email Templates**: Professional, customizable templates
 - **Automatic Scheduling**: Schedule reminders when invoice is created
 - **Cancellation**: Auto-cancel when payment received
-
-### 4. Metrics & Monitoring
-
-- **Prometheus Integration**: Export metrics for Grafana/Prometheus
-- **Key Metrics**:
-  - `payment_reconciliation_total` - Total reconciliations
-  - `payment_reconciliation_match_confidence` - Match confidence histogram
-  - `payment_reminder_sent_total` - Reminders sent by strategy
-  - `payment_transaction_import_total` - Import counts by source
-  - `payment_overdue_count` - Current overdue invoices
-
----
 
 ## Architecture
 
@@ -711,64 +698,6 @@ openfatture payment list-reminders --status PENDING
 # Cancel reminder
 openfatture payment cancel-reminder <reminder_id>
 ```
-
----
-
-## Monitoring & Metrics
-
-### Prometheus Metrics
-
-Enable metrics server:
-
-```bash
-# In .env
-PROMETHEUS_ENABLED=true
-METRICS_PORT=8000
-
-# Start metrics server
-openfatture payment start-metrics-server
-```
-
-Access metrics at: `http://localhost:8000/metrics`
-
-### Key Metrics
-
-```prometheus
-# Total reconciliations by match type
-payment_reconciliation_total{match_type="exact"} 150
-payment_reconciliation_total{match_type="fuzzy"} 45
-payment_reconciliation_total{match_type="iban"} 30
-
-# Match confidence distribution
-payment_reconciliation_match_confidence_bucket{le="0.7"} 5
-payment_reconciliation_match_confidence_bucket{le="0.8"} 15
-payment_reconciliation_match_confidence_bucket{le="0.9"} 35
-payment_reconciliation_match_confidence_bucket{le="1.0"} 60
-
-# Reminders sent by strategy
-payment_reminder_sent_total{strategy="default"} 120
-payment_reminder_sent_total{strategy="aggressive"} 45
-
-# Transaction imports by source
-payment_transaction_import_total{source="csv"} 500
-payment_transaction_import_total{source="ofx"} 200
-
-# Overdue invoices
-payment_overdue_count 12
-```
-
-### Grafana Dashboard
-
-Import the provided Grafana dashboard: `docker/grafana/dashboards/payment_tracking.json`
-
-**Panels**:
-1. Total Reconciliations (time series)
-2. Match Confidence Distribution (histogram)
-3. Reminders Sent by Strategy (pie chart)
-4. Overdue Invoices (gauge)
-5. Import Activity (bar chart)
-
----
 
 ## API Reference
 

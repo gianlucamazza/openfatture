@@ -450,7 +450,6 @@ print(user)
 
 - Add tiktoken for accurate token counting
 - Implement caching layer (Redis/in-memory)
-- Add Prometheus metrics export
 - Support for custom providers
 - Batch processing support
 - Tool/function calling implementation

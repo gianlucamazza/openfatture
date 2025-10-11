@@ -12,9 +12,11 @@ from openfatture.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-class ChatAgent(BaseAgent):
+class ChatAgent(BaseAgent[ChatContext]):
     """
     General-purpose conversational agent with tool calling.
+
+    Specialized to use ChatContext for type-safe context handling.
 
     Features:
     - Multi-turn conversations with memory

@@ -376,8 +376,8 @@ class QIFImporter(BaseImporter):
         if not (sample.startswith("!Type:") or sample.startswith("!Account:")):
             # Check if any !Type: exists in first 1KB
             if "!Type:" not in sample and "!Account:" not in sample:
-                raise ValueError(
-                    f"File does not appear to be valid QIF format: {self.file_path.name}"
+                print(
+                    f"Warning: QIF file {self.file_path.name} missing !Type: header; attempting import anyway"
                 )
 
     def __repr__(self) -> str:

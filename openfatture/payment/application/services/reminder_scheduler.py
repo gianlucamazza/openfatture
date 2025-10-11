@@ -4,11 +4,13 @@ Implements scheduling and execution of payment reminders based on configurable s
 """
 
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import structlog
 from sqlalchemy.orm import Session
 
+from ....storage.database.models import StatoPagamento
 from ...domain.enums import ReminderStrategy
 from ...domain.models import PaymentReminder
 from ..notifications.notifier import INotifier
@@ -190,12 +192,19 @@ class ReminderScheduler:
         if not payment:
             raise ValueError(f"Payment {payment_id} not found")
 
+        outstanding = self._outstanding_amount(payment)
+
         # Validate payment is not fully paid
-        if payment.importo_pagato >= payment.importo_da_pagare:
+        if outstanding <= Decimal("0.00"):
             raise ValueError(
                 f"Payment {payment_id} is already fully paid. "
                 "Cannot schedule reminders for paid invoices."
             )
+
+        if payment.data_scadenza < date.today() and outstanding > Decimal("0.00"):
+            if getattr(payment, "stato", None) != StatoPagamento.SCADUTO:
+                payment.stato = StatoPagamento.SCADUTO
+                self.payment_repo.update(payment)
 
         # 2. Calculate reminder dates
         due_date = payment.data_scadenza
@@ -281,9 +290,15 @@ class ReminderScheduler:
 
         for reminder in reminders:
             try:
-                # Check if payment is still unpaid
                 payment = reminder.payment
-                if payment.importo_pagato >= payment.importo_da_pagare:
+                outstanding = self._outstanding_amount(payment)
+
+                if payment.data_scadenza < target_date and outstanding > Decimal("0.00"):
+                    if getattr(payment, "stato", None) != StatoPagamento.SCADUTO:
+                        payment.stato = StatoPagamento.SCADUTO
+                        self.payment_repo.update(payment)
+
+                if outstanding <= Decimal("0.00"):
                     logger.debug(
                         "skipping_paid_reminder",
                         reminder_id=reminder.id,
@@ -395,3 +410,21 @@ class ReminderScheduler:
     def __repr__(self) -> str:
         """Human-readable string representation."""
         return f"<ReminderScheduler(" f"notifier={self.notifier.__class__.__name__})>"
+
+    @staticmethod
+    def _outstanding_amount(payment: "Pagamento") -> Decimal:
+        """Compute outstanding amount for a payment entity."""
+
+        saldo = getattr(payment, "saldo_residuo", None)
+        if saldo is not None:
+            try:
+                converted = Decimal(saldo)
+            except (TypeError, ValueError, ArithmeticError):
+                pass
+            else:
+                return converted if converted > Decimal("0.00") else Decimal("0.00")
+
+        due = Decimal(getattr(payment, "importo_da_pagare", getattr(payment, "importo", 0)))
+        paid = Decimal(getattr(payment, "importo_pagato", 0))
+        residual = due - paid
+        return residual if residual > Decimal("0.00") else Decimal("0.00")

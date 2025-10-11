@@ -125,11 +125,12 @@ class MatchingService:
                 # Merge results (keep highest confidence per payment)
                 for match in strategy_matches:
                     payment_id = match.payment.id
+                    normalized = self._normalise_match_result(match)
                     if (
                         payment_id not in all_matches
-                        or match.confidence > all_matches[payment_id].confidence
+                        or normalized.confidence > all_matches[payment_id].confidence
                     ):
-                        all_matches[payment_id] = match
+                        all_matches[payment_id] = normalized
 
             except Exception as e:
                 logger.error(
@@ -172,6 +173,23 @@ class MatchingService:
         )
 
         return filtered_matches
+
+    @staticmethod
+    def _normalise_match_result(match: MatchResult) -> MatchResult:
+        """Return a copy of MatchResult with float confidence for downstream comparisons."""
+
+        if isinstance(match.confidence, float):
+            return match
+
+        return MatchResult(
+            transaction=match.transaction,
+            payment=match.payment,
+            confidence=float(match.confidence),
+            match_reason=match.match_reason,
+            match_type=match.match_type,
+            matched_fields=list(match.matched_fields),
+            amount_diff=match.amount_diff,
+        )
 
     async def match_batch(
         self,
@@ -236,9 +254,9 @@ class MatchingService:
         results = await asyncio.gather(*[match_with_limit(tx) for tx in unmatched])
 
         # 3. Categorize results
-        high_confidence = []  # >= auto_apply_threshold
-        medium_confidence = []  # 0.60 - auto_apply_threshold
-        low_confidence = []  # < 0.60
+        high_confidence: list[tuple[BankTransaction, list[MatchResult]]] = []
+        medium_confidence: list[tuple[BankTransaction, list[MatchResult]]] = []
+        low_confidence: list[tuple[BankTransaction, list[MatchResult]]] = []
 
         for tx, matches in results:
             if not matches:

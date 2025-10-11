@@ -106,7 +106,7 @@ Consulta [docs/BATCH_OPERATIONS.md](BATCH_OPERATIONS.md) per il formato CSV e le
 |---------|--------|
 | `openfatture report iva [--anno 2025] [--trimestre Q1]` | Riepilogo IVA, imponibile e totali per aliquota. |
 | `openfatture report clienti [--anno 2025]` | Classifica clienti per fatturato. |
-| `openfatture report scadenze` | Segnaposto: mostrerà scadenze pagamenti quando il tracciamento sarà completo. |
+| `openfatture report scadenze` | Elenca pagamenti scaduti, in scadenza e futuri con residui e stato dal ledger pagamenti. |
 
 ---
 
@@ -118,13 +118,13 @@ Prima di usare i comandi AI configura le variabili `AI_PROVIDER`, `AI_MODEL`, `A
 |---------|---------|---------|
 | `openfatture ai describe "testo"` | Genera descrizioni professionali per le linee fattura, riutilizzando esempi rilevanti e citando note operative. | `openfatture ai describe "Consulenza backend" --hours 8 --rate 75 --tech "Python,FastAPI"` |
 | `openfatture ai suggest-vat "servizio"` | Suggerisce aliquota IVA, natura e note fiscali con riferimenti DPR 633/72 dalla knowledge base. | `openfatture ai suggest-vat "Formazione online" --pa` |
-| `openfatture ai forecast [--months 6]` | Previsione incassi basata su cronologia pagamenti (richiede dati storici). | `openfatture ai forecast --client 12` |
+| `openfatture ai forecast [--months 6]` | Previsione incassi con ensemble Prophet + XGBoost; salva modelli/metriche in `.models/` e supporta `--retrain`. | `openfatture ai forecast --client 12 --retrain` |
 | `openfatture ai check ID [--level advanced]` | Analizza la fattura con regole + AI per individuare errori prima dell’invio. | `openfatture ai check 45 --level standard --verbose` |
 | `openfatture ai rag status` | Mostra sorgenti della knowledge base, conteggio documenti e directory ChromaDB. |  |
 | `openfatture ai rag index [--source id]` | Indicizza (o reindicizza) le sorgenti definite nel manifest RAG. | `openfatture ai rag index --source tax_guides`
 | `openfatture ai rag search "query"` | Ricerca semantica nella knowledge base (utile per debug o audit interno). | `openfatture ai rag search "reverse charge edilizia" --source tax_guides` |
 
-`forecast` e alcune analisi AI avanzate sono in versione beta: in caso di errori utilizza l’opzione `--json` per diagnosticare più facilmente.
+Il comando `ai forecast` usa i modelli presenti in `MLConfig.model_path` (predefinito `.models/`); se non trovati viene eseguito il training iniziale e vengono generati i file `cash_flow_*`. Usa `--retrain` per rigenerare i modelli dopo aggiornamenti dati. Le analisi AI di compliance (`ai check`) restano in beta: in caso di errori utilizza l’opzione `--json` per diagnosticare più facilmente.
 
 > ℹ️ **Suggerimento:** dopo aver configurato `OPENAI_API_KEY` (o un provider embedding locale) esegui `openfatture ai rag index` per popolare la knowledge base. Gli agenti citeranno automaticamente le fonti normative con il formato `[numero]`.
 

@@ -12,6 +12,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
+> 📘 Documentazione consolidata per v1.0.0: consulta l'[indice aggiornato](docs/README.md) e le [note di rilascio](docs/releases/v1.0.0.md).
+
 ---
 
 ## Demo
@@ -166,13 +168,15 @@ NOTIFICATION_EMAIL=admin@yourcompany.it
 ```
 
 **📚 Full guides:**
-- [Quick Start Guide](docs/QUICKSTART.md) - Step-by-step tutorial
-- [Configuration Reference](docs/CONFIGURATION.md) - All config options
+- [Documentation Index](docs/README.md) - Navigazione completa per v1.0.0
+- [Quick Start (IT)](docs/QUICKSTART.md) - Tutorial passo-passo
+- [Quick Start (EN)](QUICKSTART.md) - CLI onboarding in 5 minuti
+- [Configuration Reference](docs/CONFIGURATION.md) - Tutte le variabili `.env`
 
 ### First Invoice
 
 ```python
-# See docs/QUICKSTART.md for complete examples
+# See docs/QUICKSTART.md (IT) or QUICKSTART.md (EN) for complete examples
 from openfatture.core.invoice.builder import InvoiceBuilder
 from openfatture.utils.email.sender import TemplatePECSender
 
@@ -258,7 +262,20 @@ OpenFatture implements the latest Italian e-invoicing standards:
 
 ## Usage
 
-OpenFatture is primarily used as a **Python library**. CLI commands are planned for future releases.
+OpenFatture può essere utilizzato sia tramite **CLI/TUI interattiva** sia come **libreria Python**. Per una panoramica completa consulta l'[indice della documentazione](docs/README.md).
+
+### CLI
+
+```bash
+# wizard interattivo per emettere una fattura
+uv run openfatture fattura crea
+
+# invio PEC con template professionale
+uv run openfatture fattura invia 42 --pec
+
+# dashboard testuale con AI chat
+uv run openfatture --interactive
+```
 
 ### Python API
 
@@ -269,7 +286,7 @@ from openfatture.core.xml.generator import FatturaXMLGenerator
 from openfatture.utils.email.sender import TemplatePECSender
 
 # Create invoice
-fattura = Fattura(...)  # See docs/QUICKSTART.md
+fattura = Fattura(...)  # See docs/QUICKSTART.md (IT) or QUICKSTART.md (EN)
 
 # Generate XML
 generator = FatturaXMLGenerator(fattura)
@@ -378,10 +395,10 @@ uv sync --all-extras
 uv run pre-commit install
 
 # Run tests
-uv run pytest
+uv run python -m pytest
 
 # Run with coverage
-uv run pytest --cov=openfatture --cov-report=html
+uv run python -m pytest --cov=openfatture --cov-report=html
 
 # Lint and format
 uv run black .
@@ -431,12 +448,12 @@ ptw
 - [x] Interactive CLI with Typer
 - [x] Invoice creation wizard
 - [x] Client management commands
-- [x] Status monitoring dashboard
+- [x] Status monitoring dashboard (fatturato + scadenze pagamenti raggruppate)
 - [x] Batch operation commands
 - [x] Report generation (IVA, clienti, scadenze)
 - [x] Email template management
 - [x] SDI notification processing
-- [ ] PDF generation for human-readable invoices (pending)
+- [x] PDF generation for human-readable invoices (PDF/A-3 templates disponibili)
 
 ### 📋 Phase 4 - AI Layer (In Progress - Partially Implemented)
 - [x] LLM provider abstraction (OpenAI, Anthropic, Ollama)
@@ -448,7 +465,7 @@ ptw
 - [x] Tax suggestion agent: `ai suggest-vat` (functional)
 - [x] Prompt template system (YAML-based)
 - [x] Context enrichment for business data
-- [ ] Cash flow forecasting: `ai forecast` (stub available)
+- [x] Cash flow forecasting: `ai forecast` (Prophet + XGBoost ensemble con modelli salvati e metriche)
 - [ ] Compliance checker agent: `ai check` (stub available)
 - [ ] Multi-agent orchestration with LangGraph
 - [ ] Vector embeddings with ChromaDB (RAG)
@@ -479,14 +496,18 @@ Complete documentation is available in the `docs/` directory:
 
 | Document | Description |
 |----------|-------------|
-| [QUICKSTART.md](docs/QUICKSTART.md) | Step-by-step guide to get started in 15 minutes |
+| [docs/README.md](docs/README.md) | 📚 Documentation index, release hub and navigation |
+| [docs/releases/v1.0.1.md](docs/releases/v1.0.1.md) | AI Cash Flow Upgrade (ensemble Prophet + XGBoost, metriche) |
+| [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md) | Detailed release notes for v1.0.0 |
+| [QUICKSTART.md](QUICKSTART.md) | Quick CLI onboarding (EN, 5 minutes) |
+| [docs/QUICKSTART.md](docs/QUICKSTART.md) | Step-by-step guide in Italian (15 minutes) |
 | [ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md) | **NEW!** Visual Mermaid diagrams (system, AI, SDI, batch, data model) |
 | [AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) | AI module architecture and agent implementation details |
 | [CONFIGURATION.md](docs/CONFIGURATION.md) | Complete reference for all configuration options |
 | [EMAIL_TEMPLATES.md](docs/EMAIL_TEMPLATES.md) | Email templates system documentation |
 | [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) | Full CLI command catalogue with examples |
 | [BATCH_OPERATIONS.md](docs/BATCH_OPERATIONS.md) | CSV import/export workflow and best practices |
-| [PAYMENT_TRACKING.md](openfatture/payment/README.md) | **NEW!** Payment tracking & bank reconciliation module (v1.0.0) |
+| [PAYMENT_TRACKING.md](docs/PAYMENT_TRACKING.md) | **NEW!** Payment tracking & bank reconciliation module (v1.0.0) |
 
 ### Examples
 

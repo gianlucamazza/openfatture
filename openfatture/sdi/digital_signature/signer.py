@@ -7,6 +7,7 @@ Implements CAdES-BES (PKCS#7) signatures for .p7m files.
 from pathlib import Path
 
 from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives.serialization import pkcs7
 
 from openfatture.sdi.digital_signature.certificate_manager import CertificateManager
@@ -138,6 +139,9 @@ class DigitalSigner:
         else:
             # Detached signature
             options = [pkcs7.PKCS7Options.DetachedSignature]
+
+        if not isinstance(private_key, (rsa.RSAPrivateKey, ec.EllipticCurvePrivateKey)):
+            raise ValueError("Unsupported private key type for PKCS#7 signing")
 
         # Sign the data
         builder = (

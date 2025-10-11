@@ -16,8 +16,11 @@ from openfatture.ai.providers import BaseLLMProvider
 logger = structlog.get_logger(__name__)
 
 
-class PaymentInsightAgent(BaseAgent):
-    """LLM agent that classifies causali to support partial payment detection."""
+class PaymentInsightAgent(BaseAgent[PaymentInsightContext]):
+    """LLM agent that classifies causali to support partial payment detection.
+
+    Specialized to use PaymentInsightContext for type-safe context handling.
+    """
 
     def __init__(
         self,

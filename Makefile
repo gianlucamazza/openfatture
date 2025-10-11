@@ -18,7 +18,7 @@ PYTHON ?= python3
 PROJECT_NAME := openfatture
 PROJECT_ROOT := openfatture
 PYTHON_VERSION := $(shell if [ -f .python-version ]; then cat .python-version; else $(PYTHON) -c "import sys; print('.'.join(map(str, sys.version_info[:3])))"; fi)
-PYTEST ?= $(UV) run pytest
+PYTEST ?= $(UV) run python -m pytest
 
 export UV PYTHON PROJECT_NAME PROJECT_ROOT PYTHON_VERSION PYTEST
 

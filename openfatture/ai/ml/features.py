@@ -17,20 +17,27 @@ All features are engineered to be:
 import statistics
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-from sqlalchemy.orm import Session
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sqlalchemy.orm import Session
 
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _get_session() -> Session:
+    """Return a database session, ensuring the engine is initialised."""
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialised. Call init_db() before using features.")
+    return SessionLocal()
 
 
 # Italian public holidays (fixed dates)
@@ -204,7 +211,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
         # Compute stats for each unique client
         unique_clients = X["cliente_id"].unique()
 
-        db = SessionLocal()
+        db = _get_session()
         try:
             for client_id in unique_clients:
                 self.client_stats_cache_[client_id] = self._compute_client_stats(db, client_id)
@@ -435,7 +442,7 @@ class FeaturePipeline:
         self.scale_features = scale_features
 
         # Build pipeline
-        steps = []
+        steps: list[tuple[str, TransformerMixin]] = []
 
         if include_temporal:
             steps.append(("temporal", TemporalFeatureExtractor()))
@@ -475,7 +482,7 @@ class FeaturePipeline:
 
         # Fit scaler if enabled
         if self.scaler:
-            X_transformed = self.pipeline.transform(X)
+            X_transformed = cast(pd.DataFrame, self.pipeline.transform(X))
             numerical_features = self._get_numerical_features(X_transformed)
             self.scaler.fit(X_transformed[numerical_features])
 
@@ -498,7 +505,7 @@ class FeaturePipeline:
             raise ValueError("Pipeline must be fitted before transform")
 
         # Apply feature extraction
-        X_features = self.pipeline.transform(X)
+        X_features = cast(pd.DataFrame, self.pipeline.transform(X))
 
         # Apply scaling if enabled
         if self.scaler:

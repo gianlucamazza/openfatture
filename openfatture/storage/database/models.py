@@ -1,23 +1,17 @@
 """SQLAlchemy models for OpenFatture."""
 
+from __future__ import annotations
+
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import (
-    Boolean,
-    Date,
-    Enum,
-    ForeignKey,
-    Integer,
-    Numeric,
-    String,
-    Text,
-)
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import Base
+from ...utils.datetime import utc_now
+from .base import Base, IntPKMixin
 
 if TYPE_CHECKING:
     from ...payment.domain.payment_allocation import PaymentAllocation
@@ -93,7 +87,7 @@ class StatoPagamento(PyEnum):
 
 
 # Models
-class Cliente(Base):
+class Cliente(IntPKMixin, Base):
     """Client/Customer model."""
 
     __tablename__ = "clienti"
@@ -127,13 +121,13 @@ class Cliente(Base):
     note: Mapped[str | None] = mapped_column(Text)
 
     # Relationships
-    fatture: Mapped[list["Fattura"]] = relationship(back_populates="cliente")
+    fatture: Mapped[list[Fattura]] = relationship(back_populates="cliente")
 
     def __repr__(self) -> str:
         return f"<Cliente(id={self.id}, denominazione='{self.denominazione}')>"
 
 
-class Prodotto(Base):
+class Prodotto(IntPKMixin, Base):
     """Product/Service model."""
 
     __tablename__ = "prodotti"
@@ -159,7 +153,7 @@ class Prodotto(Base):
         return f"<Prodotto(id={self.id}, codice='{self.codice}', descrizione='{self.descrizione}')>"
 
 
-class Fattura(Base):
+class Fattura(IntPKMixin, Base):
     """Invoice model."""
 
     __tablename__ = "fatture"
@@ -178,7 +172,7 @@ class Fattura(Base):
 
     # Cliente
     cliente_id: Mapped[int] = mapped_column(ForeignKey("clienti.id"), nullable=False)
-    cliente: Mapped["Cliente"] = relationship(back_populates="fatture")
+    cliente: Mapped[Cliente] = relationship(back_populates="fatture")
 
     # Importi (calcolati dalle righe)
     imponibile: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
@@ -211,13 +205,13 @@ class Fattura(Base):
     note: Mapped[str | None] = mapped_column(Text)
 
     # Relationships
-    righe: Mapped[list["RigaFattura"]] = relationship(
+    righe: Mapped[list[RigaFattura]] = relationship(
         back_populates="fattura", cascade="all, delete-orphan"
     )
-    pagamenti: Mapped[list["Pagamento"]] = relationship(
+    pagamenti: Mapped[list[Pagamento]] = relationship(
         back_populates="fattura", cascade="all, delete-orphan"
     )
-    log_sdi: Mapped[list["LogSDI"]] = relationship(
+    log_sdi: Mapped[list[LogSDI]] = relationship(
         back_populates="fattura", cascade="all, delete-orphan"
     )
 
@@ -225,13 +219,13 @@ class Fattura(Base):
         return f"<Fattura(id={self.id}, numero='{self.numero}/{self.anno}', stato='{self.stato.value}')>"
 
 
-class RigaFattura(Base):
+class RigaFattura(IntPKMixin, Base):
     """Invoice line item."""
 
     __tablename__ = "righe_fattura"
 
     fattura_id: Mapped[int] = mapped_column(ForeignKey("fatture.id"), nullable=False)
-    fattura: Mapped["Fattura"] = relationship(back_populates="righe")
+    fattura: Mapped[Fattura] = relationship(back_populates="righe")
 
     # Riga
     numero_riga: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -256,13 +250,13 @@ class RigaFattura(Base):
         return f"<RigaFattura(id={self.id}, fattura_id={self.fattura_id}, descrizione='{self.descrizione[:30]}...')>"
 
 
-class Pagamento(Base):
+class Pagamento(IntPKMixin, Base):
     """Payment tracking."""
 
     __tablename__ = "pagamenti"
 
     fattura_id: Mapped[int] = mapped_column(ForeignKey("fatture.id"), nullable=False)
-    fattura: Mapped["Fattura"] = relationship(back_populates="pagamenti")
+    fattura: Mapped[Fattura] = relationship(back_populates="pagamenti")
 
     # Importo
     importo: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
@@ -290,8 +284,8 @@ class Pagamento(Base):
     note: Mapped[str | None] = mapped_column(Text)
 
     # Relationships
-    allocations: Mapped[list["PaymentAllocation"]] = relationship(  # type: ignore[name-defined]
-        back_populates="payment", cascade="all, delete-orphan"
+    allocations: Mapped[list[PaymentAllocation]] = relationship(
+        "PaymentAllocation", back_populates="payment", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -336,14 +330,37 @@ class Pagamento(Base):
             if pagamento_effective_date and self.data_pagamento is None:
                 self.data_pagamento = pagamento_effective_date
 
+    def revert_payment(self, amount: Decimal) -> None:
+        """Roll back a previously applied payment amount."""
+        amount_decimal = Decimal(str(amount))
+        if amount_decimal <= Decimal("0.00"):
+            raise ValueError("Revert amount must be positive")
 
-class LogSDI(Base):
+        current_paid = Decimal(self.importo_pagato or 0)
+        if amount_decimal > current_paid:
+            raise ValueError(
+                f"Cannot revert {amount_decimal} because only {current_paid} has been paid"
+            )
+
+        nuovo_pagato = current_paid - amount_decimal
+        self.importo_pagato = nuovo_pagato
+
+        if nuovo_pagato <= Decimal("0.00"):
+            self.stato = StatoPagamento.DA_PAGARE
+            self.data_pagamento = None
+        elif nuovo_pagato < Decimal(self.importo_da_pagare):
+            self.stato = StatoPagamento.PAGATO_PARZIALE
+        else:
+            self.stato = StatoPagamento.PAGATO
+
+
+class LogSDI(IntPKMixin, Base):
     """SDI notification log."""
 
     __tablename__ = "log_sdi"
 
     fattura_id: Mapped[int] = mapped_column(ForeignKey("fatture.id"), nullable=False)
-    fattura: Mapped["Fattura"] = relationship(back_populates="log_sdi")
+    fattura: Mapped[Fattura] = relationship(back_populates="log_sdi")
 
     # Tipo notifica (RC, NS, MC, NE, DT, AT, EC)
     tipo_notifica: Mapped[str] = mapped_column(String(10), nullable=False)
@@ -355,7 +372,13 @@ class LogSDI(Base):
     xml_path: Mapped[str | None] = mapped_column(String(500))
 
     # Data ricezione
-    data_ricezione: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    data_ricezione: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now
+    )
 
     def __repr__(self) -> str:
         return f"<LogSDI(id={self.id}, fattura_id={self.fattura_id}, tipo='{self.tipo_notifica}')>"
+
+
+# Ensure payment allocation model is registered for relationship resolution
+from ...payment.domain import payment_allocation as _payment_allocation  # noqa: F401,E402

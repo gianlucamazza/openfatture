@@ -1,12 +1,16 @@
-"""Database base configuration and session management."""
+"""Database base configuration, session management, and ORM mixins."""
 
+import uuid
 from collections.abc import Generator
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import DateTime, MetaData, create_engine
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+
+from ...utils.datetime import utc_now
 
 # Naming convention for constraints (helps with Alembic migrations)
 convention = {
@@ -21,25 +25,38 @@ metadata = MetaData(naming_convention=convention)
 
 
 class Base(DeclarativeBase):
-    """Base class for all database models."""
+    """Base class for all database models (without primary key)."""
 
+    __abstract__ = True
     metadata = metadata
 
-    # Common columns for all models
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=utc_now, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utc_now,
+        onupdate=utc_now,
         nullable=False,
     )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert model to dictionary."""
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class IntPKMixin:
+    """Mixin providing an auto-incrementing integer primary key."""
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+
+
+class UUIDPKMixin:
+    """Mixin providing a UUID primary key."""
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False
+    )
 
 
 # Database engine and session (will be configured at runtime)

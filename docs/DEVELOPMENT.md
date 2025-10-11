@@ -364,33 +364,33 @@ act push --dryrun -W .github/workflows/test.yml
 
 ```bash
 # Run all tests
-uv run pytest
+uv run python -m pytest
 
 # With coverage
-uv run pytest --cov=openfatture
+uv run python -m pytest --cov=openfatture
 ```
 
 ### Specific Tests
 
 ```bash
 # Test specific file
-uv run pytest tests/test_invoice.py
+uv run python -m pytest tests/test_invoice.py
 
 # Test specific function
-uv run pytest tests/test_invoice.py::test_create_invoice
+uv run python -m pytest tests/test_invoice.py::test_create_invoice
 
 # Test with pattern
-uv run pytest -k "invoice"
+uv run python -m pytest -k "invoice"
 ```
 
 ### Coverage Report
 
 ```bash
 # Terminal report
-uv run pytest --cov=openfatture --cov-report=term-missing
+uv run python -m pytest --cov=openfatture --cov-report=term-missing
 
 # HTML report
-uv run pytest --cov=openfatture --cov-report=html
+uv run python -m pytest --cov=openfatture --cov-report=html
 open htmlcov/index.html
 ```
 
@@ -510,13 +510,13 @@ git commit -m "docs: update quickstart guide"
 OpenFatture uses **bump-my-version** for automated version management.
 
 ```bash
-# Bump patch version (0.1.0 → 0.1.1)
+# Bump patch version (1.0.0 → 1.0.1)
 uv run bump-my-version bump patch
 
-# Bump minor version (0.1.0 → 0.2.0)
+# Bump minor version (1.0.0 → 1.1.0)
 uv run bump-my-version bump minor
 
-# Bump major version (0.1.0 → 1.0.0)
+# Bump major version (1.0.0 → 2.0.0)
 uv run bump-my-version bump major
 
 # Dry-run to preview changes
@@ -527,17 +527,17 @@ This automatically:
 1. ✅ Updates `__version__` in `openfatture/__init__.py`
 2. ✅ Updates `CHANGELOG.md`
 3. ✅ Creates git commit
-4. ✅ Creates git tag `v0.1.1`
+4. ✅ Creates git tag `v<new-version>`
 
 ### Pre-release Checklist
 
 Before bumping version:
 
-- [ ] All tests pass: `uv run pytest`
+- [ ] All tests pass: `uv run python -m pytest`
 - [ ] Code formatted: `uv run black --check .`
 - [ ] No lint errors: `uv run ruff check .`
 - [ ] CHANGELOG.md updated with changes
-- [ ] Documentation updated
+- [ ] Documentation updated (`docs/README.md`, release notes, README badges)
 - [ ] GitHub Actions validated: `./scripts/validate-actions.sh`
 
 ### Creating a Release
@@ -546,7 +546,7 @@ Before bumping version:
    ```markdown
    ## [Unreleased]
 
-   ## [0.2.0] - 2025-01-15
+   ## [1.1.0] - 2026-01-15
    ### Added
    - New interactive dashboard
    - Batch operations
@@ -554,17 +554,21 @@ Before bumping version:
    - Fixed validation error
    ```
 
-2. **Bump version**:
+2. **Aggiorna la documentazione di rilascio**:
+   - Duplica `docs/releases/<versione-precedente>.md` come base per la nuova release.
+   - Aggiorna `docs/README.md` e il README principale con link e badge della nuova versione.
+
+3. **Bump version**:
    ```bash
    uv run bump-my-version bump minor
    ```
 
-3. **Push with tags**:
+4. **Push con tag**:
    ```bash
    git push --follow-tags
    ```
 
-4. **GitHub Actions will automatically**:
+5. **GitHub Actions will automatically**:
    - Run all tests
    - Build package
    - Create GitHub Release
@@ -595,7 +599,7 @@ uvx twine upload dist/*
 act push -j lint
 
 # 3. Run specific test
-uv run pytest tests/test_invoice.py
+uv run python -m pytest tests/test_invoice.py
 
 # 4. Format and commit
 uv run black .
@@ -606,21 +610,38 @@ git commit -am "feat: my changes"
 
 ```bash
 # Verbose pytest output
-uv run pytest -v
+uv run python -m pytest -v
 
 # Show print statements
-uv run pytest -s
+uv run python -m pytest -s
 
 # Drop into debugger on failure
-uv run pytest --pdb
+uv run python -m pytest --pdb
 ```
 
 ### Performance Profiling
 
 ```bash
 # Profile test execution
-uv run pytest --durations=10
+uv run python -m pytest --durations=10
 ```
+
+### AI Cash Flow Predictor (Prophet + XGBoost)
+
+- I modelli vengono salvati in `MLConfig.model_path` (default `.models/`) con i file:
+  - `cash_flow_prophet.json` / `cash_flow_xgboost.json` (ensemble)
+  - `cash_flow_pipeline.pkl` (feature pipeline + scaler)
+  - `cash_flow_metrics.json` (metriche MAE/RMSE, coverage, metadata dataset)
+- Per rigenerare i modelli esegui:
+  ```bash
+  uv run openfatture ai forecast --retrain
+  ```
+- Assicurati che il database contenga almeno 25 fatture/pagamenti reali; in caso contrario il training viene interrotto con errore.
+- Dopo modifiche al codice ML lancia i test dedicati:
+  ```bash
+  uv run pytest tests/ai/test_cash_flow_predictor_training.py
+  ```
+- Puoi ispezionare metriche e dataset utilizzati aprendo `cash_flow_metrics.json`.
 
 ---
 

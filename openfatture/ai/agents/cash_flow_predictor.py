@@ -27,16 +27,20 @@ Example Usage:
     ...     print(f"{month_data['month']}: €{month_data['expected']:.2f}")
 """
 
-from dataclasses import dataclass
-from datetime import date, timedelta
+import json
+import pickle
+from dataclasses import asdict, dataclass
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
+from sqlalchemy.orm import Session
 
-from openfatture.ai.domain.message import Message
+from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.ml.config import MLConfig, get_ml_config
-from openfatture.ai.ml.data_loader import InvoiceDataLoader
+from openfatture.ai.ml.data_loader import DatasetMetadata, InvoiceDataLoader
 from openfatture.ai.ml.features import FeaturePipeline
 from openfatture.ai.ml.models import CashFlowEnsemble
 from openfatture.ai.providers import create_provider
@@ -46,6 +50,13 @@ from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _get_session() -> Session:
+    """Return database session ensuring initialisation."""
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialized. Call init_db() before using the agent.")
+    return SessionLocal()
 
 
 @dataclass
@@ -156,6 +167,9 @@ class CashFlowPredictorAgent:
         # State
         self.initialized_ = False
         self.model_trained_ = False
+        self.training_metrics_: dict[str, Any] | None = None
+        self.dataset_metadata_: dict[str, Any] | None = None
+        self.feature_schema_: dict[str, Any] | None = None
 
         logger.info("cash_flow_predictor_agent_initialized")
 
@@ -222,7 +236,7 @@ class CashFlowPredictorAgent:
         logger.info("predicting_invoice", invoice_id=invoice_id)
 
         # Load invoice data
-        db = SessionLocal()
+        db = _get_session()
         try:
             fattura = db.query(Fattura).filter(Fattura.id == invoice_id).first()
 
@@ -234,9 +248,7 @@ class CashFlowPredictorAgent:
 
             # Extract features
             if self.feature_pipeline is None:
-                raise RuntimeError(
-                    "Feature pipeline not initialized. Call initialize() first."
-                )
+                raise RuntimeError("Feature pipeline not initialized. Call initialize() first.")
             X_features = self.feature_pipeline.transform(pd.DataFrame([X_row]))
 
             # Make prediction
@@ -295,7 +307,7 @@ class CashFlowPredictorAgent:
         logger.info("forecasting_cash_flow", months=months, client_id=client_id)
 
         # Get unpaid invoices
-        db = SessionLocal()
+        db = _get_session()
         try:
             query = db.query(Fattura).filter(
                 Fattura.stato.in_(
@@ -324,11 +336,13 @@ class CashFlowPredictorAgent:
             for fattura in unpaid_invoices:
                 try:
                     # Get prediction
-                    result = await self.predict_invoice(fattura.id, include_insights=False)
+                    prediction_result = await self.predict_invoice(
+                        fattura.id, include_insights=False
+                    )
 
                     # Calculate expected payment date
                     expected_payment_date = fattura.data_emissione + timedelta(
-                        days=result.expected_days
+                        days=prediction_result.expected_days
                     )
 
                     # Determine which month this falls into
@@ -410,15 +424,37 @@ class CashFlowPredictorAgent:
             test_size=len(dataset.X_test),
         )
 
+        # Guard against insufficient data
+        if len(dataset.X_train) < 25:
+            raise ValueError(
+                "Not enough samples to train the Cash Flow Predictor. "
+                "At least 25 historical invoices with payment data are required."
+            )
+
         # Fit feature pipeline
         if self.feature_pipeline is None:
             raise RuntimeError("Feature pipeline not initialized. Call initialize() first.")
         self.feature_pipeline.fit(dataset.X_train, dataset.y_train)
 
-        # Transform features
+        # Transform features for each split
         X_train_features = self.feature_pipeline.transform(dataset.X_train)
-        X_val_features = self.feature_pipeline.transform(dataset.X_val)
-        X_test_features = self.feature_pipeline.transform(dataset.X_test)
+        X_val_features = (
+            self.feature_pipeline.transform(dataset.X_val)
+            if len(dataset.X_val) > 0
+            else dataset.X_val
+        )
+        X_test_features = (
+            self.feature_pipeline.transform(dataset.X_test)
+            if len(dataset.X_test) > 0
+            else dataset.X_test
+        )
+
+        # Persist feature schema for downstream inspection
+        self.feature_schema_ = (
+            self.feature_pipeline.get_schema().__dict__
+            if hasattr(self.feature_pipeline, "get_schema")
+            else None
+        )
 
         # Train ensemble
         if self.ensemble is None:
@@ -426,16 +462,24 @@ class CashFlowPredictorAgent:
         self.ensemble.fit(
             X_train_features,
             dataset.y_train,
-            X_val_features,
-            dataset.y_val,
+            X_val_features if len(dataset.X_val) > 0 else None,
+            dataset.y_val if len(dataset.y_val) > 0 else None,
         )
 
-        # Evaluate on test set
-        if self.ensemble is None:
-            raise RuntimeError("Ensemble model not initialized. Call initialize() first.")
-        test_mae = self.ensemble.score(X_test_features, dataset.y_test)
+        # Evaluate and capture metrics
+        self.training_metrics_ = self._evaluate_model(
+            X_train_features,
+            dataset.y_train,
+            X_val_features,
+            dataset.y_val,
+            X_test_features,
+            dataset.y_test,
+        )
 
-        logger.info("models_trained", test_mae=test_mae)
+        logger.info("models_trained", metrics=self.training_metrics_)
+
+        # Persist dataset metadata for audit purposes
+        self.dataset_metadata_ = self._serialize_dataset_metadata(dataset.metadata)
 
         # Save models
         model_path = self.config.get_model_filepath("cash_flow")
@@ -447,13 +491,76 @@ class CashFlowPredictorAgent:
         """Save trained models to disk."""
         if self.ensemble is None:
             raise RuntimeError("Ensemble model not initialized. Cannot save.")
+        if self.feature_pipeline is None or not self.feature_pipeline.fitted_:
+            raise RuntimeError("Feature pipeline not fitted. Cannot save.")
+
+        model_dir = Path(filepath_prefix).parent
+        model_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save ensemble constituents
         self.ensemble.save(filepath_prefix)
 
-        logger.info("models_saved", path=filepath_prefix)
+        # Persist feature pipeline state
+        pipeline_path = Path(f"{filepath_prefix}_pipeline.pkl")
+        pipeline_payload = {
+            "pipeline": self.feature_pipeline,
+            "schema": self.feature_schema_,
+        }
+        with pipeline_path.open("wb") as fh:
+            pickle.dump(pipeline_payload, fh)
+
+        # Persist training metadata and dataset provenance
+        config_dump = self.config.model_dump()
+        serializable_config = {
+            key: (str(value) if isinstance(value, Path) else value)
+            for key, value in config_dump.items()
+        }
+
+        metrics_path = Path(f"{filepath_prefix}_metrics.json")
+        metrics_payload = {
+            "trained_at": datetime.now(UTC).isoformat(),
+            "config": serializable_config,
+            "metrics": self.training_metrics_ or {},
+            "dataset": self.dataset_metadata_ or {},
+        }
+        with metrics_path.open("w", encoding="utf-8") as fh:
+            json.dump(metrics_payload, fh, indent=2, ensure_ascii=False)
+
+        logger.info(
+            "models_saved",
+            path=filepath_prefix,
+            pipeline=str(pipeline_path),
+            metrics=str(metrics_path),
+        )
 
     async def _load_models(self, filepath_prefix: str) -> None:
         """Load models from disk."""
         self.ensemble = CashFlowEnsemble.load(filepath_prefix)
+        pipeline_path = Path(f"{filepath_prefix}_pipeline.pkl")
+        if not pipeline_path.exists():
+            raise FileNotFoundError(f"Saved feature pipeline not found at {pipeline_path}")
+
+        with pipeline_path.open("rb") as fh:
+            payload = pickle.load(fh)
+
+        pipeline = payload.get("pipeline")
+        if not isinstance(pipeline, FeaturePipeline):
+            raise TypeError("Saved feature pipeline is invalid or corrupted")
+
+        self.feature_pipeline = pipeline
+        self.feature_pipeline.fitted_ = True
+        self.feature_schema_ = payload.get("schema")
+
+        metrics_path = Path(f"{filepath_prefix}_metrics.json")
+        if metrics_path.exists():
+            with metrics_path.open("r", encoding="utf-8") as fh:
+                metrics_payload = json.load(fh)
+            self.training_metrics_ = metrics_payload.get("metrics")
+            self.dataset_metadata_ = metrics_payload.get("dataset")
+        else:
+            self.training_metrics_ = None
+            self.dataset_metadata_ = None
+
         self.model_trained_ = True
 
         logger.info("models_loaded", path=filepath_prefix)
@@ -462,8 +569,76 @@ class CashFlowPredictorAgent:
         """Check if saved models exist."""
         prophet_path = Path(f"{filepath_prefix}_prophet.json")
         xgboost_path = Path(f"{filepath_prefix}_xgboost.json")
+        pipeline_path = Path(f"{filepath_prefix}_pipeline.pkl")
 
-        return prophet_path.exists() and xgboost_path.exists()
+        return prophet_path.exists() and xgboost_path.exists() and pipeline_path.exists()
+
+    def _evaluate_model(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_val: pd.DataFrame,
+        y_val: pd.Series,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+    ) -> dict[str, Any]:
+        """Compute evaluation metrics for train/validation/test splits."""
+
+        ensemble = self.ensemble
+        if ensemble is None:
+            raise RuntimeError("Ensemble model not initialized. Call initialize() first.")
+
+        def _split_metrics(name: str, X: pd.DataFrame, y: pd.Series) -> dict[str, Any] | None:
+            if X is None or y is None or len(X) == 0:
+                return None
+            predictions = ensemble.predict(X)
+            y_true = y.to_numpy(dtype=float)
+            y_pred = np.array([pred.yhat for pred in predictions], dtype=float)
+            residuals = y_true - y_pred
+
+            mae = float(np.mean(np.abs(residuals)))
+            rmse = float(np.sqrt(np.mean(np.square(residuals))))
+            median_abs_error = float(np.median(np.abs(residuals)))
+
+            # Compute coverage if both bounds available
+            coverages = []
+            interval_widths = []
+            for target, pred in zip(y_true, predictions, strict=False):
+                if pred.yhat_lower is not None and pred.yhat_upper is not None:
+                    interval_widths.append(pred.uncertainty)
+                    coverages.append(pred.yhat_lower <= target <= pred.yhat_upper)
+
+            coverage = float(np.mean(coverages)) if coverages else None
+            median_interval = float(np.median(interval_widths)) if interval_widths else None
+
+            return {
+                "mae": mae,
+                "rmse": rmse,
+                "median_abs_error": median_abs_error,
+                "coverage": coverage,
+                "median_interval_width": median_interval,
+                "samples": int(len(X)),
+            }
+
+        metrics: dict[str, Any] = {}
+        for split_name, X_split, y_split in (
+            ("train", X_train, y_train),
+            ("validation", X_val, y_val),
+            ("test", X_test, y_test),
+        ):
+            split_metrics = _split_metrics(split_name, X_split, y_split)
+            if split_metrics:
+                metrics[split_name] = split_metrics
+
+        return metrics
+
+    def _serialize_dataset_metadata(self, metadata: DatasetMetadata) -> dict[str, Any]:
+        """Normalize dataset metadata for JSON serialization."""
+        payload = asdict(metadata)
+        payload["created_at"] = metadata.created_at.isoformat()
+        start_date, end_date = metadata.date_range
+        payload["date_range"] = [start_date.isoformat(), end_date.isoformat()]
+        return payload
 
     def _invoice_to_features(self, fattura: Fattura) -> dict[str, Any]:
         """Convert invoice to feature dictionary."""
@@ -512,7 +687,7 @@ Fornisci:
 Rispondi in italiano, conciso e professionale."""
 
         try:
-            messages = [Message(role="user", content=prompt)]
+            messages = [Message(role=Role.USER, content=prompt)]
             response = await self.ai_provider.generate(
                 messages=messages,
                 temperature=0.3,
@@ -579,7 +754,7 @@ Provide:
 Respond in Italian, concise and professional."""
 
         try:
-            messages = [Message(role="user", content=prompt)]
+            messages = [Message(role=Role.USER, content=prompt)]
             response = await self.ai_provider.generate(
                 messages=messages,
                 temperature=0.3,

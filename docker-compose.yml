@@ -52,23 +52,6 @@ services:
     profiles:
       - ai
 
-  # Grafana (for observability)
-  grafana:
-    image: grafana/grafana:latest
-    container_name: openfatture_grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_INSTALL_PLUGINS=grafana-clock-panel
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-    ports:
-      - "3000:3000"
-    networks:
-      - openfatture_network
-    profiles:
-      - monitoring
-
 volumes:
   openfatture_data:
     driver: local
@@ -79,8 +62,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
-    driver: local
-  grafana_data:
     driver: local
 
 networks:

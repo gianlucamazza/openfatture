@@ -2,7 +2,7 @@
 Tests for report CLI commands.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock, patch
 
@@ -10,6 +10,7 @@ import pytest
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.report import app
+from openfatture.storage.database.models import StatoPagamento
 
 runner = CliRunner()
 pytestmark = pytest.mark.unit
@@ -217,6 +218,122 @@ class TestReportClientiCommand:
         assert "3,000" in result.stdout
         assert "8,000" in result.stdout  # Total
 
+
+class FakeCliente:
+    def __init__(self, denominazione: str):
+        self.denominazione = denominazione
+        self.nome = denominazione
+
+
+class FakeFattura:
+    def __init__(self, numero: str, anno: int, cliente: FakeCliente):
+        self.numero = numero
+        self.anno = anno
+        self.cliente = cliente
+
+
+class FakePagamento:
+    def __init__(
+        self,
+        numero: str,
+        anno: int,
+        cliente: str,
+        data_scadenza: date,
+        importo: Decimal,
+        importo_pagato: Decimal,
+        stato: StatoPagamento = StatoPagamento.DA_PAGARE,
+    ):
+        self.fattura = FakeFattura(numero, anno, FakeCliente(cliente))
+        self.data_scadenza = data_scadenza
+        self.importo = importo
+        self.importo_pagato = importo_pagato
+        self.stato = stato
+
+    @property
+    def saldo_residuo(self) -> Decimal:
+        residuo = self.importo - self.importo_pagato
+        return residuo if residuo > Decimal("0.00") else Decimal("0.00")
+
+
+class TestReportScadenzeCommand:
+    """Test 'report scadenze' command."""
+
+    @patch("openfatture.cli.commands.report.SessionLocal")
+    @patch("openfatture.cli.commands.report.init_db")
+    def test_report_scadenze_no_outstanding(self, mock_init_db, mock_session_local):
+        """Should inform when there are no pending payments."""
+        mock_db = MagicMock()
+        mock_session_local.return_value = mock_db
+
+        mock_query = MagicMock()
+        mock_db.query.return_value = mock_query
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.all.return_value = []
+
+        result = runner.invoke(app, ["scadenze"])
+
+        assert result.exit_code == 0
+        assert "No outstanding payments" in result.stdout
+
+    @patch("openfatture.cli.commands.report.SessionLocal")
+    @patch("openfatture.cli.commands.report.init_db")
+    def test_report_scadenze_with_categories(self, mock_init_db, mock_session_local):
+        """Should group payments into overdue, due soon, and upcoming."""
+        mock_db = MagicMock()
+        mock_session_local.return_value = mock_db
+
+        mock_query = MagicMock()
+        mock_db.query.return_value = mock_query
+        mock_query.options.return_value = mock_query
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+
+        today = date.today()
+        payments = [
+            FakePagamento(
+                numero="001",
+                anno=2025,
+                cliente="Client Overdue",
+                data_scadenza=today - timedelta(days=5),
+                importo=Decimal("1000.00"),
+                importo_pagato=Decimal("200.00"),
+                stato=StatoPagamento.PAGATO_PARZIALE,
+            ),
+            FakePagamento(
+                numero="002",
+                anno=2025,
+                cliente="Client Soon",
+                data_scadenza=today + timedelta(days=3),
+                importo=Decimal("500.00"),
+                importo_pagato=Decimal("0.00"),
+            ),
+            FakePagamento(
+                numero="003",
+                anno=2025,
+                cliente="Client Future",
+                data_scadenza=today + timedelta(days=21),
+                importo=Decimal("250.00"),
+                importo_pagato=Decimal("0.00"),
+            ),
+        ]
+
+        mock_query.all.return_value = payments
+
+        result = runner.invoke(app, ["scadenze"])
+
+        assert result.exit_code == 0
+        assert "Scaduti" in result.stdout
+        assert "In scadenza" in result.stdout
+        assert "Prossimi pagamenti" in result.stdout
+        assert "001/2025" in result.stdout
+        assert "002/2025" in result.stdout
+        assert "003/2025" in result.stdout
+        assert "Client Overdue" in result.stdout
+        assert "Client Soon" in result.stdout
+        assert "Client Future" in result.stdout
+
     @patch("openfatture.cli.commands.report.SessionLocal")
     @patch("openfatture.cli.commands.report.init_db")
     def test_report_clienti_default_year(self, mock_init_db, mock_session_local):
@@ -262,24 +379,6 @@ class TestReportClientiCommand:
         assert "1" in result.stdout  # Rank 1
         assert "2" in result.stdout  # Rank 2
         assert "3" in result.stdout  # Rank 3
-
-
-class TestReportScadenzeCommand:
-    """Test 'report scadenze' command."""
-
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_scadenze_placeholder(self, mock_init_db, mock_session_local):
-        """Test scadenze report shows placeholder message."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        result = runner.invoke(app, ["scadenze"])
-
-        assert result.exit_code == 0
-        assert "Upcoming Payment Due Dates" in result.stdout
-        assert "not yet fully implemented" in result.stdout
-        assert "Example output" in result.stdout
 
 
 class TestEnsureDB:

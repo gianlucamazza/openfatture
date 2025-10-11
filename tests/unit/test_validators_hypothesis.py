@@ -5,6 +5,7 @@ Hypothesis generates random test cases to find edge cases automatically.
 This is a 2025 best practice for robust testing.
 """
 
+import string
 from decimal import Decimal
 
 import pytest
@@ -25,7 +26,7 @@ pytestmark = pytest.mark.unit
 class TestPartitaIVAProperties:
     """Property-based tests for Partita IVA validation."""
 
-    @given(st.text(min_size=11, max_size=11, alphabet=st.characters(whitelist_categories=("Nd",))))
+    @given(st.text(min_size=11, max_size=11, alphabet=string.digits))
     def test_valid_length_numeric_strings(self, piva: str):
         """
         Test that 11-digit numeric strings are processed.
@@ -55,9 +56,7 @@ class TestPartitaIVAProperties:
 class TestCodiceFiscaleProperties:
     """Property-based tests for Codice Fiscale validation."""
 
-    @given(
-        st.text(alphabet=st.characters(whitelist_categories=("Lu", "Nd")), min_size=16, max_size=16)
-    )
+    @given(st.text(alphabet=string.ascii_uppercase + string.digits, min_size=16, max_size=16))
     def test_uppercase_alphanumeric_16_chars(self, cf: str):
         """
         Test 16-character uppercase alphanumeric strings.
@@ -76,7 +75,11 @@ class TestCodiceFiscaleProperties:
         assert result is False
 
     @given(
-        st.text(alphabet=st.characters(blacklist_categories=("Lu", "Nd")), min_size=16, max_size=16)
+        st.text(
+            alphabet=st.characters(blacklist_characters=string.ascii_uppercase + string.digits),
+            min_size=16,
+            max_size=16,
+        )
     )
     def test_invalid_characters_fail(self, cf: str):
         """
@@ -89,9 +92,7 @@ class TestCodiceFiscaleProperties:
 class TestCodiceDestinatarioProperties:
     """Property-based tests for SDI recipient code."""
 
-    @given(
-        st.text(alphabet=st.characters(whitelist_categories=("Lu", "Nd")), min_size=7, max_size=7)
-    )
+    @given(st.text(alphabet=string.ascii_uppercase + string.digits, min_size=7, max_size=7))
     def test_seven_char_alphanumeric_valid(self, code: str):
         """
         Property: Any 7-character alphanumeric string should be valid.

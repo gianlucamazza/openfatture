@@ -279,7 +279,7 @@ success, error = sender._send_email(message)
 Run the email template tests:
 
 ```bash
-uv run pytest tests/unit/test_email_templates.py -v
+uv run python -m pytest tests/unit/test_email_templates.py -v
 ```
 
 ### Integration Testing

@@ -135,7 +135,23 @@ jobs:
             make media-scenario${scenario}
           fi
 
+      - name: Check generated videos
+        id: check_videos
+        run: |
+          if compgen -G "media/output/*.mp4" > /dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "✓ MP4 assets detected in media/output/"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️  No MP4 assets generated in media/output/"
+          fi
+
+      - name: No videos generated
+        if: steps.check_videos.outputs.found != 'true'
+        run: echo "Skipping artifact upload and optimization trigger (no videos produced)."
+
       - name: List generated videos
+        if: steps.check_videos.outputs.found == 'true'
         run: |
           echo "Generated videos:"
           ls -lh media/output/*.mp4 | awk '{print "  " $9 " (" $5 ")"}'
@@ -144,15 +160,17 @@ jobs:
           echo "Total size: $total_size"
 
       - name: Upload videos as artifacts
+        if: steps.check_videos.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: media-videos-${{ github.run_number }}
           path: media/output/*.mp4
+          if-no-files-found: warn
           retention-days: 7
           compression-level: 0  # Videos are already compressed
 
       - name: Trigger optimization workflow
-        if: ${{ !inputs.skip_optimization }}
+        if: ${{ steps.check_videos.outputs.found == 'true' && !inputs.skip_optimization }}
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -163,9 +181,14 @@ jobs:
         run: |
           echo "## 🎬 Media Generation Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_videos.outputs.found }}" != "true" ]; then
+            echo "No videos were generated during this run." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
           echo "**Scenario:** ${{ github.event.inputs.scenario || 'all' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Provider:** Anthropic Claude Sonnet 4.5" >> $GITHUB_STEP_SUMMARY
-          echo "**Videos generated:** $(ls media/output/*.mp4 | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "**Videos generated:** $(find media/output -maxdepth 1 -name '*.mp4' | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Files:" >> $GITHUB_STEP_SUMMARY
-          ls -lh media/output/*.mp4 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+          find media/output -maxdepth 1 -name '*.mp4' -type f -print0 | xargs -0 ls -lh | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY

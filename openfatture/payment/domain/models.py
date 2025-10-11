@@ -7,16 +7,27 @@ DDD Entities:
 - Mapped to database tables via SQLAlchemy
 """
 
-import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Date, Enum, ForeignKey, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import (
+    JSON,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    event,
+    select,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ...storage.database.base import Base
+from ...storage.database.base import Base, IntPKMixin, UUIDPKMixin
+from ...utils.datetime import utc_now
 from .enums import ImportSource, MatchType, ReminderStatus, ReminderStrategy, TransactionStatus
 
 if TYPE_CHECKING:
@@ -24,7 +35,7 @@ if TYPE_CHECKING:
     from .payment_allocation import PaymentAllocation
 
 
-class BankAccount(Base):
+class BankAccount(IntPKMixin, Base):
     """Bank account entity for tracking payment sources.
 
     Represents a bank account from which transactions are imported.
@@ -81,7 +92,7 @@ class BankAccount(Base):
         return f"<BankAccount(id={self.id}, name='{self.name}', iban='{self.iban}')>"
 
 
-class BankTransaction(Base):
+class BankTransaction(UUIDPKMixin, Base):
     """Bank transaction entity for reconciliation.
 
     Represents a single transaction imported from a bank statement.
@@ -105,12 +116,6 @@ class BankTransaction(Base):
     """
 
     __tablename__ = "bank_transactions"
-
-    # Override Base's id to use UUID instead of Integer
-    # Use UUID for better security and distributed systems
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False
-    )
 
     # Bank account relationship
     account_id: Mapped[int] = mapped_column(ForeignKey("bank_accounts.id"), nullable=False)
@@ -137,12 +142,15 @@ class BankTransaction(Base):
 
     match_confidence: Mapped[float | None] = mapped_column()
     match_type: Mapped[MatchType | None] = mapped_column(Enum(MatchType))
+    matched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Import metadata
     import_source: Mapped[ImportSource] = mapped_column(
         Enum(ImportSource), nullable=False, default=ImportSource.MANUAL
     )
-    import_date: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    import_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
 
     # Store original data for debugging/audit trail
     raw_data: Mapped[dict | None] = mapped_column(JSON)
@@ -205,7 +213,7 @@ class BankTransaction(Base):
         )
 
 
-class PaymentReminder(Base):
+class PaymentReminder(IntPKMixin, Base):
     """Payment reminder entity for automated notifications.
 
     Represents a scheduled reminder for an upcoming or overdue payment.
@@ -233,7 +241,7 @@ class PaymentReminder(Base):
     # Scheduling
     reminder_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     days_before_due: Mapped[int] = mapped_column(
-        nullable=False
+        Integer, nullable=False, default=0
     )  # Days relative to due date (negative = overdue)
     status: Mapped[ReminderStatus] = mapped_column(
         Enum(ReminderStatus), nullable=False, default=ReminderStatus.PENDING, index=True
@@ -254,7 +262,7 @@ class PaymentReminder(Base):
     def mark_sent(self) -> None:
         """Mark this reminder as sent."""
         self.status = ReminderStatus.SENT
-        self.sent_date = datetime.utcnow()
+        self.sent_date = datetime.now(UTC)
 
     def mark_failed(self, error: str) -> None:
         """Mark this reminder as failed with an error message."""
@@ -279,3 +287,38 @@ class PaymentReminder(Base):
             f"reminder_date={self.reminder_date}, "
             f"status='{self.status.value}')>"
         )
+
+    def recompute_days_before_due(self) -> int:
+        """Recompute days_before_due based on payment due date."""
+        if not self.reminder_date:
+            self.days_before_due = 0
+            return self.days_before_due
+
+        payment = getattr(self, "payment", None)
+        due_date = getattr(payment, "data_scadenza", None)
+        if due_date:
+            self.days_before_due = (due_date - self.reminder_date).days
+        return self.days_before_due
+
+
+@event.listens_for(PaymentReminder, "before_insert")
+def _set_days_before_due_before_insert(mapper, connection, target: PaymentReminder) -> None:
+    """Ensure days_before_due has a sensible value before persisting."""
+    if target.days_before_due is not None and target.days_before_due != 0:
+        return
+
+    if not target.reminder_date or not target.payment_id:
+        target.days_before_due = target.days_before_due or 0
+        return
+
+    from ...storage.database.models import Pagamento  # Local import to prevent circular deps
+
+    pagamento_table = Pagamento.__table__
+    due_date = connection.execute(
+        select(pagamento_table.c.data_scadenza).where(pagamento_table.c.id == target.payment_id)
+    ).scalar_one_or_none()
+
+    if due_date:
+        target.days_before_due = (due_date - target.reminder_date).days
+    else:
+        target.days_before_due = target.days_before_due or 0

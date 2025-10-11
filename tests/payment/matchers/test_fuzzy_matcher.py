@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Tests for FuzzyDescriptionMatcher with property-based testing.
 
 The FuzzyDescriptionMatcher uses Levenshtein distance (via rapidfuzz) to match
@@ -5,8 +7,10 @@ transaction descriptions with invoice/payment descriptions. Includes property-ba
 tests with Hypothesis for robust edge case coverage.
 """
 
+import string
 from datetime import date
 from decimal import Decimal
+from typing import TYPE_CHECKING, cast
 from unittest.mock import Mock
 
 import pytest
@@ -17,6 +21,14 @@ from openfatture.payment.domain.enums import MatchType
 from openfatture.payment.matchers.fuzzy import FuzzyDescriptionMatcher
 
 pytestmark = pytest.mark.unit
+
+if TYPE_CHECKING:
+    from openfatture.storage.database.models import Pagamento
+
+
+def _as_pagamenti(*payments: Mock) -> list[Pagamento]:
+    """Return payments list typed as Pagamento for matcher expectations."""
+    return cast(list["Pagamento"], list(payments))
 
 
 class TestFuzzyDescriptionMatcherBasic:
@@ -41,7 +53,7 @@ class TestFuzzyDescriptionMatcherBasic:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = "Acme Corp"
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 
@@ -68,7 +80,7 @@ class TestFuzzyDescriptionMatcherBasic:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = "Acme Corp"  # Similar but not exact
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 
@@ -95,7 +107,7 @@ class TestFuzzyDescriptionMatcherBasic:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = "Società Perché"
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 
@@ -121,7 +133,7 @@ class TestFuzzyDescriptionMatcherBasic:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = "acme corp"  # Lowercase
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 
@@ -148,7 +160,7 @@ class TestFuzzyDescriptionMatcherBasic:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = "Test"
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 
@@ -178,7 +190,7 @@ class TestFuzzyDescriptionMatcherBasic:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = "Different text"
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         high_results = high_threshold_matcher.match(transaction, candidates)
         low_results = low_threshold_matcher.match(transaction, candidates)
@@ -205,7 +217,7 @@ class TestFuzzyDescriptionMatcherBasic:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = "Acme"
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 
@@ -239,7 +251,7 @@ class TestFuzzyDescriptionMatcherPropertyBased:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = description  # Same description
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 
@@ -270,7 +282,7 @@ class TestFuzzyDescriptionMatcherPropertyBased:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = desc2
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 
@@ -278,7 +290,7 @@ class TestFuzzyDescriptionMatcherPropertyBased:
         if results:
             assert Decimal("0.0") <= results[0].confidence <= Decimal("1.0")
 
-    @given(st.text(alphabet=st.characters(whitelist_categories=("L",)), min_size=10, max_size=50))
+    @given(st.text(alphabet=string.ascii_letters, min_size=10, max_size=50))
     def test_fuzzy_case_normalization_property(self, text: str):
         """Property: Case variations should not affect matching significantly."""
         if not text.strip():
@@ -301,7 +313,7 @@ class TestFuzzyDescriptionMatcherPropertyBased:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.denominazione = text.lower()
 
-        candidates = [payment]
+        candidates = _as_pagamenti(payment)
 
         results = matcher.match(transaction, candidates)
 

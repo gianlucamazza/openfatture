@@ -263,9 +263,16 @@ class CashFlowEnsemble:
         # Weighted average for point prediction
         yhat = self.prophet_weight * prophet_pred.yhat + self.xgboost_weight * xgboost_pred.yhat
 
-        # Combine prediction intervals (conservative approach: widest interval)
-        yhat_lower = min(prophet_pred.yhat_lower, xgboost_pred.yhat_lower)
-        yhat_upper = max(prophet_pred.yhat_upper, xgboost_pred.yhat_upper)
+        # Combine prediction intervals (use available bounds from both models)
+        xgb_lower = (
+            xgboost_pred.yhat_lower if xgboost_pred.yhat_lower is not None else xgboost_pred.yhat
+        )
+        xgb_upper = (
+            xgboost_pred.yhat_upper if xgboost_pred.yhat_upper is not None else xgboost_pred.yhat
+        )
+
+        yhat_lower = min(prophet_pred.yhat_lower, xgb_lower)
+        yhat_upper = max(prophet_pred.yhat_upper, xgb_upper)
 
         # Calculate model agreement (inverse of prediction difference)
         disagreement = abs(prophet_pred.yhat - xgboost_pred.yhat)
@@ -316,7 +323,13 @@ class CashFlowEnsemble:
         confidence = model_agreement
 
         # Penalize wide uncertainty intervals
-        avg_uncertainty = (prophet_pred.uncertainty + xgboost_pred.uncertainty) / 2
+        xgb_uncertainty = (
+            xgboost_pred.uncertainty
+            if xgboost_pred.uncertainty is not None
+            else prophet_pred.uncertainty
+        )
+
+        avg_uncertainty = (prophet_pred.uncertainty + xgb_uncertainty) / 2
 
         # Normalize uncertainty (assume 30 days is low confidence)
         uncertainty_penalty = min(1.0, avg_uncertainty / 30.0)
@@ -384,8 +397,8 @@ class CashFlowEnsemble:
         xgboost_values = np.array([p.yhat for p in xgboost_preds])
 
         # Grid search over weights
-        best_mae = float("inf")
-        best_weight = 0.5
+        best_mae: float = float("inf")
+        best_weight: float = 0.5
 
         for prophet_w in np.arange(0.0, 1.01, 0.05):
             xgboost_w = 1.0 - prophet_w
@@ -394,11 +407,11 @@ class CashFlowEnsemble:
             y_pred = prophet_w * prophet_values + xgboost_w * xgboost_values
 
             # Calculate MAE
-            mae = np.mean(np.abs(y_val.values - y_pred))
+            mae = float(np.mean(np.abs(y_val.values - y_pred)))
 
             if mae < best_mae:
                 best_mae = mae
-                best_weight = prophet_w
+                best_weight = float(prophet_w)
 
         # Update weights
         self.prophet_weight = best_weight

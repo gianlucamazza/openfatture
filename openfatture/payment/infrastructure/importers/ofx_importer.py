@@ -5,6 +5,7 @@ Supports Open Financial Exchange (OFX) format used by most banks.
 
 from datetime import datetime
 from decimal import Decimal
+from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -74,10 +75,16 @@ class OFXImporter(BaseImporter):
         """
         # Parse OFX file
         with open(self.file_path, "rb") as f:
-            try:
-                ofx = OfxParser.parse(f)
-            except Exception as e:
-                raise ValueError(f"Failed to parse OFX file: {e}") from e
+            raw_content = f.read()
+
+        upper_sample = raw_content.upper()
+        if b"<OFX" not in upper_sample and b"OFXHEADER" not in upper_sample:
+            raise ValueError("Failed to parse OFX file: missing OFX header")
+
+        try:
+            ofx = OfxParser.parse(BytesIO(raw_content))
+        except Exception as e:
+            raise ValueError(f"Failed to parse OFX file: {e}") from e
 
         # Find account statement
         statement = self._find_statement(ofx)
@@ -254,7 +261,7 @@ class OFXImporter(BaseImporter):
         # OFX files must contain one of these signatures
         ofx_signatures = ["<OFX>", "OFXHEADER:", "<?xml"]
         if not any(sig in sample for sig in ofx_signatures):
-            raise ValueError(f"File does not appear to be valid OFX format: {self.file_path.name}")
+            raise ValueError("Failed to parse OFX file: missing OFX header")
 
     def __repr__(self) -> str:
         """Human-readable string representation."""

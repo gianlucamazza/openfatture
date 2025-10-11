@@ -7,7 +7,6 @@ This script demonstrates how to use the Payment Tracking module for:
 - Manual reconciliation
 - Payment reminders
 - Batch operations
-- Prometheus metrics
 
 Architecture: Domain-Driven Design (DDD) + Hexagonal Architecture
 
@@ -29,22 +28,17 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 
-from openfatture.payment import (
-    BankAccount,
-    BankTransaction,
-    MatchType,
-    TransactionStatus,
-    record_reconciliation,
-    record_transaction_import,
-)
+from openfatture.payment import BankAccount, BankTransaction, MatchType, TransactionStatus
 from openfatture.payment.application.services.matching_service import MatchingService
 from openfatture.payment.application.services.reconciliation_service import ReconciliationService
-from openfatture.payment.application.services.reminder_scheduler import ReminderScheduler
+from openfatture.payment.application.services.reminder_scheduler import (
+    ReminderRepository,
+    ReminderScheduler,
+)
 from openfatture.payment.domain.enums import ImportSource, ReminderStrategy
 from openfatture.payment.infrastructure.importers.csv_importer import CSVConfig, CSVImporter
 from openfatture.payment.infrastructure.repository import (
     BankTransactionRepository,
-    PaymentReminderRepository,
     PaymentRepository,
 )
 from openfatture.payment.matchers import (
@@ -53,11 +47,20 @@ from openfatture.payment.matchers import (
     FuzzyDescriptionMatcher,
     IBANMatcher,
 )
-from openfatture.storage.database import SessionManager, init_db
+from openfatture.storage.database import base as db_base
+from openfatture.storage.database import init_db
 from openfatture.storage.database.models import Pagamento
 
 if TYPE_CHECKING:
     pass
+
+
+def get_session() -> Session:
+    """Return an initialized SQLAlchemy session."""
+    session_factory = db_base.SessionLocal
+    if session_factory is None:
+        raise RuntimeError("Database session factory not initialized. Call init_db() first.")
+    return session_factory()
 
 
 def create_sample_csv(file_path: Path) -> None:
@@ -149,7 +152,7 @@ async def example_1_basic_workflow():
 
     # Initialize database
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create sample data
@@ -212,9 +215,6 @@ async def example_1_basic_workflow():
                 f"({tx.status.value})"
             )
 
-        # Record metrics
-        record_transaction_import(len(transactions), ImportSource.CSV.value)
-
         # STEP 2: Auto-match transactions with payments
         print("\n🔍 Step 2: Auto-matching transactions with payments...")
 
@@ -274,13 +274,10 @@ async def example_1_basic_workflow():
         print(f"   Review needed: {result.review_count} (confidence 60-84%)")
         print(f"   Unmatched: {result.unmatched_count}")
 
-        # Record metrics
-        record_reconciliation(result.matched_count, "auto", success=True)
-
         # STEP 4: Schedule reminders for unpaid invoices
         print("\n📧 Step 4: Scheduling payment reminders...")
 
-        reminder_repo = PaymentReminderRepository(session)
+        reminder_repo = ReminderRepository(session)
         reminder_scheduler = ReminderScheduler(
             payment_repo=payment_repo, reminder_repo=reminder_repo, session=session
         )
@@ -403,7 +400,7 @@ async def example_3_matching_strategies():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create test data
@@ -508,7 +505,7 @@ async def example_4_manual_reconciliation():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Setup
@@ -608,7 +605,7 @@ async def example_5_batch_operations():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create 2 accounts (simulating multi-account setup)
@@ -674,49 +671,8 @@ async def example_5_batch_operations():
         session.close()
 
 
-async def example_6_prometheus_metrics():
-    """Example 6: Prometheus metrics integration.
-
-    Demonstrates:
-    - Starting metrics server
-    - Recording custom metrics
-    - Monitoring reconciliation performance
-    """
-    print("\n" + "=" * 80)
-    print("EXAMPLE 6: Prometheus Metrics")
-    print("=" * 80 + "\n")
-
-    # Start metrics server (disabled by default)
-    # Uncomment to enable in production:
-    # start_metrics_server(port=8000)
-
-    print("📊 Recording metrics...")
-
-    # Record transaction imports
-    record_transaction_import(count=50, source="csv")
-    record_transaction_import(count=30, source="ofx")
-    print("   ✅ Recorded 50 CSV + 30 OFX imports")
-
-    # Record reconciliation
-    record_reconciliation(count=45, match_type="exact", success=True)
-    record_reconciliation(count=15, match_type="fuzzy", success=True)
-    record_reconciliation(count=5, match_type="manual", success=False)
-    print("   ✅ Recorded 60 successful + 5 failed reconciliations")
-
-    # In production, metrics are available at http://localhost:8000/metrics
-    print("\n📈 Metrics available at: http://localhost:8000/metrics")
-    print("   (Enable with start_metrics_server() in production)")
-
-    # Example metrics output:
-    print("\n   Sample metrics:")
-    print('   payment_transactions_imported_total{source="csv"} 50')
-    print('   payment_transactions_imported_total{source="ofx"} 30')
-    print('   payment_reconciliations_total{match_type="exact",status="success"} 45')
-    print('   payment_reconciliations_total{match_type="fuzzy",status="success"} 15')
-
-
-async def example_7_error_handling():
-    """Example 7: Error handling and validation.
+async def example_6_error_handling():
+    """Example 6: Error handling and validation.
 
     Demonstrates:
     - Import validation errors
@@ -724,11 +680,11 @@ async def example_7_error_handling():
     - Transaction state validation
     """
     print("\n" + "=" * 80)
-    print("EXAMPLE 7: Error Handling")
+    print("EXAMPLE 6: Error Handling")
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         account = BankAccount(name="Test Account", iban="IT999")
@@ -829,7 +785,6 @@ async def main():
     print("  • Auto-reconciliation engine")
     print("  • Manual review workflow")
     print("  • Batch operations")
-    print("  • Prometheus metrics")
     print("  • Error handling")
     print()
     print("Note: These examples use in-memory test data.")
@@ -842,8 +797,7 @@ async def main():
     await example_3_matching_strategies()
     await example_4_manual_reconciliation()
     await example_5_batch_operations()
-    await example_6_prometheus_metrics()
-    await example_7_error_handling()
+    await example_6_error_handling()
 
     print("\n" + "=" * 80)
     print("✅ All examples completed!")
@@ -853,7 +807,6 @@ async def main():
     print("  • Read full documentation: docs/PAYMENT_TRACKING.md")
     print("  • Explore matchers: openfatture/payment/matchers/")
     print("  • Check CLI commands: openfatture payment --help")
-    print("  • View metrics: http://localhost:8000/metrics (if enabled)")
     print()
 
 
@@ -866,9 +819,6 @@ if __name__ == "__main__":
         2. At least one client in database
         3. Python 3.12+
 
-    Environment variables (optional):
-        PROMETHEUS_ENABLED=true  # Enable metrics server
-        PROMETHEUS_PORT=8000     # Metrics server port
     """
     try:
         asyncio.run(main())

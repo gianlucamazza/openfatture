@@ -38,6 +38,7 @@ from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
+from openfatture.utils.datetime import utc_now
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -79,7 +80,7 @@ class CircuitBreakerState:
     failure_count: int = 0
     success_count: int = 0
     last_failure_time: datetime | None = None
-    last_state_change: datetime = field(default_factory=datetime.utcnow)
+    last_state_change: datetime = field(default_factory=utc_now)
     half_open_calls: int = 0
 
     def reset(self) -> None:
@@ -88,23 +89,23 @@ class CircuitBreakerState:
         self.failure_count = 0
         self.success_count = 0
         self.half_open_calls = 0
-        self.last_state_change = datetime.utcnow()
+        self.last_state_change = utc_now()
 
     def record_failure(self, config: CircuitBreakerConfig) -> None:
         """Record a failure and update state."""
         self.failure_count += 1
-        self.last_failure_time = datetime.utcnow()
+        self.last_failure_time = utc_now()
         self.success_count = 0  # Reset success count
 
         if self.state == CircuitState.HALF_OPEN:
             # Immediately open if failure in half-open
             self.state = CircuitState.OPEN
-            self.last_state_change = datetime.utcnow()
+            self.last_state_change = utc_now()
             self.half_open_calls = 0
         elif self.failure_count >= config.failure_threshold:
             # Open circuit if threshold reached
             self.state = CircuitState.OPEN
-            self.last_state_change = datetime.utcnow()
+            self.last_state_change = utc_now()
 
     def record_success(self, config: CircuitBreakerConfig) -> None:
         """Record a success and update state."""
@@ -127,11 +128,11 @@ class CircuitBreakerState:
         if self.state == CircuitState.OPEN:
             # Check if timeout elapsed
             if self.last_failure_time:
-                elapsed = (datetime.utcnow() - self.last_failure_time).total_seconds()
+                elapsed = (utc_now() - self.last_failure_time).total_seconds()
                 if elapsed >= config.timeout_seconds:
                     # Transition to half-open
                     self.state = CircuitState.HALF_OPEN
-                    self.last_state_change = datetime.utcnow()
+                    self.last_state_change = utc_now()
                     self.half_open_calls = 0
                     return True
 

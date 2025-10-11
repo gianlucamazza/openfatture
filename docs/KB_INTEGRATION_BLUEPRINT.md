@@ -149,7 +149,6 @@
 
 ## 15. Osservabilità & Rollout
 - Logging strutturato (`rag_event`, `source`, `similarity`, `latency_ms`, `chunks_used`).
-- Metriche Prometheus/StatsD: `rag_hits_total`, `rag_misses_total`, `rag_latency_bucket`.
 - Feature flag `AISettings.rag_enabled` + `AISettings.rag_mode` (`disabled`, `knowledge_only`, `full`).
 - Rollout graduale:
   1. **Phase Alpha**: team interno con flag manuale.

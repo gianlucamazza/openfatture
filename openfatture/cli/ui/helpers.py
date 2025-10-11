@@ -1,13 +1,18 @@
 """UI helper functions for interactive mode."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from typing import Any
 
 import questionary
 from rich.console import Console
+from sqlalchemy import select
 
 from openfatture.cli.ui.styles import openfatture_style
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura
+from openfatture.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 console = Console()
 
@@ -172,6 +177,17 @@ def select_multiple(choices: list[str], message: str = "Seleziona opzioni:") -> 
     return questionary.checkbox(message, choices=choices, style=openfatture_style).ask()
 
 
+def _normalize_ids(selected_ids: Iterable[Any]) -> list[int]:
+    """Convert raw selections to integer identifiers."""
+    normalized: list[int] = []
+    for raw in selected_ids:
+        try:
+            normalized.append(int(raw))
+        except (TypeError, ValueError):
+            logger.warning("invalid_selection_id", raw_value=raw)
+    return normalized
+
+
 def select_multiple_fatture(
     message: str = "Seleziona fatture (SPAZIO per selezionare):",
     anno: int | None = None,
@@ -230,8 +246,12 @@ def select_multiple_fatture(
         if not selected_ids:
             return []
 
-        # Fetch selected invoices
-        return db.query(Fattura).filter(Fattura.id.in_(selected_ids)).all()
+        id_list = _normalize_ids(selected_ids)
+        if not id_list:
+            return []
+
+        stmt = select(Fattura).where(Fattura.id.in_(id_list))
+        return list(db.execute(stmt).scalars())
     finally:
         db.close()
 
@@ -272,7 +292,12 @@ def select_multiple_clienti(
         if not selected_ids:
             return []
 
-        return db.query(Cliente).filter(Cliente.id.in_(selected_ids)).all()
+        id_list = _normalize_ids(selected_ids)
+        if not id_list:
+            return []
+
+        stmt = select(Cliente).where(Cliente.id.in_(id_list))
+        return list(db.execute(stmt).scalars())
     finally:
         db.close()
 

@@ -11,9 +11,11 @@ from openfatture.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-class InvoiceAssistantAgent(BaseAgent):
+class InvoiceAssistantAgent(BaseAgent[InvoiceContext]):
     """
     AI agent for generating professional invoice descriptions.
+
+    Specialized to use InvoiceContext for type-safe context handling.
 
     Takes brief service descriptions and expands them into detailed,
     professional text suitable for Italian FatturaPA electronic invoices.

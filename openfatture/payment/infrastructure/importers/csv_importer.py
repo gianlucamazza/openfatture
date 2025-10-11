@@ -9,9 +9,9 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, overload
 
-from dateutil import parser as dateutil_parser
+from dateutil import parser as dateutil_parser  # type: ignore[import-untyped]
 
 from ...domain.enums import ImportSource
 from ...domain.models import BankTransaction
@@ -220,6 +220,13 @@ class CSVImporter(BaseImporter):
         # Parse amount
         amount = self._parse_decimal(amount_str)
 
+        # Normalise description with reference/counterparty context
+        description = self._normalize_description(
+            description=description,
+            reference=reference,
+            counterparty=counterparty,
+        )
+
         # Create transaction
         return BankTransaction(
             account=account,
@@ -232,6 +239,16 @@ class CSVImporter(BaseImporter):
             import_source=ImportSource.CSV,
             raw_data=row,  # Store original row for debugging
         )
+
+    @overload
+    def _get_field(
+        self, row: dict[str, str], internal_name: str, required: Literal[True] = True
+    ) -> str: ...
+
+    @overload
+    def _get_field(
+        self, row: dict[str, str], internal_name: str, required: Literal[False]
+    ) -> str | None: ...
 
     def _get_field(
         self, row: dict[str, str], internal_name: str, required: bool = True
@@ -342,3 +359,33 @@ class CSVImporter(BaseImporter):
             f"delimiter='{self.config.delimiter}', "
             f"encoding='{self.config.encoding}')>"
         )
+
+    @staticmethod
+    def _normalize_description(
+        description: str,
+        reference: str | None = None,
+        counterparty: str | None = None,
+    ) -> str:
+        """Compose a richer description including reference/counterparty if present."""
+        parts: list[str] = [description.strip()]
+
+        if reference:
+            reference_clean = reference.strip()
+            if reference_clean and reference_clean.lower() not in description.lower():
+                parts.append(reference_clean)
+
+        if counterparty:
+            counterparty_clean = counterparty.strip()
+            if counterparty_clean and counterparty_clean.lower() not in description.lower():
+                parts.append(counterparty_clean)
+
+        # Remove duplicates while preserving order
+        seen: set[str] = set()
+        normalized_parts: list[str] = []
+        for part in parts:
+            key = part.lower()
+            if key and key not in seen:
+                seen.add(key)
+                normalized_parts.append(part)
+
+        return " - ".join(normalized_parts)

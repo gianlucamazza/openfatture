@@ -16,8 +16,60 @@ from openfatture.payment.application.services.reminder_scheduler import (
 )
 from openfatture.payment.domain.enums import ReminderStrategy
 from openfatture.payment.domain.models import PaymentReminder
+from openfatture.storage.database.models import StatoPagamento
 
 pytestmark = pytest.mark.asyncio
+
+
+class TestReminderRepository:
+    """Integration-style tests for the lightweight ReminderRepository."""
+
+    async def test_repository_crud_operations(self, db_session, sample_fattura):
+        """Repository should persist, query and delete reminders correctly."""
+        from openfatture.storage.database.models import Pagamento, StatoPagamento
+
+        repo = ReminderRepository(db_session)
+
+        payment = Pagamento(
+            fattura_id=sample_fattura.id,
+            importo=Decimal("500.00"),
+            importo_pagato=Decimal("0.00"),
+            data_scadenza=date.today() + timedelta(days=10),
+            stato=StatoPagamento.DA_PAGARE,
+        )
+        db_session.add(payment)
+        db_session.flush()
+
+        single = PaymentReminder(
+            payment_id=payment.id,
+            payment=payment,
+            reminder_date=date.today(),
+            strategy=ReminderStrategy.DEFAULT,
+            email_body="Single reminder",
+        )
+        repo.add(single)
+
+        batch = [
+            PaymentReminder(
+                payment_id=payment.id,
+                payment=payment,
+                reminder_date=date.today(),
+                strategy=ReminderStrategy.DEFAULT,
+                email_body=f"Batch reminder {i}",
+            )
+            for i in range(2)
+        ]
+        repo.add_all(batch)
+
+        batch[1].mark_sent()  # Sent reminders must be ignored
+        db_session.flush()
+
+        due_today = repo.get_due_reminders()
+        assert {r.email_body for r in due_today} == {"Single reminder", "Batch reminder 0"}
+
+        deleted = repo.delete_by_payment_id(payment.id)
+        # Only unsent reminders (2) are deleted
+        assert deleted == 2
 
 
 class TestReminderScheduler:
@@ -47,6 +99,7 @@ class TestReminderScheduler:
         """Mock PaymentRepository."""
         repo = mocker.Mock()
         repo.get_by_id = mocker.Mock()
+        repo.update = mocker.Mock()
         return repo
 
     @pytest.fixture
@@ -64,6 +117,7 @@ class TestReminderScheduler:
         payment.importo_da_pagare = Decimal("1000.00")
         payment.importo_pagato = Decimal("0.00")
         payment.data_scadenza = date.today() + timedelta(days=30)
+        payment.stato = StatoPagamento.DA_PAGARE
 
         # Mock fattura relationship
         fattura = mocker.Mock()
@@ -71,6 +125,35 @@ class TestReminderScheduler:
         payment.fattura = fattura
 
         return payment
+
+    @pytest.mark.parametrize(
+        "offset, snippet",
+        [
+            (-3, "scaduta da 3 giorni"),
+            (0, "scade OGGI"),
+            (7, "scadrà tra 7 giorni"),
+        ],
+    )
+    async def test_build_reminder_message_variants(
+        self, reminder_scheduler, mock_payment, offset, snippet
+    ):
+        """Reminder message should reflect whether it is overdue, same day, or upcoming."""
+        mock_payment.data_scadenza = date.today() + timedelta(days=offset)
+        message = reminder_scheduler._build_reminder_message(mock_payment, offset)
+        assert snippet in message
+
+    async def test_outstanding_amount_handles_invalid_saldo(self, reminder_scheduler, mocker):
+        """_outstanding_amount should fall back when saldo_residuo is not parseable."""
+        payment = mocker.Mock()
+        payment.saldo_residuo = "not-a-number"
+        payment.importo_da_pagare = Decimal("300.00")
+        payment.importo = Decimal("300.00")
+        payment.importo_pagato = Decimal("120.00")
+        assert reminder_scheduler._outstanding_amount(payment) == Decimal("180.00")
+
+        payment = mocker.Mock()
+        payment.saldo_residuo = Decimal("90.00")
+        assert reminder_scheduler._outstanding_amount(payment) == Decimal("90.00")
 
     # ==========================================================================
     # Schedule Reminders Tests (5 tests)
@@ -122,6 +205,7 @@ class TestReminderScheduler:
 
         # Verify past dates were logged (3 past dates: -7, -3, 0)
         assert mock_logger.debug.call_count >= 3
+        mock_payment_repo.update.assert_called_once_with(mock_payment)
 
     async def test_schedule_reminders_validates_payment_not_paid(
         self, reminder_scheduler, mock_payment_repo, mock_payment
@@ -182,6 +266,28 @@ class TestReminderScheduler:
                 assert r.payment_id == 1
                 assert r.reminder_date >= date.today()
                 assert r.email_body is not None
+
+    async def test_schedule_reminders_marks_overdue_scaduto(
+        self, reminder_scheduler, mock_reminder_repo, mock_payment_repo, mock_payment
+    ):
+        """Overdue payments are flagged as SCADUTO before scheduling reminders."""
+        mock_payment.data_scadenza = date.today() - timedelta(days=2)
+        mock_payment.importo_pagato = Decimal("100.00")
+        mock_payment_repo.get_by_id.return_value = mock_payment
+
+        await reminder_scheduler.schedule_reminders(payment_id=1)
+
+        assert mock_payment.stato == StatoPagamento.SCADUTO
+        mock_payment_repo.update.assert_called_with(mock_payment)
+
+    async def test_schedule_reminders_raises_for_missing_payment(
+        self, reminder_scheduler, mock_payment_repo
+    ):
+        """Missing payments must raise a descriptive error."""
+        mock_payment_repo.get_by_id.return_value = None
+
+        with pytest.raises(ValueError, match="Payment 42 not found"):
+            await reminder_scheduler.schedule_reminders(payment_id=42)
 
     # ==========================================================================
     # Process Due Reminders Tests (5 tests)
@@ -280,6 +386,31 @@ class TestReminderScheduler:
         assert reminder1.mark_sent.called
         assert not reminder2.mark_sent.called  # Failed, not marked
 
+    async def test_process_due_reminders_returns_zero_when_none_due(
+        self, reminder_scheduler, mock_reminder_repo
+    ):
+        """If the repository returns no due reminders, return 0 immediately."""
+        mock_reminder_repo.get_due_reminders.return_value = []
+        assert await reminder_scheduler.process_due_reminders() == 0
+
+    async def test_process_due_reminders_handles_unsuccessful_send(
+        self, reminder_scheduler, mock_reminder_repo, mock_notifier, mock_payment, mocker
+    ):
+        """Failed sends should not mark reminders as sent nor increment the counter."""
+        reminder = mocker.Mock(spec=PaymentReminder)
+        reminder.id = 99
+        reminder.payment = mock_payment
+        reminder.mark_sent = mocker.Mock()
+
+        mock_reminder_repo.get_due_reminders.return_value = [reminder]
+        mock_notifier.send_reminder.return_value = False
+
+        count = await reminder_scheduler.process_due_reminders()
+
+        assert count == 0
+        mock_notifier.send_reminder.assert_called_once_with(reminder)
+        reminder.mark_sent.assert_not_called()
+
     async def test_process_due_reminders_returns_count(
         self, reminder_scheduler, mock_reminder_repo, mock_notifier, mock_payment, mocker
     ):
@@ -298,6 +429,30 @@ class TestReminderScheduler:
 
         assert count == 5
         assert mock_notifier.send_reminder.call_count == 5
+
+    async def test_process_due_reminders_marks_overdue(
+        self, reminder_scheduler, mock_reminder_repo, mock_notifier, mock_payment_repo, mocker
+    ):
+        """Payments overdue at processing time are flagged SCADUTO."""
+        payment = mocker.Mock()
+        payment.id = 77
+        payment.importo_da_pagare = Decimal("800.00")
+        payment.importo_pagato = Decimal("100.00")
+        payment.data_scadenza = date.today() - timedelta(days=1)
+        payment.stato = StatoPagamento.DA_PAGARE
+        payment.saldo_residuo = Decimal("700.00")
+
+        reminder = mocker.Mock(spec=PaymentReminder)
+        reminder.id = 9
+        reminder.payment = payment
+        reminder.mark_sent = mocker.Mock()
+
+        mock_reminder_repo.get_due_reminders.return_value = [reminder]
+
+        await reminder_scheduler.process_due_reminders()
+
+        assert payment.stato == StatoPagamento.SCADUTO
+        mock_payment_repo.update.assert_called_with(payment)
 
     # ==========================================================================
     # Cancel Reminders Tests (3 tests)

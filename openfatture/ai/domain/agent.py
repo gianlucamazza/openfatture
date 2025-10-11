@@ -16,6 +16,7 @@ from openfatture.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
+# TypeVar for context type - allows agents to use specialized contexts
 class AgentConfig(BaseModel):
     """
     Configuration for an agent.
@@ -57,12 +58,15 @@ class AgentConfig(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
-class AgentProtocol(ABC):
+class AgentProtocol[ContextT: AgentContext](ABC):
     """
     Protocol that all agents must implement.
 
     Defines the contract for agent execution with context
     management and structured responses.
+
+    Generic over ContextT to allow specialized contexts (ChatContext, TaxContext, etc.)
+    while maintaining type safety.
     """
 
     @property
@@ -74,14 +78,14 @@ class AgentProtocol(ABC):
     @abstractmethod
     async def execute(
         self,
-        context: AgentContext,
+        context: ContextT,
         **kwargs: Any,
     ) -> AgentResponse:
         """
         Execute the agent with given context.
 
         Args:
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
             **kwargs: Additional arguments
 
         Returns:
@@ -93,12 +97,12 @@ class AgentProtocol(ABC):
         pass
 
     @abstractmethod
-    async def validate_input(self, context: AgentContext) -> tuple[bool, str | None]:
+    async def validate_input(self, context: ContextT) -> tuple[bool, str | None]:
         """
         Validate input before execution.
 
         Args:
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
 
         Returns:
             Tuple of (is_valid, error_message)
@@ -111,7 +115,7 @@ class AgentProtocol(ABC):
         pass
 
 
-class BaseAgent(AgentProtocol):
+class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
     """
     Base implementation of AgentProtocol.
 
@@ -123,8 +127,14 @@ class BaseAgent(AgentProtocol):
     - Cost tracking
     - Retry logic
 
+    Generic over ContextT to support specialized contexts:
+    - ChatAgent[ChatContext]
+    - TaxAdvisor[TaxContext]
+    - InvoiceAssistant[InvoiceContext]
+    etc.
+
     Concrete agents should:
-    1. Inherit from BaseAgent
+    1. Inherit from BaseAgent[YourContextType]
     2. Override _build_prompt() to construct agent-specific prompts
     3. Override _parse_response() to extract structured data
     4. Optionally override validate_input() for custom validation
@@ -161,7 +171,7 @@ class BaseAgent(AgentProtocol):
 
     async def execute(
         self,
-        context: AgentContext,
+        context: ContextT,
         **kwargs: Any,
     ) -> AgentResponse:
         """
@@ -176,7 +186,7 @@ class BaseAgent(AgentProtocol):
         6. Handle errors
 
         Args:
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
             **kwargs: Additional arguments
 
         Returns:
@@ -260,7 +270,7 @@ class BaseAgent(AgentProtocol):
 
     async def execute_stream(
         self,
-        context: AgentContext,
+        context: ContextT,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """
@@ -276,7 +286,7 @@ class BaseAgent(AgentProtocol):
         4. Yield chunks in real-time
 
         Args:
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
             **kwargs: Additional arguments
 
         Yields:
@@ -355,12 +365,12 @@ class BaseAgent(AgentProtocol):
 
             yield f"\n\n[Error: {str(e)}]"
 
-    async def validate_input(self, context: AgentContext) -> tuple[bool, str | None]:
+    async def validate_input(self, context: ContextT) -> tuple[bool, str | None]:
         """
         Default validation - can be overridden by subclasses.
 
         Args:
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
 
         Returns:
             Tuple of (is_valid, error_message)
@@ -389,7 +399,7 @@ class BaseAgent(AgentProtocol):
     # Abstract methods that subclasses must implement
 
     @abstractmethod
-    async def _build_prompt(self, context: AgentContext) -> list[Message]:
+    async def _build_prompt(self, context: ContextT) -> list[Message]:
         """
         Build the prompt for this agent.
 
@@ -397,7 +407,7 @@ class BaseAgent(AgentProtocol):
         prompts based on the context.
 
         Args:
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
 
         Returns:
             List of messages to send to LLM
@@ -407,7 +417,7 @@ class BaseAgent(AgentProtocol):
     async def _parse_response(
         self,
         response: AgentResponse,
-        context: AgentContext,
+        context: ContextT,
     ) -> AgentResponse:
         """
         Parse and process the LLM response.
@@ -419,7 +429,7 @@ class BaseAgent(AgentProtocol):
 
         Args:
             response: Raw response from LLM
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
 
         Returns:
             Processed AgentResponse
@@ -431,14 +441,14 @@ class BaseAgent(AgentProtocol):
     async def _call_llm_with_retry(
         self,
         messages: list[Message],
-        context: AgentContext,
+        context: ContextT,
     ) -> AgentResponse:
         """
         Call LLM with retry logic.
 
         Args:
             messages: Messages to send
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
 
         Returns:
             AgentResponse
@@ -508,14 +518,14 @@ class BaseAgent(AgentProtocol):
     async def _call_llm_streaming_with_retry(
         self,
         messages: list[Message],
-        context: AgentContext,
+        context: ContextT,
     ) -> AsyncIterator[str]:
         """
         Call LLM in streaming mode with retry logic.
 
         Args:
             messages: Messages to send
-            context: Agent execution context
+            context: Agent execution context (specialized per agent type)
 
         Yields:
             str: Response chunks as they arrive

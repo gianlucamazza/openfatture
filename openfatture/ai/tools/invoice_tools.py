@@ -1,6 +1,6 @@
 """Tools for invoice operations."""
 
-from typing import Any
+from typing import Any, TypedDict
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
 from openfatture.storage.database.base import get_session
@@ -8,6 +8,13 @@ from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+class InvoiceStats(TypedDict):
+    anno: int
+    totale_fatture: int
+    per_stato: dict[str, int]
+    importo_totale: float
 
 
 # =============================================================================
@@ -177,23 +184,24 @@ def get_invoice_stats(anno: int | None = None) -> dict[str, Any]:
         year = anno or datetime.now().year
 
         # Count by status
-        stats = {
+        per_stato: dict[str, int] = {}
+        stats: InvoiceStats = {
             "anno": year,
             "totale_fatture": 0,
-            "per_stato": {},
+            "per_stato": per_stato,
             "importo_totale": 0.0,
         }
 
         for stato in StatoFattura:
             count = db.query(Fattura).filter(Fattura.anno == year, Fattura.stato == stato).count()
-            stats["per_stato"][stato.value] = count
+            per_stato[stato.value] = count
             stats["totale_fatture"] += count
 
         # Total amount
         fatture = db.query(Fattura).filter(Fattura.anno == year).all()
         stats["importo_totale"] = sum(float(f.totale) for f in fatture)
 
-        return stats
+        return dict(stats)
 
     except Exception as e:
         logger.error("get_invoice_stats_failed", error=str(e))

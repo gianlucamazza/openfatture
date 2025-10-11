@@ -3,8 +3,10 @@
 This module defines configuration settings for the RAG system using Pydantic.
 """
 
+import logging
+import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -117,6 +119,8 @@ class RAGConfig(BaseModel):
 # Default configuration
 DEFAULT_RAG_CONFIG = RAGConfig()
 
+_logger = logging.getLogger(__name__)
+
 
 def get_rag_config() -> RAGConfig:
     """Get RAG configuration from environment.
@@ -133,7 +137,15 @@ def get_rag_config() -> RAGConfig:
     Returns:
         RAGConfig instance with settings from environment
     """
-    import os
+    provider_raw = os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER", "openai")
+    if provider_raw not in {"openai", "sentence-transformers"}:
+        _logger.warning(
+            "Invalid embedding provider '%s'. Falling back to 'openai'.",
+            provider_raw,
+        )
+        provider_raw = "openai"
+
+    provider = cast(Literal["openai", "sentence-transformers"], provider_raw)
 
     return RAGConfig(
         enabled=os.getenv("OPENFATTURE_RAG_ENABLED", "true").lower() == "true",
@@ -146,7 +158,7 @@ def get_rag_config() -> RAGConfig:
                 "openfatture/ai/rag/sources.json",
             )
         ),
-        embedding_provider=os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER", "openai"),
+        embedding_provider=provider,
         embedding_model=os.getenv("OPENFATTURE_RAG_EMBEDDING_MODEL", "text-embedding-3-small"),
         top_k=int(os.getenv("OPENFATTURE_RAG_TOP_K", "5")),
         similarity_threshold=float(os.getenv("OPENFATTURE_RAG_SIMILARITY_THRESHOLD", "0.7")),

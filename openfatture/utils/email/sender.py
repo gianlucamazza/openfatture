@@ -7,12 +7,14 @@ for SDI notifications, batch operations, and testing.
 
 import smtplib
 import ssl
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
+from typing import Any
 
 from openfatture.core.batch.processor import BatchResult
 from openfatture.sdi.notifiche.parser import NotificaSDI, TipoNotifica
@@ -346,15 +348,18 @@ class TemplatePECSender:
         # Fallback subject
         subject = f"Notifica SDI - Fattura {fattura.numero}/{fattura.anno}"
 
-        try:
-            subject_template = self.renderer.translations
-            for key in subject_key.split("."):
-                subject_template = subject_template[key]
-            subject = subject_template.replace("{{numero}}", fattura.numero).replace(
+        subject_data: Any = self.renderer.translations
+        for key in subject_key.split("."):
+            if isinstance(subject_data, Mapping):
+                subject_data = subject_data.get(key)
+            else:
+                subject_data = None
+                break
+
+        if isinstance(subject_data, str):
+            subject = subject_data.replace("{{numero}}", fattura.numero).replace(
                 "{{anno}}", str(fattura.anno)
             )
-        except (KeyError, TypeError):
-            pass  # Use fallback
 
         email = EmailMessage(
             subject=subject,

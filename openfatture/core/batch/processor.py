@@ -7,10 +7,7 @@ Provides framework for processing multiple items with progress tracking.
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Generic, TypeVar
-
-T = TypeVar("T")
-R = TypeVar("R")
+from typing import Any
 
 
 @dataclass
@@ -58,7 +55,7 @@ class BatchResult:
         self.errors.append(error)
 
 
-class BatchProcessor(Generic[T, R]):
+class BatchProcessor[T, R]:
     """
     Generic batch processor.
 
@@ -150,7 +147,7 @@ class BatchProcessor(Generic[T, R]):
         return self.process(filtered_items)
 
 
-def chunk_list(items: list[T], chunk_size: int) -> list[list[T]]:
+def chunk_list[T](items: list[T], chunk_size: int) -> list[list[T]]:
     """
     Split list into chunks.
 

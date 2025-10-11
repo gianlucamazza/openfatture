@@ -266,16 +266,16 @@ tests/
 ### Running Tests
 ```bash
 # All tests
-uv run pytest
+uv run python -m pytest
 
 # Only passing tests (exclude skipped)
-uv run pytest -k "not skip"
+uv run python -m pytest -k "not skip"
 
 # With coverage
-uv run pytest --cov=openfatture --cov-report=html
+uv run python -m pytest --cov=openfatture --cov-report=html
 
 # Specific module
-uv run pytest tests/cli/test_cliente_commands.py
+uv run python -m pytest tests/cli/test_cliente_commands.py
 ```
 
 ### Adding New Tests

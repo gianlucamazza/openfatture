@@ -214,7 +214,7 @@ class XGBoostModel:
         dtrain = xgb.DMatrix(X, label=y, feature_names=self.feature_names_)
 
         # Prepare parameters
-        params = {
+        params: dict[str, float | int | str] = {
             "max_depth": self.max_depth,
             "eta": self.learning_rate,
             "min_child_weight": self.min_child_weight,
@@ -371,7 +371,13 @@ class XGBoostModel:
             raise RuntimeError("Model not initialized. Call fit() first.")
 
         # Get importance from model
-        importance_dict = self.model.get_score(importance_type=importance_type)
+        raw_importance = self.model.get_score(importance_type=importance_type)
+        importance_dict: dict[str, float] = {}
+        for key, value in raw_importance.items():
+            if isinstance(value, list):
+                importance_dict[key] = float(value[0]) if value else 0.0
+            else:
+                importance_dict[key] = float(value)
 
         # Normalize to sum to 1.0
         total = sum(importance_dict.values())
@@ -379,7 +385,8 @@ class XGBoostModel:
             importance_dict = {k: v / total for k, v in importance_dict.items()}
 
         # Sort by importance
-        importance_dict = dict(sorted(importance_dict.items(), key=lambda x: x[1], reverse=True))
+        sorted_items = sorted(importance_dict.items(), key=lambda x: x[1], reverse=True)
+        importance_dict = {k: float(v) for k, v in sorted_items}
 
         return importance_dict
 

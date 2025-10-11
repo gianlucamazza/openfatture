@@ -1,7 +1,6 @@
 """Progress bar utilities for long operations."""
 
 from collections.abc import Callable
-from typing import TypeVar
 
 from rich.console import Console
 from rich.live import Live
@@ -17,7 +16,6 @@ from rich.progress import (
 from rich.spinner import Spinner
 
 console = Console()
-T = TypeVar("T")
 
 
 def create_progress() -> Progress:
@@ -38,7 +36,7 @@ def create_progress() -> Progress:
     )
 
 
-def process_with_progress(
+def process_with_progress[T](
     items: list[T],
     process_fn: Callable[[T], tuple[bool, str | None]],
     description: str = "Elaborazione...",
@@ -91,7 +89,7 @@ def process_with_progress(
     return success_count, error_count, errors
 
 
-def with_spinner(
+def with_spinner[T](
     fn: Callable[[], T],
     message: str = "Elaborazione...",
     success_message: str = "Completato!",

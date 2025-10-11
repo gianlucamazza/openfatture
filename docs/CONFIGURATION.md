@@ -1076,6 +1076,26 @@ else:
 
 ---
 
+## Payment Tracking
+
+### `PAYMENT_EVENT_LISTENERS`
+
+**Descrizione**: (facoltativo) elenco di listener personalizzati per il bus eventi dei pagamenti. Ogni listener deve essere una funzione callable che accetta un `PaymentEvent`. I listener vengono registrati in aggiunta al logger di audit predefinito.
+
+**Tipo**: Stringa (lista separata da virgole di percorsi puntati `modulo.funzione`)
+
+**Esempio**:
+```env
+PAYMENT_EVENT_LISTENERS=analytics.events.track_payment,monitoring.alerts.on_payment_event
+```
+
+**Note**:
+- Gli handler vengono importati dinamicamente; assicurati che siano disponibili nel PYTHONPATH del processo.
+- Il bus inoltra ogni evento sia al listener di audit interno sia ai listener aggiuntivi.
+- Per disabilitare i listener extra lascia la variabile vuota o rimuovi la variabile.
+
+---
+
 ## Riferimenti
 
 - [FatturaPA Specifiche Tecniche](https://www.fatturapa.gov.it/it/norme-e-regole/documentazione-fattura-elettronica/formato-fatturapa/)

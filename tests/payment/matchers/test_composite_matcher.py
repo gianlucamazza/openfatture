@@ -140,7 +140,7 @@ class TestCompositeMatcherBasic:
         results = await composite.match(transaction, candidates)
 
         # Weighted average: (1.00 * 0.8) + (0.60 * 0.2) = 0.92
-        assert results[0].confidence == Decimal("0.92")
+        assert results[0].confidence == pytest.approx(0.92)
 
     @pytest.mark.asyncio
     async def test_composite_confidence_normalization(self):
@@ -162,7 +162,7 @@ class TestCompositeMatcherBasic:
 
         results = await composite.match(transaction, candidates)
 
-        assert Decimal("0.0") <= results[0].confidence <= Decimal("1.0")
+        assert 0.0 <= results[0].confidence <= 1.0
 
     @pytest.mark.asyncio
     async def test_composite_empty_strategies_returns_empty(self):
@@ -330,13 +330,13 @@ class TestCompositeMatcherPropertyBased:
         results = await composite.match(transaction, candidates)
 
         if results:
-            avg = results[0].confidence
+            avg_dec = Decimal(str(results[0].confidence))
 
             # Property: average is between min and max
             min_conf = min(Decimal(str(c)) for c in confidences)
             max_conf = max(Decimal(str(c)) for c in confidences)
 
-            assert min_conf <= avg <= max_conf
+            assert min_conf <= avg_dec <= max_conf
 
 
 # Configure Hypothesis settings for CI

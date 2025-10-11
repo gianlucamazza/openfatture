@@ -59,7 +59,7 @@ class CompositeMatcher(IMatcherStrategy):
         self.weights: list[Decimal] = self._normalise_weights(weights)
         self.min_confidence = self._to_decimal(min_confidence)
 
-    async def match(  # type: ignore[override]
+    async def match(
         self, transaction: BankTransaction, payments: list[Pagamento]
     ) -> list[MatchResult]:
         """Execute configured strategies and merge their outputs."""
@@ -93,8 +93,8 @@ class CompositeMatcher(IMatcherStrategy):
                     },
                 )
 
-                confidence = self._to_decimal(result.confidence)
-                entry["weighted_confidence"] += confidence * weight
+                confidence_decimal = self._to_decimal(result.confidence)
+                entry["weighted_confidence"] += confidence_decimal * weight
                 entry["total_weight"] += weight
                 entry["reasons"].append(result.match_reason)
                 entry["matched_fields"].update(result.matched_fields)
@@ -107,8 +107,11 @@ class CompositeMatcher(IMatcherStrategy):
             if total_weight <= 0:
                 continue
 
-            confidence = (entry["weighted_confidence"] / total_weight).quantize(Decimal("0.01"))
-            if confidence < self.min_confidence:
+            confidence_decimal = (entry["weighted_confidence"] / total_weight).quantize(
+                Decimal("0.01")
+            )
+            confidence_value = float(confidence_decimal)
+            if confidence_value < float(self.min_confidence):
                 continue
 
             amount_diff = (entry["amount_weighted"] / total_weight).quantize(Decimal("0.01"))
@@ -123,7 +126,7 @@ class CompositeMatcher(IMatcherStrategy):
                 MatchResult(
                     transaction=entry["transaction"],
                     payment=entry["payment"],
-                    confidence=confidence,
+                    confidence=confidence_value,
                     match_reason=match_reason,
                     match_type=match_type,
                     matched_fields=sorted(entry["matched_fields"]),

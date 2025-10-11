@@ -1,6 +1,7 @@
 """Interactive configuration wizard for OpenFatture."""
 
 from pathlib import Path
+from typing import cast
 
 import questionary
 from rich.console import Console
@@ -55,12 +56,12 @@ def interactive_config_wizard() -> None:
 
 def show_config_edit_menu() -> str:
     """Show configuration edit menu."""
-    choices = [
+    choices: list[str | questionary.Choice] = [
         "1. 🏢 Dati Azienda (Cedente Prestatore)",
         "2. 📧 Configurazione PEC",
         "3. 📬 Email e Notifiche",
         "4. 🤖 Configurazione AI",
-        questionary.Separator(),
+        questionary.Choice(title="────────────", disabled=" "),
         "5. 💾 Salva ed Esci",
         "0. ← Torna senza salvare",
     ]
@@ -440,7 +441,7 @@ def edit_ai_config(env_file: Path, settings) -> None:
         selected_tools = questionary.checkbox(
             "Seleziona tools da abilitare:",
             choices=all_tools,
-            default=[t for t in current_tools if t in all_tools],
+            default=cast("list[str]", [t for t in current_tools if t in all_tools]),  # type: ignore[arg-type]
             style=openfatture_style,
         ).ask()
 

@@ -76,7 +76,7 @@
 - ✅ CLI commands (`openfatture/cli/commands/ai.py`)
   - `ai describe` - Functional
   - `ai suggest-vat` - Functional
-  - `ai forecast` - Stub
+  - `ai forecast` - Functional (Prophet + XGBoost ensemble con modelli/versioni salvati)
   - `ai check` - Stub
 
 ### 🚧 Partially Implemented
@@ -90,13 +90,25 @@
 
 ### ⏳ Planned (Phase 4.3 & 4.4)
 
-- [ ] Cash Flow Predictor agent (ML-based)
 - [ ] Compliance Checker agent
 - [ ] LangGraph orchestration for multi-agent workflows
 - [x] Complete RAG implementation with ChromaDB (fatture + knowledge base)
 - [ ] Streaming response support
 - [ ] Advanced caching strategies
 - [ ] Metrics and observability dashboards
+
+### ✅ Cash Flow Predictor (v1.0.1)
+
+- Ensemble Prophet + XGBoost con pesi ottimizzabili (`openfatture/ai/ml/models/ensemble.py`)
+- Pipeline feature engineering persistente (`FeaturePipeline`) con schema versionato
+- Dataset loader cronologico con metadata e caching (`InvoiceDataLoader`)
+- Training metrics (`mae`, `rmse`, coverage intervalli) e provenance salvati in `<model_prefix>_metrics.json`
+- Artifacts salvati in `MLConfig.model_path` (default `.models/`):
+  - `_prophet.json` + `_xgboost.json`
+  - `_pipeline.pkl` (pipeline/scaler/schema)
+  - `_metrics.json`
+- CLI `openfatture ai forecast --retrain` forza nuovo training; default riutilizza i modelli esistenti
+- Insight AI opzionali con provider configurato (fallback deterministic se non disponibile)
 
 ---
 
@@ -998,38 +1010,6 @@ logger.info(
     success=response.success,
 )
 ```
-
-### Metrics
-
-```python
-# Prometheus metrics
-
-ai_requests_total = Counter(
-    "ai_requests_total",
-    "Total AI requests",
-    ["agent", "provider", "status"],
-)
-
-ai_tokens_used = Histogram(
-    "ai_tokens_used",
-    "Tokens used per request",
-    ["agent", "provider"],
-)
-
-ai_cost_usd = Histogram(
-    "ai_cost_usd",
-    "Cost in USD per request",
-    ["agent", "provider"],
-)
-
-ai_latency_seconds = Histogram(
-    "ai_latency_seconds",
-    "Request latency in seconds",
-    ["agent", "provider"],
-)
-```
-
----
 
 ## Security Considerations
 

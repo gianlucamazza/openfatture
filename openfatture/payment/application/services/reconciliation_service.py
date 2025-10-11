@@ -4,9 +4,11 @@ Implements the Saga pattern to orchestrate complex, multi-step reconciliation pr
 with proper state transitions and event handling.
 """
 
-from datetime import datetime
+import asyncio
+import inspect
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 import structlog
@@ -16,6 +18,7 @@ from ...domain.enums import MatchType, TransactionStatus
 from ...domain.models import BankTransaction
 from ...domain.payment_allocation import PaymentAllocation
 from ...domain.value_objects import MatchResult, ReconciliationResult
+from ..events import EventBus, TransactionMatchedEvent, TransactionUnmatchedEvent
 
 if TYPE_CHECKING:
     from ....storage.database.models import Pagamento
@@ -61,6 +64,7 @@ class ReconciliationService:
         payment_repo: "PaymentRepository",
         matching_service: "MatchingService",
         session: Session | None = None,
+        event_bus: EventBus | None = None,
     ) -> None:
         """Initialize reconciliation service.
 
@@ -74,6 +78,7 @@ class ReconciliationService:
         self.payment_repo = payment_repo
         self.matching_service = matching_service
         self.session = session
+        self.event_bus = event_bus
 
     async def reconcile(
         self,
@@ -166,7 +171,7 @@ class ReconciliationService:
             transaction.matched_payment_id = payment_id
             transaction.match_type = match_type
             transaction.match_confidence = confidence
-            transaction.matched_at = datetime.utcnow()
+            transaction.matched_at = datetime.now(UTC)
 
             # Persist partial payment state on payment entity
             payment.apply_payment(applied_amount, pagamento_effective_date=transaction.date)
@@ -197,7 +202,7 @@ class ReconciliationService:
             self.tx_repo.update(transaction)
 
             # 5. Emit domain event (placeholder - implement event bus)
-            self._emit_transaction_matched_event(transaction, payment)
+            self._emit_transaction_matched_event(transaction, payment, applied_amount)
 
             logger.info(
                 "reconciliation_completed",
@@ -271,7 +276,7 @@ class ReconciliationService:
             if transaction.raw_data is None:
                 transaction.raw_data = {}
             transaction.raw_data["ignore_reason"] = reason
-            transaction.raw_data["ignored_at"] = datetime.utcnow().isoformat()
+            transaction.raw_data["ignored_at"] = datetime.now(UTC).isoformat()
 
         self.tx_repo.update(transaction)
 
@@ -317,8 +322,12 @@ class ReconciliationService:
 
         try:
             # Get payment to revert status
-            if transaction.matched_payment_id:
-                payment = self.payment_repo.get_by_id(transaction.matched_payment_id)
+            allocation: PaymentAllocation | None = None
+            payment: Pagamento | None = None
+            original_payment_id = transaction.matched_payment_id
+
+            if original_payment_id:
+                payment = self.payment_repo.get_by_id(original_payment_id)
                 if payment:
                     allocation = self.payment_repo.get_allocation(payment.id, transaction.id)
                     if allocation:
@@ -348,7 +357,12 @@ class ReconciliationService:
             self.tx_repo.update(transaction)
 
             # Emit event
-            self._emit_transaction_unmatched_event(transaction)
+            reverted_amount = allocation.amount if allocation else None
+            self._emit_transaction_unmatched_event(
+                transaction,
+                reverted_amount,
+                original_payment_id,
+            )
 
             logger.info("transaction_reset", transaction_id=transaction_id)
 
@@ -500,6 +514,7 @@ class ReconciliationService:
         self,
         transaction: BankTransaction,
         payment: "Pagamento",
+        applied_amount: Decimal,
     ) -> None:
         """Emit TransactionMatched domain event.
 
@@ -518,23 +533,27 @@ class ReconciliationService:
             payment_id=payment.id,
         )
 
-        # TODO: Implement event bus
-        # event = TransactionMatchedEvent(
-        #     transaction_id=transaction.id,
-        #     payment_id=payment.id,
-        #     confidence=transaction.match_confidence,
-        #     match_type=transaction.match_type,
-        # )
-        # self.event_bus.publish(event)
+        event = TransactionMatchedEvent(
+            transaction_id=transaction.id,
+            payment_id=payment.id,
+            matched_amount=applied_amount,
+            match_type=transaction.match_type or MatchType.MANUAL,
+            confidence=transaction.match_confidence,
+        )
+        self._publish_event(event)
 
     def _emit_transaction_unmatched_event(
         self,
         transaction: BankTransaction,
+        reverted_amount: Decimal | None,
+        payment_id: int | None,
     ) -> None:
         """Emit TransactionUnmatched domain event.
 
         Args:
             transaction: Unmatched transaction
+            reverted_amount: Amount reverted from payment
+            payment_id: Original payment identifier
         """
         logger.debug(
             "domain_event_emitted",
@@ -542,7 +561,28 @@ class ReconciliationService:
             transaction_id=transaction.id,
         )
 
-        # TODO: Implement event bus
+        event = TransactionUnmatchedEvent(
+            transaction_id=transaction.id,
+            payment_id=payment_id,
+            reverted_amount=reverted_amount,
+        )
+        self._publish_event(event)
+
+    def _publish_event(self, event: TransactionMatchedEvent | TransactionUnmatchedEvent) -> None:
+        """Publish event via configured event bus."""
+        if not self.event_bus:
+            return
+
+        try:
+            result = cast(Any, self.event_bus.publish(event))
+            if inspect.isawaitable(result):
+                asyncio.ensure_future(result)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.error(
+                "event_publish_failed",
+                event_type=event.__class__.__name__,
+                error=str(exc),
+            )
 
     def __repr__(self) -> str:
         """Human-readable string representation."""

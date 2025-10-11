@@ -3,12 +3,21 @@
 This module handles indexing of invoices and related documents into the vector store.
 """
 
+from sqlalchemy.orm import Session
+
 from openfatture.ai.rag.vector_store import VectorStore
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _get_session() -> Session:
+    """Return a database session, ensuring the engine is initialised."""
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialised. Call init_db() first.")
+    return SessionLocal()
 
 
 class InvoiceIndexer:
@@ -50,7 +59,7 @@ class InvoiceIndexer:
         Returns:
             Number of invoices indexed
         """
-        db = SessionLocal()
+        db = _get_session()
 
         try:
             # Query invoices
@@ -111,7 +120,7 @@ class InvoiceIndexer:
         Returns:
             Document ID
         """
-        db = SessionLocal()
+        db = _get_session()
 
         try:
             fattura = db.query(Fattura).filter(Fattura.id == invoice_id).first()

@@ -39,7 +39,23 @@ jobs:
           path: media/output/
           skip_unpack: false
 
+      - name: Check downloaded videos
+        id: check_videos
+        run: |
+          if compgen -G "media/output/*.mp4" > /dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "✓ MP4 assets detected in media/output/"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️  No MP4 assets available in media/output/"
+          fi
+
+      - name: No videos to optimise
+        if: steps.check_videos.outputs.found != 'true'
+        run: echo "Skipping optimisation steps (no input videos)."
+
       - name: List downloaded videos
+        if: steps.check_videos.outputs.found == 'true'
         run: |
           echo "Downloaded videos:"
           find media/output -name "*.mp4" -type f -exec ls -lh {} \;
@@ -52,12 +68,14 @@ jobs:
           ls -lh media/output/*.mp4
 
       - name: Install ffmpeg
+        if: steps.check_videos.outputs.found == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           ffmpeg -version
 
       - name: Optimize videos (HD, SD, Mobile)
+        if: steps.check_videos.outputs.found == 'true'
         run: |
           echo "🎬 Optimizing videos..."
           chmod +x scripts/optimize_videos.sh
@@ -68,7 +86,7 @@ jobs:
           find media/videos -name "*.mp4" -type f -exec ls -lh {} \;
 
       - name: Generate GIF previews
-        if: ${{ github.event.inputs.generate_gifs != 'false' && github.event.client_payload.run_id != '' || inputs.generate_gifs }}
+        if: ${{ steps.check_videos.outputs.found == 'true' && ((github.event_name == 'repository_dispatch' && github.event.client_payload.generate_gifs != 'false') || (github.event_name != 'repository_dispatch' && inputs.generate_gifs != 'false')) }}
         run: |
           echo "🎞️  Generating GIF previews..."
           chmod +x scripts/generate_gifs.sh
@@ -81,7 +99,7 @@ jobs:
           find media/gifs -name "*.gif" -type f -exec ls -lh {} \;
 
       - name: Generate thumbnails
-        if: ${{ github.event.inputs.generate_thumbnails != 'false' || inputs.generate_thumbnails }}
+        if: ${{ steps.check_videos.outputs.found == 'true' && ((github.event_name == 'repository_dispatch' && github.event.client_payload.generate_thumbnails != 'false') || (github.event_name != 'repository_dispatch' && inputs.generate_thumbnails != 'false')) }}
         run: |
           echo "📸 Generating video thumbnails..."
 
@@ -102,6 +120,7 @@ jobs:
           ls -lh media/thumbnails/*.jpg
 
       - name: Calculate size savings
+        if: steps.check_videos.outputs.found == 'true'
         run: |
           echo "📊 Size comparison:"
           echo ""
@@ -130,28 +149,32 @@ jobs:
           fi
 
       - name: Upload optimized videos
+        if: steps.check_videos.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: media-optimized-videos-${{ github.run_number }}
           path: media/videos/
+          if-no-files-found: warn
           retention-days: 30
           compression-level: 0
 
       - name: Upload GIFs
-        if: ${{ github.event.inputs.generate_gifs != 'false' || inputs.generate_gifs }}
+        if: ${{ steps.check_videos.outputs.found == 'true' && ((github.event_name == 'repository_dispatch' && github.event.client_payload.generate_gifs != 'false') || (github.event_name != 'repository_dispatch' && inputs.generate_gifs != 'false')) }}
         uses: actions/upload-artifact@v4
         with:
           name: media-gifs-${{ github.run_number }}
           path: media/gifs/
+          if-no-files-found: warn
           retention-days: 30
           compression-level: 6
 
       - name: Upload thumbnails
-        if: ${{ github.event.inputs.generate_thumbnails != 'false' || inputs.generate_thumbnails }}
+        if: ${{ steps.check_videos.outputs.found == 'true' && ((github.event_name == 'repository_dispatch' && github.event.client_payload.generate_thumbnails != 'false') || (github.event_name != 'repository_dispatch' && inputs.generate_thumbnails != 'false')) }}
         uses: actions/upload-artifact@v4
         with:
           name: media-thumbnails-${{ github.run_number }}
           path: media/thumbnails/
+          if-no-files-found: warn
           retention-days: 30
           compression-level: 6
 
@@ -163,25 +186,35 @@ jobs:
           echo "**Source Run:** ${{ github.event.client_payload.run_id || inputs.source_run_id }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "### Generated Assets:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ -d media/videos/hd ]; then
-            echo "**HD Videos (720p):**" >> $GITHUB_STEP_SUMMARY
-            ls -lh media/videos/hd/*.mp4 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- None" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_videos.outputs.found }}" != "true" ]; then
+            echo "No media assets were available for optimisation." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Generated Assets:" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-          fi
 
-          if [ -d media/videos/sd ]; then
-            echo "**SD Videos (480p):**" >> $GITHUB_STEP_SUMMARY
-            ls -lh media/videos/sd/*.mp4 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- None" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
+            if [ -d media/videos/hd ]; then
+              if compgen -G "media/videos/hd/*.mp4" > /dev/null; then
+                echo "**HD Videos (720p):**" >> $GITHUB_STEP_SUMMARY
+                ls -lh media/videos/hd/*.mp4 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
 
-          if [ -d media/gifs ]; then
-            echo "**GIF Previews:**" >> $GITHUB_STEP_SUMMARY
-            ls -lh media/gifs/*.gif | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY || echo "- None" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
+            if [ -d media/videos/sd ]; then
+              if compgen -G "media/videos/sd/*.mp4" > /dev/null; then
+                echo "**SD Videos (480p):**" >> $GITHUB_STEP_SUMMARY
+                ls -lh media/videos/sd/*.mp4 | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+
+            if [ -d media/gifs ]; then
+              if compgen -G "media/gifs/*.gif" > /dev/null; then
+                echo "**GIF Previews:**" >> $GITHUB_STEP_SUMMARY
+                ls -lh media/gifs/*.gif | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
           fi
 
           echo "---" >> $GITHUB_STEP_SUMMARY

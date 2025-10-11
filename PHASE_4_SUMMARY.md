@@ -2982,8 +2982,6 @@ export WORKFLOW_APPROVAL_POLICY="smart"  # always, never, smart
 
 **5. Advanced Observability**
 - OpenTelemetry tracing
-- Prometheus metrics export
-- Grafana dashboards
 - Alert rules (PagerDuty/Slack)
 
 **6. Security Enhancements**

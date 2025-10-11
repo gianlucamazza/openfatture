@@ -3,7 +3,9 @@
 This module defines cache settings and configuration using Pydantic.
 """
 
-from typing import Literal
+import logging
+import os
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -88,6 +90,8 @@ class CacheConfig(BaseModel):
 # Default configuration
 DEFAULT_CACHE_CONFIG = CacheConfig()
 
+_logger = logging.getLogger(__name__)
+
 
 def get_cache_config() -> CacheConfig:
     """Get cache configuration from environment.
@@ -102,11 +106,19 @@ def get_cache_config() -> CacheConfig:
     Returns:
         CacheConfig instance with settings from environment
     """
-    import os
+    strategy_raw = os.getenv("OPENFATTURE_CACHE_STRATEGY", "lru")
+    if strategy_raw not in {"lru", "semantic", "hybrid"}:
+        _logger.warning(
+            "Invalid cache strategy '%s'. Falling back to 'lru'.",
+            strategy_raw,
+        )
+        strategy_raw = "lru"
+
+    strategy = cast(Literal["lru", "semantic", "hybrid"], strategy_raw)
 
     return CacheConfig(
         enabled=os.getenv("OPENFATTURE_CACHE_ENABLED", "true").lower() == "true",
-        strategy=os.getenv("OPENFATTURE_CACHE_STRATEGY", "lru"),
+        strategy=strategy,
         max_size=int(os.getenv("OPENFATTURE_CACHE_MAX_SIZE", "1000")),
         default_ttl=int(os.getenv("OPENFATTURE_CACHE_DEFAULT_TTL", "3600")),
         cleanup_interval=int(os.getenv("OPENFATTURE_CACHE_CLEANUP_INTERVAL", "300")),

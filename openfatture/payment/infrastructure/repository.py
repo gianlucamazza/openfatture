@@ -300,7 +300,7 @@ class PaymentRepository:
     def get_allocation(self, payment_id: int, transaction_id: UUID) -> PaymentAllocation | None:
         """Fetch allocation for a specific payment/transaction pair."""
 
-        stmt = select(PaymentAllocation).where(  # type: ignore[arg-type]
+        stmt = select(PaymentAllocation).where(
             PaymentAllocation.payment_id == payment_id,
             PaymentAllocation.transaction_id == transaction_id,
         )

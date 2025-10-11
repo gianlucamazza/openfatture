@@ -43,7 +43,7 @@ Push → Lint (Black, Ruff, MyPy) → Tests (pytest) → Security (Trivy, Safety
 
 ### Docker Support
 - Multi-stage build (builder + runtime)
-- Development compose with PostgreSQL, Redis, Grafana
+- Development compose with PostgreSQL e Redis
 - Volume persistence for data
 - Health checks
 

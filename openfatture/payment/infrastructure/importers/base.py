@@ -5,10 +5,15 @@ Defines the contract that all importers must implement using the Adapter pattern
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from sqlalchemy.orm import Session, object_session
+
+from openfatture.payment.domain.models import BankTransaction
+from openfatture.storage.database.base import SessionLocal
 
 if TYPE_CHECKING:
     from ...domain.models import BankAccount, BankTransaction
@@ -38,7 +43,7 @@ class ImportResult:
     duplicate_count: int = 0
     transactions: list["BankTransaction"] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
-    import_date: datetime = field(default_factory=datetime.utcnow)
+    import_date: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def total_count(self) -> int:
@@ -137,11 +142,23 @@ class BaseImporter(ABC):
             # Parse transactions
             transactions = self.parse(account)
 
+            session = object_session(account)
+            created_session = False
+            if session is None:
+                if SessionLocal is None:
+                    raise RuntimeError(
+                        "Database not initialised. Call init_db() before importing statements."
+                    )
+                session = SessionLocal()
+                created_session = True
+
             # Process each transaction
             for transaction in transactions:
                 try:
-                    # TODO: Implement duplicate detection
-                    # For now, add all transactions
+                    if skip_duplicates and self._transaction_exists(session, account, transaction):
+                        result.duplicate_count += 1
+                        continue
+
                     result.transactions.append(transaction)
                     result.success_count += 1
 
@@ -149,9 +166,13 @@ class BaseImporter(ABC):
                     result.error_count += 1
                     result.errors.append(f"Transaction import error: {str(e)}")
 
+            if created_session:
+                session.close()
+
         except Exception as e:
             result.error_count += 1
             result.errors.append(f"File parsing error: {str(e)}")
+            raise
 
         return result
 
@@ -196,3 +217,24 @@ class BaseImporter(ABC):
     def __repr__(self) -> str:
         """Human-readable string representation."""
         return f"<{self.__class__.__name__}(file='{self.file_path.name}')>"
+
+    @staticmethod
+    def _transaction_exists(
+        session: Session,
+        account: "BankAccount",
+        transaction: "BankTransaction",
+    ) -> bool:
+        """Check whether a transaction with the same signature already exists."""
+
+        with session.no_autoflush:
+            existing = (
+                session.query(BankTransaction)
+                .filter(
+                    BankTransaction.account_id == account.id,
+                    BankTransaction.date == transaction.date,
+                    BankTransaction.amount == transaction.amount,
+                    BankTransaction.description == transaction.description,
+                )
+                .first()
+            )
+        return existing is not None

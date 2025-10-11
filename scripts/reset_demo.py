@@ -16,11 +16,10 @@ the 2025 media scenarios.
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-
-from sqlalchemy import text
+from typing import Required, TypedDict
 
 from openfatture.storage.database import base as db_base
 from openfatture.storage.database.models import (
@@ -32,6 +31,16 @@ from openfatture.storage.database.models import (
     TipoDocumento,
 )
 from openfatture.utils.config import reload_settings
+
+
+class InvoiceLineSpec(TypedDict, total=False):
+    """Structure describing invoice lines for demo data."""
+
+    prodotto: Required[Prodotto]
+    quantita: Decimal | float | str
+    prezzo: Decimal | float | str
+    aliquota: Decimal | float | str
+    descrizione_extra: str
 
 
 def _path_from_sqlite_url(database_url: str) -> Path | None:
@@ -58,11 +67,11 @@ def reset_database(database_url: str) -> None:
             dialect = connection.dialect.name
             if dialect != "sqlite":
                 if dialect == "postgresql":
-                    connection.execute(text("SET session_replication_role = 'replica'"))  # type: ignore[arg-type]
+                    connection.exec_driver_sql("SET session_replication_role = 'replica'")
                 db_base.Base.metadata.drop_all(bind=db_base.engine)
                 db_base.Base.metadata.create_all(bind=db_base.engine)
                 if dialect == "postgresql":
-                    connection.execute(text("SET session_replication_role = 'origin'"))  # type: ignore[arg-type]
+                    connection.exec_driver_sql("SET session_replication_role = 'origin'")
 
 
 def seed_demo_data() -> None:
@@ -70,7 +79,11 @@ def seed_demo_data() -> None:
     settings = reload_settings()
     reset_database(settings.database_url)
 
-    session = db_base.SessionLocal()
+    session_factory = db_base.SessionLocal
+    if session_factory is None:
+        raise RuntimeError("Database session factory not initialized.")
+
+    session = session_factory()
     try:
         clients = [
             Cliente(
@@ -153,7 +166,7 @@ def seed_demo_data() -> None:
             cliente: Cliente,
             numero: str,
             giorno_offset: int,
-            righe: list[dict[str, Decimal | Prodotto | str | float]],
+            righe: list[InvoiceLineSpec],
             stato: StatoFattura,
         ) -> Fattura:
             emission_date = date.today().replace(day=1) - timedelta(days=giorno_offset)
@@ -174,9 +187,13 @@ def seed_demo_data() -> None:
 
             for idx, riga in enumerate(righe, start=1):
                 prodotto = riga["prodotto"]
-                quantita = Decimal(str(riga.get("quantita", Decimal("1"))))
-                prezzo = Decimal(str(riga.get("prezzo", prodotto.prezzo_unitario)))
-                aliquota = Decimal(str(riga.get("aliquota", prodotto.aliquota_iva)))
+                quantita_raw = riga.get("quantita", Decimal("1"))
+                prezzo_raw = riga.get("prezzo", prodotto.prezzo_unitario)
+                aliquota_raw = riga.get("aliquota", prodotto.aliquota_iva)
+
+                quantita = Decimal(str(quantita_raw))
+                prezzo = Decimal(str(prezzo_raw))
+                aliquota = Decimal(str(aliquota_raw))
 
                 imponibile = quantita * prezzo
                 iva = (imponibile * aliquota) / Decimal("100")
@@ -204,7 +221,12 @@ def seed_demo_data() -> None:
             fattura.totale = totale_imponibile + totale_iva
 
             if stato in {StatoFattura.INVIATA, StatoFattura.CONSEGNATA}:
-                fattura.data_invio = emission_date + timedelta(days=1)
+                send_date = emission_date + timedelta(days=1)
+                fattura.data_invio_sdi = datetime.combine(
+                    send_date,
+                    datetime.min.time(),
+                    tzinfo=UTC,
+                )
 
             return fattura
 

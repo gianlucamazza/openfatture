@@ -14,7 +14,7 @@ Each pattern includes:
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from re import Pattern
 
@@ -92,20 +92,18 @@ class SDIRejectionPattern:
     error_code: str
     pattern_name: str
     description: str
-    regex_patterns: list[str] = None
-    field_checks: list[str] = None
+    regex_patterns: list[str] = field(default_factory=list)
+    field_checks: list[str] = field(default_factory=list)
     severity: str = "error"
     fix_suggestion: str = ""
     reference: str = ""
+    compiled_patterns: list[Pattern] = field(init=False, repr=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Compile regex patterns."""
-        if self.regex_patterns:
-            self.compiled_patterns: list[Pattern] = [
-                re.compile(pattern, re.IGNORECASE) for pattern in self.regex_patterns
-            ]
-        else:
-            self.compiled_patterns = []
+        self.compiled_patterns: list[Pattern] = [
+            re.compile(pattern, re.IGNORECASE) for pattern in self.regex_patterns
+        ]
 
 
 class SDIPatternDatabase:

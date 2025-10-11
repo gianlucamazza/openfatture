@@ -6,7 +6,7 @@ with Rich output formatting and interactive prompts.
 
 from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -76,22 +76,25 @@ class TestImportCommand:
                 total_count=10,
             )
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = mock_recon_result
+            mock_reconcile_batch = mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService.reconcile_batch",
+                new_callable=AsyncMock,
+            )
+            mock_reconcile_batch.return_value = mock_recon_result
 
-                # Run command
-                result = runner.invoke(
-                    app,
-                    [
-                        "import-statement",
-                        str(temp_csv),
-                        "--account",
-                        "1",
-                        "--bank",
-                        "intesa",
-                        "--auto-match",
-                    ],
-                )
+            # Run command
+            result = runner.invoke(
+                app,
+                [
+                    "import-statement",
+                    str(temp_csv),
+                    "--account",
+                    "1",
+                    "--bank",
+                    "intesa",
+                    "--auto-match",
+                ],
+            )
 
         # Verify success
         assert result.exit_code == 0
@@ -239,10 +242,17 @@ class TestMatchCommand:
             mock_match_result.should_auto_apply = True
             mock_match_result.match_type = "EXACT"
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [mock_match_result]
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.MatchingService.match_transaction",
+                new_callable=AsyncMock,
+                return_value=[mock_match_result],
+            )
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService.reconcile",
+                new_callable=AsyncMock,
+            )
 
-                result = runner.invoke(app, ["match", "--auto-apply"])
+            result = runner.invoke(app, ["match", "--auto-apply"])
 
         assert result.exit_code == 0
         assert "Matching" in result.stdout
@@ -300,10 +310,13 @@ class TestMatchCommand:
             mock_match = Mock()
             mock_match.should_auto_apply = False
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [mock_match]
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.MatchingService.match_transaction",
+                new_callable=AsyncMock,
+                return_value=[mock_match],
+            )
 
-                result = runner.invoke(app, ["match", "--manual-only"])
+            result = runner.invoke(app, ["match", "--manual-only"])
 
         assert result.exit_code == 0
         assert "Review needed" in result.stdout
@@ -318,10 +331,13 @@ class TestQueueCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = []
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService.get_review_queue",
+                new_callable=AsyncMock,
+                return_value=[],
+            )
 
-                result = runner.invoke(app, ["queue"])
+            result = runner.invoke(app, ["queue"])
 
         assert result.exit_code == 0
         assert "No transactions need review" in result.stdout
@@ -343,10 +359,13 @@ class TestQueueCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [(mock_tx, [mock_match])]
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService.get_review_queue",
+                new_callable=AsyncMock,
+                return_value=[(mock_tx, [mock_match])],
+            )
 
-                result = runner.invoke(app, ["queue", "--list-only"])
+            result = runner.invoke(app, ["queue", "--list-only"])
 
         assert result.exit_code == 0
         assert "Review Queue" in result.stdout
@@ -371,12 +390,15 @@ class TestQueueCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [(mock_tx, [mock_match])]
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService.get_review_queue",
+                new_callable=AsyncMock,
+                return_value=[(mock_tx, [mock_match])],
+            )
 
-                # Mock user input to skip
-                with patch("rich.prompt.Prompt.ask", return_value="skip"):
-                    result = runner.invoke(app, ["queue", "--interactive"])
+            # Mock user input to skip
+            with patch("rich.prompt.Prompt.ask", return_value="skip"):
+                result = runner.invoke(app, ["queue", "--interactive"])
 
         assert result.exit_code == 0
         assert "Transaction 1/1" in result.stdout
@@ -388,10 +410,13 @@ class TestQueueCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = []
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService.get_review_queue",
+                new_callable=AsyncMock,
+                return_value=[],
+            )
 
-                result = runner.invoke(app, ["queue", "--min", "0.50", "--max", "0.90"])
+            result = runner.invoke(app, ["queue", "--min", "0.50", "--max", "0.90"])
 
         # Should pass confidence range to get_review_queue
         assert result.exit_code == 0
@@ -414,13 +439,13 @@ class TestScheduleRemindersCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [
-                    mock_reminder1,
-                    mock_reminder2,
-                ]
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderScheduler.schedule_reminders",
+                new_callable=AsyncMock,
+                return_value=[mock_reminder1, mock_reminder2],
+            )
 
-                result = runner.invoke(app, ["schedule-reminders", "123", "--strategy", "default"])
+            result = runner.invoke(app, ["schedule-reminders", "123", "--strategy", "default"])
 
         assert result.exit_code == 0
         assert "Scheduled 2 reminders" in result.stdout
@@ -439,12 +464,13 @@ class TestScheduleRemindersCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.side_effect = ValueError(
-                    "Payment not found"
-                )
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderScheduler.schedule_reminders",
+                new_callable=AsyncMock,
+                side_effect=ValueError("Payment not found"),
+            )
 
-                result = runner.invoke(app, ["schedule-reminders", "999"])
+            result = runner.invoke(app, ["schedule-reminders", "999"])
 
         assert result.exit_code == 1
         assert "Error:" in result.stdout
@@ -455,14 +481,13 @@ class TestScheduleRemindersCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = [
-                    Mock(reminder_date=date.today(), days_before_due=0)
-                ]
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderScheduler.schedule_reminders",
+                new_callable=AsyncMock,
+                return_value=[Mock(reminder_date=date.today(), days_before_due=0)],
+            )
 
-                result = runner.invoke(
-                    app, ["schedule-reminders", "123", "--strategy", "aggressive"]
-                )
+            result = runner.invoke(app, ["schedule-reminders", "123", "--strategy", "aggressive"])
 
         assert result.exit_code == 0
         assert "Scheduled" in result.stdout
@@ -477,10 +502,13 @@ class TestProcessRemindersCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = 5
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderScheduler.process_due_reminders",
+                new_callable=AsyncMock,
+                return_value=5,
+            )
 
-                result = runner.invoke(app, ["process-reminders"])
+            result = runner.invoke(app, ["process-reminders"])
 
         assert result.exit_code == 0
         assert "Sent 5 reminders" in result.stdout
@@ -491,10 +519,13 @@ class TestProcessRemindersCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = 3
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderScheduler.process_due_reminders",
+                new_callable=AsyncMock,
+                return_value=3,
+            )
 
-                result = runner.invoke(app, ["process-reminders", "--date", "2024-12-25"])
+            result = runner.invoke(app, ["process-reminders", "--date", "2024-12-25"])
 
         assert result.exit_code == 0
         assert "25/12/2024" in result.stdout
@@ -506,10 +537,13 @@ class TestProcessRemindersCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = 0
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderScheduler.process_due_reminders",
+                new_callable=AsyncMock,
+                return_value=0,
+            )
 
-                result = runner.invoke(app, ["process-reminders"])
+            result = runner.invoke(app, ["process-reminders"])
 
         assert result.exit_code == 0
         assert "Sent 0 reminders" in result.stdout
@@ -520,11 +554,14 @@ class TestProcessRemindersCommand:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_until_complete.return_value = 2
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderScheduler.process_due_reminders",
+                new_callable=AsyncMock,
+                return_value=2,
+            )
 
-                with patch.dict("os.environ", {"SMTP_HOST": "smtp.test.com"}):
-                    result = runner.invoke(app, ["process-reminders"])
+            with patch.dict("os.environ", {"SMTP_HOST": "smtp.test.com"}):
+                result = runner.invoke(app, ["process-reminders"])
 
         assert result.exit_code == 0
         assert "Sent 2 reminders" in result.stdout

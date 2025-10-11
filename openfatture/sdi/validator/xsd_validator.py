@@ -68,6 +68,8 @@ class FatturaPAValidator:
                 self.load_schema()
             except FileNotFoundError as e:
                 return False, str(e)
+            if self._schema is None:
+                return False, "XSD schema not available for validation."
 
         # Parse XML
         try:

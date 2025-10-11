@@ -1,14 +1,14 @@
 """Anthropic (Claude) provider implementation."""
 
+from __future__ import annotations
+
+import asyncio
+import inspect
 import time
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
-from anthropic import (
-    AnthropicError,
-    AsyncAnthropic,
-    RateLimitError,
-)
+from anthropic import AnthropicError, AsyncAnthropic, RateLimitError
 
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
@@ -20,6 +20,12 @@ from openfatture.ai.providers.base import (
     ProviderTimeoutError,
 )
 from openfatture.utils.logging import get_logger
+
+if TYPE_CHECKING:
+    from anthropic.types import MessageParam
+else:  # pragma: no cover - runtime fallback when type hints unavailable
+    MessageParam = Any
+
 
 logger = get_logger(__name__)
 
@@ -251,44 +257,35 @@ class AnthropicProvider(BaseLLMProvider):
 
         Falls back to approximation if API call fails.
         """
-        try:
-            # Use official Anthropic token counter (synchronous)
-            # Note: Anthropic's count_tokens is a sync method
-            import asyncio
+        count_tokens_fn = getattr(self.client, "count_tokens", None)
 
-            loop = asyncio.get_event_loop()
+        if callable(count_tokens_fn):
+            try:
+                result = count_tokens_fn(text)
 
-            if loop.is_running():
-                # If in async context, use approximation to avoid blocking
-                # This is acceptable since count_tokens is primarily used for
-                # pre-flight estimation, not billing
-                logger.debug(
-                    "count_tokens_approximation",
-                    reason="async_context",
+                if inspect.isawaitable(result):  # pragma: no cover - defensive
+                    logger.debug("awaiting_async_count_tokens")
+                    result = asyncio.get_event_loop().run_until_complete(result)
+
+                if isinstance(result, dict):
+                    token_count = result.get("input_tokens") or result.get("tokens")
+                    if token_count is not None:
+                        return int(token_count)
+
+                return int(result)
+            except Exception as exc:  # pragma: no cover - fallback path
+                logger.warning(
+                    "anthropic_count_tokens_failed",
+                    error=str(exc),
                     model=self.model,
                 )
-                return len(text) // 4
 
-            # Sync context: use official counter
-            token_count = self.client.count_tokens(text)
-
-            logger.debug(
-                "count_tokens_official",
-                model=self.model,
-                count=token_count,
-                text_length=len(text),
-            )
-
-            return token_count
-
-        except Exception as e:
-            # Fallback to approximation if API call fails
-            logger.warning(
-                "count_tokens_fallback",
-                error=str(e),
-                model=self.model,
-            )
-            return len(text) // 4
+        logger.debug(
+            "count_tokens_approximation",
+            reason="anthropic_sdk_no_sync_counter",
+            model=self.model,
+        )
+        return len(text) // 4
 
     def estimate_cost(self, usage: UsageMetrics) -> float:
         """Estimate cost based on token usage."""
@@ -335,7 +332,7 @@ class AnthropicProvider(BaseLLMProvider):
         """Anthropic Claude 3 supports tool use."""
         return "claude-3" in self.model
 
-    def _prepare_claude_messages(self, messages: list[Message]) -> list[dict[str, Any]]:
+    def _prepare_claude_messages(self, messages: list[Message]) -> list[MessageParam]:
         """
         Prepare messages for Claude API.
 
@@ -348,7 +345,7 @@ class AnthropicProvider(BaseLLMProvider):
         Returns:
             List of message dicts for Claude API
         """
-        prepared = []
+        prepared: list[MessageParam] = []
 
         # Filter out system messages (handled separately)
         for msg in messages:
@@ -358,6 +355,6 @@ class AnthropicProvider(BaseLLMProvider):
             # Convert role to Claude format
             role = "user" if msg.role == Role.USER else "assistant"
 
-            prepared.append({"role": role, "content": msg.content})
+            prepared.append(cast(MessageParam, {"role": role, "content": msg.content}))
 
         return prepared

@@ -4,15 +4,22 @@ Implements the Strategy pattern to allow different matching algorithms
 to be used interchangeably.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Awaitable, Generator, Iterable
 from decimal import Decimal, InvalidOperation
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from ..domain.value_objects import MatchResult
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
     from ..domain.models import BankTransaction
-    from ..domain.value_objects import MatchResult
+
+
+MatchResultListType = list[MatchResult]
+MatchResults = MatchResultListType | Awaitable[MatchResultListType]
 
 
 class IMatcherStrategy(ABC):
@@ -47,9 +54,7 @@ class IMatcherStrategy(ABC):
     """
 
     @abstractmethod
-    def match(
-        self, transaction: "BankTransaction", payments: list["Pagamento"]
-    ) -> list["MatchResult"]:
+    def match(self, transaction: BankTransaction, payments: list[Pagamento]) -> MatchResults:
         """Match a bank transaction to potential payments.
 
         Args:
@@ -89,56 +94,50 @@ class IMatcherStrategy(ABC):
         return f"<{self.__class__.__name__}>"
 
 
-class MatchResultList(list):
+class MatchResultList(list[MatchResult]):
     """List-like container that can also be awaited."""
 
-    def __await__(self):
-        async def _coro():
+    def __await__(self) -> Generator[MatchResultListType, None, MatchResultListType]:
+        async def _coro() -> MatchResultListType:
             return self
 
         return _coro().__await__()
 
 
-def as_match_results(results: Iterable["MatchResult"]) -> MatchResultList:
+def as_match_results(results: Iterable[MatchResult]) -> MatchResultList:
     """Wrap iterable of MatchResult into an awaitable list."""
     return MatchResultList(results)
 
 
-def payment_amount_for_matching(payment: "Pagamento") -> Decimal:
+def _to_decimal_or_none(value: Any) -> Decimal | None:
+    """Convert arbitrary value to Decimal if possible, otherwise None."""
+    try:
+        return Decimal(str(value))
+    except (TypeError, ValueError, InvalidOperation):
+        return None
+
+
+def payment_amount_for_matching(payment: Pagamento) -> Decimal:
     """Return the outstanding amount to use during matching comparisons."""
 
     # Prefer dedicated outstanding attribute if available
     saldo = getattr(payment, "saldo_residuo", None)
-    if saldo is not None:
-        try:
-            saldo_decimal = Decimal(str(saldo))
-        except (TypeError, ValueError, InvalidOperation):
-            saldo_decimal = None
-        else:
-            if saldo_decimal >= 0:
-                return saldo_decimal
+    saldo_decimal = _to_decimal_or_none(saldo)
+    if saldo_decimal is not None and saldo_decimal >= Decimal("0.00"):
+        return saldo_decimal
 
     # Fallback to total minus paid
     total = getattr(payment, "importo_da_pagare", None)
-    total_decimal: Decimal | None = None
-    if total is not None:
-        try:
-            total_decimal = Decimal(str(total))
-        except (TypeError, ValueError, InvalidOperation):
-            total_decimal = None
+    total_decimal = _to_decimal_or_none(total)
 
     if total_decimal is None:
-        total = getattr(payment, "importo", Decimal("0.00"))
-        try:
-            total_decimal = Decimal(str(total))
-        except (TypeError, ValueError, InvalidOperation):
-            total_decimal = Decimal("0.00")
+        total_decimal = _to_decimal_or_none(getattr(payment, "importo", Decimal("0.00")))
+
+    if total_decimal is None:
+        total_decimal = Decimal("0.00")
 
     paid = getattr(payment, "importo_pagato", Decimal("0.00"))
-    try:
-        paid_decimal = Decimal(str(paid))
-    except (TypeError, ValueError, InvalidOperation):
-        paid_decimal = Decimal("0.00")
+    paid_decimal = _to_decimal_or_none(paid) or Decimal("0.00")
 
     outstanding = total_decimal - paid_decimal
     if outstanding < Decimal("0.00"):

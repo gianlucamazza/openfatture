@@ -207,7 +207,4 @@ class TestCSVImporterGeneric:
 
         # Second import (same file)
         result2 = importer.import_transactions(bank_account)
-        for tx in result2.transactions:
-            db_session.add(tx)
-        db_session.commit()
         assert result2.duplicate_count > 0

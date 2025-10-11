@@ -27,12 +27,15 @@ Example:
     ... )
 """
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from enum import Enum
 from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from openfatture.utils.datetime import utc_now
 
 
 class WorkflowStatus(Enum):
@@ -84,7 +87,7 @@ class AgentResult(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence score (0-1)")
     metadata: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     model_config = ConfigDict(use_enum_values=True)
 
@@ -95,7 +98,7 @@ class HumanReview(BaseModel):
     decision: ApprovalDecision
     feedback: str | None = None
     reviewer: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     model_config = ConfigDict(use_enum_values=True)
 
@@ -121,7 +124,7 @@ class SharedContext(BaseModel):
     default_payment_terms: int = 30  # days
 
     # Metadata
-    loaded_at: datetime = Field(default_factory=datetime.utcnow)
+    loaded_at: datetime = Field(default_factory=utc_now)
 
 
 class BaseWorkflowState(BaseModel):
@@ -136,8 +139,8 @@ class BaseWorkflowState(BaseModel):
     status: WorkflowStatus = WorkflowStatus.PENDING
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
     completed_at: datetime | None = None
 
     # Shared context
@@ -156,18 +159,19 @@ class BaseWorkflowState(BaseModel):
         """Add error and update status."""
         self.errors.append(error)
         self.status = WorkflowStatus.FAILED
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def add_warning(self, warning: str) -> None:
         """Add warning."""
         self.warnings.append(warning)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = utc_now()
 
     def mark_completed(self) -> None:
         """Mark workflow as completed."""
         self.status = WorkflowStatus.COMPLETED
-        self.completed_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        now = utc_now()
+        self.completed_at = now
+        self.updated_at = now
 
 
 # ============================================================================
@@ -195,8 +199,20 @@ class InvoiceCreationState(BaseWorkflowState):
     # User inputs
     user_input: str
     client_id: int
-    invoice_date: datetime | None = None
-    payment_due_date: datetime | None = None
+    invoice_date: date | None = None
+    payment_due_date: date | None = None
+
+    # Financial inputs
+    imponibile_target: Decimal = Field(default_factory=lambda: Decimal("0.00"))
+    vat_rate: Decimal = Field(default_factory=lambda: Decimal("22.00"))
+    hours: float | None = None
+    hourly_rate: Decimal | None = None
+    payment_terms_days: int = 30
+
+    # Generated data
+    line_items: list[dict[str, Any]] = Field(default_factory=list)
+    tax_details: dict[str, Any] = Field(default_factory=dict)
+    invoice_number: str | None = None
 
     # Agent results (populated by workflow)
     description_result: AgentResult | None = None
@@ -395,7 +411,15 @@ class BatchProcessingState(BaseWorkflowState):
 def create_invoice_workflow(
     user_input: str,
     client_id: int,
+    *,
     require_approvals: bool = False,
+    imponibile: Decimal | None = None,
+    vat_rate: Decimal | float | None = None,
+    hours: float | None = None,
+    hourly_rate: Decimal | float | None = None,
+    payment_terms_days: int = 30,
+    invoice_date: date | None = None,
+    payment_due_date: date | None = None,
 ) -> InvoiceCreationState:
     """Create a new invoice creation workflow state.
 
@@ -407,9 +431,28 @@ def create_invoice_workflow(
     Returns:
         InvoiceCreationState ready for workflow execution
     """
+    imponibile_value = Decimal("0.00")
+    if imponibile is not None:
+        imponibile_value = Decimal(str(imponibile))
+
+    vat_value = Decimal("22.00")
+    if vat_rate is not None:
+        vat_value = Decimal(str(vat_rate))
+
+    hourly_rate_value: Decimal | None = None
+    if hourly_rate is not None:
+        hourly_rate_value = Decimal(str(hourly_rate))
+
     return InvoiceCreationState(
         user_input=user_input,
         client_id=client_id,
+        invoice_date=invoice_date,
+        payment_due_date=payment_due_date,
+        imponibile_target=imponibile_value,
+        vat_rate=vat_value,
+        hours=hours,
+        hourly_rate=hourly_rate_value,
+        payment_terms_days=payment_terms_days,
         require_description_approval=require_approvals,
         require_tax_approval=require_approvals,
         require_compliance_approval=True,  # Always for errors

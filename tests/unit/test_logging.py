@@ -8,6 +8,7 @@ import time
 
 import pytest
 
+from openfatture import __version__
 from openfatture.utils.logging import (
     LogPerformance,
     add_app_context,
@@ -138,7 +139,7 @@ class TestLoggingProcessors:
         result = add_app_context(None, None, event_dict)
 
         assert result["app"] == "openfatture"
-        assert result["version"] == "0.1.0"
+        assert result["version"] == __version__
 
 
 class TestLogPerformance:

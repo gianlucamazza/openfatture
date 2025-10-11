@@ -89,8 +89,8 @@ class ImporterFactory:
         }
 
         if extension in extension_map:
-            # Verify with content sniffing
             detected = extension_map[extension]
+
             if ImporterFactory._verify_format(file_path, detected):
                 return detected
 
@@ -122,10 +122,15 @@ class ImporterFactory:
             elif expected_format == FileFormat.CSV:
                 # Try csv.Sniffer
                 try:
-                    csv.Sniffer().sniff(sample)
-                    return True
-                except csv.Error:
+                    dialect = csv.Sniffer().sniff(sample)
+                    delimiter = getattr(dialect, "delimiter", ",")
+                    if delimiter in {",", ";", "\t", "|"} and delimiter in sample:
+                        return True
                     return False
+                except csv.Error:
+                    # Some CSV exports (e.g., Revolut) include localized headers
+                    # that confuse Sniffer. Treat as CSV based on extension.
+                    return True
 
         except Exception:
             return False
@@ -156,8 +161,10 @@ class ImporterFactory:
 
             # Try CSV detection
             try:
-                csv.Sniffer().sniff(sample)
-                return FileFormat.CSV
+                dialect = csv.Sniffer().sniff(sample)
+                delimiter = getattr(dialect, "delimiter", ",")
+                if delimiter in {",", ";", "\t", "|"} and delimiter in sample:
+                    return FileFormat.CSV
             except csv.Error:
                 pass
 
@@ -209,7 +216,13 @@ class ImporterFactory:
         detected_format = format or cls.detect_format(file_path)
 
         if detected_format == FileFormat.UNKNOWN:
-            raise ValueError(f"Unable to detect format for file: {file_path}")
+            extension = file_path.suffix.lower()
+            if extension in {".ofx", ".qfx"}:
+                detected_format = FileFormat.OFX
+            elif extension == ".qif":
+                detected_format = FileFormat.QIF
+            else:
+                raise ValueError(f"Unable to detect format for file: {file_path}")
 
         # Delegate to format-specific creator
         return cls.create(detected_format, file_path, config, bank_preset)

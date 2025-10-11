@@ -414,7 +414,7 @@ class TestMatchingService:
     # Strategy Management Tests
     # ==========================================================================
 
-    def test_add_strategy_appends_to_pipeline(self, matching_service):
+    async def test_add_strategy_appends_to_pipeline(self, matching_service):
         """Test that add_strategy appends new strategy to pipeline."""
         initial_count = len(matching_service.strategies)
 
@@ -424,7 +424,7 @@ class TestMatchingService:
         assert len(matching_service.strategies) == initial_count + 1
         assert matching_service.strategies[-1] == new_strategy
 
-    def test_remove_strategy_by_class_type(self, matching_service):
+    async def test_remove_strategy_by_class_type(self, matching_service):
         """Test that remove_strategy removes strategy by class type."""
         # Add a specific strategy
         exact_matcher = ExactAmountMatcher()

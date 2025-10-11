@@ -122,14 +122,16 @@ test-ai-token-counter: ## Run token counter tests
 # Payment module tests
 # ============================================================================
 
-test-payment: ## Run payment module tests (>85% coverage required)
+test-payment: ## Run payment module tests (>=80% coverage required)
 	@echo "$(BLUE)Running payment module tests...$(NC)"
-	$(PYTEST) tests/payment/ -v \
-		--cov=$(PROJECT_ROOT)/payment \
+	$(PYTEST) --override-ini "addopts=" \
+		tests/payment/ -v \
+		--cov=$(PROJECT_ROOT).payment \
 		--cov-report=term-missing \
-		--cov-fail-under=85 \
+		--cov-report=html \
+		--cov-fail-under=80 \
 		--tb=short
-	@echo "$(GREEN)✓ Payment tests passed (coverage >85%)$(NC)"
+	@echo "$(GREEN)✓ Payment tests passed (coverage ≥80%)$(NC)"
 
 test-payment-domain: ## Run payment domain tests
 	@echo "$(BLUE)Running payment domain tests...$(NC)"

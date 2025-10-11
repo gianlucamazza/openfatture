@@ -31,7 +31,7 @@ Example:
     ...     pass
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
@@ -45,6 +45,7 @@ from openfatture.ai.orchestration.states import (
     ApprovalDecision,
     HumanReview,
 )
+from openfatture.utils.datetime import utc_now
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -70,15 +71,9 @@ class ApprovalRequest:
     agent_type: str
     data: dict[str, Any]
     confidence: float | None = None
-    errors: list = None
-    warnings: list = None
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     context: dict[str, Any] | None = None
-
-    def __post_init__(self):
-        if self.errors is None:
-            self.errors = []
-        if self.warnings is None:
-            self.warnings = []
 
 
 @dataclass
@@ -90,11 +85,7 @@ class ApprovalResponse:
     feedback: str | None = None
     modifications: dict[str, Any] | None = None
     reviewer: str = "human"
-    timestamp: datetime = None
-
-    def __post_init__(self):
-        if self.timestamp is None:
-            self.timestamp = datetime.utcnow()
+    timestamp: datetime = field(default_factory=utc_now)
 
     def to_human_review(self) -> HumanReview:
         """Convert to HumanReview model."""

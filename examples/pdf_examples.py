@@ -28,11 +28,14 @@ from decimal import Decimal
 from pathlib import Path
 from tempfile import mkdtemp
 
+from sqlalchemy.orm import Session
+
 from openfatture.services.pdf import (
     PDFGenerator,
     PDFGeneratorConfig,
 )
-from openfatture.storage.database import SessionManager, init_db
+from openfatture.storage.database import base as db_base
+from openfatture.storage.database import init_db
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
@@ -43,7 +46,15 @@ from openfatture.storage.database.models import (
 )
 
 
-def create_sample_invoice(session, numero: str = "001", year: int = 2024) -> Fattura:
+def get_session() -> Session:
+    """Return an initialized SQLAlchemy session."""
+    session_factory = db_base.SessionLocal
+    if session_factory is None:
+        raise RuntimeError("Database session factory not initialized. Call init_db() first.")
+    return session_factory()
+
+
+def create_sample_invoice(session: Session, numero: str = "001", year: int = 2024) -> Fattura:
     """Create a sample invoice for demonstration.
 
     Args:
@@ -79,7 +90,7 @@ def create_sample_invoice(session, numero: str = "001", year: int = 2024) -> Fat
         numero=numero,
         anno=year,
         data_emissione=date.today(),
-        tipo_documento=TipoDocumento.FATTURA,
+        tipo_documento=TipoDocumento.TD01,
         cliente_id=cliente.id,
         imponibile=Decimal("1000.00"),
         iva=Decimal("220.00"),
@@ -144,7 +155,7 @@ def example_1_minimalist_template():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create sample invoice
@@ -189,7 +200,7 @@ def example_2_professional_template():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create sample invoice
@@ -241,7 +252,7 @@ def example_3_branded_template():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create sample invoice
@@ -297,7 +308,7 @@ def example_4_qr_code_integration():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create sample invoice
@@ -353,7 +364,7 @@ def example_5_pdfa_compliance():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create sample invoice
@@ -405,7 +416,7 @@ def example_6_batch_generation():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create multiple sample invoices
@@ -474,7 +485,7 @@ def example_7_custom_configuration():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create sample invoice
@@ -541,7 +552,7 @@ def example_8_template_comparison():
     print("=" * 80 + "\n")
 
     init_db()
-    session = SessionManager.get_session()
+    session = get_session()
 
     try:
         # Create ONE sample invoice

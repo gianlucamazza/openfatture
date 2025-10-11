@@ -5,8 +5,9 @@ and semantic search.
 """
 
 import uuid
+from collections.abc import Mapping, Sequence
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import chromadb
 from chromadb.api.models.Collection import Collection
@@ -119,18 +120,25 @@ class VectorStore:
         embeddings = await self.embedding_strategy.embed_batch(documents)
 
         # Add timestamp to metadata
+        metadata_dicts: list[dict[str, str | int | float | bool | None]]
         if metadatas is None:
-            metadatas = [{}] * len(documents)
+            metadata_dicts = [{} for _ in documents]
+        else:
+            metadata_dicts = [_coerce_metadata_dict(metadata) for metadata in metadatas]
 
-        for metadata in metadatas:
-            metadata["indexed_at"] = datetime.now().isoformat()
+        timestamp = datetime.now().isoformat()
+        for metadata in metadata_dicts:
+            metadata["indexed_at"] = timestamp
             metadata["embedding_model"] = self.embedding_strategy.model_name
+
+        embedding_matrix: list[Sequence[float]] = [list(vector) for vector in embeddings]
+        metadata_payload = cast(list[Mapping[str, Any]], metadata_dicts)
 
         # Add to collection
         self.collection.add(
-            documents=documents,
-            embeddings=embeddings,
-            metadatas=metadatas,
+            documents=list(documents),
+            embeddings=embedding_matrix,
+            metadatas=metadata_payload,
             ids=ids,
         )
 
@@ -173,13 +181,14 @@ class VectorStore:
 
         # Generate query embedding
         query_embedding = await self.embedding_strategy.embed_text(query)
+        query_embeddings_payload: list[Sequence[float]] = [list(query_embedding)]
 
         # Build ChromaDB where clause for filters
         where = filters if filters else None
 
         # Search collection
         results = self.collection.query(
-            query_embeddings=[query_embedding],
+            query_embeddings=query_embeddings_payload,
             n_results=top_k,
             where=where,
         )
@@ -187,10 +196,25 @@ class VectorStore:
         # Process results
         processed_results = []
 
-        if results["ids"] and results["ids"][0]:
-            for i, doc_id in enumerate(results["ids"][0]):
+        ids_result = cast(Sequence[Sequence[str]] | None, results.get("ids"))
+        documents_result = cast(Sequence[Sequence[str]] | None, results.get("documents"))
+        metadatas_result = cast(
+            Sequence[Sequence[Mapping[str, Any]]] | None, results.get("metadatas")
+        )
+        distances_result = cast(Sequence[Sequence[float]] | None, results.get("distances"))
+
+        if ids_result and len(ids_result) > 0:
+            doc_ids = ids_result[0]
+            documents_list = documents_result[0] if documents_result else []
+            metadatas_list = metadatas_result[0] if metadatas_result else []
+            distances_list = distances_result[0] if distances_result else []
+
+            for index, doc_id in enumerate(doc_ids):
+                document_text = documents_list[index] if index < len(documents_list) else ""
+                metadata_raw = metadatas_list[index] if index < len(metadatas_list) else {}
+                distance = distances_list[index] if index < len(distances_list) else 1.0
+
                 # ChromaDB returns distance, convert to similarity (1 - distance)
-                distance = results["distances"][0][i] if results["distances"] else 1.0
                 similarity = 1.0 - distance
 
                 # Filter by similarity threshold
@@ -200,8 +224,8 @@ class VectorStore:
                 processed_results.append(
                     {
                         "id": doc_id,
-                        "document": results["documents"][0][i],
-                        "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
+                        "document": document_text,
+                        "metadata": _coerce_metadata_dict(dict(metadata_raw)),
                         "similarity": similarity,
                     }
                 )
@@ -232,29 +256,41 @@ class VectorStore:
         # Get existing document
         existing = self.collection.get(ids=[doc_id])
 
-        if not existing["ids"]:
+        ids_result = cast(list[str] | None, existing.get("ids"))
+        if not ids_result:
             raise ValueError(f"Document {doc_id} not found")
 
         # Prepare update
-        update_doc = document if document is not None else existing["documents"][0]
-        update_metadata = existing["metadatas"][0] if existing["metadatas"] else {}
+        documents_result = cast(list[str] | None, existing.get("documents"))
+        update_doc = document if document is not None else (documents_result or [""])[0]
+
+        metadatas_result = cast(list[Mapping[str, Any]] | None, existing.get("metadatas"))
+        update_metadata = _coerce_metadata_dict(
+            dict(metadatas_result[0]) if metadatas_result else {}
+        )
 
         if metadata:
-            update_metadata.update(metadata)
+            update_metadata.update(_coerce_metadata_dict(metadata))
 
         update_metadata["updated_at"] = datetime.now().isoformat()
 
         # Generate new embedding if document changed
         if document is not None:
-            embedding = await self.embedding_strategy.embed_text(document)
+            embedding_vector = await self.embedding_strategy.embed_text(document)
         else:
-            embedding = existing["embeddings"][0]
+            embeddings_result = cast(list[list[float]] | None, existing.get("embeddings"))
+            if embeddings_result and embeddings_result[0]:
+                embedding_vector = list(embeddings_result[0])
+            else:
+                embedding_vector = await self.embedding_strategy.embed_text(update_doc)
 
         # Update collection
+        embedding_payload: list[Sequence[float]] = [list(embedding_vector)]
+
         self.collection.update(
             ids=[doc_id],
             documents=[update_doc],
-            embeddings=[embedding],
+            embeddings=embedding_payload,
             metadatas=[update_metadata],
         )
 
@@ -286,9 +322,12 @@ class VectorStore:
         # Get matching documents
         results = self.collection.get(where=filters)
 
-        if results["ids"]:
-            count = len(results["ids"])
-            self.collection.delete(ids=results["ids"])
+        ids_value = results.get("ids")
+        ids_list = list(ids_value) if isinstance(ids_value, list) else None
+
+        if ids_list:
+            count = len(ids_list)
+            self.collection.delete(ids=ids_list)
 
             logger.info(
                 "documents_deleted_by_filter",
@@ -311,11 +350,19 @@ class VectorStore:
         """
         results = self.collection.get(ids=[doc_id])
 
-        if results["ids"]:
+        ids_value = results.get("ids")
+        documents_value = results.get("documents")
+        metadatas_value = results.get("metadatas")
+
+        if isinstance(ids_value, list) and ids_value:
+            document_text = documents_value[0] if isinstance(documents_value, list) else ""
+            metadata_raw = (
+                metadatas_value[0] if isinstance(metadatas_value, list) and metadatas_value else {}
+            )
             return {
-                "id": results["ids"][0],
-                "document": results["documents"][0],
-                "metadata": results["metadatas"][0] if results["metadatas"] else {},
+                "id": ids_value[0],
+                "document": document_text,
+                "metadata": _coerce_metadata_dict(dict(metadata_raw)),
             }
 
         return None
@@ -336,7 +383,7 @@ class VectorStore:
         logger.warning("resetting_collection", collection=self.config.collection_name)
 
         # Delete collection and recreate
-        self.client.delete_collection(self.config.collection_name)
+        self.client.delete_collection(name=self.config.collection_name)
 
         self.collection = self.client.get_or_create_collection(
             name=self.config.collection_name,
@@ -358,3 +405,17 @@ class VectorStore:
             "embedding_model": self.embedding_strategy.model_name,
             "persist_directory": str(self.config.persist_directory),
         }
+
+
+MetadataValue = str | int | float | bool | None
+
+
+def _coerce_metadata_dict(metadata: Mapping[str, Any]) -> dict[str, MetadataValue]:
+    """Convert metadata values to supported scalar types."""
+    typed_metadata: dict[str, MetadataValue] = {}
+    for key, value in metadata.items():
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            typed_metadata[key] = value
+        else:
+            typed_metadata[key] = str(value)
+    return typed_metadata

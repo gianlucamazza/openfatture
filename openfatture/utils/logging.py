@@ -12,7 +12,7 @@ import logging
 import sys
 import uuid
 from contextvars import ContextVar
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from structlog.types import EventDict, Processor
@@ -162,7 +162,7 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
         logger = get_logger(__name__)
         logger.info("invoice_created", invoice_id=123, amount=1000.00)
     """
-    return structlog.get_logger(name)
+    return cast(structlog.stdlib.BoundLogger, structlog.get_logger(name))
 
 
 # Performance logging helpers

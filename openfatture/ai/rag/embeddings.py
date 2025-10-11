@@ -8,6 +8,8 @@ This module provides embedding generation using different providers:
 import hashlib
 import json
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
+from typing import Protocol, runtime_checkable
 
 from sentence_transformers import SentenceTransformer
 
@@ -36,7 +38,7 @@ class EmbeddingStrategy(ABC):
         pass
 
     @abstractmethod
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+    async def embed_batch(self, texts: Sequence[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts.
 
         Args:
@@ -58,6 +60,15 @@ class EmbeddingStrategy(ABC):
     def model_name(self) -> str:
         """Get model name."""
         pass
+
+
+@runtime_checkable
+class EmbeddingCache(Protocol):
+    async def get(self, key: str) -> list[float] | None:
+        """Retrieve cached embedding."""
+
+    async def set(self, key: str, value: list[float]) -> None:
+        """Store embedding in cache."""
 
 
 class OpenAIEmbeddings(EmbeddingStrategy):
@@ -83,7 +94,7 @@ class OpenAIEmbeddings(EmbeddingStrategy):
         self,
         api_key: str,
         model: str = "text-embedding-3-small",
-        cache: any | None = None,
+        cache: EmbeddingCache | None = None,
     ) -> None:
         """Initialize OpenAI embeddings.
 
@@ -110,6 +121,7 @@ class OpenAIEmbeddings(EmbeddingStrategy):
     async def embed_text(self, text: str) -> list[float]:
         """Generate embedding for a single text."""
         # Check cache first
+        cache_key: str | None = None
         if self.cache:
             cache_key = self._generate_cache_key(text)
             cached = await self.cache.get(cache_key)
@@ -127,7 +139,7 @@ class OpenAIEmbeddings(EmbeddingStrategy):
             embedding = response.data[0].embedding
 
             # Cache result
-            if self.cache:
+            if self.cache and cache_key is not None:
                 await self.cache.set(cache_key, embedding)
 
             logger.debug(
@@ -146,12 +158,12 @@ class OpenAIEmbeddings(EmbeddingStrategy):
             )
             raise
 
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+    async def embed_batch(self, texts: Sequence[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts."""
         try:
             # Batch API call
             response = await self.client.embeddings.create(
-                input=texts,
+                input=list(texts),
                 model=self.model,
             )
 
@@ -249,6 +261,7 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
 
             loop = asyncio.get_event_loop()
             embedding = await loop.run_in_executor(None, self.model.encode, text)
+            embedding_list = [float(value) for value in embedding.tolist()]
 
             logger.debug(
                 "embedding_generated",
@@ -256,7 +269,7 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
                 text_length=len(text),
             )
 
-            return embedding.tolist()
+            return embedding_list
 
         except Exception as e:
             logger.error(
@@ -266,14 +279,15 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
             )
             raise
 
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+    async def embed_batch(self, texts: Sequence[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts."""
         try:
             # Batch encode
             import asyncio
 
             loop = asyncio.get_event_loop()
-            embeddings = await loop.run_in_executor(None, self.model.encode, texts)
+            embeddings = await loop.run_in_executor(None, self.model.encode, list(texts))
+            embedding_lists = [[float(value) for value in vector.tolist()] for vector in embeddings]
 
             logger.info(
                 "batch_embeddings_generated",
@@ -281,7 +295,7 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
                 count=len(texts),
             )
 
-            return embeddings.tolist()
+            return embedding_lists
 
         except Exception as e:
             logger.error(
@@ -304,7 +318,9 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
 
 
 def create_embeddings(
-    config: RAGConfig, api_key: str | None = None, cache: any | None = None
+    config: RAGConfig,
+    api_key: str | None = None,
+    cache: EmbeddingCache | None = None,
 ) -> EmbeddingStrategy:
     """Factory function to create embedding strategy.
 

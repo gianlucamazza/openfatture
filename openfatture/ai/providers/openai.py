@@ -1,13 +1,15 @@
 """OpenAI provider implementation."""
 
+from __future__ import annotations
+
 import time
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from openai import AsyncOpenAI, OpenAIError, RateLimitError
 from pydantic import BaseModel
 
-from openfatture.ai.domain.message import Message
+from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 from openfatture.ai.providers.base import (
     BaseLLMProvider,
@@ -17,6 +19,22 @@ from openfatture.ai.providers.base import (
     ProviderTimeoutError,
 )
 from openfatture.utils.logging import get_logger
+
+if TYPE_CHECKING:
+    from openai._streaming import AsyncStream
+    from openai.types.chat import (
+        ChatCompletion,
+        ChatCompletionChunk,
+        ChatCompletionMessageParam,
+        ChatCompletionToolMessageParam,
+    )
+else:  # pragma: no cover - runtime fallback when type hints unavailable
+    AsyncStream = Any
+    ChatCompletion = Any
+    ChatCompletionChunk = Any
+    ChatCompletionMessageParam = Any
+    ChatCompletionToolMessageParam = Any
+
 
 logger = get_logger(__name__)
 
@@ -119,7 +137,7 @@ class OpenAIProvider(BaseLLMProvider):
 
         try:
             # Prepare messages
-            prepared_messages = self._prepare_messages(messages, system_prompt)
+            prepared_messages = self._prepare_chat_messages(messages, system_prompt)
 
             logger.info(
                 "openai_request_started",
@@ -129,13 +147,14 @@ class OpenAIProvider(BaseLLMProvider):
             )
 
             # Call API
-            response = await self.client.chat.completions.create(
+            response_raw = await self.client.chat.completions.create(
                 model=self.model,
                 messages=prepared_messages,
                 temperature=self._get_temperature(temperature),
                 max_tokens=self._get_max_tokens(max_tokens),
                 **kwargs,
             )
+            response = cast("ChatCompletion", response_raw)
 
             # Extract response
             content = response.choices[0].message.content or ""
@@ -225,7 +244,7 @@ class OpenAIProvider(BaseLLMProvider):
         """Stream response tokens from OpenAI."""
         try:
             # Prepare messages
-            prepared_messages = self._prepare_messages(messages, system_prompt)
+            prepared_messages = self._prepare_chat_messages(messages, system_prompt)
 
             logger.info(
                 "openai_stream_started",
@@ -234,7 +253,7 @@ class OpenAIProvider(BaseLLMProvider):
             )
 
             # Stream API call
-            stream = await self.client.chat.completions.create(
+            stream_raw = await self.client.chat.completions.create(
                 model=self.model,
                 messages=prepared_messages,
                 temperature=self._get_temperature(temperature),
@@ -242,6 +261,7 @@ class OpenAIProvider(BaseLLMProvider):
                 stream=True,
                 **kwargs,
             )
+            stream = cast("AsyncStream[ChatCompletionChunk]", stream_raw)
 
             # Yield chunks
             async for chunk in stream:
@@ -361,12 +381,13 @@ class OpenAIProvider(BaseLLMProvider):
         """Check if OpenAI API is accessible."""
         try:
             # Try a simple API call
-            response = await self.client.chat.completions.create(
+            response_raw = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": "test"}],
                 max_tokens=5,
             )
 
+            response = cast("ChatCompletion", response_raw)
             return response is not None
 
         except Exception as e:
@@ -387,3 +408,66 @@ class OpenAIProvider(BaseLLMProvider):
     def supports_tools(self) -> bool:
         """OpenAI supports function calling."""
         return True
+
+    def _prepare_chat_messages(
+        self,
+        messages: list[Message],
+        system_prompt: str | None,
+    ) -> list[ChatCompletionMessageParam]:
+        """
+        Prepare messages in the format expected by OpenAI chat completions.
+
+        Args:
+            messages: Conversation history
+            system_prompt: Optional system instruction prepended to the history
+
+        Returns:
+            List of typed message parameters for the OpenAI SDK
+        """
+        prepared: list[ChatCompletionMessageParam] = []
+
+        if system_prompt:
+            prepared.append(
+                cast(ChatCompletionMessageParam, {"role": "system", "content": system_prompt})
+            )
+
+        for message in messages:
+            if message.role == Role.SYSTEM:
+                prepared.append(
+                    cast(
+                        ChatCompletionMessageParam,
+                        {"role": "system", "content": message.content},
+                    )
+                )
+            elif message.role == Role.USER:
+                prepared.append(
+                    cast(
+                        ChatCompletionMessageParam,
+                        {"role": "user", "content": message.content},
+                    )
+                )
+            elif message.role == Role.ASSISTANT:
+                prepared.append(
+                    cast(
+                        ChatCompletionMessageParam,
+                        {"role": "assistant", "content": message.content},
+                    )
+                )
+            elif message.role == Role.TOOL:
+                if not message.tool_call_id:
+                    logger.warning(
+                        "tool_message_missing_id",
+                        message="Skipping tool message without tool_call_id",
+                    )
+                    continue
+                tool_message: ChatCompletionToolMessageParam = cast(
+                    ChatCompletionToolMessageParam,
+                    {
+                        "role": "tool",
+                        "content": message.content,
+                        "tool_call_id": message.tool_call_id,
+                    },
+                )
+                prepared.append(tool_message)
+
+        return prepared

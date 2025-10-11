@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from enum import Enum
+from typing import cast
 
 from openfatture.storage.database.models import Cliente, Fattura, RigaFattura
 from openfatture.utils.logging import get_logger
@@ -268,7 +269,8 @@ class ComplianceRulesEngine:
 
         # FPA012: P.IVA format validation (Italian)
         if has_piva and cliente.nazione == "IT":
-            if not self.PARTITA_IVA_PATTERN.match(cliente.partita_iva):
+            partita_iva = cast(str, cliente.partita_iva)
+            if not self.PARTITA_IVA_PATTERN.match(partita_iva):
                 result.add_issue(
                     ValidationIssue(
                         code="FPA012",
@@ -282,7 +284,8 @@ class ComplianceRulesEngine:
 
         # FPA013: CF format validation (Italian)
         if has_cf and cliente.nazione == "IT":
-            if not self.CODICE_FISCALE_PATTERN.match(cliente.codice_fiscale.upper()):
+            codice_fiscale = cast(str, cliente.codice_fiscale)
+            if not self.CODICE_FISCALE_PATTERN.match(codice_fiscale.upper()):
                 result.add_issue(
                     ValidationIssue(
                         code="FPA013",
@@ -365,7 +368,8 @@ class ComplianceRulesEngine:
 
         # FPA019: Codice Destinatario format
         if has_codice_dest:
-            if not self.CODICE_DESTINATARIO_PATTERN.match(cliente.codice_destinatario):
+            codice_destinatario = cast(str, cliente.codice_destinatario)
+            if not self.CODICE_DESTINATARIO_PATTERN.match(codice_destinatario):
                 result.add_issue(
                     ValidationIssue(
                         code="FPA019",
@@ -378,17 +382,19 @@ class ComplianceRulesEngine:
                 )
 
         # FPA020: PEC format
-        if has_pec and not self.EMAIL_PATTERN.match(cliente.pec):
-            result.add_issue(
-                ValidationIssue(
-                    code="FPA020",
-                    severity=ValidationSeverity.WARNING,
-                    field="cliente.pec",
-                    message=f"Formato PEC non valido: {cliente.pec}",
-                    suggestion="Verificare l'indirizzo PEC",
-                    reference="FatturaPA v1.2.2 - Campo 1.1.5 (PECDestinatario)",
+        if has_pec:
+            pec = cast(str, cliente.pec)
+            if not self.EMAIL_PATTERN.match(pec):
+                result.add_issue(
+                    ValidationIssue(
+                        code="FPA020",
+                        severity=ValidationSeverity.WARNING,
+                        field="cliente.pec",
+                        message=f"Formato PEC non valido: {pec}",
+                        suggestion="Verificare l'indirizzo PEC",
+                        reference="FatturaPA v1.2.2 - Campo 1.1.5 (PECDestinatario)",
+                    )
                 )
-            )
 
     def _validate_invoice_lines(self, fattura: Fattura, result: ValidationResult) -> None:
         """Validate invoice lines."""

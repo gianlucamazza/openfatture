@@ -110,7 +110,7 @@ make test-ai-token-counter  # Test token counter
 
 **Test Payment:**
 ```bash
-make test-payment           # Payment module (coverage >85%)
+make test-payment           # Payment module (coverage ≥80%)
 make test-payment-domain    # Domain tests
 make test-payment-matchers  # Matchers tests
 ```
@@ -155,7 +155,6 @@ make docker-interactive # OpenFatture interattivo
 make compose-up                # Avvia servizi base
 make compose-up-postgres       # Con PostgreSQL
 make compose-up-ai             # Con Redis (AI cache)
-make compose-up-monitoring     # Con Prometheus + Grafana
 make compose-up-worker         # Con payment worker
 make compose-up-full           # Stack completo
 make compose-down              # Ferma servizi

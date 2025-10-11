@@ -4,8 +4,9 @@ import asyncio
 import json
 import os
 from collections.abc import Iterable
+from contextlib import nullcontext
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import typer
 from rich.console import Console
@@ -229,7 +230,7 @@ async def _run_invoice_assistant(
         # Optional RAG enrichment (invoice history + knowledge snippets)
         context.enable_rag = True
         try:
-            context = await enrich_with_rag(context, text)
+            context = cast(InvoiceContext, await enrich_with_rag(context, text))
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.warning("invoice_context_rag_failed", error=str(exc))
 
@@ -428,7 +429,7 @@ async def _run_tax_advisor(
 
         context.enable_rag = True
         try:
-            context = await enrich_with_rag(context, description)
+            context = cast(TaxContext, await enrich_with_rag(context, description))
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.warning("tax_context_rag_failed", error=str(exc))
 
@@ -745,7 +746,10 @@ async def _run_compliance_check(
 
     try:
         # Create checker
-        with console.status("[bold green]Analyzing invoice...") if not json_output else None:
+        status_context = (
+            console.status("[bold green]Analyzing invoice...") if not json_output else nullcontext()
+        )
+        with status_context:
             checker = ComplianceChecker(level=level)
             report = await checker.check_invoice(fattura_id)
 

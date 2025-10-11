@@ -1,12 +1,14 @@
 """Batch operations commands."""
 
 from pathlib import Path
+from typing import cast
 
 import typer
 from rich.console import Console
 from rich.table import Table
+from sqlalchemy.orm import Session
 
-from openfatture.core.batch.processor import BatchProcessor
+from openfatture.core.batch.invoice_processor import InvoiceBatchProcessor
 from openfatture.storage.database.base import SessionLocal, init_db
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.config import get_settings
@@ -14,6 +16,13 @@ from openfatture.utils.email.sender import TemplatePECSender
 
 app = typer.Typer()
 console = Console()
+
+
+def _get_session() -> Session:
+    """Return a database session ensuring initialisation."""
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialised. Call init_db() before batch operations.")
+    return SessionLocal()
 
 
 def ensure_db() -> None:
@@ -56,11 +65,11 @@ def import_invoices(
     if dry_run:
         console.print("[yellow]⚠ Dry run mode - no data will be saved[/yellow]\n")
 
-    db = SessionLocal()
+    db = _get_session()
     settings = get_settings()
 
     try:
-        processor: BatchProcessor = BatchProcessor(db_session=db)
+        processor = InvoiceBatchProcessor(db_session=db)
 
         # Start import
         result = processor.import_from_csv(file, dry_run=dry_run)
@@ -99,25 +108,25 @@ def import_invoices(
             console.print(f"\n[yellow]⚠ {result.failed} invoices failed to import[/yellow]")
 
         # Send email summary
-        if (
-            send_summary
-            and not dry_run
-            and settings.notification_enabled
-            and settings.notification_email
-        ):
-            console.print("\n[dim]Sending email summary...[/dim]")
-
-            sender = TemplatePECSender(settings=settings, locale=settings.locale)
-            success, error = sender.send_batch_summary(
-                result=result,
-                operation_type="import",
-                recipients=[settings.notification_email],
-            )
-
-            if success:
-                console.print(f"[dim]📧 Summary sent to {settings.notification_email}[/dim]")
+        if send_summary and not dry_run and settings.notification_enabled:
+            email_option = settings.notification_email
+            if not email_option:
+                console.print("[yellow]Notification email not configured.[/yellow]")
             else:
-                console.print(f"[yellow]⚠ Failed to send summary: {error}[/yellow]")
+                email = cast(str, email_option)
+                console.print("\n[dim]Sending email summary...[/dim]")
+
+                sender = TemplatePECSender(settings=settings, locale=settings.locale)
+                success, summary_error = sender.send_batch_summary(
+                    result=result,
+                    operation_type="import",
+                    recipients=[email],
+                )
+
+                if success:
+                    console.print(f"[dim]📧 Summary sent to {email}[/dim]")
+                else:
+                    console.print(f"[yellow]⚠ Failed to send summary: {summary_error}[/yellow]")
 
         console.print()
 
@@ -147,7 +156,7 @@ def export_invoices(
 
     console.print("\n[bold blue]📦 Batch Export Invoices[/bold blue]\n")
 
-    db = SessionLocal()
+    db = _get_session()
 
     try:
         # Build query
@@ -175,7 +184,7 @@ def export_invoices(
         console.print(f"[cyan]Invoices:[/cyan] {len(fatture)}\n")
 
         # Export
-        processor: BatchProcessor = BatchProcessor(db_session=db)
+        processor = InvoiceBatchProcessor(db_session=db)
         output_path = Path(output_file)
 
         result = processor.export_to_csv(fatture, output_path)

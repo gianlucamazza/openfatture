@@ -177,6 +177,12 @@ class TestEmailNotifier:
         assert "Promemoria Pagamento" in result
         assert "INV-2024-001" in result
         assert "1000.00" in result
+        expected_company = (
+            email_notifier.settings.cedente_denominazione
+            or email_notifier.smtp_config.from_name
+            or "OpenFatture"
+        )
+        assert expected_company in result
 
     @pytest.mark.asyncio
     async def test_send_email_validates_recipient(self, email_notifier):
@@ -185,6 +191,64 @@ class TestEmailNotifier:
             await email_notifier._send_email(
                 to_email=None, subject="Test", html_body="<html>Test</html>", text_body="Test"
             )
+
+    @pytest.mark.asyncio
+    async def test_context_uses_settings_company_name(
+        self, smtp_config, mock_reminder, tmp_path, mocker
+    ):
+        """Ensure notifier injects company name from application settings."""
+        from openfatture.utils.config import Settings
+
+        custom_settings = Settings(cedente_denominazione="Venere Labs S.r.l.")
+        template_dir = tmp_path / "templates"
+        template_dir.mkdir()
+        notifier = EmailNotifier(
+            smtp_config,
+            template_dir=template_dir,
+            settings=custom_settings,
+        )
+
+        notifier._render_template = AsyncMock(
+            side_effect=[
+                "<html>Body</html>",
+                "Plain text",
+            ]
+        )
+        notifier._send_email = AsyncMock(return_value=None)
+
+        result = await notifier.send_reminder(mock_reminder)
+
+        assert result is True
+        first_call_context = notifier._render_template.call_args_list[0].args[1]
+        assert first_call_context["company_name"] == "Venere Labs S.r.l."
+
+    @pytest.mark.asyncio
+    async def test_fallback_text_uses_settings_company_name(
+        self, smtp_config, mock_reminder, tmp_path
+    ):
+        """Ensure fallback text reflects configured company name."""
+        from openfatture.utils.config import Settings
+
+        custom_settings = Settings(cedente_denominazione="Studio Demo SRL")
+        template_dir = tmp_path / "templates"
+        template_dir.mkdir()
+        notifier = EmailNotifier(
+            smtp_config,
+            template_dir=template_dir,
+            settings=custom_settings,
+        )
+
+        context = {
+            "reminder": mock_reminder,
+            "payment": mock_reminder.payment,
+            "invoice": mock_reminder.payment.fattura,
+            "days_to_due": -2,
+        }
+
+        result = await notifier._render_template("missing.txt", context, fallback_text=True)
+
+        assert "ATTENZIONE" in result
+        assert "Studio Demo SRL" in result
 
 
 class TestConsoleNotifier:
@@ -474,4 +538,4 @@ class TestINotifierInterface:
     def test_cannot_instantiate_interface(self):
         """Test that INotifier cannot be instantiated directly."""
         with pytest.raises(TypeError):
-            INotifier()  # type: ignore
+            INotifier()

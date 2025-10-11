@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import Any, cast
 
 from rich.align import Align
 from rich.console import Console
@@ -11,6 +12,11 @@ from rich.table import Table
 from rich.text import Text
 from sqlalchemy import extract, func
 
+from openfatture.payment.application.services.payment_overview import (
+    PaymentDueEntry,
+    PaymentDueSummary,
+    collect_payment_due_summary,
+)
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 
@@ -66,7 +72,8 @@ class DashboardData:
 
     def get_invoices_by_status(self) -> list[tuple[str, int]]:
         """Get invoice count grouped by status."""
-        results = self.db.query(Fattura.stato, func.count(Fattura.id)).group_by(Fattura.stato).all()
+        id_column = cast(Any, Fattura.id)
+        results = self.db.query(Fattura.stato, func.count(id_column)).group_by(Fattura.stato).all()
         return [(stato.value, count) for stato, count in results]
 
     def get_pending_amount(self) -> Decimal:
@@ -129,7 +136,7 @@ class DashboardData:
         results = (
             self.db.query(
                 Cliente.denominazione,
-                func.count(Fattura.id),
+                func.count(cast(Any, Fattura.id)),
                 func.sum(Fattura.totale),
             )
             .join(Fattura)
@@ -152,6 +159,12 @@ class DashboardData:
             List of Invoice objects
         """
         return self.db.query(Fattura).order_by(Fattura.data_emissione.desc()).limit(limit).all()
+
+    def get_payment_due_summary(
+        self, window_days: int = 14, max_upcoming: int = 10
+    ) -> PaymentDueSummary:
+        """Return grouped payment due data for dashboard."""
+        return collect_payment_due_summary(self.db, window_days, max_upcoming)
 
 
 def create_overview_panel(data: DashboardData) -> Panel:
@@ -344,6 +357,102 @@ def create_recent_invoices_table(data: DashboardData, limit: int = 5) -> Table:
     return table
 
 
+def create_payment_due_panel(
+    data: DashboardData,
+    window_days: int = 14,
+    max_upcoming: int = 10,
+) -> Panel:
+    """Create panel summarizing outstanding payments."""
+
+    summary = data.get_payment_due_summary(window_days, max_upcoming)
+
+    if not (summary.overdue or summary.due_soon or summary.upcoming):
+        message = Align.center(Text("✅ Nessun pagamento pendente", style="green bold"))
+        return Panel(
+            message,
+            title=f"[bold blue]💳 Scadenze Pagamenti (<= {window_days} gg)[/bold blue]",
+            border_style="green",
+        )
+
+    table = Table(
+        title=None,
+        show_header=True,
+        header_style="bold magenta",
+        expand=True,
+    )
+    table.add_column("Categoria", style="cyan")
+    table.add_column("Fattura", style="white")
+    table.add_column("Cliente", style="white")
+    table.add_column("Scadenza", style="yellow", justify="center")
+    table.add_column("Δ", justify="right")
+    table.add_column("Residuo", justify="right", style="red")
+    table.add_column("Pagato", justify="right")
+    table.add_column("Totale", justify="right")
+    table.add_column("Stato", style="magenta")
+
+    def _fmt_money(value: Decimal) -> str:
+        return f"€{value:,.2f}"
+
+    def _fmt_days(delta: int) -> str:
+        if delta < 0:
+            return f"[red]{delta}[/red]"
+        if delta == 0:
+            return "[yellow]0[/yellow]"
+        return f"[green]+{delta}[/green]"
+
+    def _status(entry: PaymentDueEntry) -> str:
+        mapping = {
+            "scaduto": "[red]Scaduto[/red]",
+            "pagato_parziale": "[yellow]Parziale[/yellow]",
+            "da_pagare": "Da pagare",
+        }
+        return mapping.get(entry.status.value, entry.status.value.replace("_", " ").title())
+
+    def _add_rows(category: str, entries: list[PaymentDueEntry]) -> None:
+        color = {
+            "Scaduto": "red",
+            "In scadenza": "yellow",
+            "Prossimo": "cyan",
+        }[category]
+
+        for entry in entries:
+            table.add_row(
+                category,
+                entry.invoice_ref,
+                entry.client_name,
+                entry.due_date.strftime("%d/%m/%Y"),
+                _fmt_days(entry.days_delta),
+                f"[bold {color}]{_fmt_money(entry.residual)}[/bold {color}]",
+                _fmt_money(entry.paid),
+                _fmt_money(entry.total),
+                _status(entry),
+            )
+
+    if summary.overdue:
+        _add_rows("Scaduto", summary.overdue)
+    if summary.due_soon:
+        _add_rows("In scadenza", summary.due_soon)
+    if summary.upcoming:
+        _add_rows("Prossimo", summary.upcoming)
+
+    footer = Text.assemble(
+        ("Totale residuo: ", "bold"),
+        (f"{_fmt_money(summary.total_outstanding)}", "bold red"),
+    )
+    if summary.hidden_upcoming:
+        footer.append(
+            f"  (+{summary.hidden_upcoming} ulteriori pagamenti futuri)",
+            style="dim",
+        )
+
+    return Panel(
+        table,
+        title=f"[bold blue]💳 Scadenze Pagamenti (<= {window_days} gg)[/bold blue]",
+        subtitle=footer,
+        border_style="blue",
+    )
+
+
 def show_dashboard(refresh: bool = False) -> None:
     """
     Display interactive dashboard.
@@ -382,6 +491,7 @@ def show_dashboard(refresh: bool = False) -> None:
         # Right side: Split into top and bottom
         layout["right"].split_column(
             Layout(name="top"),
+            Layout(name="mid"),
             Layout(name="bottom"),
         )
 
@@ -390,6 +500,8 @@ def show_dashboard(refresh: bool = False) -> None:
             Layout(create_status_table(data)),
             Layout(create_monthly_revenue_table(data)),
         )
+
+        layout["mid"].update(create_payment_due_panel(data))
 
         # Bottom right: Top Clients and Recent Invoices
         layout["bottom"].split_row(

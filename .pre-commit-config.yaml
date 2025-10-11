@@ -25,8 +25,14 @@ repos:
         args: [--fix]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.12.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-requests, sqlalchemy-stubs, pydantic>=2.6.0]
+        additional_dependencies:
+          [
+            types-requests,
+            pydantic>=2.6.0,
+            SQLAlchemy>=2.0.0,
+            types-PyYAML,
+          ]
         args: [--ignore-missing-imports]

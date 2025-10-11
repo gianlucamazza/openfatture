@@ -23,6 +23,7 @@ from ...ai.providers.base import ProviderError
 from ...ai.providers.factory import create_provider
 from ...storage.database import get_db
 from ...utils.logging import get_logger
+from ..application import create_event_bus
 from ..application.notifications import ConsoleNotifier, EmailNotifier, SMTPConfig
 from ..application.services import (
     MatchingService,
@@ -46,6 +47,11 @@ logger = get_logger(__name__)
 
 _INSIGHT_SERVICE: TransactionInsightService | None = None
 _INSIGHT_INITIALIZED = False
+
+
+def _run(coro):
+    """Execute coroutine synchronously using a fresh event loop."""
+    return asyncio.run(coro)
 
 
 @contextmanager
@@ -141,17 +147,18 @@ def import_statement(
                 session,
                 strategies=[ExactAmountMatcher(), CompositeMatcher()],
             )
+            event_bus = create_event_bus()
 
             reconciliation_service = ReconciliationService(
                 BankTransactionRepository(session),
                 PaymentRepository(session),
                 matching_service,
                 session,
+                event_bus=event_bus,
             )
 
             # Batch reconcile
-            loop = asyncio.get_event_loop()
-            recon_result = loop.run_until_complete(
+            recon_result = asyncio.run(
                 reconciliation_service.reconcile_batch(
                     account_id, auto_apply=True, auto_apply_threshold=confidence
                 )
@@ -200,8 +207,14 @@ def match(
             strategies=[ExactAmountMatcher(), CompositeMatcher()],
         )
 
+        event_bus = create_event_bus()
+
         reconciliation_service = ReconciliationService(
-            tx_repo, PaymentRepository(session), matching_service, session
+            tx_repo,
+            PaymentRepository(session),
+            matching_service,
+            session,
+            event_bus=event_bus,
         )
 
         # Get unmatched transactions
@@ -218,10 +231,8 @@ def match(
         matched_count = 0
         review_count = 0
 
-        loop = asyncio.get_event_loop()
-
         for tx in track(unmatched, description="Matching..."):
-            matches = loop.run_until_complete(matching_service.match_transaction(tx, confidence))
+            matches = _run(matching_service.match_transaction(tx, confidence))
 
             if not matches:
                 continue
@@ -230,7 +241,7 @@ def match(
 
             if auto_apply and top_match.should_auto_apply:
                 # Auto-reconcile
-                loop.run_until_complete(
+                _run(
                     reconciliation_service.reconcile(
                         tx.id, top_match.payment.id, top_match.match_type, top_match.confidence
                     )
@@ -277,16 +288,18 @@ def queue(
             strategies=[ExactAmountMatcher(), CompositeMatcher()],
         )
 
+        event_bus = create_event_bus()
+
         reconciliation_service = ReconciliationService(
             BankTransactionRepository(session),
             PaymentRepository(session),
             matching_service,
             session,
+            event_bus=event_bus,
         )
 
         # Get review queue
-        loop = asyncio.get_event_loop()
-        review_queue = loop.run_until_complete(
+        review_queue = _run(
             reconciliation_service.get_review_queue(
                 account_id, confidence_range=(confidence_min, confidence_max)
             )
@@ -333,7 +346,7 @@ def queue(
                 )
 
                 if action == "approve" and matches:
-                    loop.run_until_complete(
+                    _run(
                         reconciliation_service.reconcile(
                             tx.id, matches[0].payment.id, MatchType.MANUAL
                         )
@@ -342,9 +355,7 @@ def queue(
 
                 elif action == "ignore":
                     reason = Prompt.ask("Reason (optional)", default="")
-                    loop.run_until_complete(
-                        reconciliation_service.ignore_transaction(tx.id, reason)
-                    )
+                    _run(reconciliation_service.ignore_transaction(tx.id, reason))
                     console.print("[yellow]⏭️  Ignored[/]\n")
 
                 elif action == "quit":
@@ -423,10 +434,7 @@ def schedule_reminders(
         )
 
         try:
-            loop = asyncio.get_event_loop()
-            reminders = loop.run_until_complete(
-                scheduler.schedule_reminders(payment_id, strategy_map[strategy])
-            )
+            reminders = _run(scheduler.schedule_reminders(payment_id, strategy_map[strategy]))
 
             console.print(f"\n[green]✅ Scheduled {len(reminders)} reminders[/]")
 
@@ -439,10 +447,11 @@ def schedule_reminders(
             for reminder in reminders:
                 payment = getattr(reminder, "payment", None)
                 due_date = getattr(payment, "data_scadenza", None) if payment is not None else None
+                reminder_date = getattr(reminder, "reminder_date", None)
+
                 days_until_due: int | None
-                if due_date:
-                    reminder_date = getattr(reminder, "reminder_date", None)
-                    days_until_due = (due_date - reminder_date).days if reminder_date else None
+                if isinstance(due_date, date) and isinstance(reminder_date, date):
+                    days_until_due = (due_date - reminder_date).days
                 else:
                     days_until_due = getattr(reminder, "days_before_due", None)
 
@@ -513,8 +522,7 @@ def process_reminders(
             f"[cyan]📧 Processing reminders for {process_date.strftime('%d/%m/%Y')}...[/]"
         )
 
-        loop = asyncio.get_event_loop()
-        count = loop.run_until_complete(scheduler.process_due_reminders(process_date))
+        count = _run(scheduler.process_due_reminders(process_date))
 
         console.print(f"\n[green]✅ Sent {count} reminders[/]")
 

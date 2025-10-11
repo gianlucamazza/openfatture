@@ -11,7 +11,11 @@ import pytest
 from openfatture.payment.domain.enums import ImportSource
 from openfatture.payment.infrastructure.importers import ImporterFactory
 
-pytestmark = pytest.mark.unit
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.filterwarnings("ignore::DeprecationWarning:ofxparse.ofxparse"),
+    pytest.mark.filterwarnings("ignore::bs4.XMLParsedAsHTMLWarning"),
+]
 
 FIXTURES_DIR = Path(__file__).parent.parent.parent / "fixtures"
 

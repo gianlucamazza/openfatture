@@ -66,10 +66,10 @@ Be respectful, inclusive, and professional. We're building this tool together fo
    uv run mypy openfatture/
 
    # Run tests
-   uv run pytest
+   uv run python -m pytest
 
    # Check coverage
-   uv run pytest --cov=openfatture
+   uv run python -m pytest --cov=openfatture
    ```
 
 6. **Commit Changes**

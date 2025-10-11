@@ -3,12 +3,14 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ...storage.database.base import Base
+from ...utils.datetime import utc_now
 from .enums import MatchType
 
 if TYPE_CHECKING:
@@ -28,14 +30,14 @@ class PaymentAllocation(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     payment_id: Mapped[int] = mapped_column(ForeignKey("pagamenti.id"), nullable=False, index=True)
     transaction_id: Mapped[UUID] = mapped_column(
-        UUID(as_uuid=True),
+        PG_UUID(as_uuid=True),
         ForeignKey("bank_transactions.id"),
         nullable=False,
         index=True,
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     allocated_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
     match_type: Mapped[MatchType | None] = mapped_column(Enum(MatchType))
     match_confidence: Mapped[float | None] = mapped_column()

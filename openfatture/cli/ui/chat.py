@@ -1,5 +1,7 @@
 """Interactive chat UI for AI assistant."""
 
+from typing import cast
+
 import questionary
 from rich.console import Console
 from rich.live import Live
@@ -10,6 +12,8 @@ from rich.table import Table
 from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.context import enrich_chat_context, enrich_with_rag
 from openfatture.ai.domain.context import ChatContext
+from openfatture.ai.domain.message import Message
+from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.session import ChatSession, SessionManager
 from openfatture.cli.ui.styles import openfatture_style
@@ -47,7 +51,7 @@ class InteractiveChatUI:
         self.session = session or ChatSession()
         self.session_manager = session_manager or SessionManager()
         self.agent: ChatAgent | None = None
-        self.provider = None
+        self.provider: BaseLLMProvider | None = None
 
         # Commands
         self.commands = {
@@ -111,22 +115,23 @@ class InteractiveChatUI:
 
         try:
             # Create provider
-            self.provider = create_provider()
+            provider = create_provider()
+            if provider is None:
+                raise RuntimeError("Provider initialization failed.")
 
             # Create agent with streaming enabled
             self.agent = ChatAgent(
-                provider=self.provider,
+                provider=provider,
                 enable_tools=True,
                 enable_streaming=True,
             )
 
-            if self.provider is None:
-                raise RuntimeError("Provider initialization failed.")
+            self.provider = provider
 
             logger.info(
                 "chat_agent_initialized",
-                provider=self.provider.provider_name,
-                model=self.provider.model,
+                provider=provider.provider_name,
+                model=provider.model,
                 streaming_enabled=True,
             )
 
@@ -316,8 +321,15 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         )
 
         # Add conversation history from session
-        for msg in self.session.get_messages(include_system=False):
-            context.conversation_history.add_message(msg)
+        for chat_message in self.session.get_messages(include_system=False):
+            context.conversation_history.add_message(
+                Message(
+                    role=chat_message.role,
+                    content=chat_message.content,
+                    metadata=chat_message.metadata,
+                    tool_call_id=chat_message.tool_call_id,
+                )
+            )
 
         # Add available tools
         if self.agent:
@@ -330,7 +342,7 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         cleaned_input = user_input.strip()
         if self.agent and self.agent.config.rag_enabled and len(cleaned_input) >= 4:
             try:
-                context = await enrich_with_rag(context, cleaned_input)
+                context = cast(ChatContext, await enrich_with_rag(context, cleaned_input))
             except Exception as exc:  # pragma: no cover - defensive logging
                 logger.warning(
                     "rag_enrichment_skipped",
@@ -488,7 +500,7 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         table.add_column("Descrizione", style="white")
 
         for tool in tools:
-            table.add_column(tool.name, tool.category, tool.description)
+            table.add_row(tool.name, tool.category, tool.description)
 
         console.print()
         console.print(table)

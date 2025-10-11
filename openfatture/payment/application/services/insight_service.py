@@ -12,8 +12,8 @@ from openfatture.payment.domain.value_objects import PaymentInsight
 
 if TYPE_CHECKING:
     from ....ai.agents.payment_insight_agent import PaymentInsightAgent
+    from ....storage.database.models import Pagamento
     from ...domain.models import BankTransaction
-    from ...storage.database.models import Pagamento
 
 logger = structlog.get_logger()
 

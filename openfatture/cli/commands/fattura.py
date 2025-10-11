@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
 
-from openfatture.storage.database.base import get_session, init_db
+from openfatture.storage.database.base import SessionLocal, get_session, init_db
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
@@ -28,6 +28,13 @@ def ensure_db() -> None:
     init_db(str(settings.database_url))
 
 
+def _get_session():
+    """Return a database session using the configured factory."""
+    if SessionLocal is not None:
+        return SessionLocal()
+    return get_session()
+
+
 @app.command("crea")
 def crea_fattura(
     cliente_id: int | None = typer.Option(None, "--cliente", help="Client ID"),
@@ -39,7 +46,7 @@ def crea_fattura(
 
     console.print("\n[bold blue]🧾 Create New Invoice[/bold blue]\n")
 
-    db = get_session()
+    db = _get_session()
     try:
         # Select client
         if not cliente_id:
@@ -195,7 +202,7 @@ def list_fatture(
     """List invoices."""
     ensure_db()
 
-    db = get_session()
+    db = _get_session()
     try:
         query = db.query(Fattura).order_by(Fattura.anno.desc(), Fattura.numero.desc())
 
@@ -255,7 +262,7 @@ def show_fattura(
     """Show invoice details."""
     ensure_db()
 
-    db = get_session()
+    db = _get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
@@ -338,7 +345,7 @@ def delete_fattura(
     """Delete an invoice."""
     ensure_db()
 
-    db = get_session()
+    db = _get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
@@ -385,7 +392,7 @@ def genera_xml(
 
     console.print("\n[bold blue]🔧 Generating FatturaPA XML[/bold blue]\n")
 
-    db = get_session()
+    db = _get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
@@ -457,7 +464,7 @@ def invia_fattura(
 
     console.print("\n[bold blue]📤 Sending Invoice to SDI[/bold blue]\n")
 
-    db = get_session()
+    db = _get_session()
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 

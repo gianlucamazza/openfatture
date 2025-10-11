@@ -1,13 +1,18 @@
 """Reporting commands."""
 
 from datetime import date
+from decimal import Decimal
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from openfatture.storage.database.base import get_session, init_db
-from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.payment.application.services.payment_overview import (
+    PaymentDueEntry,
+    collect_payment_due_summary,
+)
+from openfatture.storage.database.base import SessionLocal, get_session, init_db
+from openfatture.storage.database.models import Fattura, StatoFattura, StatoPagamento
 from openfatture.utils.config import get_settings
 
 app = typer.Typer()
@@ -18,6 +23,13 @@ def ensure_db() -> None:
     """Ensure database is initialized."""
     settings = get_settings()
     init_db(str(settings.database_url))
+
+
+def _get_session():
+    """Return a database session using the configured factory."""
+    if SessionLocal is not None:
+        return SessionLocal()
+    return get_session()
 
 
 @app.command("iva")
@@ -53,7 +65,7 @@ def report_iva(
         mese_inizio, mese_fine = 1, 12
         console.print("[cyan]Full year[/cyan]\n")
 
-    db = get_session()
+    db = _get_session()
     try:
         # Query invoices
         query = (
@@ -144,7 +156,7 @@ def report_clienti(
 
     console.print(f"\n[bold blue]📊 Client Revenue Report - {anno}[/bold blue]\n")
 
-    db = get_session()
+    db = _get_session()
     try:
         from sqlalchemy import func
 
@@ -198,25 +210,115 @@ def report_clienti(
 
 
 @app.command("scadenze")
-def report_scadenze() -> None:
+def report_scadenze(
+    finestra: int = typer.Option(
+        14,
+        "--finestra",
+        "-f",
+        min=1,
+        help='Numero di giorni considerati "in scadenza" (default: 14).',
+    )
+) -> None:
     """
-    Show upcoming payment due dates.
+    Show overdue and upcoming payment due dates leveraging the Pagamento ledger.
 
     Example:
-        openfatture report scadenze
+        openfatture report scadenze --finestra 21
     """
     ensure_db()
 
-    console.print("\n[bold blue]📅 Upcoming Payment Due Dates[/bold blue]\n")
+    console.print("\n[bold blue]📅 Payment Due Dates Overview[/bold blue]\n")
 
-    console.print("[yellow]⚠ Payment tracking not yet fully implemented[/yellow]")
-    console.print(
-        "[dim]This will show all overdue and upcoming payments from the Pagamento table.[/dim]\n"
-    )
+    db = _get_session()
+    try:
+        summary = collect_payment_due_summary(db, window_days=finestra, max_upcoming=20)
 
-    # Placeholder
-    console.print("Example output:")
-    console.print("  [red]OVERDUE:[/red] Invoice 001/2025 - Client ABC - €1,500 (due 2025-01-15)")
-    console.print(
-        "  [yellow]DUE SOON:[/yellow] Invoice 003/2025 - Client XYZ - €2,300 (due 2025-02-28)"
-    )
+        has_entries = any(summary.overdue or summary.due_soon or summary.upcoming)
+
+        if not has_entries:
+            console.print("[green]✅ No outstanding payments. All invoices are settled![/green]\n")
+            return
+
+        section_config = [
+            ("overdue", "[red]🔥 Scaduti[/red]", "red"),
+            (
+                "due_soon",
+                f"[yellow]⏰ In scadenza (<= {finestra} giorni)[/yellow]",
+                "yellow",
+            ),
+            ("upcoming", "[cyan]📆 Prossimi pagamenti[/cyan]", "cyan"),
+        ]
+
+        def _format_money(amount: Decimal) -> str:
+            return f"€{amount:,.2f}"
+
+        def _format_days(delta: int) -> str:
+            if delta < 0:
+                return f"[red]{delta}[/red]"
+            if delta == 0:
+                return "[yellow]0[/yellow]"
+            return f"[green]+{delta}[/green]"
+
+        def _label_for(entry: PaymentDueEntry) -> str:
+            mapping = {
+                StatoPagamento.SCADUTO: "Scaduto",
+                StatoPagamento.PAGATO_PARZIALE: "Parziale",
+                StatoPagamento.DA_PAGARE: "Da pagare",
+            }
+            return mapping.get(entry.status, entry.status.value.replace("_", " ").title())
+
+        for key, title, color in section_config:
+            rows = getattr(summary, key)
+            if not rows:
+                continue
+
+            console.print(title)
+            table = Table(
+                show_header=True,
+                header_style="bold",
+                show_lines=False,
+                box=None,
+            )
+            table.add_column("Fattura", style="cyan")
+            table.add_column("Cliente", style="white")
+            table.add_column("Scadenza", justify="center")
+            table.add_column("Δ giorni", justify="right")
+            table.add_column("Residuo", justify="right")
+            table.add_column("Pagato", justify="right")
+            table.add_column("Totale", justify="right")
+            table.add_column("Stato", justify="left")
+
+            for item in rows:
+                residual_display = f"[bold {color}]{_format_money(item.residual)}[/bold {color}]"
+                paid_display = _format_money(item.paid)
+                total_display = _format_money(item.total)
+                table.add_row(
+                    item.invoice_ref,
+                    item.client_name,
+                    item.due_date.isoformat(),
+                    _format_days(item.days_delta),
+                    residual_display,
+                    paid_display,
+                    total_display,
+                    _label_for(item),
+                )
+
+            console.print(table)
+
+            total_residual = sum(item.residual for item in rows)
+            console.print(
+                f"[bold {color}]Totale residuo: {_format_money(total_residual)} • Pagamenti: {len(rows)}[/]",
+            )
+            console.print()
+
+        if summary.hidden_upcoming > 0:
+            console.print(
+                f"[dim]… {summary.hidden_upcoming} ulteriori pagamenti futuri non mostrati. Usa --finestra o esporta dati dal modulo payment per maggiori dettagli.[/dim]\n"
+            )
+
+        console.print(
+            f"[bold]Totale residuo complessivo: {_format_money(summary.total_outstanding)}[/bold]\n"
+        )
+
+    finally:
+        db.close()

@@ -155,6 +155,12 @@ class Settings(BaseSettings):
     # Vector Store (for AI)
     vector_store_path: Path = Field(default=Path.home() / ".openfatture" / "vector_store")
 
+    # Payment module
+    payment_event_listeners: str | None = Field(
+        default=None,
+        description="Comma-separated dotted paths to custom payment event listeners",
+    )
+
     @field_validator(
         "data_dir", "archivio_dir", "certificates_dir", "vector_store_path", "ai_chat_sessions_dir"
     )

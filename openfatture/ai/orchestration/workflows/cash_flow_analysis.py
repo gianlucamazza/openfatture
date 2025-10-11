@@ -21,12 +21,14 @@ Example:
     ...     print(f"{month['month']}: €{month['expected']:.2f}")
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
 
-from langgraph.checkpoint import MemorySaver
-from langgraph.graph import END, StateGraph
+from sqlalchemy.orm import Session
 
 from openfatture.ai.agents.cash_flow_predictor import CashFlowPredictorAgent
+from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.orchestration.states import (
     CashFlowAnalysisState,
     WorkflowStatus,
@@ -34,9 +36,28 @@ from openfatture.ai.orchestration.states import (
 from openfatture.ai.providers import create_provider
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.utils.datetime import utc_now
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _get_session() -> Session:
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialized. Call init_db() before running workflows.")
+    return SessionLocal()
+
+
+if TYPE_CHECKING:
+    from langgraph.graph import END as _END
+    from langgraph.graph import StateGraph as _StateGraph
+else:
+    _graph_module = import_module("langgraph.graph")
+    _StateGraph = _graph_module.StateGraph
+    _END = _graph_module.END
+
+StateGraph = _StateGraph
+END = _END
 
 
 class CashFlowAnalysisWorkflow:
@@ -81,14 +102,14 @@ class CashFlowAnalysisWorkflow:
         self.cash_flow_agent: CashFlowPredictorAgent | None = None
 
         # Build graph
-        self.graph = self._build_graph()
+        self.graph: Any = self._build_graph()
 
         logger.info(
             "cash_flow_workflow_initialized",
             batch_size=batch_size,
         )
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self) -> Any:
         """Build LangGraph state machine.
 
         Graph structure:
@@ -136,10 +157,13 @@ class CashFlowAnalysisWorkflow:
 
         # Compile
         if self.enable_checkpointing:
-            checkpointer = MemorySaver()
+            checkpoint_module = import_module("langgraph.checkpoint")
+            memory_saver_cls = getattr(checkpoint_module, "MemorySaver", None)
+            if memory_saver_cls is None:
+                raise RuntimeError("LangGraph MemorySaver unavailable")
+            checkpointer = memory_saver_cls()
             return workflow.compile(checkpointer=checkpointer)
-        else:
-            return workflow.compile()
+        return workflow.compile()
 
     # ========================================================================
     # Node Implementations
@@ -156,7 +180,7 @@ class CashFlowAnalysisWorkflow:
             await self.cash_flow_agent.initialize(force_retrain=False)
 
             state.status = WorkflowStatus.IN_PROGRESS
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
 
             logger.info(
                 "agent_initialized",
@@ -183,7 +207,7 @@ class CashFlowAnalysisWorkflow:
             client_id=state.client_id,
         )
 
-        db = SessionLocal()
+        db = _get_session()
         try:
             # Query unpaid invoices
             query = db.query(Fattura).filter(
@@ -219,7 +243,7 @@ class CashFlowAnalysisWorkflow:
                 count=len(invoices),
             )
 
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
             return state
 
         except Exception as e:
@@ -241,8 +265,11 @@ class CashFlowAnalysisWorkflow:
         invoice_ids = state.metadata.get("invoice_ids", [])
 
         if not invoice_ids:
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
             return state
+
+        if self.cash_flow_agent is None:
+            raise RuntimeError("Cash flow agent not initialized.")
 
         try:
             # Predict for each invoice
@@ -291,7 +318,7 @@ class CashFlowAnalysisWorkflow:
                 failed=state.failed_predictions,
             )
 
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
             return state
 
         except Exception as e:
@@ -307,71 +334,64 @@ class CashFlowAnalysisWorkflow:
         """Aggregate predictions into monthly buckets."""
         logger.info("aggregating_monthly_forecast", workflow_id=state.workflow_id)
 
+        db = _get_session()
         try:
-            # Get invoice data
-            db = SessionLocal()
-            try:
-                invoice_ids = [p["invoice_id"] for p in state.predictions]
-                invoices = db.query(Fattura).filter(Fattura.id.in_(invoice_ids)).all()
+            invoice_ids = [p["invoice_id"] for p in state.predictions]
+            invoices = db.query(Fattura).filter(Fattura.id.in_(invoice_ids)).all()
 
-                # Create invoice lookup
-                invoice_map = {f.id: f for f in invoices}
+            # Create invoice lookup
+            invoice_map = {f.id: f for f in invoices}
 
-                # Initialize monthly totals
-                monthly_totals = dict.fromkeys(range(state.forecast_months), 0.0)
+            # Initialize monthly totals
+            monthly_totals: dict[int, float] = dict.fromkeys(range(state.forecast_months), 0.0)  # type: ignore[assignment]
 
-                today = date.today()
+            today = date.today()
 
-                # Aggregate by expected payment month
-                for prediction in state.predictions:
-                    invoice_id = prediction["invoice_id"]
-                    fattura = invoice_map.get(invoice_id)
+            # Aggregate by expected payment month
+            for prediction in state.predictions:
+                invoice_id = prediction["invoice_id"]
+                fattura = invoice_map.get(invoice_id)
 
-                    if not fattura:
-                        continue
+                if not fattura:
+                    continue
 
-                    # Calculate expected payment date
-                    expected_payment_date = fattura.data_emissione + timedelta(
-                        days=prediction["expected_days"]
-                    )
-
-                    # Determine which month this falls into
-                    month_diff = (
-                        (expected_payment_date.year - today.year) * 12
-                        + expected_payment_date.month
-                        - today.month
-                    )
-
-                    # Add to appropriate month
-                    if 0 <= month_diff < state.forecast_months:
-                        monthly_totals[month_diff] += float(fattura.totale)
-
-                # Build monthly forecast
-                for i in range(state.forecast_months):
-                    month_date = today + timedelta(days=30 * (i + 1))
-                    month_str = month_date.strftime("%B %Y")
-
-                    state.monthly_forecast.append(
-                        {
-                            "month": month_str,
-                            "month_index": i + 1,
-                            "expected": monthly_totals[i],
-                        }
-                    )
-
-                state.total_expected_revenue = sum(monthly_totals.values())
-
-                logger.info(
-                    "monthly_aggregation_completed",
-                    workflow_id=state.workflow_id,
-                    total_expected=state.total_expected_revenue,
+                expected_payment_date = fattura.data_emissione + timedelta(
+                    days=prediction["expected_days"]
                 )
 
-                state.updated_at = datetime.utcnow()
-                return state
+                month_diff = (
+                    (expected_payment_date.year - today.year) * 12
+                    + expected_payment_date.month
+                    - today.month
+                )
 
-            finally:
-                db.close()
+                if 0 <= month_diff < state.forecast_months:
+                    monthly_totals[month_diff] += float(fattura.totale)
+
+            # Build monthly forecast
+            state.monthly_forecast = []
+            for i in range(state.forecast_months):
+                month_date = today + timedelta(days=30 * (i + 1))
+                month_str = month_date.strftime("%B %Y")
+
+                state.monthly_forecast.append(
+                    {
+                        "month": month_str,
+                        "month_index": i + 1,
+                        "expected": monthly_totals[i],
+                    }
+                )
+
+            state.total_expected_revenue = sum(monthly_totals.values())
+
+            logger.info(
+                "monthly_aggregation_completed",
+                workflow_id=state.workflow_id,
+                total_expected=state.total_expected_revenue,
+            )
+
+            state.updated_at = utc_now()
+            return state
 
         except Exception as e:
             logger.error(
@@ -381,6 +401,8 @@ class CashFlowAnalysisWorkflow:
             )
             state.add_error(f"Monthly aggregation failed: {e}")
             return state
+        finally:
+            db.close()
 
     async def _analyze_risks_node(self, state: CashFlowAnalysisState) -> CashFlowAnalysisState:
         """Analyze payment risks and overdue predictions."""
@@ -405,7 +427,7 @@ class CashFlowAnalysisWorkflow:
                 overdue_count=len(state.overdue_predictions),
             )
 
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
             return state
 
         except Exception as e:
@@ -428,8 +450,6 @@ class CashFlowAnalysisWorkflow:
             )
 
             # Generate insights using AI
-            from openfatture.ai.domain.message import Message
-
             prompt = f"""Analizza questa previsione cash flow:
 
 {monthly_summary}
@@ -445,7 +465,7 @@ Fornisci:
 
 Rispondi in italiano, conciso e professionale."""
 
-            messages = [Message(role="user", content=prompt)]
+            messages = [Message(role=Role.USER, content=prompt)]
             response = await self.ai_provider.generate(
                 messages=messages,
                 temperature=0.3,
@@ -506,7 +526,7 @@ Rispondi in italiano, conciso e professionale."""
         )
 
         state.status = WorkflowStatus.FAILED
-        state.updated_at = datetime.utcnow()
+        state.updated_at = utc_now()
 
         return state
 

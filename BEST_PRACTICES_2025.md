@@ -122,13 +122,12 @@ Services:
   - openfatture (main app)
   - postgres (production DB) [profile: postgres]
   - redis (AI caching) [profile: ai]
-  - grafana (monitoring) [profile: monitoring]
 ```
 
 **Profiles enable**:
 - Development: `docker-compose up`
 - Production: `docker-compose --profile postgres up`
-- Full stack: `docker-compose --profile postgres --profile ai --profile monitoring up`
+- Full stack: `docker-compose --profile postgres --profile ai up`
 
 ---
 

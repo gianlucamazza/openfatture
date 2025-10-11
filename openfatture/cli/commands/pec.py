@@ -6,6 +6,8 @@ from rich.console import Console
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
 
+PECSender = TemplatePECSender
+
 app = typer.Typer()
 console = Console()
 
@@ -45,7 +47,7 @@ def test_pec() -> None:
 
     console.print("Sending test email with professional template...")
 
-    sender = TemplatePECSender(settings=settings, locale=settings.locale)
+    sender = PECSender(settings=settings, locale=settings.locale)
     success, error = sender.send_test_email()
 
     if success:

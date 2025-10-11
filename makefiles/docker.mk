@@ -4,7 +4,7 @@
 
 .PHONY: docker-build docker-run docker-shell docker-clean docker-prune
 .PHONY: compose-up compose-down compose-restart compose-logs compose-ps
-.PHONY: compose-up-postgres compose-up-ai compose-up-monitoring compose-up-worker
+.PHONY: compose-up-postgres compose-up-ai compose-up-worker
 .PHONY: compose-up-full docker-test docker-health
 
 # Docker image configuration
@@ -107,13 +107,6 @@ compose-up-ai: check-docker ## Start services with AI support (Redis)
 	docker-compose --profile ai up -d
 	@echo "$(GREEN)✓ Services started with AI support$(NC)"
 
-compose-up-monitoring: check-docker ## Start services with monitoring (Prometheus + Grafana)
-	@echo "$(BLUE)Starting services with monitoring...$(NC)"
-	docker-compose --profile monitoring up -d
-	@echo "$(GREEN)✓ Services started with monitoring$(NC)"
-	@echo "$(BLUE)Grafana: $(CYAN)http://localhost:3000$(NC)"
-	@echo "$(BLUE)Prometheus: $(CYAN)http://localhost:9090$(NC)"
-
 compose-up-worker: check-docker ## Start services with payment worker
 	@echo "$(BLUE)Starting services with payment worker...$(NC)"
 	docker-compose --profile worker up -d
@@ -124,7 +117,6 @@ compose-up-full: check-docker ## Start all services with all profiles
 	docker-compose \
 		--profile postgres \
 		--profile ai \
-		--profile monitoring \
 		--profile worker \
 		up -d
 	@echo "$(GREEN)✓ Full stack started$(NC)"
@@ -132,8 +124,6 @@ compose-up-full: check-docker ## Start all services with all profiles
 	@echo "  - OpenFatture CLI"
 	@echo "  - PostgreSQL (port 5432)"
 	@echo "  - Redis (port 6379)"
-	@echo "  - Prometheus (port 9090)"
-	@echo "  - Grafana (port 3000)"
 	@echo "  - Payment Worker"
 
 compose-down: ## Stop all services

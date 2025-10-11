@@ -11,9 +11,11 @@ from openfatture.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-class TaxAdvisorAgent(BaseAgent):
+class TaxAdvisorAgent(BaseAgent[TaxContext]):
     """
     AI agent for suggesting correct VAT treatment for Italian invoices.
+
+    Specialized to use TaxContext for type-safe context handling.
 
     Analyzes service/product descriptions and suggests:
     - Correct VAT rate (22%, 10%, 5%, 4%, 0%)

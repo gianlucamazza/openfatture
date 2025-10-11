@@ -15,8 +15,10 @@ import statistics
 from dataclasses import dataclass, field
 from decimal import Decimal
 
+from sqlalchemy.orm import Session
+
 from openfatture.ai.agents.compliance.rules import ValidationIssue, ValidationSeverity
-from openfatture.ai.domain.message import Message
+from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.storage.database.base import SessionLocal
@@ -24,6 +26,13 @@ from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _get_session() -> Session:
+    """Return database session ensuring initialisation."""
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialized. Call init_db() before compliance analysis.")
+    return SessionLocal()
 
 
 @dataclass
@@ -280,7 +289,7 @@ Rispondi in formato JSON con:
 }}"""
 
         try:
-            messages = [Message(role="user", content=prompt)]
+            messages = [Message(role=Role.USER, content=prompt)]
             response = await self.provider.generate(messages=messages, temperature=0.3)
 
             # Parse AI response (simplified - in production use structured output)
@@ -473,7 +482,7 @@ Rispondi in formato JSON con:
 
         for fattura in fatture:
             # Get client history
-            db = SessionLocal()
+            db = _get_session()
             try:
                 client_history = (
                     db.query(Fattura)

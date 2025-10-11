@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 import structlog
 from jinja2 import Environment, FileSystemLoader
 
+from openfatture.utils.config import Settings, get_settings
+
 if TYPE_CHECKING:
     from ...domain.models import PaymentReminder
 
@@ -79,6 +81,7 @@ class EmailNotifier(INotifier):
         self,
         smtp_config: SMTPConfig,
         template_dir: Path | None = None,
+        settings: Settings | None = None,
     ) -> None:
         """Initialize email notifier.
 
@@ -87,6 +90,8 @@ class EmailNotifier(INotifier):
             template_dir: Directory containing email templates
         """
         self.smtp_config = smtp_config
+        self.settings = settings or get_settings()
+        self.env: Environment | None = None
 
         # Setup Jinja2 environment
         if template_dir and template_dir.exists():
@@ -97,7 +102,6 @@ class EmailNotifier(INotifier):
             if default_template_dir.exists():
                 self.env = Environment(loader=FileSystemLoader(default_template_dir))
             else:
-                self.env = None
                 logger.warning("email_template_dir_not_found", template_dir=template_dir)
 
     async def send_reminder(self, reminder: "PaymentReminder") -> bool:
@@ -134,7 +138,11 @@ class EmailNotifier(INotifier):
                 "payment": payment,
                 "invoice": invoice,
                 "days_to_due": reminder.days_before_due,
-                "company_name": "OpenFatture",  # TODO: Get from config
+                "company_name": (
+                    self.settings.cedente_denominazione
+                    or self.smtp_config.from_name
+                    or "OpenFatture"
+                ),
             }
 
             # Render template
@@ -221,6 +229,13 @@ class EmailNotifier(INotifier):
         else:
             status = f"Scadenza tra {days_to_due} giorni"
 
+        company_name = (
+            context.get("company_name")
+            or self.settings.cedente_denominazione
+            or self.smtp_config.from_name
+            or "OpenFatture"
+        )
+
         return f"""
 Promemoria Pagamento
 
@@ -231,7 +246,7 @@ Importo: €{payment.importo_da_pagare if payment else 0}
 Scadenza: {payment.data_scadenza.strftime('%d/%m/%Y') if payment else 'N/A'}
 
 Cordiali saluti,
-OpenFatture
+{company_name}
         """.strip()
 
     async def _send_email(

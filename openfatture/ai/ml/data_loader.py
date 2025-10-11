@@ -20,12 +20,20 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sqlalchemy import and_
+from sqlalchemy.orm import Session
 
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _get_session() -> Session:
+    """Return database session ensuring initialisation."""
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialised. Call init_db() before loading data.")
+    return SessionLocal()
 
 
 @dataclass
@@ -220,7 +228,7 @@ class InvoiceDataLoader:
         Returns:
             DataFrame with invoice data
         """
-        db = SessionLocal()
+        db = _get_session()
 
         try:
             # Query invoices with payments and client data

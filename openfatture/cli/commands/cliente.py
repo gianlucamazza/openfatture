@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
-from openfatture.storage.database.base import get_session, init_db
+from openfatture.storage.database.base import SessionLocal, get_session, init_db
 from openfatture.storage.database.models import Cliente
 from openfatture.utils.config import get_settings
 from openfatture.utils.validators import (
@@ -25,6 +25,13 @@ def ensure_db() -> None:
     init_db(str(settings.database_url))
 
 
+def _get_session():
+    """Return a database session using the configured factory."""
+    if SessionLocal is not None:
+        return SessionLocal()
+    return get_session()
+
+
 @app.command("add")
 def add_cliente(
     denominazione: str = typer.Argument(..., help="Client name/company name"),
@@ -36,6 +43,13 @@ def add_cliente(
 ) -> None:
     """Add a new client."""
     ensure_db()
+
+    indirizzo: str | None = None
+    cap: str | None = None
+    comune: str | None = None
+    provincia: str | None = None
+    email: str | None = None
+    telefono: str | None = None
 
     # Interactive mode collects all data
     if interactive:
@@ -70,14 +84,6 @@ def add_cliente(
 
         email = Prompt.ask("Regular email (optional)", default="")
         telefono = Prompt.ask("Phone (optional)", default="")
-    else:
-        # Quick add mode - minimal data
-        indirizzo: str | None = None
-        cap: str | None = None
-        comune: str | None = None
-        provincia: str | None = None
-        email: str | None = None
-        telefono: str | None = None
 
     # Validate required fields
     if not denominazione:
@@ -85,7 +91,7 @@ def add_cliente(
         raise typer.Exit(1)
 
     # Create client
-    db = get_session()
+    db = _get_session()
     try:
         cliente = Cliente(
             denominazione=denominazione,
@@ -138,7 +144,7 @@ def list_clienti(
     """List all clients."""
     ensure_db()
 
-    db = get_session()
+    db = _get_session()
     try:
         clienti = db.query(Cliente).order_by(Cliente.denominazione).limit(limit).all()
 
@@ -177,7 +183,7 @@ def show_cliente(
     """Show detailed client information."""
     ensure_db()
 
-    db = get_session()
+    db = _get_session()
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 
@@ -227,7 +233,7 @@ def delete_cliente(
     """Delete a client."""
     ensure_db()
 
-    db = get_session()
+    db = _get_session()
     try:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 

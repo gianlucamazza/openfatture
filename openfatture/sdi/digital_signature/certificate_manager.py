@@ -10,8 +10,28 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import (
+    dh,
+    dsa,
+    ec,
+    rsa,
+    x448,
+    x25519,
+)
+from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.x509 import Certificate
+
+type PrivateKeyType = (
+    rsa.RSAPrivateKey
+    | dsa.DSAPrivateKey
+    | ec.EllipticCurvePrivateKey
+    | dh.DHPrivateKey
+    | Ed25519PrivateKey
+    | Ed448PrivateKey
+    | x25519.X25519PrivateKey
+    | x448.X448PrivateKey
+)
 
 
 class CertificateManager:
@@ -35,7 +55,7 @@ class CertificateManager:
         self.certificate_path = certificate_path
         self._password = password.encode() if password else None
         self._certificate: Certificate | None = None
-        self._private_key: rsa.RSAPrivateKey | None = None
+        self._private_key: PrivateKeyType | None = None
 
     def load_certificate(
         self, certificate_path: Path | None = None, password: str | None = None
@@ -171,7 +191,7 @@ class CertificateManager:
         return self._certificate
 
     @property
-    def private_key(self) -> rsa.RSAPrivateKey | None:
+    def private_key(self) -> PrivateKeyType | None:
         """Get loaded private key."""
         return self._private_key
 

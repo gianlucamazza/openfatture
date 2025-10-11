@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from openfatture.sdi.notifiche.processor import NotificationProcessor
-from openfatture.storage.database.base import get_session, init_db
+from openfatture.storage.database.base import SessionLocal, get_session, init_db
 from openfatture.storage.database.models import LogSDI
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
@@ -20,6 +20,13 @@ def ensure_db() -> None:
     """Ensure database is initialized."""
     settings = get_settings()
     init_db(str(settings.database_url))
+
+
+def _get_session():
+    """Return a database session using the configured factory."""
+    if SessionLocal is not None:
+        return SessionLocal()
+    return get_session()
 
 
 @app.command("process")
@@ -50,7 +57,7 @@ def process_notification(
     console.print(f"[cyan]Size:[/cyan] {file.stat().st_size} bytes\n")
 
     settings = get_settings()
-    db = get_session()
+    db = _get_session()
 
     try:
         # Initialize processor with optional email sender
@@ -126,7 +133,7 @@ def list_notifications(
 
     console.print("\n[bold blue]📬 SDI Notifications[/bold blue]\n")
 
-    db = get_session()
+    db = _get_session()
     try:
         query = db.query(LogSDI).order_by(LogSDI.data_ricezione.desc())
 
@@ -191,7 +198,7 @@ def show_notification(
     """
     ensure_db()
 
-    db = get_session()
+    db = _get_session()
     try:
         notifica = db.query(LogSDI).filter(LogSDI.id == notification_id).first()
 

@@ -24,14 +24,15 @@ Example:
     ...     print(f"Found {len(result.rules_issues)} issues")
 """
 
-from datetime import datetime
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
 
-from langgraph.checkpoint import MemorySaver
-from langgraph.graph import END, StateGraph
+from sqlalchemy.orm import Session
 
 from openfatture.ai.agents.compliance import (
     ComplianceChecker,
     ComplianceLevel,
+    ComplianceReport,
 )
 from openfatture.ai.orchestration.states import (
     ComplianceCheckState,
@@ -39,9 +40,27 @@ from openfatture.ai.orchestration.states import (
 )
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura
+from openfatture.utils.datetime import utc_now
 from openfatture.utils.logging import get_logger
 
+if TYPE_CHECKING:
+    from langgraph.graph import END as _END
+    from langgraph.graph import StateGraph as _StateGraph
+else:
+    _graph_module = import_module("langgraph.graph")
+    _StateGraph = _graph_module.StateGraph
+    _END = _graph_module.END
+
+StateGraph = _StateGraph
+END = _END
+
 logger = get_logger(__name__)
+
+
+def _get_session() -> Session:
+    if SessionLocal is None:
+        raise RuntimeError("Database not initialized. Call init_db() before running workflows.")
+    return SessionLocal()
 
 
 class ComplianceCheckWorkflow:
@@ -80,9 +99,10 @@ class ComplianceCheckWorkflow:
 
         # Compliance checker
         self.checker = ComplianceChecker(level=self.level)
+        self._reports: dict[str, ComplianceReport] = {}
 
         # Build graph
-        self.graph = self._build_graph()
+        self.graph: Any = self._build_graph()
 
         logger.info(
             "compliance_workflow_initialized",
@@ -98,7 +118,7 @@ class ComplianceCheckWorkflow:
         }
         return level_map.get(level_str.lower(), ComplianceLevel.STANDARD)
 
-    def _build_graph(self) -> StateGraph:
+    def _build_graph(self) -> Any:
         """Build LangGraph state machine.
 
         Graph structure:
@@ -168,10 +188,15 @@ class ComplianceCheckWorkflow:
 
         # Compile
         if self.enable_checkpointing:
-            checkpointer = MemorySaver()
+            from importlib import import_module
+
+            checkpoint_module = import_module("langgraph.checkpoint")
+            memory_saver_cls = getattr(checkpoint_module, "MemorySaver", None)
+            if memory_saver_cls is None:
+                raise RuntimeError("LangGraph MemorySaver unavailable")
+            checkpointer = memory_saver_cls()
             return workflow.compile(checkpointer=checkpointer)
-        else:
-            return workflow.compile()
+        return workflow.compile()
 
     # ========================================================================
     # Node Implementations
@@ -185,7 +210,7 @@ class ComplianceCheckWorkflow:
             invoice_id=state.invoice_id,
         )
 
-        db = SessionLocal()
+        db = _get_session()
         try:
             fattura = db.query(Fattura).filter(Fattura.id == state.invoice_id).first()
 
@@ -202,7 +227,7 @@ class ComplianceCheckWorkflow:
             }
 
             state.status = WorkflowStatus.IN_PROGRESS
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
 
             logger.info(
                 "invoice_loaded",
@@ -231,6 +256,7 @@ class ComplianceCheckWorkflow:
         try:
             # Execute compliance check (Level 1: Rules)
             report = await self.checker.check_invoice(state.invoice_id)
+            self._reports[state.workflow_id] = report
 
             # Extract rules issues
             state.rules_issues = [
@@ -240,17 +266,17 @@ class ComplianceCheckWorkflow:
                     "severity": issue.severity.value,
                     "field": issue.field,
                     "suggestion": issue.suggestion,
+                    "reference": issue.reference,
                 }
-                for issue in report.issues
-                if issue.severity.value in ["ERROR", "WARNING"]
+                for issue in report.validation_issues
             ]
 
-            state.rules_passed = (
-                len([i for i in state.rules_issues if i["severity"] == "ERROR"]) == 0
-            )
+            state.rules_passed = len(report.get_errors()) == 0
 
             state.compliance_score = report.compliance_score
+            state.risk_score = report.risk_score
             state.is_compliant = report.is_compliant
+            state.metadata["compliance_report"] = report.to_dict()
 
             logger.info(
                 "rules_check_completed",
@@ -260,7 +286,7 @@ class ComplianceCheckWorkflow:
                 score=state.compliance_score,
             )
 
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
             return state
 
         except Exception as e:
@@ -273,22 +299,27 @@ class ComplianceCheckWorkflow:
         logger.info("checking_sdi_patterns", workflow_id=state.workflow_id)
 
         try:
-            # SDI patterns check already included in ComplianceChecker
-            # at STANDARD level and above
+            report = self._reports.get(state.workflow_id)
+            if report is None:
+                logger.warning(
+                    "sdi_patterns_report_missing",
+                    workflow_id=state.workflow_id,
+                )
+                return state
+
             state.sdi_patterns_checked = True
 
-            # Extract SDI-specific warnings
             state.sdi_warnings = [
                 {
-                    "pattern": "generic_sdi_pattern",
-                    "risk_level": "medium",
-                    "description": "Invoice structure matches historical rejection patterns",
+                    "pattern": pattern.pattern_name,
+                    "error_code": pattern.error_code,
+                    "severity": pattern.severity,
+                    "description": pattern.description,
+                    "suggestion": pattern.fix_suggestion,
+                    "reference": pattern.reference,
                 }
+                for pattern in report.sdi_pattern_matches
             ]
-
-            # Adjust risk score based on SDI patterns
-            if state.sdi_warnings:
-                state.risk_score = min(100.0, state.risk_score + 10.0 * len(state.sdi_warnings))
 
             logger.info(
                 "sdi_patterns_checked",
@@ -296,7 +327,7 @@ class ComplianceCheckWorkflow:
                 warnings_count=len(state.sdi_warnings),
             )
 
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
             return state
 
         except Exception as e:
@@ -309,22 +340,45 @@ class ComplianceCheckWorkflow:
         logger.info("running_ai_analysis", workflow_id=state.workflow_id)
 
         try:
-            # AI heuristics already included in ComplianceChecker
-            # at ADVANCED level
+            report = self._reports.get(state.workflow_id)
+            if report is None:
+                logger.warning(
+                    "ai_analysis_report_missing",
+                    workflow_id=state.workflow_id,
+                )
+                return state
+
             state.ai_analysis_performed = True
 
-            # Generate insights using AI
-            state.ai_insights = (
-                "L'analisi AI non ha rilevato anomalie semantiche. "
-                "La fattura appare conforme alle best practices."
-            )
+            anomalies = [
+                {
+                    "code": issue.code,
+                    "severity": issue.severity.value,
+                    "field": issue.field,
+                    "message": issue.message,
+                    "suggestion": issue.suggestion,
+                }
+                for issue in report.heuristic_anomalies
+            ]
+
+            if anomalies:
+                state.ai_insights = " ".join(
+                    message for message in (a["message"] for a in anomalies) if message
+                )
+                state.metadata["ai_anomalies"] = anomalies
+                for anomaly in anomalies:
+                    suggestion = anomaly.get("suggestion")
+                    if suggestion:
+                        state.fix_suggestions.append(suggestion)
+            else:
+                state.ai_insights = "Nessuna anomalia AI rilevata."
 
             logger.info(
                 "ai_analysis_completed",
                 workflow_id=state.workflow_id,
             )
 
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
             return state
 
         except Exception as e:
@@ -337,27 +391,44 @@ class ComplianceCheckWorkflow:
         logger.info("aggregating_results", workflow_id=state.workflow_id)
 
         try:
-            # Calculate final compliance score
-            # Already set by rules check, may be adjusted by AI
+            report = self._reports.get(state.workflow_id)
+            if report is None:
+                logger.warning(
+                    "aggregate_results_missing_report",
+                    workflow_id=state.workflow_id,
+                )
+                return state
 
-            # Generate fix suggestions
-            state.fix_suggestions = [
-                issue["suggestion"] for issue in state.rules_issues if issue.get("suggestion")
+            state.compliance_score = report.compliance_score
+            state.risk_score = report.risk_score
+            state.is_compliant = report.is_compliant
+
+            suggestions = [
+                issue.get("suggestion") for issue in state.rules_issues if issue.get("suggestion")
             ]
+            suggestions.extend(report.recommendations)
+            if state.fix_suggestions:
+                suggestions.extend(state.fix_suggestions)
+            # Deduplicate while preserving order
+            seen: set[str] = set()
+            state.fix_suggestions = []
+            for suggestion in suggestions:
+                if suggestion and suggestion not in seen:
+                    seen.add(suggestion)
+                    state.fix_suggestions.append(suggestion)
 
-            # Estimate SDI approval probability
-            if state.compliance_score >= 90:
-                state.sdi_approval_probability = 0.95
-            elif state.compliance_score >= 80:
-                state.sdi_approval_probability = 0.85
-            elif state.compliance_score >= 70:
-                state.sdi_approval_probability = 0.70
+            # Estimate SDI approval probability (simple heuristic)
+            errors_count = len(report.get_errors())
+            if errors_count > 0:
+                probability = 0.2
             else:
-                state.sdi_approval_probability = 0.50
+                probability = min(0.98, 0.5 + (report.compliance_score / 200))
+                if state.sdi_warnings:
+                    probability -= 0.1
+            state.sdi_approval_probability = max(0.0, round(probability, 2))
 
-            # Adjust for SDI warnings
-            if state.sdi_warnings:
-                state.sdi_approval_probability *= 0.9
+            state.metadata["recommendations"] = report.recommendations
+            self._reports[state.workflow_id] = report  # ensure cache retained until completion
 
             logger.info(
                 "results_aggregated",
@@ -366,7 +437,7 @@ class ComplianceCheckWorkflow:
                 approval_probability=state.sdi_approval_probability,
             )
 
-            state.updated_at = datetime.utcnow()
+            state.updated_at = utc_now()
             return state
 
         except Exception as e:
@@ -383,7 +454,7 @@ class ComplianceCheckWorkflow:
         # In real implementation, would pause for human input
         # For now, just mark as reviewed
 
-        state.updated_at = datetime.utcnow()
+        state.updated_at = utc_now()
         return state
 
     async def _handle_error_node(self, state: ComplianceCheckState) -> ComplianceCheckState:
@@ -395,7 +466,9 @@ class ComplianceCheckWorkflow:
         )
 
         state.status = WorkflowStatus.FAILED
-        state.updated_at = datetime.utcnow()
+        state.updated_at = utc_now()
+
+        self._reports.pop(state.workflow_id, None)
 
         return state
 
@@ -487,12 +560,17 @@ class ComplianceCheckWorkflow:
         # Execute graph
         final_state = await self.graph.ainvoke(initial_state)
 
+        if isinstance(final_state, dict):
+            final_state = ComplianceCheckState.model_validate(final_state)
+
         logger.info(
             "compliance_workflow_completed",
             workflow_id=final_state.workflow_id,
             is_compliant=final_state.is_compliant,
             compliance_score=final_state.compliance_score,
         )
+
+        self._reports.pop(final_state.workflow_id, None)
 
         return final_state
 
