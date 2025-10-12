@@ -25,7 +25,11 @@ jobs:
       - name: Install libomp on macOS
         if: runner.os == 'macOS'
         run: |
-          brew list libomp || brew install libomp
+          if brew ls --versions libomp >/dev/null 2>&1; then
+            echo "libomp already installed"
+          else
+            brew install libomp
+          fi
           echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:${DYLD_LIBRARY_PATH}" >> $GITHUB_ENV
 
       - name: Install uv
