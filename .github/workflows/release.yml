@@ -34,7 +34,7 @@ jobs:
         run: uv run --extra dev pytest
 
       - name: Build package
-        run: uvx pyproject-build
+        run: uvx --from build pyproject-build
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
