@@ -50,6 +50,7 @@ jobs:
       - name: Run payment module tests
         run: |
           uv run pytest tests/payment/ \
+            --override-ini=addopts= \
             --cov=openfatture.payment \
             --cov-report=xml \
             --cov-report=term-missing \
@@ -59,6 +60,7 @@ jobs:
       - name: Check coverage threshold
         run: |
           uv run pytest tests/payment/ \
+            --override-ini=addopts= \
             --cov=openfatture.payment \
             --cov-fail-under=85 \
             --cov-report=term-missing
@@ -144,7 +146,7 @@ jobs:
         run: uv sync --all-extras --python $(which python3)
 
       - name: Run Black on payment module
-        run: uv run black --check openfatture/payment/ tests/payment/
+        run: uv run python -m black --check openfatture/payment/ tests/payment/
 
       - name: Run Ruff on payment module
         run: uv run ruff check openfatture/payment/ tests/payment/
@@ -235,6 +237,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Free disk space for Docker build
+        run: docker builder prune -af || true
 
       - name: Build Docker image
         uses: docker/build-push-action@v5

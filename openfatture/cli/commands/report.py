@@ -279,8 +279,8 @@ def report_scadenze(
                 show_lines=False,
                 box=None,
             )
-            table.add_column("Fattura", style="cyan")
-            table.add_column("Cliente", style="white")
+            table.add_column("Fattura", style="cyan", no_wrap=True, min_width=10)
+            table.add_column("Cliente", style="white", no_wrap=True, min_width=18)
             table.add_column("Scadenza", justify="center")
             table.add_column("Δ giorni", justify="right")
             table.add_column("Residuo", justify="right")

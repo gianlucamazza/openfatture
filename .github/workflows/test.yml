@@ -26,7 +26,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: uv sync --all-extras
@@ -61,7 +63,7 @@ jobs:
         run: uv sync --all-extras --python $(which python3)
 
       - name: Run Black
-        run: uv run black --check .
+        run: uv run python -m black --check .
 
       - name: Run Ruff
         run: uv run ruff check .
@@ -126,3 +128,6 @@ jobs:
         run: |
           uv run pytest --cov=openfatture --cov-report=term-missing --cov-fail-under=50
           echo "✓ Coverage threshold met (minimum 50%)"
+permissions:
+  contents: read
+  security-events: write
