@@ -23,8 +23,15 @@ jobs:
         run: |
           echo "🔍 Validating tape files..."
           validation_failed=0
+          shopt -s nullglob
+          tapes=(media/automation/*.tape)
 
-          for tape in media/automation/*.tape; do
+          if [ ${#tapes[@]} -eq 0 ]; then
+            echo "ℹ️  No .tape files found, skipping validation."
+            exit 0
+          fi
+
+          for tape in "${tapes[@]}"; do
             echo ""
             echo "Validating $tape..."
 

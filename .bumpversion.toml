@@ -19,3 +19,8 @@ commit_args = ""
 filename = "openfatture/__init__.py"
 search = "__version__ = \"{current_version}\""
 replace = "__version__ = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "openfatture/ai/__init__.py"
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""

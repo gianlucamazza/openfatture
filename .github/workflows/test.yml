@@ -35,7 +35,7 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          uv run pytest --cov=openfatture --cov-report=xml --cov-report=term-missing
+          uv run pytest --cov=openfatture --cov-report=xml --cov-report=term-missing --cov-fail-under=50
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -106,28 +106,6 @@ jobs:
         run: uv run safety check --json
         continue-on-error: true
 
-  coverage-gate:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v1
-
-      - name: Install dependencies
-        run: uv sync --all-extras --python $(which python3)
-
-      - name: Run coverage check
-        run: |
-          uv run pytest --cov=openfatture --cov-report=term-missing --cov-fail-under=50
-          echo "✓ Coverage threshold met (minimum 50%)"
 permissions:
   contents: read
   security-events: write

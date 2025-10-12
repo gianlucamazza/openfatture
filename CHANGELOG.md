@@ -6,8 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.1.0] - 2025-10-12
 ### Changed
-- Localised the CLI, interactive experience, email templates, and PDF outputs to English for consistency with the refreshed documentation set.
+- Localised the CLI, interactive experience, email templates, and PDF outputs to English for consistency across platforms.
 - Updated documentation, quickstarts, automation tapes, and examples to reflect global English-first messaging.
 
 ### Removed
@@ -163,6 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Encrypted digital signature handling
 - Input validation for all user data
 
-[Unreleased]: https://github.com/gianlucamazza/openfatture/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/gianlucamazza/openfatture/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/gianlucamazza/openfatture/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/gianlucamazza/openfatture/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/gianlucamazza/openfatture/releases/tag/v0.1.0

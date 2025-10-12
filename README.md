@@ -2,7 +2,7 @@
 
 **Open-source electronic invoicing for Italian freelancers** — built around a CLI-first workflow, AI automation, and payment reconciliation.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
 [![CI Tests](https://github.com/gianlucamazza/openfatture/actions/workflows/test.yml/badge.svg)](https://github.com/gianlucamazza/openfatture/actions/workflows/test.yml)
 [![Release](https://github.com/gianlucamazza/openfatture/actions/workflows/release.yml/badge.svg)](https://github.com/gianlucamazza/openfatture/actions/workflows/release.yml)
 [![Media Generation](https://github.com/gianlucamazza/openfatture/actions/workflows/media-generation.yml/badge.svg)](https://github.com/gianlucamazza/openfatture/actions/workflows/media-generation.yml)
@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-> 📘 For the consolidated v1.0.0 documentation, visit the docs hub at `docs/README.md` and the release notes in `docs/releases/`.
+> 📘 For the consolidated v1.1.0 documentation, visit the docs hub at `docs/README.md` and the release notes in `docs/releases/`.
 
 ---
 
@@ -18,7 +18,8 @@
 - `docs/README.md` – Documentation hub and navigation index
 - `docs/QUICKSTART.md` – Extended quickstart (15-minute setup walkthrough)
 - `QUICKSTART.md` – Quickstart (5-minute CLI tour)
-- `docs/releases/v1.0.1.md` – Latest release notes
+- `docs/releases/v1.1.0.md` – Latest release notes
+- `docs/releases/v1.0.1.md` – Upcoming AI cash flow upgrade (in progress)
 - `CHANGELOG.md` – Full change log
 - `docs/history/ROADMAP.md` – Roadmap and phase breakdown
 - `docs/reports/TEST_RESULTS_SUMMARY.md` – Test and coverage report

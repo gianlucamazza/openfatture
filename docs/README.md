@@ -1,10 +1,11 @@
 # OpenFatture Documentation Hub
 
-Welcome to the official documentation hub for the **v1.0.0** release. Use this index to jump quickly to operational guides, advanced manuals, and developer resources.
+Welcome to the official documentation hub for the **v1.1.0** release. Use this index to jump quickly to operational guides, advanced manuals, and developer resources.
 
 ## At a Glance
-- **Latest update:** [v1.0.1 – AI Cash Flow Upgrade](releases/v1.0.1.md)
-- **Current stable release:** [v1.0.0 – Release Notes](releases/v1.0.0.md)
+- **Latest update:** [v1.1.0 – English-First Messaging](releases/v1.1.0.md)
+- **Previous stable release:** [v1.0.0 – Release Notes](releases/v1.0.0.md)
+- **In progress:** [v1.0.1 – AI Cash Flow Upgrade](releases/v1.0.1.md)
 - **Complete changelog:** [CHANGELOG.md](../CHANGELOG.md)
 - **FAQ & Support:** see the “Support” section in the [main README](../README.md#support)
 
