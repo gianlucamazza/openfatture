@@ -72,7 +72,7 @@ Found 56 errors in 26 files (checked 180 source files)
 
 ### CATEGORIA D: Errori Risolti
 ```bash
-$ grep -E "(batch\.py:63|batch\.py:66|batch\.py:178|batch\.py:181|reconciliation_service\.py:169|reconciliation_service\.py:325|reconciliation_service\.py:346)" mypy_final.log
+$ grep -E "(batch\.py:63|batch\.py:66|batch\.py:178|batch\.py:181|reconciliation_service\.py:169|reconciliation_service\.py:325|reconciliation_service\.py:346)" reports/mypy/mypy_final.log
 (nessun risultato - tutti risolti!)
 ```
 

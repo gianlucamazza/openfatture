@@ -24,7 +24,7 @@
 | Database fatture/Clienti | `openfatture/storage/database/models.py` | SQL (PostgreSQL/SQLite) | Dati strutturati fatture, clienti, stati | Già indicizzati in RAG (solo fatture) |
 | Prompt Tax Advisor | `openfatture/ai/prompts/tax_advisor.yaml` | YAML | Norme IVA sintetizzate, few-shot | Fonte primaria per knowledge normativa attuale |
 | Documentazione configurazione | `docs/CONFIGURATION.md` | Markdown | Tabelle aliquote, codici IVA, configurazioni PEC | Estrarre sezioni rilevanti (chunking) |
-| AI Architecture & Roadmap | `docs/AI_ARCHITECTURE.md`, `ROADMAP.md` | Markdown | Visione orchestrazione, TODO RAG | Informazioni operative per agent |
+| AI Architecture & Roadmap | `docs/AI_ARCHITECTURE.md`, `history/ROADMAP.md` | Markdown | Visione orchestrazione, TODO RAG | Informazioni operative per agent |
 | Summaries Fase 4.x | `PHASE_4_*.md` | Markdown | Decisioni implementative, knowledge AI | Fonte storica, definire se indicizzare |
 | Manuale PEC/SDI (esterno) | TODO | PDF/HTML | Specifiche ufficiali Agenzia Entrate | Richiede conversione e licenza |
 | FAQ supporto clienti | TODO | Markdown/Notion | Procedure, edge case | Da raccogliere con team supporto |

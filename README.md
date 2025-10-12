@@ -20,7 +20,8 @@
 - `QUICKSTART.md` – Guida rapida in inglese (CLI in 5 minuti)
 - `docs/releases/v1.0.1.md` – Aggiornamento più recente
 - `CHANGELOG.md` – Storico completo delle modifiche
-- `ROADMAP.md` – Roadmap e fasi di progetto
+- `docs/history/ROADMAP.md` – Roadmap e fasi di progetto
+- `docs/reports/TEST_RESULTS_SUMMARY.md` – Report test e copertura
 - `CONTRIBUTING.md` – Regole per contribuire
 
 ---
@@ -117,13 +118,13 @@ Altri esempi sono disponibili nella cartella `examples/`.
 ## Development
 - Installa gli extra di sviluppo e i pre-commit: `uv sync --all-extras` e `uv run pre-commit install`
 - Esegui i test: `uv run python -m pytest` (copertura: `uv run python -m pytest --cov=openfatture`)
-- Automazioni, CI/CD e media workflow sono descritti in `docs/DEVELOPMENT.md`, `SETUP_CI_CD.md` e nella documentazione correlata
+- Automazioni, CI/CD e media workflow sono descritti in `docs/DEVELOPMENT.md`, `docs/operations/SETUP_CI_CD.md` e nella documentazione correlata
 
 ---
 
 ## Project Status
 - Ultimo rilascio stabile: `docs/releases/v1.0.1.md` (AI Cash Flow Upgrade)
-- Roadmap dettagliata e fasi progettuali in `ROADMAP.md` e file `PHASE_*_SUMMARY.md`
+- Roadmap dettagliata e fasi progettuali in `docs/history/ROADMAP.md` e file `docs/history/PHASE_*_SUMMARY.md`
 - Focus attuale: orchestrazione AI (Phase 4) e hardening per produzione (Phase 6)
 
 ---
