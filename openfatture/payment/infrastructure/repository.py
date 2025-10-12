@@ -78,6 +78,21 @@ class BankAccountRepository:
         stmt = select(BankAccount).where(BankAccount.is_active == True)  # noqa: E712
         return list(self.session.execute(stmt).scalars())
 
+    def list_accounts(self, include_inactive: bool = True) -> list[BankAccount]:
+        """List bank accounts with optional inactive accounts.
+
+        Args:
+            include_inactive: If False, returns only active accounts
+
+        Returns:
+            List of BankAccount entities
+        """
+        stmt = select(BankAccount)
+        if not include_inactive:
+            stmt = stmt.where(BankAccount.is_active == True)  # noqa: E712
+        stmt = stmt.order_by(BankAccount.name.asc())
+        return list(self.session.execute(stmt).scalars())
+
     def update(self, account: BankAccount) -> BankAccount:
         """Update an existing bank account.
 
@@ -226,6 +241,37 @@ class BankTransactionRepository:
         """
         self.session.flush()
         return transaction
+
+    def list_transactions(
+        self,
+        account_id: int | None = None,
+        status: TransactionStatus | None = None,
+        limit: int | None = None,
+    ) -> list[BankTransaction]:
+        """List transactions with optional filters.
+
+        Args:
+            account_id: Optional account ID filter
+            status: Optional transaction status filter
+            limit: Optional max results
+
+        Returns:
+            List of BankTransaction entities
+        """
+        stmt = select(BankTransaction)
+
+        if account_id is not None:
+            stmt = stmt.where(BankTransaction.account_id == account_id)
+
+        if status is not None:
+            stmt = stmt.where(BankTransaction.status == status)
+
+        stmt = stmt.order_by(BankTransaction.date.desc())
+
+        if limit is not None:
+            stmt = stmt.limit(limit)
+
+        return list(self.session.execute(stmt).scalars())
 
 
 class PaymentRepository:

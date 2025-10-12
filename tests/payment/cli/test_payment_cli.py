@@ -12,6 +12,11 @@ import pytest
 from typer.testing import CliRunner
 
 from openfatture.payment.cli.payment_cli import app
+from openfatture.payment.domain.enums import (
+    ReminderStatus,
+    ReminderStrategy,
+    TransactionStatus,
+)
 from openfatture.payment.domain.models import BankAccount, BankTransaction
 from openfatture.payment.domain.value_objects import ImportResult, ReconciliationResult
 
@@ -212,6 +217,350 @@ class TestImportCommand:
         assert result.exit_code == 0
         assert "Auto-matching" not in result.stdout
         assert "✅ Success" in result.stdout
+
+
+class TestAccountCommands:
+    """Tests for account management commands."""
+
+    def _mock_session(self, mock_get_db):
+        mock_session = MagicMock()
+        mock_session.commit = MagicMock()
+        mock_session.rollback = MagicMock()
+        mock_get_db.return_value.__enter__.return_value = mock_session
+        return mock_session
+
+    def test_create_account_success(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            session = self._mock_session(mock_get_db)
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.BankAccountRepository"
+            ).return_value
+            repo.get_by_iban.return_value = None
+
+            def add_side_effect(account):
+                account.id = 42
+                return account
+
+            repo.add.side_effect = add_side_effect
+
+            result = runner.invoke(
+                app,
+                [
+                    "create-account",
+                    "Main Account",
+                    "--iban",
+                    "IT60X0542811101000000123456",
+                    "--opening-balance",
+                    "1000.00",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "Account created" in result.stdout
+        session.commit.assert_called_once()
+        repo.add.assert_called_once()
+
+    def test_create_account_duplicate_iban(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            session = self._mock_session(mock_get_db)
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.BankAccountRepository"
+            ).return_value
+            repo.get_by_iban.return_value = Mock(id=99)
+
+            result = runner.invoke(
+                app,
+                ["create-account", "Main", "--iban", "IT60X0542811101000000123456"],
+            )
+
+        assert result.exit_code == 1
+        assert "already exists" in result.stdout
+        session.rollback.assert_called_once()
+
+    def test_list_accounts_outputs_table(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            self._mock_session(mock_get_db)
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.BankAccountRepository"
+            ).return_value
+            account = Mock()
+            account.id = 1
+            account.name = "Primary"
+            account.iban = "IT00TEST"
+            account.bank_name = "Test Bank"
+            account.currency = "EUR"
+            account.opening_balance = Decimal("0.00")
+            account.current_balance = Decimal("100.00")
+            account.is_active = True
+            repo.list_accounts.return_value = [account]
+
+            result = runner.invoke(app, ["list-accounts"])
+
+        assert result.exit_code == 0
+        assert "Primary" in result.stdout
+
+    def test_update_account_changes_fields(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            session = self._mock_session(mock_get_db)
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.BankAccountRepository"
+            ).return_value
+            account = Mock()
+            account.id = 1
+            account.iban = "IT00OLD"
+            account.name = "Old"
+            account.bank_name = "Old Bank"
+            account.bic_swift = "OLDHBIC"
+            account.currency = "EUR"
+            account.notes = None
+            account.is_active = True
+            repo.get_by_id.return_value = account
+            repo.get_by_iban.return_value = None
+
+            result = runner.invoke(
+                app,
+                [
+                    "update-account",
+                    "1",
+                    "--name",
+                    "New Name",
+                    "--bank-name",
+                    "New Bank",
+                    "--inactive",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert account.name == "New Name"
+        assert account.bank_name == "New Bank"
+        assert account.is_active is False
+        session.commit.assert_called_once()
+
+    def test_delete_account_not_found(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            session = self._mock_session(mock_get_db)
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.BankAccountRepository"
+            ).return_value
+            repo.delete.return_value = False
+
+            result = runner.invoke(app, ["delete-account", "5"])
+
+        assert result.exit_code == 1
+        assert "not found" in result.stdout
+        session.commit.assert_not_called()
+
+
+class TestTransactionListingCommands:
+    """Tests for transaction listing and detail commands."""
+
+    def test_list_transactions(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            mock_session = MagicMock()
+            mock_get_db.return_value.__enter__.return_value = mock_session
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.BankTransactionRepository"
+            ).return_value
+            tx = Mock()
+            tx.id = "1111"
+            tx.date = date(2025, 1, 1)
+            tx.amount = Decimal("123.45")
+            tx.status = TransactionStatus.UNMATCHED
+            tx.account_id = 1
+            tx.matched_payment_id = None
+            tx.description = "Consulting invoice"
+            repo.list_transactions.return_value = [tx]
+
+            result = runner.invoke(app, ["list-transactions", "--account", "1"])
+
+        assert result.exit_code == 0
+        assert "Consulting" in result.stdout
+
+    def test_show_transaction_not_found(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            mock_session = MagicMock()
+            mock_get_db.return_value.__enter__.return_value = mock_session
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.BankTransactionRepository"
+            ).return_value
+            repo.get_by_id.return_value = None
+
+            result = runner.invoke(
+                app, ["show-transaction", "123e4567-e89b-12d3-a456-426614174000"]
+            )
+
+        assert result.exit_code == 1
+        assert "not found" in result.stdout
+
+
+class TestReconcileCommand:
+    """Tests for the batch reconcile command."""
+
+    def test_reconcile_auto_mode(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            mock_session = MagicMock()
+            mock_session.commit = MagicMock()
+            mock_session.rollback = MagicMock()
+            mock_get_db.return_value.__enter__.return_value = mock_session
+
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli._build_matching_service",
+                return_value=Mock(),
+            )
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.create_event_bus", return_value=Mock()
+            )
+
+            mock_service = mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService"
+            ).return_value
+            mock_result = ReconciliationResult(
+                matched_count=2,
+                review_count=1,
+                unmatched_count=1,
+                total_count=4,
+            )
+            mock_service.reconcile_batch = AsyncMock(return_value=mock_result)
+
+            result = runner.invoke(app, ["reconcile", "--account", "1", "--mode", "auto"])
+
+        assert result.exit_code == 0
+        assert "Reconciliation" in result.stdout
+        mock_session.commit.assert_called_once()
+        mock_service.reconcile_batch.assert_awaited()
+
+    def test_reconcile_invalid_mode(self):
+        result = runner.invoke(app, ["reconcile", "--account", "1", "--mode", "invalid"])
+
+        assert result.exit_code == 1
+        assert "Invalid mode" in result.stdout
+
+
+class TestMatchTransactionCommands:
+    """Tests for manual match/unmatch commands."""
+
+    def test_match_transaction_success(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            mock_session = MagicMock()
+            mock_session.commit = MagicMock()
+            mock_session.rollback = MagicMock()
+            mock_get_db.return_value.__enter__.return_value = mock_session
+
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli._build_matching_service",
+                return_value=Mock(),
+            )
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.create_event_bus", return_value=Mock()
+            )
+
+            mock_service = mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService"
+            ).return_value
+            mock_service.reconcile = AsyncMock(return_value=Mock(match_confidence=0.9))
+
+            result = runner.invoke(
+                app,
+                [
+                    "match-transaction",
+                    "123e4567-e89b-12d3-a456-426614174000",
+                    "101",
+                    "--match-type",
+                    "MANUAL",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "matched to payment" in result.stdout
+        mock_service.reconcile.assert_awaited()
+        mock_session.commit.assert_called_once()
+
+    def test_unmatch_transaction(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            mock_session = MagicMock()
+            mock_session.commit = MagicMock()
+            mock_session.rollback = MagicMock()
+            mock_get_db.return_value.__enter__.return_value = mock_session
+
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli._build_matching_service",
+                return_value=Mock(),
+            )
+            mocker.patch(
+                "openfatture.payment.cli.payment_cli.create_event_bus", return_value=Mock()
+            )
+
+            mock_service = mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReconciliationService"
+            ).return_value
+            mock_service.reset_transaction = AsyncMock(return_value=None)
+
+            result = runner.invoke(
+                app,
+                ["unmatch-transaction", "123e4567-e89b-12d3-a456-426614174000"],
+            )
+
+        assert result.exit_code == 0
+        assert "reset to UNMATCHED" in result.stdout
+        mock_service.reset_transaction.assert_awaited()
+        mock_session.commit.assert_called_once()
+
+
+class TestReminderManagementCommands:
+    """Tests for reminder listing and cancellation commands."""
+
+    def test_list_reminders(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            mock_session = MagicMock()
+            mock_get_db.return_value.__enter__.return_value = mock_session
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderRepository"
+            ).return_value
+            reminder = Mock()
+            reminder.id = 7
+            reminder.payment_id = 10
+            reminder.reminder_date = date(2025, 1, 10)
+            reminder.status = ReminderStatus.PENDING
+            reminder.strategy = ReminderStrategy.DEFAULT
+            reminder.days_before_due = 5
+            reminder.sent_date = None
+            reminder.payment = Mock(data_scadenza=date(2025, 1, 15))
+            repo.list_reminders.return_value = [reminder]
+
+            result = runner.invoke(app, ["list-reminders"])
+
+        assert result.exit_code == 0
+        assert "Payment Reminders" in result.stdout
+        assert "7" in result.stdout
+
+    def test_cancel_reminder(self, mocker):
+        with patch("openfatture.payment.cli.payment_cli.get_db_session") as mock_get_db:
+            mock_session = MagicMock()
+            mock_session.commit = MagicMock()
+            mock_session.rollback = MagicMock()
+            mock_get_db.return_value.__enter__.return_value = mock_session
+
+            repo = mocker.patch(
+                "openfatture.payment.cli.payment_cli.ReminderRepository"
+            ).return_value
+            reminder = Mock()
+            reminder.status = ReminderStatus.PENDING
+            reminder.cancel = Mock()
+            repo.get_by_id.return_value = reminder
+
+            result = runner.invoke(app, ["cancel-reminder", "12"])
+
+        assert result.exit_code == 0
+        reminder.cancel.assert_called_once()
+        mock_session.commit.assert_called_once()
 
 
 class TestMatchCommand:

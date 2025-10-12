@@ -11,7 +11,7 @@ import structlog
 from sqlalchemy.orm import Session
 
 from ....storage.database.models import StatoPagamento
-from ...domain.enums import ReminderStrategy
+from ...domain.enums import ReminderStatus, ReminderStrategy
 from ...domain.models import PaymentReminder
 from ..notifications.notifier import INotifier
 
@@ -106,6 +106,40 @@ class ReminderRepository:
 
         self.session.flush()
         return deleted
+
+    def get_by_id(self, reminder_id: int) -> PaymentReminder | None:
+        """Retrieve reminder by ID."""
+
+        return self.session.get(PaymentReminder, reminder_id)
+
+    def list_reminders(
+        self,
+        status: ReminderStatus | None = None,
+        payment_id: int | None = None,
+        limit: int | None = None,
+    ) -> list[PaymentReminder]:
+        """List reminders with optional filters."""
+
+        query = self.session.query(PaymentReminder).order_by(
+            PaymentReminder.reminder_date.asc(), PaymentReminder.id.asc()
+        )
+
+        if status is not None:
+            query = query.filter(PaymentReminder.status == status)
+
+        if payment_id is not None:
+            query = query.filter(PaymentReminder.payment_id == payment_id)
+
+        if limit is not None:
+            query = query.limit(limit)
+
+        return query.all()
+
+    def update(self, reminder: PaymentReminder) -> PaymentReminder:
+        """Flush changes to reminder."""
+
+        self.session.flush()
+        return reminder
 
 
 class ReminderScheduler:

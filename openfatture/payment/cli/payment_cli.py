@@ -9,7 +9,9 @@ import os
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
+from uuid import UUID
 
 import typer
 from rich.console import Console
@@ -32,7 +34,8 @@ from ..application.services import (
     ReminderScheduler,
     TransactionInsightService,
 )
-from ..domain.enums import MatchType, ReminderStrategy, TransactionStatus
+from ..domain.enums import MatchType, ReminderStatus, ReminderStrategy, TransactionStatus
+from ..domain.models import BankAccount
 from ..infrastructure.importers import ImporterFactory
 from ..infrastructure.repository import (
     BankAccountRepository,
@@ -67,6 +70,256 @@ def get_db_session() -> Iterator[Session]:
         except RuntimeError:
             # If the generator is already closed (e.g., during test mocks), ignore.
             pass
+
+
+# ============================================================================
+# ACCOUNT COMMANDS
+# ============================================================================
+
+
+@app.command(name="create-account")
+def create_account(
+    name: str = typer.Argument(..., help="Account name"),
+    iban: str | None = typer.Option(None, "--iban", help="Account IBAN"),
+    bank_name: str | None = typer.Option(None, "--bank-name", help="Bank name"),
+    bic: str | None = typer.Option(None, "--bic", help="BIC/SWIFT code"),
+    currency: str = typer.Option("EUR", "--currency", help="Currency code (default: EUR)"),
+    opening_balance: float = typer.Option(
+        0.00, "--opening-balance", help="Opening balance (default: 0.00)"
+    ),
+    notes: str | None = typer.Option(None, "--notes", help="Optional notes"),
+) -> None:
+    """Create a bank account for payment reconciliation."""
+    with get_db_session() as session:
+        repo = BankAccountRepository(session)
+        try:
+            if iban:
+                existing = repo.get_by_iban(iban)
+                if existing:
+                    console.print(
+                        f"[red]✗ An account with IBAN {iban} already exists (ID {existing.id}).[/]"
+                    )
+                    raise typer.Exit(1)
+
+            opening_amount = Decimal(str(opening_balance))
+
+            account = BankAccount(
+                name=name,
+                iban=iban,
+                bank_name=bank_name,
+                bic_swift=bic,
+                currency=currency.upper(),
+                opening_balance=opening_amount,
+                current_balance=opening_amount,
+                notes=notes,
+            )
+            repo.add(account)
+            session.commit()
+            console.print(f"[green]✓ Account created with ID {account.id}[/]")
+        except typer.Exit:
+            session.rollback()
+            raise
+        except Exception as exc:  # pragma: no cover - defensive logging
+            session.rollback()
+            console.print(f"[red]✗ Failed to create account: {exc}[/]")
+            raise typer.Exit(1) from exc
+
+
+@app.command(name="list-accounts")
+def list_accounts(
+    include_inactive: bool = typer.Option(
+        False, "--all", help="Include inactive accounts in the result list"
+    )
+) -> None:
+    """List configured bank accounts."""
+    with get_db_session() as session:
+        repo = BankAccountRepository(session)
+        accounts = repo.list_accounts(include_inactive=include_inactive)
+
+        if not accounts:
+            console.print("[yellow]ℹ️  No bank accounts configured yet.[/]")
+            return
+
+        table = Table(title="🏦 Bank Accounts", show_lines=False)
+        table.add_column("ID", style="cyan", justify="right")
+        table.add_column("Name", style="bold")
+        table.add_column("IBAN", style="dim")
+        table.add_column("Bank")
+        table.add_column("Currency", justify="center")
+        table.add_column("Opening", justify="right")
+        table.add_column("Current", justify="right")
+        table.add_column("Active", justify="center")
+
+        for account in accounts:
+            table.add_row(
+                str(account.id),
+                account.name,
+                account.iban or "-",
+                account.bank_name or "-",
+                account.currency,
+                f"{account.opening_balance:.2f}",
+                f"{account.current_balance:.2f}",
+                "✅" if account.is_active else "❌",
+            )
+
+        console.print(table)
+
+
+@app.command(name="update-account")
+def update_account(
+    account_id: int = typer.Argument(..., help="Account ID to update"),
+    name: str | None = typer.Option(None, "--name", help="New account name"),
+    iban: str | None = typer.Option(None, "--iban", help="New IBAN"),
+    bank_name: str | None = typer.Option(None, "--bank-name", help="New bank name"),
+    bic: str | None = typer.Option(None, "--bic", help="New BIC/SWIFT code"),
+    currency: str | None = typer.Option(None, "--currency", help="New currency code"),
+    notes: str | None = typer.Option(None, "--notes", help="Overwrite notes"),
+    active: bool | None = typer.Option(
+        None, "--active/--inactive", help="Toggle account activation flag"
+    ),
+) -> None:
+    """Update metadata for an existing bank account."""
+    with get_db_session() as session:
+        repo = BankAccountRepository(session)
+        account = repo.get_by_id(account_id)
+        if not account:
+            console.print(f"[red]✗ Account {account_id} not found[/]")
+            raise typer.Exit(1)
+
+        try:
+            if iban and iban != account.iban:
+                existing = repo.get_by_iban(iban)
+                if existing and existing.id != account.id:
+                    console.print(
+                        f"[red]✗ Another account with IBAN {iban} exists (ID {existing.id}).[/]"
+                    )
+                    raise typer.Exit(1)
+                account.iban = iban
+
+            if name:
+                account.name = name
+            if bank_name:
+                account.bank_name = bank_name
+            if bic:
+                account.bic_swift = bic
+            if currency:
+                account.currency = currency.upper()
+            if notes is not None:
+                account.notes = notes
+            if active is not None:
+                account.is_active = active
+
+            repo.update(account)
+            session.commit()
+            console.print(f"[green]✓ Account {account_id} updated[/]")
+        except typer.Exit:
+            session.rollback()
+            raise
+        except Exception as exc:  # pragma: no cover - defensive logging
+            session.rollback()
+            console.print(f"[red]✗ Failed to update account: {exc}[/]")
+            raise typer.Exit(1) from exc
+
+
+@app.command(name="delete-account")
+def delete_account(account_id: int = typer.Argument(..., help="Account ID to delete")) -> None:
+    """Delete a bank account (and related transactions)."""
+    with get_db_session() as session:
+        repo = BankAccountRepository(session)
+        try:
+            deleted = repo.delete(account_id)
+            if not deleted:
+                console.print(f"[yellow]⚠️  Account {account_id} not found[/]")
+                raise typer.Exit(1)
+
+            session.commit()
+            console.print(f"[green]✓ Account {account_id} deleted[/]")
+        except typer.Exit:
+            session.rollback()
+            raise
+        except Exception as exc:  # pragma: no cover - defensive logging
+            session.rollback()
+            console.print(f"[red]✗ Failed to delete account: {exc}[/]")
+            raise typer.Exit(1) from exc
+
+
+# ============================================================================
+# TRANSACTION COMMANDS
+# ============================================================================
+
+
+@app.command(name="list-transactions")
+def list_transactions(
+    account_id: int | None = typer.Option(None, "--account", "-a", help="Filter by account ID"),
+    status: TransactionStatus | None = typer.Option(
+        None, "--status", help="Filter by status (UNMATCHED|MATCHED|IGNORED)"
+    ),
+    limit: int | None = typer.Option(20, "--limit", "-l", help="Limit results (default: 20)"),
+) -> None:
+    """List imported bank transactions."""
+    with get_db_session() as session:
+        tx_repo = BankTransactionRepository(session)
+        effective_limit = None if limit is None or limit <= 0 else limit
+        transactions = tx_repo.list_transactions(
+            account_id=account_id,
+            status=status,
+            limit=effective_limit,
+        )
+
+        if not transactions:
+            console.print("[yellow]ℹ️  No transactions found for the given filters.[/]")
+            return
+
+        table = Table(title="🔍 Bank Transactions", show_lines=False)
+        table.add_column("ID", style="cyan")
+        table.add_column("Date", justify="center")
+        table.add_column("Amount", justify="right")
+        table.add_column("Status", justify="center")
+        table.add_column("Account", justify="right")
+        table.add_column("Payment", justify="right")
+        table.add_column("Description", overflow="fold")
+
+        for tx in transactions:
+            table.add_row(
+                str(tx.id),
+                tx.date.strftime("%d/%m/%Y"),
+                f"{tx.amount:.2f}",
+                tx.status.value,
+                str(tx.account_id),
+                str(tx.matched_payment_id) if tx.matched_payment_id else "-",
+                (tx.description or "")[:80],
+            )
+
+        console.print(table)
+
+
+@app.command(name="show-transaction")
+def show_transaction(transaction_id: UUID = typer.Argument(..., help="Transaction UUID")) -> None:
+    """Show detailed information about a transaction."""
+    with get_db_session() as session:
+        tx_repo = BankTransactionRepository(session)
+        transaction = tx_repo.get_by_id(transaction_id)
+
+        if not transaction:
+            console.print(f"[red]✗ Transaction {transaction_id} not found[/]")
+            raise typer.Exit(1)
+
+        table = Table(title=f"Transaction {transaction_id}", show_header=False)
+        table.add_row("Account", str(transaction.account_id))
+        table.add_row("Date", transaction.date.strftime("%d/%m/%Y"))
+        table.add_row("Amount", f"{transaction.amount:.2f}")
+        table.add_row("Status", transaction.status.value)
+        table.add_row("Matched Payment", str(transaction.matched_payment_id or "-"))
+        table.add_row(
+            "Confidence",
+            f"{transaction.match_confidence:.2%}" if transaction.match_confidence else "-",
+        )
+        table.add_row("Match Type", transaction.match_type.value if transaction.match_type else "-")
+        table.add_row("Description", transaction.description or "-")
+        table.add_row("Reference", transaction.reference or "-")
+        table.add_row("Counterparty", transaction.counterparty or "-")
+        table.add_row("Counterparty IBAN", transaction.counterparty_iban or "-")
+        console.print(table)
 
 
 # ============================================================================
@@ -278,7 +531,99 @@ def match(
 
 
 # ============================================================================
-# COMMAND 3: queue (Interactive Review)
+# COMMAND 3: reconcile (batch)
+# ============================================================================
+
+
+@app.command(name="reconcile")
+def reconcile(
+    account_id: int = typer.Option(..., "--account", "-a", help="Bank account to reconcile"),
+    mode: str = typer.Option(
+        "auto",
+        "--mode",
+        "-m",
+        help="Reconciliation mode: 'auto' applies matches, 'preview' only reports",
+    ),
+    confidence: float = typer.Option(0.85, "--confidence", "-c", min=0.0, max=1.0),
+) -> None:
+    """Run batch reconciliation for an account."""
+
+    mode_normalized = mode.lower().strip()
+    if mode_normalized not in {"auto", "preview"}:
+        console.print("[red]✗ Invalid mode. Use 'auto' or 'preview'.[/]")
+        raise typer.Exit(1)
+
+    with get_db_session() as session:
+        matching_service = _build_matching_service(
+            session,
+            strategies=[ExactAmountMatcher(), CompositeMatcher()],
+        )
+        event_bus = create_event_bus()
+        reconciliation_service = ReconciliationService(
+            BankTransactionRepository(session),
+            PaymentRepository(session),
+            matching_service,
+            session,
+            event_bus=event_bus,
+        )
+
+        try:
+            result = _run(
+                reconciliation_service.reconcile_batch(
+                    account_id=account_id,
+                    auto_apply=mode_normalized == "auto",
+                    auto_apply_threshold=confidence,
+                )
+            )
+
+            if mode_normalized == "auto":
+                session.commit()
+            else:
+                session.rollback()
+
+            summary = Table(title="🤝 Reconciliation Summary", show_header=True)
+            summary.add_column("Metric", style="cyan")
+            summary.add_column("Value", justify="right")
+            summary.add_row("Processed", str(result.total_count))
+            summary.add_row("Matched", str(result.matched_count))
+            summary.add_row("Needs review", str(result.review_count))
+            summary.add_row("Unmatched", str(result.unmatched_count))
+            summary.add_row("Match rate", f"{result.match_rate:.1%}")
+            console.print(summary)
+
+            if result.errors:
+                console.print("\n[red]Errors during reconciliation:[/]")
+                for err in result.errors:
+                    console.print(f"  • {err}")
+
+            if mode_normalized == "preview" and result.matches:
+                preview_table = Table(title="Suggested Matches (top results)")
+                preview_table.add_column("Transaction")
+                preview_table.add_column("Payment")
+                preview_table.add_column("Confidence", justify="right")
+                preview_table.add_column("Reason")
+
+                for tx, matches in result.matches[:10]:
+                    if not matches:
+                        continue
+                    top = matches[0]
+                    preview_table.add_row(
+                        str(tx.id),
+                        str(top.payment.id),
+                        f"{top.confidence:.1%}",
+                        top.match_reason[:60],
+                    )
+
+                console.print(preview_table)
+
+        except Exception as exc:  # pragma: no cover - defensive logging
+            session.rollback()
+            console.print(f"[red]✗ Reconciliation failed: {exc}[/]")
+            raise typer.Exit(1) from exc
+
+
+# ============================================================================
+# COMMAND 4: queue (Interactive Review)
 # ============================================================================
 
 
@@ -412,7 +757,101 @@ def queue(
 
 
 # ============================================================================
-# COMMAND 4: schedule-reminders
+# COMMAND 5: match single transaction
+# ============================================================================
+
+
+@app.command(name="match-transaction")
+def match_transaction(
+    transaction_id: UUID = typer.Argument(..., help="Transaction UUID to reconcile"),
+    payment_id: int = typer.Argument(..., help="Payment ID to match to"),
+    match_type: MatchType = typer.Option(
+        MatchType.MANUAL,
+        "--match-type",
+        "-t",
+        help="Match type to record",
+        case_sensitive=False,
+    ),
+    confidence: float | None = typer.Option(
+        None, "--confidence", "-c", help="Optional confidence score (0.0-1.0)"
+    ),
+) -> None:
+    """Manually match a transaction to a payment."""
+    with get_db_session() as session:
+        matching_service = _build_matching_service(
+            session,
+            strategies=[ExactAmountMatcher(), CompositeMatcher()],
+        )
+        event_bus = create_event_bus()
+        reconciliation_service = ReconciliationService(
+            BankTransactionRepository(session),
+            PaymentRepository(session),
+            matching_service,
+            session,
+            event_bus=event_bus,
+        )
+
+        try:
+            tx = _run(
+                reconciliation_service.reconcile(
+                    transaction_id=transaction_id,
+                    payment_id=payment_id,
+                    match_type=match_type,
+                    confidence=confidence,
+                )
+            )
+            session.commit()
+            console.print(
+                f"[green]✓ Transaction {transaction_id} matched to payment {payment_id} ({match_type.value})[/]"
+            )
+            if tx.match_confidence is not None:
+                console.print(f"  Confidence: {tx.match_confidence:.2%}")
+        except ValueError as exc:
+            session.rollback()
+            console.print(f"[red]✗ {exc}[/]")
+            raise typer.Exit(1) from exc
+        except Exception as exc:  # pragma: no cover - defensive logging
+            session.rollback()
+            console.print(f"[red]✗ Failed to match transaction: {exc}[/]")
+            raise typer.Exit(1) from exc
+
+
+@app.command(name="unmatch-transaction")
+def unmatch_transaction(
+    transaction_id: UUID = typer.Argument(..., help="Transaction UUID to reset")
+) -> None:
+    """Undo a previous reconciliation for a transaction."""
+
+    with get_db_session() as session:
+        matching_service = _build_matching_service(
+            session,
+            strategies=[ExactAmountMatcher(), CompositeMatcher()],
+        )
+        event_bus = create_event_bus()
+        reconciliation_service = ReconciliationService(
+            BankTransactionRepository(session),
+            PaymentRepository(session),
+            matching_service,
+            session,
+            event_bus=event_bus,
+        )
+
+        try:
+            _run(reconciliation_service.reset_transaction(transaction_id))
+            session.commit()
+            console.print(f"[green]✓ Transaction {transaction_id} reset to UNMATCHED[/]")
+        except ValueError as exc:
+            session.rollback()
+            console.print(f"[red]✗ {exc}[/]")
+            raise typer.Exit(1) from exc
+        except Exception as exc:  # pragma: no cover - defensive logging
+            session.rollback()
+            console.print(f"[red]✗ Failed to reset transaction: {exc}[/]")
+            raise typer.Exit(1) from exc
+
+
+# ============================================================================
+# COMMAND 6: schedule-reminders
 # ============================================================================
 
 
@@ -499,7 +938,7 @@ def schedule_reminders(
 
 
 # ============================================================================
-# COMMAND 5: process-reminders
+# COMMAND 7: process-reminders
 # ============================================================================
 
 
@@ -549,7 +988,82 @@ def process_reminders(
 
 
 # ============================================================================
-# COMMAND 6: stats
+# COMMAND 8: list reminders
+# ============================================================================
+
+
+@app.command(name="list-reminders")
+def list_reminders(
+    status: ReminderStatus | None = typer.Option(
+        None,
+        "--status",
+        help="Filter by status (PENDING|SENT|FAILED|CANCELLED)",
+        case_sensitive=False,
+    ),
+    payment_id: int | None = typer.Option(None, "--payment", help="Filter by payment ID"),
+    limit: int | None = typer.Option(50, "--limit", "-l", help="Limit results (default: 50)"),
+) -> None:
+    """List scheduled payment reminders."""
+
+    with get_db_session() as session:
+        repo = ReminderRepository(session)
+        effective_limit = None if limit is None or limit <= 0 else limit
+        reminders = repo.list_reminders(status=status, payment_id=payment_id, limit=effective_limit)
+
+        if not reminders:
+            console.print("[yellow]ℹ️  No reminders found for the given filters.[/]")
+            return
+
+        table = Table(title="📬 Payment Reminders")
+        table.add_column("ID", justify="right", style="cyan")
+        table.add_column("Payment", justify="right")
+        table.add_column("Date", justify="center")
+        table.add_column("Status", justify="center")
+        table.add_column("Strategy", justify="center")
+        table.add_column("Days", justify="right")
+        table.add_column("Sent", justify="center")
+        table.add_column("Notes", overflow="fold")
+
+        for reminder in reminders:
+            due_date = getattr(reminder.payment, "data_scadenza", None)
+            table.add_row(
+                str(reminder.id),
+                str(reminder.payment_id),
+                reminder.reminder_date.strftime("%d/%m/%Y"),
+                reminder.status.value,
+                reminder.strategy.value,
+                str(reminder.days_before_due),
+                reminder.sent_date.strftime("%d/%m/%Y") if reminder.sent_date else "-",
+                f"Due: {due_date.strftime('%d/%m/%Y')}" if due_date else "-",
+            )
+
+        console.print(table)
+
+
+@app.command(name="cancel-reminder")
+def cancel_reminder(reminder_id: int = typer.Argument(..., help="Reminder ID to cancel")) -> None:
+    """Cancel a scheduled reminder if it hasn't been sent yet."""
+
+    with get_db_session() as session:
+        repo = ReminderRepository(session)
+        reminder = repo.get_by_id(reminder_id)
+        if not reminder:
+            console.print(f"[red]✗ Reminder {reminder_id} not found[/]")
+            raise typer.Exit(1)
+
+        if reminder.status == ReminderStatus.SENT:
+            console.print(f"[yellow]⚠️  Reminder {reminder_id} already sent; cannot cancel.[/]")
+            raise typer.Exit(1)
+
+        reminder.cancel()
+        repo.update(reminder)
+        session.commit()
+
+        console.print(f"[green]✓ Reminder {reminder_id} cancelled[/]")
+
+
+# ============================================================================
+# COMMAND 9: stats
 # ============================================================================
 
 

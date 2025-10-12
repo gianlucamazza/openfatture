@@ -146,7 +146,7 @@ Highlights:
 ---
 
 ## 🗺️ Next Release (v1.0.2 Preview)
-- **Payment CLI parity** – implementare i comandi mancanti (account, reconcile, reminder management). Dettagli in `docs/history/NEXT_RELEASE_PLAN.md`.
+- **Payment CLI parity** – comandi core consegnati (account, reconcile, reminder management). Prossimi step: UX avanzata e audit trail (`docs/history/NEXT_RELEASE_PLAN.md`).
 - **Coverage uplift** – alzare la soglia CI a ≥60% e stimare roadmap verso l'85%.
 - **Doc & UX alignment** – aggiornare `docs/CLI_REFERENCE.md`, completare esempi CLI e sincronizzare la dashboard interattiva con i nuovi comandi.
 
