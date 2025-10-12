@@ -174,12 +174,26 @@ jobs:
         run: |
           scenario="${{ github.event.inputs.scenario || 'all' }}"
 
+          # Set timeout for each video generation to prevent runaway processes
+          export VHS_TIMEOUT=120  # 2 minutes per scenario max
+
           if [ "$scenario" = "all" ]; then
-            echo "→ Generating all scenarios..."
-            make media-all
+            echo "→ Generating all scenarios with timeout protection..."
+            # Run each scenario with timeout to prevent excessive costs
+            for s in A B C D E; do
+              echo "→ Generating scenario $s..."
+              timeout $VHS_TIMEOUT make media-scenario$s || echo "⚠️ Scenario $s failed or timed out (expected for API-requiring scenarios without key)"
+            done
           else
-            echo "→ Generating scenario $scenario..."
-            make media-scenario${scenario}
+            echo "→ Generating scenario $scenario with timeout protection..."
+            timeout $VHS_TIMEOUT make media-scenario${scenario} || {
+              echo "⚠️ Scenario $scenario failed or timed out"
+              if [ "$scenario" = "C" ]; then
+                echo "ℹ️ Scenario C may fail without Ollama available"
+              else
+                echo "ℹ️ This may be due to missing API key or other configuration"
+              fi
+            }
           fi
 
       - name: Check generated videos
