@@ -22,7 +22,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v1
         with:
-          version: '0.4.0'
+          version: '0.7.12'  # Using a recent stable version
 
       - name: Set up Python
         run: uv python install 3.12
@@ -50,7 +50,22 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: uvx twine upload dist/*
+        run: |
+          echo "Publishing to PyPI..."
+          # Check current package version
+          PACKAGE_VERSION=$(python -c "from openfatture import __version__; print(__version__)")
+          echo "Package version: $PACKAGE_VERSION"
+
+          # Try to upload with skip-existing flag to avoid errors on duplicate uploads
+          uvx twine upload --skip-existing dist/* --verbose
+
+          # Check if upload was successful or skipped
+          if [ $? -eq 0 ]; then
+            echo "✓ PyPI upload completed (or skipped if already exists)"
+          else
+            echo "⚠️ PyPI upload failed"
+            exit 1
+          fi
 
   # Docker Hub publishing - to be configured later
   # docker:
