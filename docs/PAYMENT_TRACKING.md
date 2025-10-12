@@ -614,7 +614,7 @@ L'applicazione espone i seguenti comandi Typer (tutti accessibili via `uv run op
 
 | Command | Descrizione | Opzioni principali |
 |---------|-------------|--------------------|
-| `import <file>` | Importa un estratto conto e avvia il matching automatico (opzionale). | `--account / -a`, `--bank / -b`, `--auto-match/--no-auto-match`, `--confidence` |
+| `import <file>` *(alias `import-statement`)* | Importa un estratto conto e avvia il matching automatico (opzionale). | `--account / -a`, `--bank / -b`, `--auto-match/--no-auto-match`, `--confidence` |
 | `match` | Riesegue il matching per le transazioni non riconciliate. | `--account / -a`, `--confidence`, `--auto-apply/--manual-only`, `--limit` |
 | `queue` | Gestisce la coda di revisione manuale (interattiva o elenco). | `--account / -a`, `--interactive/--list-only`, `--min`, `--max` |
 | `schedule-reminders <payment_id>` | Pianifica i promemoria per un pagamento. | `--strategy` (`default`/`aggressive`/`gentle`/`minimal`) |

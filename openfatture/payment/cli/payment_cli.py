@@ -74,7 +74,7 @@ def get_db_session() -> Iterator[Session]:
 # ============================================================================
 
 
-@app.command(name="import")
+@app.command()
 def import_statement(
     file_path: Path = typer.Argument(..., help="Bank statement file path", exists=True),
     account_id: int = typer.Option(..., "--account", "-a", help="Bank account ID"),
@@ -174,6 +174,27 @@ def import_statement(
                 console.print(
                     "\n[yellow]💡 Tip: Run 'openfatture payment queue' to review medium-confidence matches[/]"
                 )
+
+
+@app.command(name="import")
+def import_alias(
+    file_path: Path = typer.Argument(..., help="Bank statement file path", exists=True),
+    account_id: int = typer.Option(..., "--account", "-a", help="Bank account ID"),
+    bank_preset: str | None = typer.Option(
+        None, "--bank", "-b", help="Bank preset (intesa|unicredit|revolut|...)"
+    ),
+    auto_match: bool = typer.Option(True, "--auto-match/--no-auto-match"),
+    confidence: float = typer.Option(0.85, "--confidence", "-c", min=0.0, max=1.0),
+) -> None:
+    """Alias `import` per retrocompatibilità con `import-statement`."""
+
+    import_statement(
+        file_path=file_path,
+        account_id=account_id,
+        bank_preset=bank_preset,
+        auto_match=auto_match,
+        confidence=confidence,
+    )
 
 
 # ============================================================================

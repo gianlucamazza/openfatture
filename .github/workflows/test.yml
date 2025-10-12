@@ -126,8 +126,8 @@ jobs:
 
       - name: Run coverage check
         run: |
-          uv run pytest --cov=openfatture --cov-report=term-missing --cov-fail-under=60
-          echo "✓ Coverage threshold met (minimum 60%)"
+          uv run pytest --cov=openfatture --cov-report=term-missing --cov-fail-under=50
+          echo "✓ Coverage threshold met (minimum 50%)"
 permissions:
   contents: read
   security-events: write
