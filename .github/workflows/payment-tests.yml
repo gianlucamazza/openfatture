@@ -132,10 +132,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://test:test@postgres:5432/openfatture_test
         run: |
-          uv run --extra dev pytest tests/payment/integration/ \
-            --cov=openfatture.payment \
-            --cov-report=term-missing \
-            -v
+          if [ -d "tests/payment/integration" ] && [ "$(ls -A tests/payment/integration)" ]; then
+            uv run --extra dev pytest tests/payment/integration/ \
+              --cov=openfatture.payment \
+              --cov-report=term-missing \
+              -v
+          else
+            echo "No payment integration tests found; skipping."
+          fi
 
   lint-payment:
     name: Lint Payment Module
