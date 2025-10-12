@@ -62,7 +62,7 @@ jobs:
 
       - name: Run payment module tests
         run: |
-          uv run pytest tests/payment/ \
+          uv run --extra dev pytest tests/payment/ \
             --override-ini=addopts= \
             --cov=openfatture.payment \
             --cov-fail-under=85 \
@@ -132,7 +132,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://test:test@postgres:5432/openfatture_test
         run: |
-          uv run pytest tests/payment/integration/ \
+          uv run --extra dev pytest tests/payment/integration/ \
             --cov=openfatture.payment \
             --cov-report=term-missing \
             -v
@@ -157,13 +157,13 @@ jobs:
         run: uv sync --all-extras --python $(which python3)
 
       - name: Run Black on payment module
-        run: uv run python -m black --check openfatture/payment/ tests/payment/
+        run: uv run --extra dev python -m black --check openfatture/payment/ tests/payment/
 
       - name: Run Ruff on payment module
-        run: uv run ruff check openfatture/payment/ tests/payment/
+        run: uv run --extra dev ruff check openfatture/payment/ tests/payment/
 
       - name: Run MyPy on payment module
-        run: uv run mypy openfatture/payment/
+        run: uv run --extra dev mypy openfatture/payment/
         continue-on-error: true
 
   test-fixtures:
@@ -187,18 +187,18 @@ jobs:
 
       - name: Validate bank statement fixtures
         run: |
-          uv run pytest tests/payment/infrastructure/importers/ \
+          uv run --extra dev pytest tests/payment/infrastructure/importers/ \
             --fixtures \
             -v
 
       - name: Test CSV parsers
         run: |
-          uv run pytest tests/payment/infrastructure/importers/test_csv_importer.py \
+          uv run --extra dev pytest tests/payment/infrastructure/importers/test_csv_importer.py \
             -v
 
       - name: Test OFX parsers
         run: |
-          uv run pytest tests/payment/infrastructure/importers/test_ofx_importer.py \
+          uv run --extra dev pytest tests/payment/infrastructure/importers/test_ofx_importer.py \
             -v
         continue-on-error: true  # OFX tests may fail if fixtures not ready
 
