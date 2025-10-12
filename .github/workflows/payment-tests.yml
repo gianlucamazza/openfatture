@@ -23,6 +23,9 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  UV_EXTRA: dev
+
 jobs:
   test-payment:
     name: Test Payment Module
