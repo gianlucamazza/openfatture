@@ -145,10 +145,17 @@ Highlights:
 
 ---
 
+## 🗺️ Next Release (v1.0.2 Preview)
+- **Payment CLI parity** – implementare i comandi mancanti (account, reconcile, reminder management). Dettagli in `docs/history/NEXT_RELEASE_PLAN.md`.
+- **Coverage uplift** – alzare la soglia CI a ≥60% e stimare roadmap verso l'85%.
+- **Doc & UX alignment** – aggiornare `docs/CLI_REFERENCE.md`, completare esempi CLI e sincronizzare la dashboard interattiva con i nuovi comandi.
+
+---
+
 ## Success Criteria & Metrics
 
 - **Compliance:** Keep FatturaPA/SDI compatibility up to date (audited each release).
-- **Quality:** Maintain ≥85% test coverage; expand tests when new domains land.
+- **Quality:** Incrementare la copertura (gate CI ≥60% in v1.0.2, obiettivo 85% a medio termine); ampliare i test quando arrivano nuovi moduli.
 - **AI adoption:** ≥60% of active users leverage AI features; monitor cost per AI-assisted invoice (<€0.10 target).
 - **Payments:** ≥95% reconciliation accuracy per banca supportata con reminder affidabili.
 - **Documentation:** Update `docs/README.md`, release notes, and roadmap at every tagged release.

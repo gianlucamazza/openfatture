@@ -76,7 +76,7 @@
 - ✅ CLI commands (`openfatture/cli/commands/ai.py`)
   - `ai describe` - Functional
   - `ai suggest-vat` - Functional
-  - `ai forecast` - Functional (Prophet + XGBoost ensemble con modelli/versioni salvati)
+- `ai forecast` - Functional (Prophet + XGBoost ensemble con modelli/versioni salvati)
   - `ai check` - Stub
 
 ### 🚧 Partially Implemented

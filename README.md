@@ -30,7 +30,7 @@
 - **Core invoicing** – Generazione FatturaPA XML v1.9, invio SDI via PEC, firme digitali e validazione automatica.
 - **Payment & reconciliation** – Import multi-banca, riconciliazione intelligente e reminder configurabili (`docs/PAYMENT_TRACKING.md`).
 - **AI workflows** – Chat assistant, suggerimenti IVA e descrizioni automatiche con provider OpenAI/Anthropic/Ollama (`examples/AI_CHAT_ASSISTANT.md`).
-- **Developer experience** – Stack Python moderno (uv, Typer, Pydantic), test >80% di copertura, Docker e script pronti.
+- **Developer experience** – Stack Python moderno (uv, Typer, Pydantic), 117 test automatizzati con gate di copertura al 60% (in crescita), Docker e script pronti.
 - **Compliance & operations** – Gestione GDPR, log di audit, template email professionali e flussi PEC pronti all’uso.
 
 ---

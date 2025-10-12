@@ -59,6 +59,8 @@ dependencies = [
     # Vector Store & Embeddings
     "chromadb>=0.4.22",
     "sentence-transformers>=2.6.0",
+    "prophet>=1.1.5",
+    "xgboost>=2.1.0",
     # Date & Time
     "python-dateutil>=2.8.2",
     # Fuzzy String Matching

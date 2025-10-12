@@ -74,7 +74,7 @@ def get_db_session() -> Iterator[Session]:
 # ============================================================================
 
 
-@app.command()
+@app.command(name="import")
 def import_statement(
     file_path: Path = typer.Argument(..., help="Bank statement file path", exists=True),
     account_id: int = typer.Option(..., "--account", "-a", help="Bank account ID"),

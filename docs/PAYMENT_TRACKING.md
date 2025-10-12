@@ -608,96 +608,42 @@ for result in results:
         print(f"✗ Failed: {result.error}")
 ```
 
-### CLI Commands
+### CLI Command Reference
+
+L'applicazione espone i seguenti comandi Typer (tutti accessibili via `uv run openfatture payment ...`):
+
+| Command | Descrizione | Opzioni principali |
+|---------|-------------|--------------------|
+| `import <file>` | Importa un estratto conto e avvia il matching automatico (opzionale). | `--account / -a`, `--bank / -b`, `--auto-match/--no-auto-match`, `--confidence` |
+| `match` | Riesegue il matching per le transazioni non riconciliate. | `--account / -a`, `--confidence`, `--auto-apply/--manual-only`, `--limit` |
+| `queue` | Gestisce la coda di revisione manuale (interattiva o elenco). | `--account / -a`, `--interactive/--list-only`, `--min`, `--max` |
+| `schedule-reminders <payment_id>` | Pianifica i promemoria per un pagamento. | `--strategy` (`default`/`aggressive`/`gentle`/`minimal`) |
+| `process-reminders` | Processa e invia i promemoria in scadenza. | `--date` (YYYY-MM-DD) |
+| `stats` | Mostra statistiche aggregate per stato (UNMATCHED/MATCHED/IGNORED). | `--account / -a` |
+
+Esempi pratici:
 
 ```bash
-# Schedule reminders for all unpaid invoices
-openfatture payment schedule-reminders --strategy DEFAULT
+# Import CSV con preset Intesa e matching automatico al 90%
+uv run openfatture payment import data/intesa.csv --account 1 --bank intesa --confidence 0.90
 
-# Send pending reminders
-openfatture payment process-reminders
+# Ricalcola i match per un conto specifico senza applicazione automatica
+uv run openfatture payment match --account 1 --confidence 0.75 --manual-only
 
-# View upcoming reminders
-openfatture payment list-reminders --status PENDING
+# Avvia la revisione interattiva della coda (intervallo confidenza 0.6-0.84)
+uv run openfatture payment queue --account 1 --min 0.60 --max 0.84
 
-# Cancel reminder
-openfatture payment cancel-reminder <reminder_id>
+# Pianifica promemoria per il pagamento 123 con strategia aggressiva
+uv run openfatture payment schedule-reminders 123 --strategy aggressive
+
+# Processa i promemoria previsti per una data specifica
+uv run openfatture payment process-reminders --date 2025-01-15
+
+# Statistiche complessive
+uv run openfatture payment stats
 ```
 
----
-
-## CLI Commands
-
-### Account Management
-
-```bash
-# Create bank account
-openfatture payment create-account \
-  --name "Intesa Business" \
-  --iban "IT60X0542811101000000123456" \
-  --bank "Intesa Sanpaolo"
-
-# List accounts
-openfatture payment list-accounts
-
-# Update account
-openfatture payment update-account 1 --name "Primary Account"
-
-# Delete account
-openfatture payment delete-account 1
-```
-
-### Transaction Import
-
-```bash
-# Import transactions
-openfatture payment import transactions.csv \
-  --account-id 1 \
-  --preset intesa
-
-# List transactions
-openfatture payment list-transactions \
-  --account-id 1 \
-  --status UNMATCHED
-
-# View transaction details
-openfatture payment show-transaction <uuid>
-```
-
-### Reconciliation
-
-```bash
-# Auto-reconcile all unmatched
-openfatture payment reconcile --auto
-
-# Reconcile with manual review
-openfatture payment reconcile --review
-
-# Match specific transaction to payment
-openfatture payment match-transaction <transaction_id> <payment_id>
-
-# Unmatch transaction
-openfatture payment unmatch-transaction <transaction_id>
-
-# View reconciliation stats
-openfatture payment stats
-```
-
-### Reminders
-
-```bash
-# Schedule reminders
-openfatture payment schedule-reminders --strategy DEFAULT
-
-# Process pending reminders
-openfatture payment process-reminders
-
-# List reminders
-openfatture payment list-reminders --status PENDING
-
-# Cancel reminder
-openfatture payment cancel-reminder <reminder_id>
-```
+> ℹ️ Le funzionalità di gestione conto (`create-account`, `list-accounts`, …) e di revisione avanzata verranno introdotte nella prossima release (vedi *Next Release Planning*).
 
 ## API Reference
 
