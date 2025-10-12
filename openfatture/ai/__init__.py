@@ -39,7 +39,7 @@ from openfatture.ai.providers import (
     create_provider,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = [
     # Domain
