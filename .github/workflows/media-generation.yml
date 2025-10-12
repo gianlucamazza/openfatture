@@ -88,13 +88,13 @@ jobs:
           CEDENTE_EMAIL=demo@openfatture.dev
 
           # AI Configuration - Anthropic Claude Sonnet 4.5
-          AI_PROVIDER=anthropic
-          AI_MODEL=claude-sonnet-4-5
+          OPENFATTURE_AI_PROVIDER=anthropic
+          OPENFATTURE_AI_ANTHROPIC_MODEL=claude-4.5-sonnet  # Using actual model name from settings
           OPENFATTURE_AI_ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-          AI_TEMPERATURE=0.7
-          AI_MAX_TOKENS=2000
-          AI_CHAT_ENABLED=true
-          AI_TOOLS_ENABLED=true
+          OPENFATTURE_AI_TEMPERATURE=0.7
+          OPENFATTURE_AI_MAX_TOKENS=2000
+          OPENFATTURE_AI_CHAT_ENABLED=true
+          OPENFATTURE_AI_TOOLS_ENABLED=true
 
           # Notifications
           NOTIFICATION_EMAIL=ci@openfatture.dev
@@ -113,7 +113,7 @@ jobs:
           print(f'Model: {settings.anthropic_model}')
           print(f'Configured: {settings.is_provider_configured()}')
           assert settings.provider == 'anthropic'
-          assert settings.anthropic_model == 'claude-sonnet-4-5'
+          assert settings.anthropic_model == 'claude-4.5-sonnet'
           assert settings.is_provider_configured()
           print('✓ Anthropic configuration verified')
           "
