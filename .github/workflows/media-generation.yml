@@ -315,26 +315,34 @@ jobs:
             echo "✓ Successfully triggered optimization workflow"
           fi
 
-      - name: Generate summary
+      - name: Generate cost and usage summary
         run: |
+          PROVIDER="${{ steps.verify_ai.outputs.provider }}"
+
           echo "## 🎬 Media Generation Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
           if [ "${{ steps.check_videos.outputs.found }}" != "true" ]; then
             echo "No videos were generated during this run." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
           echo "**Scenario:** ${{ github.event.inputs.scenario || 'all' }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.verify_ai.outputs.provider }}" = "anthropic" ]; then
+
+          if [ "$PROVIDER" = "anthropic" ]; then
             echo "**Provider:** Anthropic (controlled costs)" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ steps.verify_ai.outputs.provider }}" = "ollama" ]; then
+            echo "**Cost Controls Active:** ✅ Max tokens: 1000, Daily budget: $1.00" >> $GITHUB_STEP_SUMMARY
+            echo "**Estimated Cost Range:** USD 0.05 - 0.50 (depending on video length and AI usage)" >> $GITHUB_STEP_SUMMARY
+          elif [ "$PROVIDER" = "ollama" ]; then
             echo "**Provider:** Ollama (cost-free local)" >> $GITHUB_STEP_SUMMARY
+            echo "**Cost Controls Active:** ✅ All AI usage is local, no API costs" >> $GITHUB_STEP_SUMMARY
+            echo "**Estimated Cost:** USD 0.00" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Provider:** ${{ steps.verify_ai.outputs.provider }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Provider:** $PROVIDER" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "**Model:** ${{ steps.verify_ai.outputs.model }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Videos generated:** $(find media/output -maxdepth 1 -name '*.mp4' | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "**Videos Generated:** $(find media/output -maxdepth 1 -name '*.mp4' -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
 
           # Add validation status to summary
           if [ "${{ steps.validate_videos.outputs.validated }}" = "true" ]; then
@@ -343,6 +351,17 @@ jobs:
             echo "**Validation:** ❌ Some videos are invalid" >> $GITHUB_STEP_SUMMARY
           fi
 
+          # Add execution metrics
           echo "" >> $GITHUB_STEP_SUMMARY
+
           echo "### Files:" >> $GITHUB_STEP_SUMMARY
           find media/output -maxdepth 1 -name '*.mp4' -type f -print0 | xargs -0 ls -lh | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Cost & Safety Measures:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ API key validation performed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Fallback to Ollama when Anthropic key unavailable" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Max tokens limited to 1000 per request" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Daily budget set to $1.00 maximum" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Timeout protection (2 min max per scenario)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Video validation before optimization" >> $GITHUB_STEP_SUMMARY
