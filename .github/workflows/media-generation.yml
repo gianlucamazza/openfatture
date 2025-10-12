@@ -164,6 +164,57 @@ jobs:
           total_size=$(du -ch media/output/*.mp4 | grep total | awk '{print $1}')
           echo "Total size: $total_size"
 
+      - name: Validate video files
+        if: steps.check_videos.outputs.found == 'true'
+        id: validate_videos
+        run: |
+          echo "Validating video files..."
+          all_valid=true
+
+          for video in media/output/*.mp4; do
+            echo "Validating: $video"
+
+            # Check if file exists and has content
+            if [ ! -f "$video" ] || [ ! -s "$video" ]; then
+              echo "❌ $video does not exist or is empty"
+              all_valid=false
+              continue
+            fi
+
+            # Check file size (min 10KB to catch empty/truncated files)
+            size=$(stat -c%s "$video")
+            if [ "$size" -lt 10240 ]; then
+              echo "❌ $video is too small (only $size bytes)"
+              all_valid=false
+              continue
+            fi
+
+            # Use ffprobe to check if it's a valid MP4 file with moov atom
+            if ! timeout 10s ffprobe -v quiet -show_format -show_streams "$video" >/dev/null 2>&1; then
+              echo "❌ $video is not a valid video file or is corrupted"
+              all_valid=false
+              continue
+            fi
+
+            # Check for moov atom specifically using ffmpeg/ffprobe
+            if ! ffprobe -v quiet -show_format "$video" 2>/dev/null | grep -q "moov"; then
+              echo "❌ $video is missing moov atom and will fail optimization"
+              all_valid=false
+              continue
+            fi
+
+            echo "✓ $video is valid"
+          done
+
+          if [ "$all_valid" = "true" ]; then
+            echo "validated=true" >> "$GITHUB_OUTPUT"
+            echo "✓ All video files are valid"
+          else
+            echo "validated=false" >> "$GITHUB_OUTPUT"
+            echo "❌ Some video files are invalid"
+            exit 1  # Fail the step if any video is invalid
+          fi
+
       - name: Upload videos as artifacts
         if: steps.check_videos.outputs.found == 'true'
         uses: actions/upload-artifact@v4
@@ -175,7 +226,7 @@ jobs:
           compression-level: 0  # Videos are already compressed
 
       - name: Trigger optimization workflow
-        if: ${{ steps.check_videos.outputs.found == 'true' && !inputs.skip_optimization }}
+        if: ${{ steps.check_videos.outputs.found == 'true' && steps.validate_videos.outputs.validated == 'true' && !inputs.skip_optimization }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -200,6 +251,14 @@ jobs:
           echo "**Scenario:** ${{ github.event.inputs.scenario || 'all' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Provider:** Anthropic Claude Sonnet 4.5" >> $GITHUB_STEP_SUMMARY
           echo "**Videos generated:** $(find media/output -maxdepth 1 -name '*.mp4' | wc -l)" >> $GITHUB_STEP_SUMMARY
+
+          # Add validation status to summary
+          if [ "${{ steps.validate_videos.outputs.validated }}" = "true" ]; then
+            echo "**Validation:** ✅ All videos are valid" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Validation:** ❌ Some videos are invalid" >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Files:" >> $GITHUB_STEP_SUMMARY
           find media/output -maxdepth 1 -name '*.mp4' -type f -print0 | xargs -0 ls -lh | awk '{print "- " $9 " (" $5 ")"}' >> $GITHUB_STEP_SUMMARY
