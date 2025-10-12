@@ -54,6 +54,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install libomp on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew list libomp || brew install libomp
+          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:${DYLD_LIBRARY_PATH}" >> $GITHUB_ENV
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
