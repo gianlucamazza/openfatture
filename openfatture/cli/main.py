@@ -5,6 +5,9 @@ from rich.console import Console
 
 from openfatture import __version__
 
+# Payment CLI lives in the payment package to keep the top-level commands lean.
+from ..payment.cli import app as payment_app
+
 # Import command modules
 from .commands import (
     ai,
@@ -82,6 +85,7 @@ app.add_typer(notifiche.app, name="notifiche", help="📬 SDI notifications")
 app.add_typer(batch.app, name="batch", help="📦 Batch operations")
 app.add_typer(ai.app, name="ai", help="🤖 AI-powered assistance")
 app.add_typer(report.app, name="report", help="📊 Generate reports")
+app.add_typer(payment_app, name="payment", help="💰 Payment tracking & reconciliation")
 
 
 if __name__ == "__main__":
