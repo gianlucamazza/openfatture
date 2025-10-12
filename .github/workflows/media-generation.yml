@@ -70,10 +70,32 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --all-extras
 
-      - name: Configure Anthropic AI
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Validate API Key Availability
+        id: validate_api
         run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "info=API key not available" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Anthropic API key not configured in secrets"
+            echo "Using Ollama as fallback provider for demo"
+          else
+            echo "info=API key available" >> "$GITHUB_OUTPUT"
+            echo "✓ Anthropic API key is configured"
+          fi
+
+      - name: Configure AI Provider
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "Using Ollama as provider (cost-free)"
+            PROVIDER_CONFIG="ollama"
+            MODEL_CONFIG="llama3.2"
+            API_KEY_CONFIG=""
+          else
+            echo "Using Anthropic as provider (with cost controls)"
+            PROVIDER_CONFIG="anthropic"
+            MODEL_CONFIG="claude-4.5-sonnet"
+            API_KEY_CONFIG="${{ secrets.ANTHROPIC_API_KEY }}"
+          fi
+
           cat > .env <<EOF
           # Database
           DATABASE_URL=sqlite:///./openfatture_demo.db
@@ -91,14 +113,18 @@ jobs:
           CEDENTE_TELEFONO="+39 02 1234567"
           CEDENTE_EMAIL=demo@openfatture.dev
 
-          # AI Configuration - Anthropic Claude Sonnet 4.5
-          OPENFATTURE_AI_PROVIDER=anthropic
-          OPENFATTURE_AI_ANTHROPIC_MODEL=claude-4.5-sonnet  # Using actual model name from settings
-          OPENFATTURE_AI_ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+          # AI Configuration - Safe defaults with fallback
+          OPENFATTURE_AI_PROVIDER=$PROVIDER_CONFIG
+          OPENFATTURE_AI_ANTHROPIC_MODEL=$MODEL_CONFIG
+          OPENFATTURE_AI_OLLAMA_MODEL=llama3.2
+          OPENFATTURE_AI_ANTHROPIC_API_KEY=$API_KEY_CONFIG
           OPENFATTURE_AI_TEMPERATURE=0.7
-          OPENFATTURE_AI_MAX_TOKENS=2000
+          OPENFATTURE_AI_MAX_TOKENS=1000  # Conservative default to control costs
+          OPENFATTURE_AI_MAX_COST_PER_REQUEST_USD=0.10  # Cost control
+          OPENFATTURE_AI_DAILY_BUDGET_USD=1.0  # Daily budget limit
+          OPENFATTURE_AI_WARN_COST_THRESHOLD_USD=0.05  # Warning threshold
           OPENFATTURE_AI_CHAT_ENABLED=true
-          OPENFATTURE_AI_TOOLS_ENABLED=true
+          OPENFATTURE_AI_TOOLS_ENABLED=false  # Disable tools to reduce costs
 
           # Notifications
           NOTIFICATION_EMAIL=ci@openfatture.dev
@@ -106,21 +132,37 @@ jobs:
           LOCALE=it
           EOF
 
-          echo "✓ Anthropic configured with claude-sonnet-4-5"
+          echo "✓ AI configured with provider: $PROVIDER_CONFIG"
 
-      - name: Verify Anthropic configuration
+      - name: Verify AI configuration
+        id: verify_ai
         run: |
           uv run python -c "
           from openfatture.ai.config.settings import get_ai_settings
           settings = get_ai_settings()
           print(f'Provider: {settings.provider}')
-          print(f'Model: {settings.anthropic_model}')
+          print(f'Model: {settings.get_model_for_provider()}')
           print(f'Configured: {settings.is_provider_configured()}')
-          assert settings.provider == 'anthropic'
-          assert settings.anthropic_model == 'claude-4.5-sonnet'
-          assert settings.is_provider_configured()
-          print('✓ Anthropic configuration verified')
+          print(f'Max tokens: {settings.max_tokens}')
+          print(f'Daily budget: ${settings.daily_budget_usd}')
+          print(f'Max cost per request: ${settings.max_cost_per_request_usd}')
+          assert settings.provider in ['anthropic', 'ollama']
+          assert settings.max_tokens <= 1000  # Cost control check
+          assert settings.daily_budget_usd <= 1.0  # Budget control check
+          assert settings.is_provider_configured() or settings.provider == 'ollama'  # Ollama doesn't need API key
+          print('✓ AI configuration verified with cost controls')
+
+          # Write provider and model info to outputs
+          with open('provider_info.txt', 'w') as f:
+              f.write(f'{settings.provider}\\n')
+              f.write(f'{settings.get_model_for_provider()}\\n')
           "
+
+          # Read the provider and model info
+          PROVIDER=$(sed -n '1p' provider_info.txt)
+          MODEL=$(sed -n '2p' provider_info.txt)
+          echo "provider=$PROVIDER" >> "$GITHUB_OUTPUT"
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
 
       - name: Reset demo environment
         run: |
@@ -262,7 +304,15 @@ jobs:
           fi
 
           echo "**Scenario:** ${{ github.event.inputs.scenario || 'all' }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Provider:** Anthropic Claude Sonnet 4.5" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.verify_ai.outputs.provider }}" = "anthropic" ]; then
+            echo "**Provider:** Anthropic (controlled costs)" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.verify_ai.outputs.provider }}" = "ollama" ]; then
+            echo "**Provider:** Ollama (cost-free local)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Provider:** ${{ steps.verify_ai.outputs.provider }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "**Model:** ${{ steps.verify_ai.outputs.model }}" >> $GITHUB_STEP_SUMMARY
           echo "**Videos generated:** $(find media/output -maxdepth 1 -name '*.mp4' | wc -l)" >> $GITHUB_STEP_SUMMARY
 
           # Add validation status to summary
