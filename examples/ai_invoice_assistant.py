@@ -104,16 +104,16 @@ async def example_3_with_client():
     agent = InvoiceAssistantAgent(provider=provider)
 
     context = InvoiceContext(
-        user_input="audit sicurezza applicazione",
-        servizio_base="audit sicurezza applicazione",
+        user_input="Application security audit",
+        servizio_base="Application security audit",
         ore_lavorate=16.0,
         tariffa_oraria=150.0,
         cliente=cliente,
         tecnologie=["OWASP", "Security Testing", "Penetration Testing"],
         deliverables=[
-            "Report audit completo",
-            "Lista vulnerabilità",
-            "Piano remediation",
+            "Comprehensive audit report",
+            "Vulnerability list",
+            "Remediation plan",
             "Best practices",
         ],
     )
@@ -123,19 +123,19 @@ async def example_3_with_client():
     if response.metadata.get("is_structured"):
         model = response.metadata["parsed_model"]
 
-        print(f"Cliente: {cliente.denominazione}")
-        print(f"\nDescrizione:\n{model['descrizione_completa']}")
+        print(f"Customer: {cliente.denominazione}")
+        print(f"\nDescription:\n{model['descrizione_completa']}")
         print("\nDeliverables:")
         for item in model["deliverables"]:
             print(f"  • {item}")
-        print("\nCompetenze:")
+        print("\nSkills:")
         for skill in model["competenze"]:
             print(f"  • {skill}")
 
         # Calculate total
         total = context.ore_lavorate * context.tariffa_oraria
-        print(f"\nDurata: {model['durata_ore']}h @ €{context.tariffa_oraria}/h")
-        print(f"Totale: €{total:.2f}")
+        print(f"\nDuration: {model['durata_ore']}h @ €{context.tariffa_oraria}/h")
+        print(f"Total: €{total:.2f}")
 
     print(f"\nCost: ${response.usage.estimated_cost_usd:.4f}")
 

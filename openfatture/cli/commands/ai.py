@@ -777,10 +777,12 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
 
     # Status panel
     if report.is_compliant:
-        status_text = "[bold green]✓ COMPLIANT[/bold green]\n\nL'invoice è pronta per l'invio a SDI"
+        status_text = (
+            "[bold green]✓ COMPLIANT[/bold green]\n\nThe invoice is ready for SDI submission"
+        )
         border_style = "green"
     else:
-        status_text = f"[bold red]✗ NOT COMPLIANT[/bold red]\n\nTrovati {len(report.get_errors())} errori critici"
+        status_text = f"[bold red]✗ NOT COMPLIANT[/bold red]\n\nFound {len(report.get_errors())} critical errors"
         border_style = "red"
 
     console.print(

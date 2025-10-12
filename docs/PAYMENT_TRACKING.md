@@ -610,52 +610,52 @@ for result in results:
 
 ### CLI Command Reference
 
-L'applicazione espone i seguenti comandi Typer (tutti accessibili via `uv run openfatture payment ...`):
+The Typer application exposes the following commands (run them via `uv run openfatture payment ...`):
 
-| Command | Descrizione | Opzioni principali |
-|---------|-------------|--------------------|
-| `create-account <nome>` | Crea un conto bancario per le importazioni. | `--iban`, `--bank-name`, `--bic`, `--currency`, `--opening-balance`, `--notes` |
-| `list-accounts` | Elenca i conti (solo attivi o tutti con `--all`). | `--all` |
-| `update-account <id>` | Aggiorna metadati e stato di un conto. | `--name`, `--iban`, `--bank-name`, `--bic`, `--currency`, `--notes`, `--active/--inactive` |
-| `delete-account <id>` | Elimina un conto e le transazioni collegate. | - |
-| `import <file>` *(alias `import-statement`)* | Importa estratti conto e avvia il matching opzionale. | `--account / -a`, `--bank / -b`, `--auto-match/--no-auto-match`, `--confidence` |
-| `list-transactions` | Mostra transazioni importate con filtri per conto/stato. | `--account / -a`, `--status`, `--limit` |
-| `show-transaction <uuid>` | Visualizza il dettaglio di una transazione. | - |
-| `match` | Riesegue il matching per le transazioni non riconciliate. | `--account / -a`, `--confidence`, `--auto-apply/--manual-only`, `--limit` |
-| `reconcile` | Esegue la riconciliazione batch (`auto` oppure `preview`). | `--account / -a`, `--mode`, `--confidence` |
-| `match-transaction <uuid> <payment_id>` | Associa manualmente una transazione a un pagamento. | `--match-type`, `--confidence` |
-| `unmatch-transaction <uuid>` | Annulla una riconciliazione precedente. | - |
-| `queue` | Gestisce la coda di revisione manuale (interattiva o elenco). | `--account / -a`, `--interactive/--list-only`, `--min`, `--max` |
-| `schedule-reminders <payment_id>` | Pianifica promemoria per un pagamento. | `--strategy` (`default`/`aggressive`/`gentle`/`minimal`) |
-| `process-reminders` | Processa e invia i promemoria in scadenza. | `--date` (YYYY-MM-DD) |
-| `list-reminders` | Elenca i promemoria pianificati o inviati. | `--status`, `--payment`, `--limit` |
-| `cancel-reminder <id>` | Cancella un promemoria non ancora inviato. | - |
-| `stats` | Mostra statistiche aggregate per stato (UNMATCHED/MATCHED/IGNORED). | `--account / -a` |
+| Command | Description | Key options |
+|---------|-------------|-------------|
+| `create-account <name>` | Create a bank account used for imports. | `--iban`, `--bank-name`, `--bic`, `--currency`, `--opening-balance`, `--notes` |
+| `list-accounts` | List accounts (include inactive ones with `--all`). | `--all` |
+| `update-account <id>` | Update account metadata or status. | `--name`, `--iban`, `--bank-name`, `--bic`, `--currency`, `--notes`, `--active/--inactive` |
+| `delete-account <id>` | Delete an account and its transactions. | - |
+| `import <file>` | Import bank statements and optionally auto-match transactions. | `--account / -a`, `--bank / -b`, `--auto-match/--no-auto-match`, `--confidence` |
+| `list-transactions` | Show imported transactions filtered by account/status. | `--account / -a`, `--status`, `--limit` |
+| `show-transaction <uuid>` | Display transaction details. | - |
+| `match` | Re-run matching for unmatched transactions. | `--account / -a`, `--confidence`, `--auto-apply/--manual-only`, `--limit` |
+| `reconcile` | Perform batch reconciliation (`auto` or `preview`). | `--account / -a`, `--mode`, `--confidence` |
+| `match-transaction <uuid> <payment_id>` | Manually link a transaction to a payment. | `--match-type`, `--confidence` |
+| `unmatch-transaction <uuid>` | Undo a previous reconciliation. | - |
+| `queue` | Manage the review queue (interactive or list view). | `--account / -a`, `--interactive/--list-only`, `--min`, `--max` |
+| `schedule-reminders <payment_id>` | Schedule reminders for a payment. | `--strategy` (`default` / `aggressive` / `gentle` / `minimal`) |
+| `process-reminders` | Process and send due reminders. | `--date` (YYYY-MM-DD) |
+| `list-reminders` | List scheduled or sent reminders. | `--status`, `--payment`, `--limit` |
+| `cancel-reminder <id>` | Cancel a reminder that has not been sent yet. | - |
+| `stats` | Aggregate statistics by status (UNMATCHED/MATCHED/IGNORED). | `--account / -a` |
 
-Esempi pratici:
+Examples:
 
 ```bash
-# Crea un conto bancario di lavoro
+# Create a bank account
 uv run openfatture payment create-account "Intesa Business" \
   --iban IT60X0542811101000000123456 --bank-name "Intesa Sanpaolo" \
   --opening-balance 5000.00
 
-# Import CSV con preset Intesa e matching automatico al 90%
+# Import a CSV with the Intesa preset and 90% auto-matching
 uv run openfatture payment import data/intesa.csv --account 1 --bank intesa --confidence 0.90
 
-# Ricalcola i match per un conto specifico senza applicazione automatica
+# Re-run matching for a specific account without auto-apply
 uv run openfatture payment match --account 1 --confidence 0.75 --manual-only
 
-# Avvia la revisione interattiva della coda (intervallo confidenza 0.6-0.84)
+# Review the queue interactively (confidence range 0.6-0.84)
 uv run openfatture payment queue --account 1 --min 0.60 --max 0.84
 
-# Pianifica promemoria per il pagamento 123 con strategia aggressiva
+# Schedule reminders for payment 123 with the aggressive strategy
 uv run openfatture payment schedule-reminders 123 --strategy aggressive
 
-# Processa i promemoria previsti per una data specifica
+# Process reminders due on a specific date
 uv run openfatture payment process-reminders --date 2025-01-15
 
-# Elenca i promemoria pendenti
+# List pending reminders
 uv run openfatture payment list-reminders --status PENDING --limit 20
 
 # Statistiche complessive

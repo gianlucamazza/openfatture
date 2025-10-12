@@ -83,32 +83,32 @@
 
 - 🔄 RAG / Vector Store
   - ChromaDB persistence for invoices + knowledge base (`openfatture/ai/rag/**`)
-  - Async enrichment pipeline (`enrich_with_rag`) per chat, invoice e tax advisor
+  - Async enrichment pipeline (`enrich_with_rag`) for chat, invoice, and tax advisor agents
   - CLI management commands (`openfatture ai rag status|index|search`)
-  - Knowledge base manifest (`openfatture/ai/rag/sources.json`) e indicizzatore dedicato
-  - Citazioni normative disponibili negli agent (Chat/Tax/Invoice)
+  - Knowledge base manifest (`openfatture/ai/rag/sources.json`) with dedicated indexer
+  - Legal citations surfaced within Chat/Tax/Invoice agents
 
 ### ⏳ Planned (Phase 4.3 & 4.4)
 
 - [ ] Compliance Checker agent
 - [ ] LangGraph orchestration for multi-agent workflows
-- [x] Complete RAG implementation with ChromaDB (fatture + knowledge base)
+- [x] Complete RAG implementation with ChromaDB (invoice + knowledge collections)
 - [ ] Streaming response support
 - [ ] Advanced caching strategies
 - [ ] Metrics and observability dashboards
 
 ### ✅ Cash Flow Predictor (v1.0.1)
 
-- Ensemble Prophet + XGBoost con pesi ottimizzabili (`openfatture/ai/ml/models/ensemble.py`)
-- Pipeline feature engineering persistente (`FeaturePipeline`) con schema versionato
-- Dataset loader cronologico con metadata e caching (`InvoiceDataLoader`)
-- Training metrics (`mae`, `rmse`, coverage intervalli) e provenance salvati in `<model_prefix>_metrics.json`
-- Artifacts salvati in `MLConfig.model_path` (default `.models/`):
+- Prophet + XGBoost ensemble with tunable weights (`openfatture/ai/ml/models/ensemble.py`)
+- Persistent feature engineering pipeline (`FeaturePipeline`) with versioned schema
+- Chronological dataset loader with metadata and caching (`InvoiceDataLoader`)
+- Training metrics (`mae`, `rmse`, interval coverage) and provenance saved to `<model_prefix>_metrics.json`
+- Artefacts stored in `MLConfig.model_path` (default `.models/`):
   - `_prophet.json` + `_xgboost.json`
   - `_pipeline.pkl` (pipeline/scaler/schema)
   - `_metrics.json`
-- CLI `openfatture ai forecast --retrain` forza nuovo training; default riutilizza i modelli esistenti
-- Insight AI opzionali con provider configurato (fallback deterministic se non disponibile)
+- CLI `openfatture ai forecast --retrain` forces retraining; default reuses existing models
+- Optional AI insights when a provider is configured (deterministic fallback otherwise)
 
 ---
 
@@ -616,22 +616,22 @@ class PromptManager:
 
 **Purpose:** Generate detailed invoice descriptions from brief inputs
 
-**Input:** "3 ore consulenza web"
+**Input:** "3 hours web consulting"
 
 **Output:**
 ```
-Consulenza professionale per sviluppo web e architettura software
+Professional consulting for web development and software architecture
 
-Attività svolte:
-- Analisi dei requisiti funzionali e non funzionali
-- Progettazione dell'architettura applicativa
-- Sviluppo di componenti front-end con React
-- Implementazione API REST con autenticazione
-- Testing e debugging del codice
-- Documentazione tecnica
+Activities delivered:
+- Analysed functional and non-functional requirements
+- Designed the application architecture
+- Developed front-end components with React
+- Implemented authenticated REST APIs
+- Performed testing and debugging
+- Produced technical documentation
 
-Durata: 3 ore
-Competenze: React, TypeScript, Node.js, API Design
+Duration: 3 hours
+Skills: React, TypeScript, Node.js, API design
 ```
 
 **Implementation Strategy:**
@@ -646,7 +646,7 @@ Competenze: React, TypeScript, Node.js, API Design
 
 **Purpose:** Suggest correct VAT rates and tax treatments
 
-**Input:** "Consulenza IT per azienda edile"
+**Input:** "IT consulting services for a construction company"
 
 **Output:**
 ```json
@@ -656,9 +656,9 @@ Competenze: React, TypeScript, Node.js, API Design
   "reverse_charge": true,
   "split_payment": false,
   "regime_speciale": "REVERSE_CHARGE_COSTRUZIONI",
-  "spiegazione": "Per servizi resi al settore edile si applica il reverse charge ai sensi dell'art. 17, comma 6, lettera a-ter del DPR 633/72.",
+  "spiegazione": "Reverse charge applies to services rendered to the construction sector under art. 17, paragraph 6, letter a-ter of DPR 633/72.",
   "codice_iva": "N6.2",
-  "note_fattura": "Inversione contabile - art. 17 c. 6 lett. a-ter DPR 633/72"
+  "note_fattura": "Reverse charge - art. 17 c. 6 lett. a-ter DPR 633/72"
 }
 ```
 
@@ -713,7 +713,7 @@ Competenze: React, TypeScript, Node.js, API Design
 
 **Purpose:** Pre-validate invoices before SDI submission
 
-**Input:** Fattura object
+**Input:** `Fattura` object
 
 **Output:**
 ```json
@@ -723,20 +723,20 @@ Competenze: React, TypeScript, Node.js, API Design
   "issues": [
     {
       "field": "cliente.codice_destinatario",
-      "message": "Codice destinatario mancante per cliente PA",
+      "message": "Missing SDI recipient code for Public Administration customer",
       "severity": "ERROR",
-      "fix": "Richiedere il codice univoco IPA al cliente"
+      "fix": "Request the IPA recipient code from the customer"
     },
     {
       "field": "riga[0].descrizione",
-      "message": "Descrizione troppo generica (< 20 caratteri)",
+      "message": "Description too generic (< 20 characters)",
       "severity": "WARNING",
-      "fix": "Aggiungi dettagli: ore, attività specifiche, deliverables"
+      "fix": "Add details such as hours, specific activities, deliverables"
     }
   ],
   "suggestions": [
-    "Considera l'aggiunta del CIG per appalti pubblici",
-    "Verifica la ritenuta d'acconto per questo tipo di prestazione"
+    "Consider adding the CIG for public tenders",
+    "Verify whether withholding tax applies to this service"
   ],
   "estimated_sdi_approval": 0.95
 }
@@ -911,8 +911,8 @@ async def test_invoice_assistant_generates_description(mock_llm_provider):
     )
 
     context = InvoiceContext(
-        user_input="3 ore consulenza web",
-        servizio_base="consulenza",
+        user_input="3 hours web consulting",
+        servizio_base="consulting",
         ore_lavorate=3.0,
     )
 
@@ -920,7 +920,7 @@ async def test_invoice_assistant_generates_description(mock_llm_provider):
 
     assert response.success
     assert len(response.content) > 100
-    assert "consulenza" in response.content.lower()
+    assert "consulting" in response.content.lower()
     mock_llm_provider.generate.assert_called_once()
 ```
 

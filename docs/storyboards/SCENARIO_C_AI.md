@@ -1,46 +1,43 @@
-# Scenario C · AI Assistant & Automazioni (Storyboard)
+# Scenario C · AI Assistant (Storyboard)
 
-**Versione:** v2025.02.03
+**Version:** v2025.02.03
 **Owner:** AI/ML Guild (lead: Elisa Moretti)
-**Durata target:** 2'45" ± 10s
+**Target duration:** 2'45" ± 10s
 
-## Sequenza Shot
-| # | Durata | Video | Audio/VO | Overlay/Note |
-|---|--------|-------|----------|--------------|
-| 1 | 0:04 | Logo animato + titolo "AI Assistant" | SFX intro breve | Badge "Powered by Ollama" |
-| 2 | 0:12 | Speaker on cam | "OpenFatture integra AI locale con Ollama - zero API costs" | Callout "100% Local" |
-| 3 | 0:18 | Terminale: `openfatture ai chat "crea descrizione per consulenza GDPR"` | "Generazione automatica descrizioni servizi" | Streaming response animation |
-| 4 | 0:25 | Output AI con descrizione dettagliata | "L'AI genera testo professionale e compliant" | Highlight keywords GDPR |
-| 5 | 0:20 | Terminale: `openfatture ai suggest-vat "Consulenza GDPR" --importo 1500` | "Suggerimento aliquota IVA corretta" | Lower-third "IVA 22% - Servizi professionali" |
-| 6 | 0:18 | Terminale: `openfatture --interactive` → menu "AI Assistant" | "Modalità interattiva con chat persistente" | UI menu navigation |
-| 7 | 0:22 | Chat interattiva con multi-turn conversation | "Conversazione contestuale per task complessi" | Callout context-aware |
-| 8 | 0:20 | Esempio: "riepiloga fatture gennaio 2025" | "Query intelligenti sul database" | Badge tool-calling |
-| 9 | 0:16 | Terminale: visualizzazione stats via AI | "L'AI accede ai dati e risponde con insights" | Chart overlay (opzionale) |
-| 10 | 0:10 | Outro + note privacy | "Ollama locale: dati mai condivisi con cloud" | CTA scenario D |
+## Shot Sequence
+| # | Length | Video | Audio/VO | Overlay/Notes |
+|---|--------|-------|----------|---------------|
+| 1 | 0:04 | Animated logo + title “AI Assistant with Ollama” | Intro SFX | Brand palette |
+| 2 | 0:12 | Speaker on camera | “Let’s automate descriptions and VAT suggestions with the AI assistant” | CTA “Step 1/4” |
+| 3 | 0:18 | Terminal: `ollama serve` / health check | “Start the local Ollama model for deterministic demos” | Show health check output |
+| 4 | 0:20 | Terminal: `openfatture --interactive` | “Launch the interactive dashboard” | Highlight AI menu entry |
+| 5 | 0:30 | TUI: AI chat session | “Generate a professional line item description” | Display prompt + AI response |
+| 6 | 0:35 | Terminal: `openfatture ai suggest-vat ...` | “Ask for VAT treatment with legal references” | Show confidence + citation |
+| 7 | 0:20 | Terminal: `openfatture ai rag status` | “Check the knowledge base status and sources” | Focus on document counts |
+| 8 | 0:16 | Terminal: `openfatture ai rag search "reverse charge edilizia"` | “Run a semantic search for compliance audit” | Display snippet + citation |
+| 9 | 0:10 | Summary slide | “Configure provider, index KB, use AI responsibly” | Include privacy reminder |
+|10 | 0:10 | Outro | “Next scenario: batch automation” | Link to Scenario D |
 
-## Note Produzione
-- **AI Provider**: **Ollama locale** con modello `llama3.2` (configurato in `.env.demo`)
-- **Prompts**: usare esempi realistici (consulenza, fatturazione, IVA)
-- **Response timing**: l'AI locale è più lenta - lasciare 3-4s per inference
-- **Privacy highlight**: enfatizzare che tutto rimane locale (no external API calls)
-- **Screen capture**: OBS, terminale + eventuale split-screen per mostrare Ollama running
+## Production Notes
+- **AI config:** Ollama (`llama3.2`) with deterministic outputs; fallback to Anthropic if local setup unavailable.
+- **Dataset:** invoice + customer data for 2024/2025 to provide context.
+- **RAG manifest:** ensure `openfatture ai rag index` was executed before recording.
+- **Terminal:** ensure `AI_MOCK_MODE=1` if using mocked responses.
 
-## Asset Necessari
-- Ollama running con modello llama3.2 pulled
-- Database demo popolato con fatture gennaio 2025
-- Script `check_ollama.sh` eseguito con successo
-- Callout Figma "100% Local AI - No API Costs"
-- Badge "Privacy-First" overlay
+## Required Assets
+- `.env.demo` configured for Ollama.
+- Script `scripts/check_ollama.sh` for health checks.
+- Pre-generated screenshots of `rag status` and `rag search` results.
+- Overlay for citation format `[1] DPR 633/72 art...`.
 
-## Checklist Pre-shoot
-- [ ] Verificare Ollama service running (`./scripts/check_ollama.sh llama3.2`)
-- [ ] Testare comandi AI manualmente e cronometrare response time
-- [ ] Preparare 3-4 prompt pre-testati con output consistenti
-- [ ] Verificare chat interattiva funzionante
-- [ ] Confermare env var `AI_PROVIDER=ollama` in `.env.demo`
+## Pre-Shoot Checklist
+- [ ] `ollama serve` running locally with `llama3.2`.
+- [ ] `openfatture ai rag index` executed successfully.
+- [ ] Test `ai describe` and `ai suggest-vat` for consistent outputs.
+- [ ] Validate `rag search` returns snippets with citations.
+- [ ] Prepare TUI capture layout (Rich theme, full width).
 
-## Post-produzione
-- Marker timeline: Intro (0:00), Chat (0:16), Suggest-VAT (0:59), Interactive (1:37), Query (2:17), Outro (2:35)
-- Sottotitoli IT + EN (per enfasi internazionale su privacy/local AI)
-- Export: Master ProRes + H.264 1080p + GIF animato per social (highlight AI response streaming)
-- Nota: aggiungere disclaimer "AI output is for demonstration - always verify with accountant"
+## Post-Production
+- Include lower-thirds describing AI commands and environment variables.
+- Add callout reminding viewers about data-privacy and API keys.
+- Export master + H.264 + vertical highlight (AI chat segment).

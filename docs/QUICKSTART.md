@@ -1,105 +1,105 @@
 # 🚀 Quick Start Guide - OpenFatture
 
-Guida pratica per iniziare ad usare OpenFatture in 15 minuti.
+Hands-on walkthrough to get OpenFatture running in 15 minutes.
 
 ---
 
-## 📦 Installazione
+## 📦 Installation
 
-### Requisiti
-- Python 3.12 o superiore
-- Account PEC (per invio fatture a SDI)
-- Certificato firma digitale (opzionale, ma raccomandato)
+### Requirements
+- Python 3.12 or later
+- PEC mailbox (required to deliver invoices to SDI)
+- Digital signature certificate (optional but recommended)
 
 ```bash
-# Installa uv (se non già installato)
+# Install uv (if it is not already available)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Clona il repository
+# Clone the repository
 git clone https://github.com/gianlucamazza/openfatture.git
 cd openfatture
 
-# Installa dipendenze
+# Install dependencies
 uv sync
 
-# Verifica installazione
+# Verify the installation
 uv run python -c "from openfatture import __version__; print(f'OpenFatture v{__version__}')"
 ```
 
 ---
 
-## ⚙️ Configurazione
+## ⚙️ Configuration
 
-### 1. Crea il file `.env`
+### 1. Create the `.env` File
 
 ```bash
-# Copia il template
+# Copy the template
 cp .env.example .env
 
-# Modifica con il tuo editor preferito
+# Edit with your favourite editor
 nano .env
-# oppure
+# or
 code .env
 ```
 
-### 2. Configura i Dati Obbligatori
+### 2. Provide the Required Company Data
 
-Modifica `.env` con i tuoi dati:
+Update `.env` with your details:
 
 ```env
 # ==========================================
-# DATI AZIENDALI (OBBLIGATORI)
+# COMPANY DETAILS (REQUIRED)
 # ==========================================
-CEDENTE_DENOMINAZIONE=La Tua Azienda SRL
+CEDENTE_DENOMINAZIONE=Your Company SRL
 CEDENTE_PARTITA_IVA=12345678901
 CEDENTE_CODICE_FISCALE=12345678901
 CEDENTE_INDIRIZZO=Via Roma 123
 CEDENTE_CAP=00100
-CEDENTE_COMUNE=Roma
+CEDENTE_COMUNE=Rome
 CEDENTE_PROVINCIA=RM
-CEDENTE_EMAIL=info@tuaazienda.it
+CEDENTE_EMAIL=info@yourcompany.it
 
-# Regime fiscale
-# RF01 = Regime ordinario
-# RF19 = Regime forfettario (5%)
+# Tax regime
+# RF01 = Ordinary regime
+# RF19 = Flat-tax (5%)
 CEDENTE_REGIME_FISCALE=RF19
 
 # ==========================================
-# PEC (OBBLIGATORIO per invio fatture)
+# PEC (REQUIRED for SDI delivery)
 # ==========================================
-PEC_ADDRESS=tuaazienda@pec.it
-PEC_PASSWORD=la_tua_password_pec
+PEC_ADDRESS=yourcompany@pec.it
+PEC_PASSWORD=your_pec_password
 
-# SMTP del tuo provider PEC
+# SMTP server for your PEC provider
 # Aruba: smtp.pec.aruba.it
 # Register: smtps.pec.register.it
 PEC_SMTP_SERVER=smtp.pec.aruba.it
 PEC_SMTP_PORT=465
 
 # ==========================================
-# EMAIL NOTIFICATIONS (OBBLIGATORIO)
+# EMAIL NOTIFICATIONS (REQUIRED)
 # ==========================================
-NOTIFICATION_EMAIL=admin@tuaazienda.it
+NOTIFICATION_EMAIL=admin@yourcompany.it
 NOTIFICATION_ENABLED=true
 LOCALE=it
 ```
 
-### 3. Inizializza il Database
+### 3. Initialise the Database
 
 ```bash
 uv run python -c "
 from openfatture.storage.database.session import init_db
 init_db()
-print('✅ Database inizializzato!')
+print('✅ Database initialised!')
 "
 ```
 
-### 4. Test Configurazione PEC
+### 4. Test the PEC Configuration
 
-Prima di creare fatture, testa che la PEC funzioni:
+Before issuing invoices, confirm the PEC credentials work:
 
 ```bash
-# Con uv
+# Using uv
 uv run python -c "
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
@@ -107,35 +107,35 @@ from openfatture.utils.email.sender import TemplatePECSender
 settings = get_settings()
 sender = TemplatePECSender(settings=settings)
 
-print('📧 Invio email di test...')
+print('📧 Sending PEC test email...')
 success, error = sender.send_test_email()
 
 if success:
-    print('✅ PEC configurata correttamente!')
-    print(f'   Controlla la casella: {settings.notification_email}')
+    print('✅ PEC configured correctly!')
+    print(f'   Check the inbox: {settings.notification_email}')
 else:
-    print(f'❌ Errore: {error}')
-    print('   Controlla le credenziali PEC in .env')
+    print(f'❌ Error: {error}')
+    print('   Double-check PEC credentials in .env')
 "
 ```
 
-Se ricevi l'email di test, sei pronto! 🎉
+If the test email lands in your inbox you are ready to go! 🎉
 
 ---
 
-## 📄 Prima Fattura
+## 📄 Create Your First Invoice
 
-### 1. Crea il Primo Cliente
+### 1. Add the First Customer
 
 ```python
-# salva come: crea_cliente.py
+# save as: create_customer.py
 from openfatture.storage.database.models import Cliente
 from openfatture.storage.database.session import get_session
 
-# Inizializza sessione database
+# Initialise the database session
 session = next(get_session())
 
-# Crea cliente
+# Create a new customer
 cliente = Cliente(
     denominazione="Acme Corporation SRL",
     partita_iva="98765432100",
@@ -152,18 +152,18 @@ cliente = Cliente(
 session.add(cliente)
 session.commit()
 
-print(f"✅ Cliente creato: {cliente.denominazione} (ID: {cliente.id})")
+print(f"✅ Customer created: {cliente.denominazione} (ID: {cliente.id})")
 ```
 
-Esegui:
+Run:
 ```bash
-uv run python crea_cliente.py
+uv run python create_customer.py
 ```
 
-### 2. Crea la Prima Fattura
+### 2. Create the First Invoice
 
 ```python
-# salva come: crea_fattura.py
+# save as: create_invoice.py
 from datetime import date
 from decimal import Decimal
 from openfatture.storage.database.models import Cliente, Fattura, LineaFattura, StatoFattura
@@ -171,10 +171,10 @@ from openfatture.storage.database.session import get_session
 
 session = next(get_session())
 
-# Recupera il cliente (usa l'ID stampato prima)
+# Retrieve the customer (use the ID printed earlier)
 cliente = session.query(Cliente).filter_by(id=1).first()
 
-# Crea fattura
+# Create the invoice
 fattura = Fattura(
     numero="001",
     anno=2025,
@@ -197,15 +197,15 @@ linea = LineaFattura(
     aliquota_iva=Decimal("22.00"),
 )
 
-# Calcola totali linea
+# Calculate line totals
 linea.imponibile = linea.quantita * linea.prezzo_unitario  # 500.00
 linea.iva = linea.imponibile * (linea.aliquota_iva / 100)  # 110.00
 linea.totale = linea.imponibile + linea.iva  # 610.00
 
-# Aggiungi linea alla fattura
+# Attach the line to the invoice
 fattura.linee = [linea]
 
-# Ricalcola totali fattura
+# Recalculate invoice totals
 fattura.imponibile = sum(l.imponibile for l in fattura.linee)
 fattura.iva = sum(l.iva for l in fattura.linee)
 fattura.totale = sum(l.totale for l in fattura.linee)
@@ -213,24 +213,24 @@ fattura.totale = sum(l.totale for l in fattura.linee)
 session.add(fattura)
 session.commit()
 
-print(f"✅ Fattura creata: {fattura.numero}/{fattura.anno}")
-print(f"   Cliente: {fattura.cliente.denominazione}")
-print(f"   Totale: €{fattura.totale}")
+print(f"✅ Invoice created: {fattura.numero}/{fattura.anno}")
+print(f"   Customer: {fattura.cliente.denominazione}")
+print(f"   Total: €{fattura.totale}")
 ```
 
-Esegui:
+Run:
 ```bash
-uv run python crea_fattura.py
+uv run python create_invoice.py
 ```
 
 ---
 
-## 📤 Invia Fattura a SDI
+## 📤 Send the Invoice to SDI
 
-### 1. Genera XML FatturaPA
+### 1. Generate the FatturaPA XML
 
 ```python
-# salva come: genera_xml.py
+# save as: generate_xml.py
 from pathlib import Path
 from openfatture.storage.database.models import Fattura
 from openfatture.storage.database.session import get_session
@@ -238,14 +238,14 @@ from openfatture.core.xml.generator import FatturaXMLGenerator
 
 session = next(get_session())
 
-# Recupera fattura
+# Retrieve the invoice
 fattura = session.query(Fattura).filter_by(numero="001", anno=2025).first()
 
-# Genera XML
+# Generate the XML
 generator = FatturaXMLGenerator(fattura)
 xml_tree = generator.generate()
 
-# Salva XML
+# Save the XML
 xml_filename = f"IT{fattura.cliente.partita_iva}_{int(fattura.numero):05d}.xml"
 xml_path = Path(f"/tmp/{xml_filename}")
 xml_tree.write(str(xml_path), encoding="utf-8", xml_declaration=True)
@@ -253,20 +253,20 @@ xml_tree.write(str(xml_path), encoding="utf-8", xml_declaration=True)
 print(f"✅ XML generato: {xml_path}")
 print(f"   Dimensione: {xml_path.stat().st_size} bytes")
 
-# Mostra contenuto (per debug)
-print(f"\n📄 Contenuto XML:")
+# Display a preview (for debugging only)
+print(f"\n📄 XML content:")
 print(xml_tree.read_text())
 ```
 
-Esegui:
+Run:
 ```bash
-uv run python genera_xml.py
+uv run python generate_xml.py
 ```
 
-### 2. Invia a SDI con Email Template Professionale
+### 2. Deliver the Invoice to SDI with the Professional Email Template
 
 ```python
-# salva come: invia_sdi.py
+# save as: send_to_sdi.py
 from pathlib import Path
 from openfatture.storage.database.models import Fattura
 from openfatture.storage.database.session import get_session
@@ -276,69 +276,69 @@ from openfatture.utils.email.sender import TemplatePECSender
 session = next(get_session())
 settings = get_settings()
 
-# Recupera fattura
+# Retrieve the invoice
 fattura = session.query(Fattura).filter_by(numero="001", anno=2025).first()
 
-# Percorso XML (generato prima)
+# XML path generated earlier
 xml_filename = f"IT{fattura.cliente.partita_iva}_{int(fattura.numero):05d}.xml"
 xml_path = Path(f"/tmp/{xml_filename}")
 
-# Invia con template professionale
+# Send using the professional template
 sender = TemplatePECSender(settings=settings)
 
-print(f"📧 Invio fattura {fattura.numero}/{fattura.anno} a SDI...")
+print(f"📧 Sending invoice {fattura.numero}/{fattura.anno} to SDI...")
 
 success, error = sender.send_invoice_to_sdi(
     fattura=fattura,
     xml_path=xml_path,
-    signed=False  # True se hai firmato digitalmente il file
+    signed=False  # Set to True if the XML was digitally signed
 )
 
 if success:
-    print(f"✅ Fattura inviata con successo!")
+    print("✅ Invoice delivered successfully!")
     print(f"   Status: {fattura.stato.value}")
-    print(f"   Email inviata con template professionale")
-    print(f"   Destinatario: {settings.sdi_pec_address}")
+    print("   Email sent using the professional template")
+    print(f"   Recipient: {settings.sdi_pec_address}")
 
-    # La fattura ora è in stato INVIATA
+    # The invoice status is now INVIATA
     session.commit()
 else:
-    print(f"❌ Errore nell'invio: {error}")
+    print(f"❌ Delivery error: {error}")
 ```
 
-Esegui:
+Run:
 ```bash
-uv run python invia_sdi.py
+uv run python send_to_sdi.py
 ```
 
-**Cosa succede dietro le quinte:**
-1. ✅ XML allegato alla PEC
-2. ✅ Email professionale con template HTML
-3. ✅ Fattura marcata come INVIATA nel database
-4. ✅ Notifica inviata a NOTIFICATION_EMAIL
+**Behind the scenes:**
+1. ✅ The XML is attached to the PEC email
+2. ✅ OpenFatture renders a professional HTML template
+3. ✅ The invoice status changes to `INVIATA`
+4. ✅ The NOTIFICATION_EMAIL receives a confirmation
 
 ---
 
-## 📬 Ricevi Notifiche SDI Automatiche
+## 📬 Receive SDI Notifications Automatically
 
-Quando il SDI risponde (entro 5 giorni), riceverai notifiche automatiche via email!
+When SDI replies (typically within five days), OpenFatture sends you automatic updates via email.
 
-### Tipi di Notifiche
+### Notification Types
 
-| Codice | Descrizione | Email Automatica |
-|--------|-------------|------------------|
-| **AT** | Attestazione di trasmissione | ✅ Email inviata |
-| **RC** | Ricevuta di consegna | ✅ Email inviata |
-| **NS** | Notifica di scarto | ❌ Email inviata con errori |
-| **MC** | Mancata consegna | ⚠️ Email inviata |
-| **NE** | Notifica esito (accettata/rifiutata) | ✅/❌ Email inviata |
+| Code | Description | Automatic Email |
+|------|-------------|-----------------|
+| **AT** | Transmission receipt | ✅ Email sent |
+| **RC** | Delivery receipt | ✅ Email sent |
+| **NS** | Rejection notice | ❌ Email sent with errors |
+| **MC** | Failed delivery | ⚠️ Email sent |
+| **NE** | Outcome notice (accepted/rejected) | ✅/❌ Email sent |
 
-### Processa Notifiche Manualmente
+### Process Notifications Manually
 
-Se scarichi le notifiche PEC manualmente:
+If you download PEC notifications manually:
 
 ```python
-# salva come: processa_notifica.py
+# save as: process_notification.py
 from pathlib import Path
 from openfatture.sdi.notifiche.processor import NotificationProcessor
 from openfatture.storage.database.session import get_session
@@ -348,35 +348,35 @@ from openfatture.utils.email.sender import TemplatePECSender
 session = next(get_session())
 settings = get_settings()
 
-# Inizializza con email sender per notifiche automatiche
+# Configure automatic emails for notifications
 sender = TemplatePECSender(settings=settings)
 processor = NotificationProcessor(
     db_session=session,
-    email_sender=sender  # ← Abilita email automatiche!
+    email_sender=sender  # ← Enables automatic emails!
 )
 
-# Processa file notifica SDI
+# Process the SDI notification file
 notification_file = Path("RC_IT12345678901_00001.xml")
 
 success, error, notification = processor.process_file(notification_file)
 
 if success:
-    print(f"✅ Notifica processata: {notification.tipo_notifica.value}")
-    print(f"   Fattura: {notification.fattura.numero}/{notification.fattura.anno}")
-    print(f"   Nuovo stato: {notification.fattura.stato.value}")
-    print(f"📧 Email automatica inviata a: {settings.notification_email}")
+    print(f"✅ Notification processed: {notification.tipo_notifica.value}")
+    print(f"   Invoice: {notification.fattura.numero}/{notification.fattura.anno}")
+    print(f"   New status: {notification.fattura.stato.value}")
+    print(f"📧 Automatic email sent to: {settings.notification_email}")
 else:
     print(f"❌ Errore: {error}")
 ```
 
 ---
 
-## 🎨 Personalizza Email Templates
+## 🎨 Customise Email Templates
 
-### Anteprima Email Prima dell'Invio
+### Preview the Email Before Sending
 
 ```python
-# salva come: preview_email.py
+# save as: preview_email.py
 from pathlib import Path
 from datetime import date
 from decimal import Decimal
@@ -388,7 +388,7 @@ from openfatture.utils.email.models import FatturaInvioContext
 settings = get_settings()
 renderer = TemplateRenderer(settings=settings, locale="it")
 
-# Mock data per preview
+# Mock data for the preview
 cliente = Cliente(denominazione="Cliente Test SRL", partita_iva="12345678901")
 fattura = Fattura(
     numero="001",
@@ -398,7 +398,7 @@ fattura = Fattura(
     totale=Decimal("610.00"),
 )
 
-# Crea context
+# Build the template context
 context = FatturaInvioContext(
     fattura=fattura,
     cedente={
@@ -421,30 +421,30 @@ preview_path = renderer.preview(
 )
 
 print(f"📧 Anteprima generata: file://{preview_path}")
-print(f"   Apri il file nel browser per vedere l'email")
+print("   Open the file in your browser to review the email")
 ```
 
-### Personalizza Colori e Logo
+### Customise Colours and Logo
 
-Nel file `.env`:
+In the `.env` file:
 
 ```env
 EMAIL_LOGO_URL=https://tuosito.com/logo.png
-EMAIL_PRIMARY_COLOR=#FF5722  # Arancione
-EMAIL_SECONDARY_COLOR=#212121  # Grigio scuro
-EMAIL_FOOTER_TEXT=© 2025 Mia Azienda - P.IVA 12345678901
+EMAIL_PRIMARY_COLOR=#FF5722  # Orange
+EMAIL_SECONDARY_COLOR=#212121  # Dark grey
+EMAIL_FOOTER_TEXT=© 2025 My Company - VAT 12345678901
 ```
 
-Riavvia l'applicazione per applicare le modifiche.
+Restart the application to apply the changes.
 
 ---
 
-## 🔍 Verifica Tutto Funzioni
+## 🔍 Final Verification
 
-### Checklist Finale
+### Final Checklist
 
 ```bash
-# 1. Test PEC
+# 1. PEC test
 uv run python -c "
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
@@ -453,16 +453,16 @@ success, _ = sender.send_test_email()
 print('✅ PEC OK' if success else '❌ PEC ERROR')
 "
 
-# 2. Test Database
+# 2. Database test
 uv run python -c "
 from openfatture.storage.database.session import get_session
 from openfatture.storage.database.models import Cliente
 session = next(get_session())
 count = session.query(Cliente).count()
-print(f'✅ Database OK ({count} clienti)')
+print(f'✅ Database OK ({count} customers)')
 "
 
-# 3. Test Configurazione
+# 3. Configuration test
 uv run python -c "
 from openfatture.utils.config import get_settings
 s = get_settings()
@@ -474,43 +474,43 @@ print(f'✅ Notifiche: {s.notification_email}')
 
 ---
 
-## 📚 Prossimi Passi
+## 📚 Next Steps
 
-Ora che hai configurato OpenFatture:
+Now that OpenFatture is configured:
 
-1. **Esplora gli esempi**: `examples/email_templates_example.py`
-2. **Leggi la documentazione completa**: `docs/EMAIL_TEMPLATES.md`
-3. **Configura firma digitale**: `docs/CONFIGURATION.md`
-4. **Operazioni batch**: Importa CSV con fatture multiple
-5. **Integra AI**: Configura LangChain per suggerimenti intelligenti
+1. **Explore the examples**: `examples/email_templates_example.py`
+2. **Read the email documentation**: `docs/EMAIL_TEMPLATES.md`
+3. **Configure the digital signature**: `docs/CONFIGURATION.md`
+4. **Try batch operations**: import invoices from CSV
+5. **Enable AI features**: configure your preferred provider for smarter suggestions
 
 ---
 
 ## 🆘 Troubleshooting
 
-### Problema: Email non inviata
+### Issue: Email Not Sent
 
 ```bash
-# Verifica credenziali
+# Check credentials
 uv run python -c "
 from openfatture.utils.config import get_settings
 s = get_settings()
 print(f'PEC: {s.pec_address}')
 print(f'SMTP: {s.pec_smtp_server}:{s.pec_smtp_port}')
-print(f'Password impostata: {\"Sì\" if s.pec_password else \"No\"}')
+print(f'Password set: {\"Yes\" if s.pec_password else \"No\"}')
 "
 ```
 
-**Soluzioni comuni:**
-- Controlla username/password PEC
-- Verifica SMTP server del provider
-- Controlla firewall (porta 465)
-- Prova con PEC di test
+**Common fixes:**
+- Double-check PEC username/password
+- Verify the provider SMTP server details
+- Ensure the firewall allows port 465
+- Try sending with a PEC test account
 
-### Problema: Database non inizializzato
+### Issue: Database Not Initialised
 
 ```bash
-# Reinizializza database
+# Recreate the database
 uv run python -c "
 from openfatture.storage.database.session import init_db
 init_db()
@@ -518,10 +518,10 @@ print('✅ Database ricreato')
 "
 ```
 
-### Problema: Template non trovato
+### Issue: Template Not Found
 
 ```bash
-# Verifica templates
+# Inspect available templates
 ls -la openfatture/utils/email/templates/
 ```
 
@@ -529,14 +529,14 @@ ls -la openfatture/utils/email/templates/
 
 ## 💡 Tips & Best Practices
 
-1. **Testa sempre prima**: Usa `send_test_email()` prima di inviare fatture vere
-2. **Backup database**: `cp openfatture.db openfatture.db.backup`
-3. **Salva XML**: Conserva sempre le fatture XML per 10 anni (obbligo di legge)
-4. **Monitora notifiche**: Controlla NOTIFICATION_EMAIL quotidianamente
-5. **Usa firma digitale**: Aumenta la sicurezza e riduce i rischi di scarto
+1. **Always run a test first:** call `send_test_email()` before sending real invoices.
+2. **Back up the database:** `cp openfatture.db openfatture.db.backup`.
+3. **Archive the XML files:** keep every invoice XML for the mandatory 10-year period.
+4. **Monitor notifications:** check `NOTIFICATION_EMAIL` daily to catch SDI updates.
+5. **Use digital signatures:** they improve trust and reduce rejection risk.
 
 ---
 
-**Congratulazioni! 🎉 Hai configurato OpenFatture correttamente!**
+**Congratulations! 🎉 OpenFatture is now configured.**
 
-Per domande e supporto: [GitHub Issues](https://github.com/gianlucamazza/openfatture/issues)
+For questions and support: [GitHub Issues](https://github.com/gianlucamazza/openfatture/issues)

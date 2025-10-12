@@ -129,9 +129,9 @@ class TestReminderScheduler:
     @pytest.mark.parametrize(
         "offset, snippet",
         [
-            (-3, "scaduta da 3 giorni"),
-            (0, "scade OGGI"),
-            (7, "scadrà tra 7 giorni"),
+            (-3, "3 days overdue"),
+            (0, "due TODAY"),
+            (7, "falls due in 7 days"),
         ],
     )
     async def test_build_reminder_message_variants(

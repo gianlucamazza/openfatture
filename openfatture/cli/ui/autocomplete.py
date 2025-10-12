@@ -178,8 +178,8 @@ def autocomplete_descrizione_servizio(
 
 
 def autocomplete_unita_misura(
-    message: str = "Unità di misura:",
-    default: str = "ore",
+    message: str = "Unit of measure:",
+    default: str = "hours",
 ) -> str:
     """
     Autocomplete for units of measure.
@@ -200,8 +200,8 @@ def autocomplete_unita_misura(
 
 
 def autocomplete_modalita_pagamento(
-    message: str = "Modalità di pagamento:",
-    default: str = "Bonifico bancario",
+    message: str = "Payment method:",
+    default: str = "Bank transfer",
 ) -> str:
     """
     Autocomplete for payment methods.

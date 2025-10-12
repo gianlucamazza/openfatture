@@ -195,7 +195,7 @@ Total: ~1,682 LOC
 ### Features Implemented
 
 **1. InvoiceAssistant Agent (`agents/invoice_assistant.py`)**
-- **Natural Language Understanding** - Parses user inputs like "consulenza Python 5h"
+- **Natural Language Understanding** - Parses user inputs like "Python consulting 5h"
 - **Context-Aware Expansion** - Generates professional invoice descriptions
 - **Structured Output** - Pydantic models for deliverables, skills, duration
 - **Multi-Language Support** - Italian and English
@@ -203,13 +203,13 @@ Total: ~1,682 LOC
 
 **Example:**
 ```python
-Input:  "consulenza Python 5h"
+Input:  "Python consulting 5h"
 Output: {
-    "descrizione": "Consulenza tecnica per sviluppo software Python",
+    "descrizione": "Technical consulting for Python software development",
     "dettagli": [
-        "Analisi requisiti e architettura",
-        "Sviluppo componenti backend",
-        "Code review e ottimizzazioni"
+        "Requirements and architecture analysis",
+        "Backend component development",
+        "Code review and optimisations"
     ],
     "ore": 5.0,
     "competenze": ["Python", "Backend", "Architettura"]
@@ -226,11 +226,11 @@ Output: {
 
 **Example:**
 ```python
-Input:  "servizi IT a società estera EU"
+Input:  "IT services provided to an EU company"
 Output: {
     "aliquota_iva": 0,
     "natura": "N3.2",
-    "motivo": "Servizi generici a soggetto UE (reverse charge)",
+    "motivo": "Cross-border EU services (reverse charge)",
     "riferimento_normativo": "Art. 7-ter DPR 633/1972"
 }
 ```
@@ -339,8 +339,8 @@ ADVANCED:
 ```
 ┌────────────────────────────────────┐
 │   User Query                       │
-│   "consulenza simile a quella di   │
-│    settembre per Cliente XYZ"      │
+│   "Similar consulting work to the  │
+│    September engagement for Client XYZ" │
 └──────────┬─────────────────────────┘
            │
            ▼
@@ -2872,8 +2872,8 @@ def forecast_monthly(
 **Commands Added:**
 ```bash
 # AI-powered commands
-openfatture ai describe "consulenza Python 5h"
-openfatture ai suggest-vat "servizi IT a società estera EU"
+openfatture ai describe "Python consulting 5h"
+openfatture ai suggest-vat "IT services for EU-based company"
 openfatture ai forecast --months 6
 openfatture ai check <invoice_id> --level advanced
 
@@ -3040,7 +3040,7 @@ export WORKFLOW_APPROVAL_POLICY="smart"  # always, never, smart
 - **ROI: 5-10x** - Time saved vs AI costs
 
 **4. User Experience**
-- **Natural Language** - "consulenza Python 5h" → full description
+- **Natural Language** - "Python consulting 5h" → full description
 - **Real-time Feedback** - Streaming responses (<100ms TTFT)
 - **Intelligent Assistance** - Context-aware suggestions
 - **Human Control** - Approval checkpoints for critical decisions

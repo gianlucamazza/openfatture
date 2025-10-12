@@ -1,41 +1,41 @@
-PROMEMORIA PAGAMENTO
+PAYMENT REMINDER
 {{ '=' * 60 }}
 
-Gentile Cliente,
+Dear Customer,
 
-Le ricordiamo il pagamento relativo alla seguente fattura:
+This is a friendly reminder for the following invoice:
 
-DETTAGLI FATTURA
+INVOICE DETAILS
 {{ '-' * 60 }}
-Numero Fattura:      {{ invoice.numero }}
-Data Emissione:      {{ invoice.data.strftime('%d/%m/%Y') }}
-Scadenza Pagamento:  {{ payment.data_scadenza.strftime('%d/%m/%Y') }}
-Importo da Pagare:   € {{ "%.2f"|format(payment.importo_da_pagare) }}
+Invoice number:      {{ invoice.numero }}
+Issue date:          {{ invoice.data.strftime('%d/%m/%Y') }}
+Due date:            {{ payment.data_scadenza.strftime('%d/%m/%Y') }}
+Amount due:          € {{ "%.2f"|format(payment.importo_da_pagare) }}
 {{ '-' * 60 }}
 
 {% if days_to_due < 0 %}
-⚠️  ATTENZIONE: Il pagamento è in ritardo di {{ -days_to_due }} giorni!
-   Si prega di procedere con URGENZA.
+⚠️  ATTENTION: The payment is {{ -days_to_due }} days overdue.
+   Please arrange payment as soon as possible.
 {% elif days_to_due == 0 %}
-⏰ SCADENZA OGGI: Il pagamento scade oggi.
-   Si prega di procedere con il pagamento.
+⏰ DUE TODAY: The payment falls due today.
+   Kindly proceed with the transfer.
 {% elif days_to_due <= 3 %}
-📅 Il pagamento scadrà tra {{ days_to_due }} giorni.
+📅 The payment is due in {{ days_to_due }} days.
 {% else %}
-ℹ️  Il pagamento scadrà tra {{ days_to_due }} giorni.
+ℹ️  The payment is due in {{ days_to_due }} days.
 {% endif %}
 
 {% if payment.istruzioni_pagamento %}
-ISTRUZIONI PER IL PAGAMENTO:
+PAYMENT INSTRUCTIONS:
 {{ payment.istruzioni_pagamento }}
 {% endif %}
 
-Cordiali saluti,
+Kind regards,
 {{ company_name }}
 
 {{ '=' * 60 }}
-Questo è un messaggio automatico. Si prega di non rispondere.
-Per assistenza: support@example.com
+This is an automated message. Please do not reply.
+Need help? Contact: support@example.com
 
 Powered by OpenFatture
 https://github.com/openfatture/openfatture

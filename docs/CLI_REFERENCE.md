@@ -1,8 +1,8 @@
-# Guida ai Comandi CLI
+# CLI Command Reference
 
-Panoramica completa dei comandi `openfatture` e delle attività quotidiane che puoi svolgere dalla riga di comando.
+Complete catalogue of the `openfatture` CLI commands and the tasks you can run from the terminal.
 
-> **🎥 Demo Videos:** Watch these scenario videos to see commands in action:
+> **🎥 Demo videos**
 > - [Setup & Configuration](../media/output/scenario_a_onboarding.mp4) (2:30)
 > - [Invoice Creation](../media/output/scenario_b_invoice.mp4) (3:30)
 > - [AI Assistant](../media/output/scenario_c_ai.mp4) (2:45)
@@ -11,140 +11,140 @@ Panoramica completa dei comandi `openfatture` e delle attività quotidiane che p
 
 ---
 
-## Struttura Generale
+## General Structure
 
-- Visualizza l'help globale: `openfatture --help`
-- Autocomplete (consigliato): `openfatture --install-completion zsh` / `bash`
-- Modalità interattiva (menu): `openfatture --interactive` oppure `openfatture interactive`
+- Show global help: `openfatture --help`
+- Install shell completion (recommended): `openfatture --install-completion zsh` / `bash`
+- Launch the interactive TUI: `openfatture --interactive` or `openfatture interactive`
 
-Ogni gruppo di comandi dispone del proprio `--help`, ad esempio `openfatture fattura --help`.
+Every command group ships with its own `--help`, e.g. `openfatture fattura --help`.
 
 ---
 
-## 1. Setup Iniziale
+## 1. Initial Setup
 
-| Comando | Descrizione | Opzioni utili |
+| Command | Description | Handy options |
 |---------|-------------|---------------|
-| `openfatture init` | Crea cartelle dati, inizializza il database e (in modalità interattiva) genera `.env`. | `--no-interactive` per saltare il wizard e usare solo i valori già presenti in `.env`. |
-| `openfatture config show` | Mostra configurazione corrente (valori derivati da `.env`). | `--json` per output strutturato. |
-| `openfatture config edit` | Apre l'editor per modificare `.env` (rispetta `$EDITOR`) e ricarica le impostazioni. |  |
-| `openfatture config set KEY VALUE` | Aggiorna uno o più valori della configurazione e ricarica `.env`. | Supporta formati `KEY VALUE` e `KEY=VALUE`. |
-| `openfatture config reload` | Forza il ricaricamento delle impostazioni da `.env`. |  |
+| `openfatture init` | Creates data folders, initialises the database, and (in interactive mode) prepares `.env`. | `--no-interactive` skips the wizard and uses existing `.env` values. |
+| `openfatture config show` | Displays the current configuration (derived from `.env`). | `--json` for structured output. |
+| `openfatture config edit` | Opens `.env` in `$EDITOR`, then reloads settings. |  |
+| `openfatture config set KEY VALUE` | Updates one or more config values and reloads `.env`. | Accepts `KEY VALUE` and `KEY=VALUE` formats. |
+| `openfatture config reload` | Forces a reload of settings from `.env`. |  |
 
 ---
 
-## 2. Gestione Clienti
+## 2. Customer Management
 
-| Comando | Scopo | Esempio |
-|---------|-------|---------|
-| `openfatture cliente add` | Aggiunge un cliente (`--interactive` avvia il wizard guidato). | `openfatture cliente add "ACME SRL" --piva 12345678901 --sdi ABC1234 --pec acme@pec.it` |
-| `openfatture cliente list` | Elenca i clienti con limite configurabile (default 50). | `openfatture cliente list --limit 20` |
-| `openfatture cliente show ID` | Mostra i dettagli completi (anagrafiche, indirizzi). | `openfatture cliente show 3` |
-| `openfatture cliente delete ID` | Rimuove il cliente (blocca se esistono fatture collegate). | `openfatture cliente delete 7 --force` |
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `openfatture cliente add` | Adds a customer (`--interactive` launches a guided wizard). | `openfatture cliente add "ACME SRL" --piva 12345678901 --sdi ABC1234 --pec acme@pec.it` |
+| `openfatture cliente list` | Lists customers (default limit 50). | `openfatture cliente list --limit 20` |
+| `openfatture cliente show ID` | Shows full details (addresses, contacts). | `openfatture cliente show 3` |
+| `openfatture cliente delete ID` | Removes a customer (blocked if invoices exist). | `openfatture cliente delete 7 --force` |
 
-Suggerimento: usa `cliente list` per recuperare gli ID prima di fatturare o importare CSV batch.
+Tip: run `cliente list` to retrieve IDs before invoicing or batch imports.
 
 ---
 
-## 3. Gestione Fatture
+## 3. Invoice Management
 
-### Creazione e aggiornamento
-- `openfatture fattura crea [--cliente ID] [--pdf]`: wizard per creare fatture, aggiungere righe, calcolare IVA, ritenuta, bollo. Con `--pdf` genera subito il PDF.
-- `openfatture fattura delete ID [--force]`: elimina bozze/non inviate.
+### Creation and updates
+- `openfatture fattura crea [--cliente ID] [--pdf]`: interactive wizard to build invoices, add lines, calculate VAT/withholding/stamp duty. Use `--pdf` to render the PDF immediately.
+- `openfatture fattura delete ID [--force]`: deletes drafts or unsent invoices.
 
-### Consultazione
-- `openfatture fattura list [--stato inviata] [--anno 2025]`: elenco con filtri.
-- `openfatture fattura show ID`: riepilogo completo con righe e totali.
+### Review
+- `openfatture fattura list [--stato inviata] [--anno 2025]`: list with filters.
+- `openfatture fattura show ID`: detailed breakdown with lines and totals.
 
-### Esportazione
-- `openfatture fattura pdf ID [--template professional] [--output path.pdf]`: genera PDF (template `minimalist`, `professional`, `branded`).
-- `openfatture fattura xml ID [--output path.xml] [--no-validate]`: produce XML FatturaPA (validazione XSD attiva di default).
+### Export
+- `openfatture fattura pdf ID [--template professional] [--output path.pdf]`: renders PDF (templates: `minimalist`, `professional`, `branded`).
+- `openfatture fattura xml ID [--output path.xml] [--no-validate]`: generates the FatturaPA XML (XSD validation on by default).
 
-### Invio
-- `openfatture fattura invia ID [--pec/--no-pec]`: genera XML e invia via PEC con template HTML professionale. Ricorda di configurare PEC e NOTIFICATION_EMAIL in `.env`.
+### Delivery
+- `openfatture fattura invia ID [--pec/--no-pec]`: generates XML and sends it via PEC using the professional HTML template. Ensure PEC and `NOTIFICATION_EMAIL` are set in `.env`.
 
 ---
 
 ## 4. PEC & Email
 
-| Comando | Utilità |
+| Command | Purpose |
 |---------|---------|
-| `openfatture pec test` | Verifica credenziali PEC, server SMTP e invia un messaggio di prova. |
-| `openfatture email test` | Invia la mail di test con template professionale alle notifiche interne. |
-| `openfatture email preview --template sdi/invio_fattura` | Genera l’HTML in `/tmp/email_preview.html` con dati demo. |
-| `openfatture email info` | Mostra branding, colori, template disponibili. |
+| `openfatture pec test` | Verifies PEC credentials and SMTP server by sending a test message. |
+| `openfatture email test` | Sends a test email using the professional template to the notification address. |
+| `openfatture email preview --template sdi/invio_fattura` | Renders HTML to `/tmp/email_preview.html` with demo data. |
+| `openfatture email info` | Displays branding, colours, and available templates. |
 
-Se il test fallisce, controlla le variabili `PEC_ADDRESS`, `PEC_PASSWORD`, `PEC_SMTP_*` nel file `.env`.
-
----
-
-## 5. Notifiche SDI
-
-| Comando | Descrizione | Note |
-|---------|-------------|------|
-| `openfatture notifiche process FILE.xml` | Analizza la notifica SDI (AT/RC/NS/MC/NE), aggiorna la fattura e invia email. | Usa `--no-email` per saltare l’avviso automatico. |
-| `openfatture notifiche list [--tipo RC]` | Elenca le notifiche salvate in archivio. | I dati provengono dalla tabella `log_sdi`. |
-| `openfatture notifiche show ID` | Mostra i dettagli di una singola notifica. | Utile per capire perché una fattura è stata scartata. |
-
-Quando scarichi manualmente le notifiche PEC, processale con `notifiche process` per mantenere il database allineato.
+If the test fails, double-check `PEC_ADDRESS`, `PEC_PASSWORD`, and `PEC_SMTP_*` in `.env`.
 
 ---
 
-## 6. Operazioni Batch
+## 5. SDI Notifications
 
-- `openfatture batch import file.csv [--dry-run] [--no-summary]`: importa fatture in massa. Con `--dry-run` valida senza salvare. Al termine può inviare un riepilogo email.
-- `openfatture batch export output.csv [--anno 2025] [--stato inviata]`: esporta fatture per report o migrazione.
-- `openfatture batch history`: segnaposto (mostra solo un esempio). Il tracciamento storico sarà completato nelle prossime versioni.
+| Command | Description | Notes |
+|---------|-------------|-------|
+| `openfatture notifiche process FILE.xml` | Parses SDI notifications (AT/RC/NS/MC/NE), updates invoice status, and optionally sends an email. | `--no-email` skips automatic alerts. |
+| `openfatture notifiche list [--tipo RC]` | Lists processed notifications. | Data comes from the `log_sdi` table. |
+| `openfatture notifiche show ID` | Shows the details of a specific notification. | Useful to understand why an invoice was rejected. |
 
-Consulta [docs/BATCH_OPERATIONS.md](BATCH_OPERATIONS.md) per il formato CSV e le best practice.
+When you download PEC notifications manually, feed them to `notifiche process` to keep the database in sync.
 
 ---
 
-## 7. Reportistica
+## 6. Batch Operations
 
-| Comando | Output |
+- `openfatture batch import file.csv [--dry-run] [--no-summary]`: bulk-import invoices. Use `--dry-run` to validate without saving; optionally emails a summary afterwards.
+- `openfatture batch export output.csv [--anno 2025] [--stato inviata]`: exports invoices for reporting or migrations.
+- `openfatture batch history`: placeholder (currently shows an example). Historical tracking will be finalised in future releases.
+
+See [docs/BATCH_OPERATIONS.md](BATCH_OPERATIONS.md) for CSV formats and best practices.
+
+---
+
+## 7. Reporting
+
+| Command | Output |
 |---------|--------|
-| `openfatture report iva [--anno 2025] [--trimestre Q1]` | Riepilogo IVA, imponibile e totali per aliquota. |
-| `openfatture report clienti [--anno 2025]` | Classifica clienti per fatturato. |
-| `openfatture report scadenze` | Elenca pagamenti scaduti, in scadenza e futuri con residui e stato dal ledger pagamenti. |
+| `openfatture report iva [--anno 2025] [--trimestre Q1]` | VAT breakdown by rate. |
+| `openfatture report clienti [--anno 2025]` | Top clients by revenue. |
+| `openfatture report scadenze` | Overdue, due, and upcoming payments with remaining balance and payment status. |
 
 ---
 
-## 8. AI & Automazione
+## 8. AI & Automation
 
-Prima di usare i comandi AI configura le variabili `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY` (oppure Ollama). Verifica con `openfatture config show`.
+Configure `AI_PROVIDER`, `AI_MODEL`, and `AI_API_KEY` (or Ollama) first. Validate with `openfatture config show`.
 
-| Comando | Cosa fa | Esempio |
+| Command | Purpose | Example |
 |---------|---------|---------|
-| `openfatture ai describe "testo"` | Genera descrizioni professionali per le linee fattura, riutilizzando esempi rilevanti e citando note operative. | `openfatture ai describe "Consulenza backend" --hours 8 --rate 75 --tech "Python,FastAPI"` |
-| `openfatture ai suggest-vat "servizio"` | Suggerisce aliquota IVA, natura e note fiscali con riferimenti DPR 633/72 dalla knowledge base. | `openfatture ai suggest-vat "Formazione online" --pa` |
-| `openfatture ai forecast [--months 6]` | Previsione incassi con ensemble Prophet + XGBoost; salva modelli/metriche in `.models/` e supporta `--retrain`. | `openfatture ai forecast --client 12 --retrain` |
-| `openfatture ai check ID [--level advanced]` | Analizza la fattura con regole + AI per individuare errori prima dell’invio. | `openfatture ai check 45 --level standard --verbose` |
-| `openfatture ai rag status` | Mostra sorgenti della knowledge base, conteggio documenti e directory ChromaDB. |  |
-| `openfatture ai rag index [--source id]` | Indicizza (o reindicizza) le sorgenti definite nel manifest RAG. | `openfatture ai rag index --source tax_guides`
-| `openfatture ai rag search "query"` | Ricerca semantica nella knowledge base (utile per debug o audit interno). | `openfatture ai rag search "reverse charge edilizia" --source tax_guides` |
+| `openfatture ai describe "text"` | Generates polished invoice line descriptions, reusing relevant examples and operational notes. | `openfatture ai describe "Backend consulting" --hours 8 --rate 75 --tech "Python,FastAPI"` |
+| `openfatture ai suggest-vat "service"` | Suggests VAT rate, nature code, and fiscal notes with references to DPR 633/72. | `openfatture ai suggest-vat "Online training" --pa` |
+| `openfatture ai forecast [--months 6]` | Cash-flow forecast using Prophet + XGBoost; stores models/metrics; supports `--retrain`. | `openfatture ai forecast --client 12 --retrain` |
+| `openfatture ai check ID [--level advanced]` | Analyses the invoice using rules + AI to catch issues before submission. | `openfatture ai check 45 --level standard --verbose` |
+| `openfatture ai rag status` | Displays knowledge-base sources, document counts, and ChromaDB directory. |  |
+| `openfatture ai rag index [--source id]` | Indexes or re-indexes the RAG sources defined in the manifest. | `openfatture ai rag index --source tax_guides` |
+| `openfatture ai rag search "query"` | Semantic search inside the knowledge base (great for debugging or audits). | `openfatture ai rag search "reverse charge edilizia" --source tax_guides` |
 
-Il comando `ai forecast` usa i modelli presenti in `MLConfig.model_path` (predefinito `.models/`); se non trovati viene eseguito il training iniziale e vengono generati i file `cash_flow_*`. Usa `--retrain` per rigenerare i modelli dopo aggiornamenti dati. Le analisi AI di compliance (`ai check`) restano in beta: in caso di errori utilizza l’opzione `--json` per diagnosticare più facilmente.
+`ai forecast` reads models from `MLConfig.model_path` (default `.models/`). If missing, it performs the initial training and generates `cash_flow_*` files. Use `--retrain` to rebuild models after updating your data.
 
-> ℹ️ **Suggerimento:** dopo aver configurato `OPENAI_API_KEY` (o un provider embedding locale) esegui `openfatture ai rag index` per popolare la knowledge base. Gli agenti citeranno automaticamente le fonti normative con il formato `[numero]`.
+Compliance analysis (`ai check`) remains in beta; when it fails, use `--json` for easier diagnostics.
 
----
-
-## 9. Modalità Interattiva
-
-`openfatture interactive` (o `openfatture --interactive`) avvia l’interfaccia testuale con menu Rich/Questionary:
-
-- Navigazione rapida tra clienti, fatture, report
-- Chat AI con cronologia persistente (`~/.openfatture/ai/sessions`)
-- Suggerimenti fiscali IVA guidati dall'AI direttamente dal menu
-- Accesso diretto alle azioni più comuni senza ricordare sintassi CLI
+> ℹ️ **Tip:** After setting `OPENAI_API_KEY` (or a local embedding provider), run `openfatture ai rag index` to populate the knowledge base. Agents will automatically cite normative sources such as `[1] DPR 633/72 art...`.
 
 ---
 
-## Suggerimenti Finali
+## 9. Interactive Mode
 
-- Esegui `uv run openfatture ...` se usi `uv` (consigliato). Con ambienti virtuali classici basta attivarli e usare `openfatture`.
-- Per debugging aggiungi `--verbose` ai comandi che lo supportano o controlla i log in `~/.openfatture/data`.
-- Aggiorna spesso `.env` e mantieni un backup del database (`openfatture.db` o l’istanza PostgreSQL).
+`openfatture interactive` (or `openfatture --interactive`) launches the Rich-powered TUI with menu navigation:
 
-Buon lavoro con OpenFatture! 🧾
+- Quick access to customers, invoices, and reports
+- AI chat with persistent history (`~/.openfatture/ai/sessions`)
+- Guided VAT suggestions directly from the menu
+- Shortcuts for the most common operations without memorising CLI syntax
+
+---
+
+## Final Tips
+
+- Run `uv run openfatture ...` if you rely on `uv` (recommended). With classic virtual environments, activate the venv and call `openfatture` directly.
+- For debugging, add `--verbose` to commands that support it or inspect logs under `~/.openfatture/data`.
+- Keep `.env` up to date and back up the database (`openfatture.db` or your PostgreSQL instance) regularly.

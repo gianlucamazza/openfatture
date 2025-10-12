@@ -1,6 +1,6 @@
 # OpenFatture 🧾
 
-**Open-source electronic invoicing system for Italian freelancers** – CLI-first with AI-powered workflows and bank reconciliation.
+**Open-source electronic invoicing for Italian freelancers** — built around a CLI-first workflow, AI automation, and payment reconciliation.
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
 [![CI Tests](https://github.com/gianlucamazza/openfatture/actions/workflows/test.yml/badge.svg)](https://github.com/gianlucamazza/openfatture/actions/workflows/test.yml)
@@ -10,50 +10,50 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-> 📘 Per la documentazione consolidata v1.0.0 consulta l'hub principale in `docs/README.md` e le note di rilascio in `docs/releases/`.
+> 📘 For the consolidated v1.0.0 documentation, visit the docs hub at `docs/README.md` and the release notes in `docs/releases/`.
 
 ---
 
 ## Quick Links
-- `docs/README.md` – Hub di documentazione e navigazione
-- `docs/QUICKSTART.md` – Guida rapida in italiano
-- `QUICKSTART.md` – Guida rapida in inglese (CLI in 5 minuti)
-- `docs/releases/v1.0.1.md` – Aggiornamento più recente
-- `CHANGELOG.md` – Storico completo delle modifiche
-- `docs/history/ROADMAP.md` – Roadmap e fasi di progetto
-- `docs/reports/TEST_RESULTS_SUMMARY.md` – Report test e copertura
-- `CONTRIBUTING.md` – Regole per contribuire
+- `docs/README.md` – Documentation hub and navigation index
+- `docs/QUICKSTART.md` – Extended quickstart (15-minute setup walkthrough)
+- `QUICKSTART.md` – Quickstart (5-minute CLI tour)
+- `docs/releases/v1.0.1.md` – Latest release notes
+- `CHANGELOG.md` – Full change log
+- `docs/history/ROADMAP.md` – Roadmap and phase breakdown
+- `docs/reports/TEST_RESULTS_SUMMARY.md` – Test and coverage report
+- `CONTRIBUTING.md` – Contribution guidelines
 
 ---
 
 ## Highlights
-- **Core invoicing** – Generazione FatturaPA XML v1.9, invio SDI via PEC, firme digitali e validazione automatica.
-- **Payment & reconciliation** – Import multi-banca, riconciliazione intelligente e reminder configurabili (`docs/PAYMENT_TRACKING.md`).
-- **AI workflows** – Chat assistant, suggerimenti IVA e descrizioni automatiche con provider OpenAI/Anthropic/Ollama (`examples/AI_CHAT_ASSISTANT.md`).
-- **Developer experience** – Stack Python moderno (uv, Typer, Pydantic), 117 test automatizzati con copertura media ~56% e gate CI al 50% (roadmap → 60%), Docker e script pronti.
-- **Compliance & operations** – Gestione GDPR, log di audit, template email professionali e flussi PEC pronti all’uso.
+- **Core invoicing** – Generates FatturaPA XML v1.9, handles PEC delivery to SDI, supports digital signatures, and validates automatically.
+- **Payment & reconciliation** – Multi-bank imports, intelligent reconciliation, and configurable reminders (`docs/PAYMENT_TRACKING.md`).
+- **AI workflows** – Chat assistant, VAT guidance, and description generation powered by OpenAI, Anthropic, or Ollama (`examples/AI_CHAT_ASSISTANT.md`).
+- **Developer experience** – Modern Python toolchain (uv, Typer, Pydantic), 117 automated tests with CI coverage gate at 50% (targeting 60%), plus Docker and Makefile automation.
+- **Compliance & operations** – GDPR-ready logging, professional email templates, and turnkey PEC workflows.
 
 ---
 
-## Demo
-- Scenario A — Setup & configurazione: https://github.com/user-attachments/assets/scenario_a_onboarding.mp4
-- Scenario B — Emissione fatture professionali: https://github.com/user-attachments/assets/scenario_b_invoice.mp4
-- Scenario C — Assistant AI con Ollama locale: https://github.com/user-attachments/assets/scenario_c_ai.mp4
-- Scenario D — Operazioni batch & analytics: https://github.com/user-attachments/assets/scenario_d_batch.mp4
-- Scenario E — Integrazione PEC & notifiche SDI: https://github.com/user-attachments/assets/scenario_e_pec.mp4
-- Libreria media completa in `media/output/` (video) e `media/screenshots/` (immagini)
+## Demo Library
+- Scenario A — Setup & configuration: https://github.com/user-attachments/assets/scenario_a_onboarding.mp4
+- Scenario B — Professional invoicing: https://github.com/user-attachments/assets/scenario_b_invoice.mp4
+- Scenario C — AI Assistant with local Ollama: https://github.com/user-attachments/assets/scenario_c_ai.mp4
+- Scenario D — Batch operations & analytics: https://github.com/user-attachments/assets/scenario_d_batch.mp4
+- Scenario E — PEC integration & SDI notifications: https://github.com/user-attachments/assets/scenario_e_pec.mp4
+- Additional assets live in `media/output/` (videos) and `media/screenshots/` (images)
 
 ---
 
 ## Getting Started
 
-### Prerequisiti
-- Python 3.12 o superiore
-- [uv](https://docs.astral.sh/uv/)
-- Account PEC e credenziali
-- Facoltativo: certificato di firma digitale (PKCS#12)
+### Prerequisites
+- Python 3.12 or later
+- [uv](https://docs.astral.sh/uv/) package manager
+- PEC mailbox credentials (for SDI delivery)
+- Optional: digital signature certificate (PKCS#12)
 
-### Installazione e configurazione
+### Installation & Setup
 
 ```bash
 git clone https://github.com/gianlucamazza/openfatture.git
@@ -62,22 +62,22 @@ uv sync
 cp .env.example .env
 ```
 
-Compila `.env` con i dati aziendali, PEC e notifiche (riferimento: `docs/CONFIGURATION.md`), poi inizializza il database:
+Populate `.env` with company data, PEC credentials, and notification settings (see `docs/CONFIGURATION.md`), then initialise the database:
 
 ```bash
 uv run python -c "from openfatture.storage.database.session import init_db; init_db()"
 ```
 
-### Prossimi passi
-- Segui la guida italiana in `docs/QUICKSTART.md` o la walkthrough inglese in `QUICKSTART.md`.
-- Consulta `docs/CLI_REFERENCE.md` per il catalogo completo dei comandi.
-- Esplora `docs/PAYMENT_TRACKING.md` per il modulo pagamenti e riconciliazione.
+### Next Steps
+- Follow the extended quickstart in `docs/QUICKSTART.md` or the slim walkthrough in `QUICKSTART.md`.
+- Review the complete CLI catalogue in `docs/CLI_REFERENCE.md`.
+- Explore `docs/PAYMENT_TRACKING.md` to master reconciliation and reminders.
 
 ---
 
 ## Usage
 
-### CLI
+### CLI Examples
 
 ```bash
 uv run openfatture fattura crea
@@ -93,57 +93,57 @@ from openfatture.core.xml.generator import FatturaXMLGenerator
 from openfatture.utils.email.sender import TemplatePECSender
 from openfatture.utils.config import get_settings
 
-fattura = Fattura(...)  # Vedi QUICKSTART per esempi completi
-xml_tree = FatturaXMLGenerator(fattura).generate()
+invoice = Fattura(...)  # See QUICKSTART for complete examples
+xml_tree = FatturaXMLGenerator(invoice).generate()
 TemplatePECSender(settings=get_settings()).send_invoice_to_sdi(
-    fattura,
-    xml_path="fattura.xml",
+    invoice,
+    xml_path="invoice.xml",
     signed=False,
 )
 ```
 
-Altri esempi sono disponibili nella cartella `examples/`.
+More examples live in the `examples/` directory.
 
 ---
 
 ## Documentation
-- `docs/README.md` – Indice di navigazione per guide, diagrammi e release
-- `docs/CONFIGURATION.md` – Riferimento completo per `.env` e impostazioni
-- `docs/AI_ARCHITECTURE.md` – Struttura agenti e integrazioni AI
-- `docs/PAYMENT_TRACKING.md` – Flussi di riconciliazione e reminder
-- `docs/ARCHITECTURE_DIAGRAMS.md` – Diagrammi Mermaid di sistema
+- `docs/README.md` – Navigation index for guides, diagrams, and releases
+- `docs/CONFIGURATION.md` – Complete `.env` and settings reference
+- `docs/AI_ARCHITECTURE.md` – AI agent architecture and integrations
+- `docs/PAYMENT_TRACKING.md` – Reconciliation workflows and reminders
+- `docs/ARCHITECTURE_DIAGRAMS.md` – Mermaid diagrams of the platform
 
 ---
 
 ## Development
-- Installa gli extra di sviluppo e i pre-commit: `uv sync --all-extras` e `uv run pre-commit install`
-- Esegui i test: `uv run python -m pytest` (copertura: `uv run python -m pytest --cov=openfatture`)
-- Automazioni, CI/CD e media workflow sono descritti in `docs/DEVELOPMENT.md`, `docs/operations/SETUP_CI_CD.md` e nella documentazione correlata
+- Install dev extras and pre-commit hooks: `uv sync --all-extras` and `uv run pre-commit install`
+- Run the tests: `uv run python -m pytest` (coverage: `uv run python -m pytest --cov=openfatture`)
+- CI/CD, automation, and media workflows are documented in `docs/DEVELOPMENT.md`, `docs/operations/SETUP_CI_CD.md`, and related guides
 
 ---
 
 ## Project Status
-- Ultimo rilascio stabile: `docs/releases/v1.0.1.md` (AI Cash Flow Upgrade)
-- Roadmap dettagliata e fasi progettuali in `docs/history/ROADMAP.md` e file `docs/history/PHASE_*_SUMMARY.md`
-- Focus attuale: orchestrazione AI (Phase 4) e hardening per produzione (Phase 6)
+- Latest stable release: `docs/releases/v1.0.1.md` (AI Cash Flow Upgrade)
+- Detailed roadmap and phase summaries: `docs/history/ROADMAP.md` and `docs/history/PHASE_*_SUMMARY.md`
+- Current focus: AI orchestration (Phase 4) and production hardening (Phase 6)
 
 ---
 
 ## Contributing & License
-Contribuzioni benvenute! Leggi `CONTRIBUTING.md` e apri una issue per proposte sostanziali. OpenFatture è distribuito sotto licenza MIT (vedi `LICENSE`).
+Contributions are welcome! Read `CONTRIBUTING.md` and open an issue for substantial proposals. OpenFatture ships under the MIT License (see `LICENSE`).
 
 ---
 
 ## Support
-- Documentazione: `docs/README.md`, guide QUICKSTART e directory `examples/`
+- Documentation: `docs/README.md`, quickstart guides, and the `examples/` directory
 - Community: [GitHub Discussions](https://github.com/gianlucamazza/openfatture/discussions)
-- Bug & feature request: [GitHub Issues](https://github.com/gianlucamazza/openfatture/issues)
+- Bugs & feature requests: [GitHub Issues](https://github.com/gianlucamazza/openfatture/issues)
 - Email: info@gianlucamazza.it
 
 ---
 
 ## Disclaimer
-Il software è fornito “as-is” per scopi didattici e produttivi. Assicurati la conformità con la normativa fiscale italiana e consulta un commercialista in caso di dubbi.
+The software is provided “as-is” for educational and production use. Ensure compliance with Italian tax regulations and consult a certified accountant when in doubt.
 
 ---
 

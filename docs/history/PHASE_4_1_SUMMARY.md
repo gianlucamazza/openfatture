@@ -197,7 +197,7 @@ max_tokens: 500
 manager = PromptManager(Path("openfatture/ai/prompts"))
 system, user = manager.render(
     "invoice_assistant",
-    {"servizio_base": "consulenza web", "ore_lavorate": 3}
+    {"servizio_base": "web consulting", "ore_lavorate": 3}
 )
 ```
 
@@ -387,8 +387,8 @@ agent = SimpleInvoiceAgent(config=config, provider=provider)
 
 # Execute
 context = InvoiceContext(
-    user_input="3 ore consulenza web",
-    servizio_base="consulenza web",
+    user_input="3 hours web consulting",
+    servizio_base="web consulting",
     ore_lavorate=3.0,
 )
 
@@ -409,7 +409,7 @@ manager = create_prompt_manager(Path("openfatture/ai/prompts"))
 system, user = manager.render(
     "invoice_assistant",
     {
-        "servizio_base": "consulenza IT",
+        "servizio_base": "IT consulting",
         "ore_lavorate": 5,
         "tecnologie": ["Python", "FastAPI", "PostgreSQL"],
     }

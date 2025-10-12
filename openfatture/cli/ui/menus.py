@@ -538,7 +538,7 @@ def action_search_cliente() -> None:
 
 def action_edit_cliente() -> None:
     """Edit client."""
-    console.print("\n[yellow]Funzionalità non ancora implementata[/yellow]")
+    console.print("\n[yellow]This feature is not yet implemented[/yellow]")
     console.print(
         "[dim]Usa: openfatture cliente add --interactive per creare un nuovo cliente[/dim]"
     )
@@ -781,7 +781,7 @@ def action_batch_send() -> None:
 
 def action_batch_import() -> None:
     """Import invoices from CSV."""
-    console.print("\n[yellow]Funzionalità batch import non ancora completamente integrata[/yellow]")
+    console.print("\n[yellow]Batch import is not fully integrated yet[/yellow]")
     console.print("[dim]Usa: openfatture batch import <file.csv>[/dim]")
     press_any_key()
 
@@ -857,7 +857,7 @@ def action_batch_delete() -> None:
 
     # Confirm
     if not confirm_action(
-        f"[red]ATTENZIONE: Eliminare {len(fatture)} fatture? Questa operazione è irreversibile![/red]",
+        f"[red]WARNING: Delete {len(fatture)} invoices? This action cannot be undone![/red]",
         default=False,
     ):
         console.print("[yellow]Operazione annullata.[/yellow]")
@@ -887,9 +887,7 @@ def action_batch_delete() -> None:
 
 def action_batch_history() -> None:
     """Show batch operations history."""
-    console.print(
-        "\n[yellow]Funzionalità batch history non ancora completamente integrata[/yellow]"
-    )
+    console.print("\n[yellow]Batch history is not fully integrated yet[/yellow]")
     console.print("[dim]Usa: openfatture batch history[/dim]")
     press_any_key()
 

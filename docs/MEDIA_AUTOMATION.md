@@ -1,53 +1,53 @@
-# Automazione Video & Screenshot (2025)
+# Media Automation (2025)
 
-> Obiettivo: ridurre al minimo la cattura manuale per gli scenari demo, mantenendo qualità e coerenza con il piano media.
+> Goal: minimise manual capture for demo scenarios while keeping quality aligned with the media plan.
 
 ## 1. Overview
-- **Terminal/CLI** → automatizzabile tramite script di input + registratori headless (es. `vhs`, `terminalizer`, `agg`).
-- **Screenshot GUI/Docs** → generabili con browser automation (Playwright) e template Figma API.
-- **Voice-over e human touch** → restano manuali (o TTS controllato) per mantenere tono coerente.
-- **Post-produzione** → pipeline scriptata (`ffmpeg`, `whisperx`), con controlli QA finali.
+- **Terminal/CLI** → scriptable via input scripts + headless recorders (e.g. `vhs`, `terminalizer`, `agg`).
+- **Screenshots (GUI/docs)** → generated with browser automation (Playwright) and Figma API templates.
+- **Voice-over / human touch** → kept manual (or curated TTS) to preserve tone.
+- **Post-production** → scripted pipeline (`ffmpeg`, `whisperx`) followed by final QA.
 
-## 2. Stack Consigliato
-| Area | Tool | Note |
-|------|------|------|
-| Terminal Recording | [`vhs`](https://github.com/charmbracelet/vhs) | Genera mp4/gif da script `.tape`; gestisce tema, font, dimensioni. |
-| CLI Storyboard | `media/automation/*.tape` | Script scenario-driven con commenti; includono `Sleep`, `Type`, `Enter`. |
-| Browser Screenshots | [Playwright](https://playwright.dev/python/) (`scripts/capture_docs.py`) | Rendering docs/CLI web (es. HTML export) a risoluzione 2×. |
-| Video Post | `ffmpeg`, `ffmpeg-normalize`, `python -m whisperx` | Composizione, normalizzazione audio, generazione sottotitoli. |
-| Asset Sync | `make media` (da introdurre) | Orchestratore per sequenza reset → capture → export. |
+## 2. Recommended Stack
+| Area | Tool | Notes |
+|------|------|-------|
+| Terminal recording | [`vhs`](https://github.com/charmbracelet/vhs) | Generates mp4/gif from `.tape` scripts; handles theme, font, size. |
+| CLI storyboard | `media/automation/*.tape` | Scenario-driven scripts with comments; include `Sleep`, `Type`, `Enter`. |
+| Browser screenshots | [Playwright](https://playwright.dev/python/) (`scripts/capture_screenshots.py`) | Renders docs/CLI HTML (e.g. static pages) at 2× resolution. |
+| Video post | `ffmpeg`, `ffmpeg-normalize`, `python -m whisperx` | Composition, audio normalisation, subtitle generation. |
+| Asset orchestration | `make media-*` targets | Resets demo environment → capture → export in sequence.
 
-## 3. Pipeline Automatica (Scenario CLI)
-1. `./scripts/reset_demo.sh` → dataset deterministico.
+## 3. Automated CLI Scenario Pipeline
+1. `./scripts/reset_demo.sh` → deterministic dataset.
 2. `vhs media/automation/scenario_a_onboarding.tape` → `media/output/scenario_a.mp4`.
-3. `ffmpeg` overlay callout statici o lower-third (preset in `media/overlays/`).
-4. `whisperx --model medium.it` per bozza sottotitoli (se VO registrata).
-5. QA: confronto con storyboard e checklist, eventuale registrazione manuale dei segmenti mancanti.
+3. `ffmpeg` overlays for callouts/lower-thirds (presets in `media/overlays/`).
+4. `whisperx --model medium.it` for draft subtitles (if voice-over recorded).
+5. QA: compare with storyboard and checklist, re-record missing segments manually if needed.
 
-## 4. Pipeline Screenshot
-1. `uv run playwright install chromium` (una tantum).
+## 4. Screenshot Pipeline
+1. `uv run playwright install chromium` (one-time).
 2. `uv run python scripts/capture_screenshots.py --scenario A`:
-   - esegue comandi CLI e salva output come testo.
-   - Renderizza HTML con highlight e cattura PNG 2560×1440.
-   - Per GUI/doc: apre URL local (`mkdocs serve` o file statico) e scatta screenshot sezioni selezionate.
-3. Output in `media/screenshots/v2025/*.png` + JSON metadata (timestamp, comando, file origine).
+   - Runs CLI commands and stores raw output.
+   - Renders HTML with syntax highlighting and captures 2560×1440 PNGs.
+   - For GUI/docs: opens local URL (`mkdocs serve` or static files) and snaps selected sections.
+3. Output stored under `media/screenshots/v2025/*.png` with JSON metadata (timestamp, command, source file).
 
-## 5. Esempi Script
-- `media/automation/scenario_a_onboarding.tape` → scenario A (setup) totalmente scriptato.
-- `media/automation/templates/common.tapeinc` → snippet riutilizzabili (clear, prompt, helper).
-- `scripts/capture_screenshots.py` → definisce scenari CLI screenshot + fallback manuale.
+## 5. Script Examples
+- `media/automation/scenario_a_onboarding.tape` → fully scripted onboarding scenario.
+- `media/automation/templates/common.tapeinc` → reusable snippets (clear, prompt, helpers).
+- `scripts/capture_screenshots.py` → defines CLI screenshot scenarios + manual fallback.
 
-> ⚠️ L’esecuzione degli script deve avvenire in ambiente pulito (`git status` pulito, DB demo). Ogni modifica ai comandi va riflessa nello storyboard e nei test automatici (`tests/services/test_media_automation.py`, da creare).
+> ⚠️ Run automation in a clean workspace (`git status` clean, demo DB). Every CLI change must be reflected in the storyboard and automated tests (`tests/services/test_media_automation.py`, planned).
 
-## 6. Limiti & Mitigazioni
-- **Latency/Prompt**: alcuni comandi (es. AI) richiedono input manuale o API key reali → usare flag `--mock` o environ `AI_MOCK_MODE=1` per output deterministici.
-- **Rendering Terminal Fonts**: `vhs` usa font di sistema; configurare `Set FontFamily "JetBrains Mono"` per coerenza. Se non installato → fallback a `Menlo`.
-- **Aggiornamenti CLI**: dopo ogni release, rigenerare video con pipeline e confrontare CRC.
+## 6. Limitations & Mitigations
+- **Latency/prompts:** certain commands (e.g. AI) need manual input or real API keys → use `--mock` or `AI_MOCK_MODE=1` for deterministic output.
+- **Terminal font rendering:** `vhs` uses system fonts; configure `Set FontFamily "JetBrains Mono"` for consistency. If missing → fall back to `Menlo`.
+- **CLI updates:** regenerate videos after each release and compare checksums.
 
-## 7. Roadmap Automazione
-- [ ] Aggiungere workflow `make media-scenarioA` che esegue sequenza completa.
-- [ ] Introdurre test snapshot sugli output (immagini diff via `pixelmatch`).
-- [ ] Collegare pipeline a GitHub Actions (nightly) per verificare che gli script restino validi (solo dry-run, senza esport video).
-- [ ] Estendere a scenari B-E con modularizzazione tape (inclusione passi comuni: login AI, export pdf XML).
+## 7. Automation Roadmap
+- [ ] Add workflow `make media-scenarioA` chaining the full pipeline.
+- [ ] Introduce snapshot tests for outputs (image diffs via `pixelmatch`).
+- [ ] Wire a GitHub Actions workflow (nightly dry-run) to ensure scripts remain valid.
+- [ ] Extend coverage to scenarios B–E with modular tape inclusions (shared steps: AI login, PDF/XML export).
 
-Per ulteriori dettagli, vedere `media/automation/README.md` e gli script nella stessa directory. In caso di modifica della CLI che rompa gli script, aprire task su board Linear `MED-2025` con label `automation`.
+For more detail, consult `media/automation/README.md` and the scripts in the same directory. When CLI changes break scripts, open a task on the Linear board `MED-2025` with the label `automation`.

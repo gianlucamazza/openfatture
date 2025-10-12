@@ -1,21 +1,21 @@
 # Configuration Reference
 
-Riferimento completo per tutte le opzioni di configurazione di OpenFatture.
+Comprehensive reference for every OpenFatture configuration option.
 
 ---
 
-## Panoramica
+## Overview
 
-OpenFatture usa variabili d'ambiente per la configurazione, caricate da file `.env` tramite **Pydantic Settings**.
+OpenFatture relies on environment variables managed through `.env` files and loaded with **Pydantic Settings**.
 
-**File di configurazione:**
-- `.env` - Configurazione locale (NON committare!)
-- `.env.example` - Template con valori di esempio
+**Key files**
+- `.env` – Local configuration (never commit this file)
+- `.env.example` – Template with sample values
 
-**Precedenza:**
-1. Variabili d'ambiente del sistema
-2. File `.env`
-3. Valori di default nel codice
+**Precedence order**
+1. System environment variables
+2. Values defined in `.env`
+3. Defaults defined in code
 
 ---
 
@@ -23,168 +23,148 @@ OpenFatture usa variabili d'ambiente per la configurazione, caricate da file `.e
 
 ### `DATABASE_URL`
 
-**Descrizione**: URL di connessione al database
+**Description:** Database connection string
+**Type:** String
+**Default:** `sqlite:///./openfatture.db`
 
-**Tipo**: String
-
-**Default**: `sqlite:///./openfatture.db`
-
-**Esempi**:
 ```env
-# SQLite (sviluppo)
+# SQLite (development)
 DATABASE_URL=sqlite:///./openfatture.db
 
-# PostgreSQL (produzione)
+# PostgreSQL (production)
 DATABASE_URL=postgresql://user:password@localhost:5432/openfatture
 
-# PostgreSQL con SSL
+# PostgreSQL with SSL
 DATABASE_URL=postgresql://user:password@host:5432/db?sslmode=require
 ```
 
-**Note**:
-- SQLite va bene per sviluppo e freelancer singoli
-- PostgreSQL raccomandato per produzione o multi-utente
-- Il database viene creato automaticamente se non esiste
+**Notes**
+- SQLite is fine for development and single-user installs
+- PostgreSQL is recommended for production or multi-user scenarios
+- The database is created automatically if it does not exist
 
-**Troubleshooting**:
+**Troubleshooting**
 ```bash
-# Verifica connessione
 uv run python -c "
 from openfatture.storage.database.session import get_session
 session = next(get_session())
-print('✅ Database connesso')
+print('✅ Database connection OK')
 "
 ```
 
 ---
 
-## Dati Aziendali (Cedente Prestatore)
+## Company Data (Cedente Prestatore)
 
-Questi sono i tuoi dati aziendali che appariranno su tutte le fatture.
+These details appear on every invoice and in SDI submissions.
 
 ### `CEDENTE_DENOMINAZIONE`
 
-**Descrizione**: Ragione sociale o nome completo
+**Description:** Company name or full name
+**Type:** String
+**Required:** ✅
 
-**Tipo**: String
-
-**Required**: ✅ Obbligatorio
-
-**Esempio**:
 ```env
 CEDENTE_DENOMINAZIONE=Mario Rossi
-# oppure
+# or
 CEDENTE_DENOMINAZIONE=Acme Consulting SRL
 ```
 
-**Note**:
-- Per ditte individuali: nome e cognome
-- Per società: ragione sociale completa
-- Verrà mostrato nell'XML e nelle email
+**Notes**
+- Sole traders: full name
+- Companies: registered business name
+- Shown in XML files and outbound emails
 
 ---
 
 ### `CEDENTE_PARTITA_IVA`
 
-**Descrizione**: Partita IVA (11 cifre)
+**Description:** VAT number (11 digits)
+**Type:** String (11 characters)
+**Required:** ✅
 
-**Tipo**: String (11 caratteri)
-
-**Required**: ✅ Obbligatorio
-
-**Esempio**:
 ```env
 CEDENTE_PARTITA_IVA=12345678901
 ```
 
-**Validazione**:
-- Deve essere esattamente 11 cifre
-- Solo numeri
-- Algoritmo di controllo non verificato (puoi estendere)
+**Validation**
+- Must contain exactly 11 digits
+- Digits only
+- Basic checksum not enforced (extend if needed)
 
-**Note**:
-- Usata come identificatore univoco
-- Necessaria per invio SDI
+**Notes**
+- Primary identifier for SDI
+- Required for electronic invoicing
 
 ---
 
 ### `CEDENTE_CODICE_FISCALE`
 
-**Descrizione**: Codice fiscale
+**Description:** Italian tax code
+**Type:** String (16 alphanumeric characters)
+**Required:** ✅
 
-**Tipo**: String (16 caratteri alfanumerici)
-
-**Required**: ✅ Obbligatorio
-
-**Esempio**:
 ```env
-# Persona fisica
+# Individual
 CEDENTE_CODICE_FISCALE=RSSMRA80A01H501U
 
-# Società (uguale a P.IVA)
+# Company (usually same as VAT number)
 CEDENTE_CODICE_FISCALE=12345678901
 ```
 
-**Note**:
-- Per persone fisiche: codice fiscale standard (16 caratteri)
-- Per società: solitamente uguale alla P.IVA
-- Obbligatorio per FatturaPA
+**Notes**
+- Individuals: 16-character codice fiscale
+- Companies: generally matches the VAT number
+- Mandatory for FatturaPA
 
 ---
 
 ### `CEDENTE_REGIME_FISCALE`
 
-**Descrizione**: Codice regime fiscale
+**Description:** Tax regime code
+**Type:** String
+**Default:** `RF19`
 
-**Tipo**: String
-
-**Default**: `RF19`
-
-**Valori comuni**:
 ```env
-# Regime forfettario (flat tax 5-15%)
+# Flat-tax regime (5–15%)
 CEDENTE_REGIME_FISCALE=RF19
 
-# Regime ordinario
+# Ordinary regime
 CEDENTE_REGIME_FISCALE=RF01
 
-# Regime dei minimi
+# Simplified regime
 CEDENTE_REGIME_FISCALE=RF02
 ```
 
-**Codici completi**:
-| Codice | Descrizione |
-|--------|-------------|
-| RF01 | Ordinario |
-| RF02 | Contribuenti minimi |
-| RF04 | Agricoltura e attività connesse |
-| RF05 | Vendita sali e tabacchi |
-| RF06 | Commercio fiammiferi |
-| RF07 | Editoria |
-| RF08 | Gestione servizi telefonia pubblica |
-| RF09 | Rivendita documenti di trasporto |
-| RF10 | Intrattenimenti/spettacoli/giochi |
-| RF11 | Agenzie viaggi e turismo |
-| RF12 | Agriturismo |
-| RF13 | Vendite a domicilio |
-| RF14 | Rivendita beni usati/oggetti arte |
-| RF15 | Agenzie vendite all'asta |
-| RF16 | IVA per cassa P.A. |
-| RF17 | IVA per cassa altri |
-| RF18 | Altro |
-| RF19 | **Forfettario** (più comune) |
+| Code | Description |
+|------|-------------|
+| RF01 | Ordinary |
+| RF02 | Minimum taxpayers |
+| RF04 | Agriculture and related activities |
+| RF05 | Salt and tobacco retail |
+| RF06 | Match sales |
+| RF07 | Publishing |
+| RF08 | Public telephony services |
+| RF09 | Transport document resale |
+| RF10 | Entertainment and gaming |
+| RF11 | Travel agencies |
+| RF12 | Agritourism |
+| RF13 | Door-to-door sales |
+| RF14 | Second-hand goods / art objects |
+| RF15 | Auction agencies |
+| RF16 | Cash accounting – public administration |
+| RF17 | Cash accounting – other |
+| RF18 | Other |
+| RF19 | **Forfait regime** (most common) |
 
 ---
 
 ### `CEDENTE_INDIRIZZO`
 
-**Descrizione**: Indirizzo completo (via e numero civico)
+**Description:** Full street address
+**Type:** String
+**Required:** ✅
 
-**Tipo**: String
-
-**Required**: ✅ Obbligatorio
-
-**Esempio**:
 ```env
 CEDENTE_INDIRIZZO=Via Giuseppe Garibaldi 42
 ```
@@ -193,13 +173,10 @@ CEDENTE_INDIRIZZO=Via Giuseppe Garibaldi 42
 
 ### `CEDENTE_CAP`
 
-**Descrizione**: Codice di Avviamento Postale
+**Description:** Postal code (CAP)
+**Type:** String (5 digits)
+**Required:** ✅
 
-**Tipo**: String (5 cifre)
-
-**Required**: ✅ Obbligatorio
-
-**Esempio**:
 ```env
 CEDENTE_CAP=00100
 ```
@@ -208,37 +185,30 @@ CEDENTE_CAP=00100
 
 ### `CEDENTE_COMUNE`
 
-**Descrizione**: Nome del comune
+**Description:** Municipality name
+**Type:** String
+**Required:** ✅
 
-**Tipo**: String
-
-**Required**: ✅ Obbligatorio
-
-**Esempio**:
 ```env
 CEDENTE_COMUNE=Roma
 ```
 
-**Note**:
-- Deve corrispondere al comune ufficiale
-- Usare il nome completo (es. "Reggio Emilia", non "Reggio E.")
+**Notes**
+- Use the official full name (e.g. `Reggio Emilia`, not `Reggio E.`)
 
 ---
 
 ### `CEDENTE_PROVINCIA`
 
-**Descrizione**: Sigla provincia (2 caratteri)
+**Description:** Province code (2 letters)
+**Type:** String (2 characters)
+**Required:** ✅
 
-**Tipo**: String (2 caratteri)
-
-**Required**: ✅ Obbligatorio
-
-**Esempio**:
 ```env
 CEDENTE_PROVINCIA=RM
 ```
 
-**Province comuni**:
+**Common province codes**
 - RM = Roma
 - MI = Milano
 - TO = Torino
@@ -246,124 +216,106 @@ CEDENTE_PROVINCIA=RM
 - FI = Firenze
 - BO = Bologna
 
-[Lista completa province italiane](https://it.wikipedia.org/wiki/Province_d%27Italia)
+[Full province list](https://it.wikipedia.org/wiki/Province_d%27Italia)
 
 ---
 
 ### `CEDENTE_NAZIONE`
 
-**Descrizione**: Codice nazione ISO 3166-1 alpha-2
+**Description:** ISO 3166-1 alpha-2 country code
+**Type:** String (2 characters)
+**Default:** `IT`
 
-**Tipo**: String (2 caratteri)
-
-**Default**: `IT`
-
-**Esempio**:
 ```env
 CEDENTE_NAZIONE=IT
 ```
 
-**Note**:
-- Quasi sempre `IT` per utenti italiani
-- Altri codici solo per società estere
+**Notes**
+- Italian entities use `IT`
+- Change only for foreign companies
 
 ---
 
 ### `CEDENTE_TELEFONO`
 
-**Descrizione**: Numero di telefono (opzionale)
+**Description:** Contact phone number (optional)
+**Type:** String (optional)
+**Default:** None
 
-**Tipo**: String (opzionale)
-
-**Default**: None
-
-**Esempio**:
 ```env
 CEDENTE_TELEFONO=+39 06 12345678
 CEDENTE_TELEFONO=06 12345678
 CEDENTE_TELEFONO=3331234567
 ```
 
-**Note**:
-- Formato libero (con o senza prefisso)
-- Raccomandato per comunicazioni con clienti
+**Notes**
+- Accepts any readable format
+- Recommended for client communications
 
 ---
 
 ### `CEDENTE_EMAIL`
 
-**Descrizione**: Email aziendale (opzionale)
+**Description:** Company email (optional)
+**Type:** String (optional)
+**Default:** None
 
-**Tipo**: String (opzionale)
-
-**Default**: None
-
-**Esempio**:
 ```env
-CEDENTE_EMAIL=info@tuaazienda.it
+CEDENTE_EMAIL=info@yourcompany.it
 ```
 
-**Note**:
-- Diversa dalla PEC
-- Usata per comunicazioni generiche
-- Può apparire sulle fatture
+**Notes**
+- Separate from the PEC mailbox
+- Used for general communications
+- May appear on invoice PDFs
 
 ---
 
-## Configurazione PEC
+## PEC Configuration
 
-La PEC (Posta Elettronica Certificata) è necessaria per inviare fatture al SDI.
+PEC (certified email) is required to deliver invoices to SDI.
 
 ### `PEC_ADDRESS`
 
-**Descrizione**: Tuo indirizzo PEC
+**Description:** PEC mailbox
+**Type:** String (email)
+**Required:** ✅
 
-**Tipo**: String (email)
-
-**Required**: ✅ Obbligatorio (per invio fatture)
-
-**Esempio**:
 ```env
-PEC_ADDRESS=tuaazienda@pec.it
+PEC_ADDRESS=yourcompany@pec.it
 ```
 
-**Note**:
-- Deve essere una PEC valida e attiva
-- Usata come mittente per invio SDI
-- Verifica che sia ancora attiva
+**Notes**
+- Must be valid and active
+- Used as the sender for SDI
+- Verify periodically with your provider
 
 ---
 
 ### `PEC_PASSWORD`
 
-**Descrizione**: Password della PEC
+**Description:** PEC mailbox password
+**Type:** String
+**Required:** ✅
 
-**Tipo**: String
-
-**Required**: ✅ Obbligatorio (per invio fatture)
-
-**Esempio**:
 ```env
-PEC_PASSWORD=la_tua_password_sicura
+PEC_PASSWORD=your_secure_password
 ```
 
-**Sicurezza**:
-- ⚠️ NON committare il file `.env` su Git!
-- Usa password forte
-- Cambia regolarmente
-- Considera variabili d'ambiente per produzione
+**Security checklist**
+- ⚠️ Never commit `.env` to Git
+- Use a strong password
+- Rotate regularly
+- Prefer environment variables or vaults in production
 
 ---
 
 ### `PEC_SMTP_SERVER`
 
-**Descrizione**: Server SMTP del provider PEC
+**Description:** SMTP hostname for the PEC provider
+**Type:** String (hostname)
+**Default:** `smtp.pec.it`
 
-**Tipo**: String (hostname)
-
-**Default**: `smtp.pec.it`
-
-**Provider comuni**:
 ```env
 # Aruba
 PEC_SMTP_SERVER=smtp.pec.aruba.it
@@ -384,298 +336,254 @@ PEC_SMTP_SERVER=smtp.pec.infocert.it
 PEC_SMTP_SERVER=smtp.pec.actalis.it
 ```
 
-**Note**:
-- Varia per provider
-- Controlla documentazione del tuo provider
-- Solitamente usa SSL/TLS sulla porta 465
+**Notes**
+- Hostname depends on the provider
+- Consult your provider’s documentation
+- Typically uses SSL/TLS on port 465
 
 ---
 
 ### `PEC_SMTP_PORT`
 
-**Descrizione**: Porta SMTP
+**Description:** SMTP port
+**Type:** Integer
+**Default:** `465`
 
-**Tipo**: Integer
-
-**Default**: `465`
-
-**Valori comuni**:
 ```env
-# SSL/TLS (raccomandato)
+# SSL/TLS (recommended)
 PEC_SMTP_PORT=465
 
-# STARTTLS (meno comune per PEC)
+# STARTTLS (less common for PEC)
 PEC_SMTP_PORT=587
 ```
 
-**Note**:
-- Porta 465 è la più comune per PEC
-- Usa sempre connessione cifrata
+**Notes**
+- Port 465 is standard for PEC
+- Always use encrypted connections
 
 ---
 
 ### `SDI_PEC_ADDRESS`
 
-**Descrizione**: Indirizzo PEC del Sistema di Interscambio
+**Description:** SDI intake mailbox
+**Type:** String (email)
+**Default:** `sdi01@pec.fatturapa.it`
 
-**Tipo**: String (email)
-
-**Default**: `sdi01@pec.fatturapa.it`
-
-**Esempio**:
 ```env
 SDI_PEC_ADDRESS=sdi01@pec.fatturapa.it
 ```
 
-**Note**:
-- Questo è l'indirizzo ufficiale del SDI
-- Raramente cambia
-- Non modificare a meno che non sia esplicitamente richiesto
+**Notes**
+- Official SDI address
+- Rarely changes
+- Do not modify unless explicitly instructed by Agenzia delle Entrate
 
 ---
 
 ## Email Templates & Branding
 
-Configurazione per personalizzare le email automatiche.
+Customise the automatic emails sent by OpenFatture.
 
 ### `EMAIL_LOGO_URL`
 
-**Descrizione**: URL del logo aziendale per email
+**Description:** Public URL for the company logo
+**Type:** String (URL, optional)
+**Default:** None
 
-**Tipo**: String (URL, opzionale)
-
-**Default**: None
-
-**Esempio**:
 ```env
-EMAIL_LOGO_URL=https://tuosito.com/logo.png
+EMAIL_LOGO_URL=https://cdn.yourcompany.it/logo.png
+EMAIL_LOGO_URL=https://your-company.com/assets/logo.svg
 ```
 
-**Requisiti immagine**:
-- Formato: PNG, JPG, SVG
-- Dimensione raccomandata: 200x60px
-- Sfondo trasparente (PNG)
-- Hosting pubblico (HTTPS)
-
-**Note**:
-- Se non specificato, usa solo testo
-- Migliora il branding delle email
-- Testalo con `preview()` prima
+**Notes**
+- Must be reachable via HTTPS
+- PNG or SVG recommended
+- Displayed in the email header
 
 ---
 
 ### `EMAIL_PRIMARY_COLOR`
 
-**Descrizione**: Colore primario per template email
+**Description:** Primary brand colour (hex)
+**Type:** String (HEX, optional)
+**Default:** `#1976D2`
 
-**Tipo**: String (colore hex)
-
-**Default**: `#1976D2` (blu Material Design)
-
-**Esempio**:
 ```env
-EMAIL_PRIMARY_COLOR=#1976D2  # Blu
-EMAIL_PRIMARY_COLOR=#4CAF50  # Verde
-EMAIL_PRIMARY_COLOR=#FF5722  # Arancione
+EMAIL_PRIMARY_COLOR=#1976D2  # Blue
+EMAIL_PRIMARY_COLOR=#FF5722  # Orange
+EMAIL_PRIMARY_COLOR=#0E1116  # Near black
 ```
 
-**Note**:
-- Formato: `#RRGGBB` (hex)
-- Usato per intestazioni, pulsanti, badge
-- Mantieni buon contrasto con bianco/nero
+**Notes**
+- Include the `#`
+- High-contrast colours work best
+- Applied to headers and buttons
 
 ---
 
 ### `EMAIL_SECONDARY_COLOR`
 
-**Descrizione**: Colore secondario per template email
+**Description:** Secondary colour (hex)
+**Type:** String (HEX, optional)
+**Default:** `#424242`
 
-**Tipo**: String (colore hex)
-
-**Default**: `#424242` (grigio scuro)
-
-**Esempio**:
 ```env
-EMAIL_SECONDARY_COLOR=#424242  # Grigio scuro
-EMAIL_SECONDARY_COLOR=#212121  # Nero
+EMAIL_SECONDARY_COLOR=#424242  # Dark grey
+EMAIL_SECONDARY_COLOR=#FFFFFF  # White
+EMAIL_SECONDARY_COLOR=#1E1E1E  # Charcoal
 ```
 
-**Note**:
-- Usato per testo secondario, footer
-- Deve avere buon contrasto con sfondo
+**Notes**
+- Used for footers and links
+- Keep a readable contrast with the primary colour
 
 ---
 
 ### `EMAIL_FOOTER_TEXT`
 
-**Descrizione**: Testo personalizzato nel footer email
+**Description:** Custom footer text
+**Type:** String (optional)
+**Default:** None (falls back to company details)
 
-**Tipo**: String (opzionale)
-
-**Default**: None (usa dati cedente)
-
-**Esempio**:
 ```env
-EMAIL_FOOTER_TEXT=© 2025 Acme SRL - P.IVA 12345678901 - Tutti i diritti riservati
+EMAIL_FOOTER_TEXT=© 2025 Acme SRL - VAT 12345678901 - All rights reserved
 ```
 
-**Note**:
-- Supporta testo semplice (no HTML)
-- Apparirà in tutte le email
-- Se non specificato, usa automaticamente dati cedente
+**Notes**
+- Plain text only (no HTML)
+- Appears on every email
+- Defaults to cedente information when omitted
 
 ---
 
 ### `NOTIFICATION_EMAIL`
 
-**Descrizione**: Email per notifiche automatiche SDI
+**Description:** Inbox for SDI and automation alerts
+**Type:** String (email)
+**Required:** ✅ (for email features)
 
-**Tipo**: String (email)
-
-**Required**: ✅ Obbligatorio (per email features)
-
-**Esempio**:
 ```env
-NOTIFICATION_EMAIL=admin@tuaazienda.it
+NOTIFICATION_EMAIL=admin@yourcompany.it
 ```
 
-**Riceve notifiche per**:
-- Attestazioni trasmissione SDI (AT)
-- Ricevute consegna (RC)
-- Notifiche scarto (NS)
-- Mancate consegne (MC)
-- Esiti cliente (NE)
-- Riepiloghi batch operations
-- Test PEC
+**Receives**
+- SDI transmission receipts (AT)
+- Delivery receipts (RC)
+- Rejection notices (NS)
+- Failed deliveries (MC)
+- Customer outcomes (NE)
+- Batch operation summaries
+- PEC configuration tests
 
-**Note**:
-- Può essere diversa dalla PEC
-- Controlla questa casella quotidianamente
-- Può essere una mailing list
+**Notes**
+- May differ from the PEC mailbox
+- Monitor daily (or route to a shared mailbox)
+- Mailing lists are supported
 
 ---
 
 ### `NOTIFICATION_ENABLED`
 
-**Descrizione**: Abilita/disabilita notifiche email
+**Description:** Toggle email notifications
+**Type:** Boolean
+**Default:** `true`
 
-**Tipo**: Boolean
-
-**Default**: `true`
-
-**Esempio**:
 ```env
-NOTIFICATION_ENABLED=true   # Abilita notifiche
-NOTIFICATION_ENABLED=false  # Disabilita notifiche
+NOTIFICATION_ENABLED=true   # Enable notifications
+NOTIFICATION_ENABLED=false  # Disable temporarily
 ```
 
-**Note**:
-- Utile per disabilitare temporaneamente
-- Le notifiche vengono comunque processate (solo non inviate via email)
-- In produzione, mantieni sempre `true`
+**Notes**
+- Even when disabled, notifications are still processed (emails are just skipped)
+- Keep enabled in production
 
 ---
 
 ### `LOCALE`
 
-**Descrizione**: Lingua per email e UI
+**Description:** Locale for emails and CLI labels
+**Type:** String
+**Default:** `it`
 
-**Tipo**: String
-
-**Default**: `it`
-
-**Valori supportati**:
 ```env
-LOCALE=it  # Italiano
+LOCALE=it  # Italian
 LOCALE=en  # English
 ```
 
-**Note**:
-- Cambia lingua di tutte le email
-- I18n completo per IT e EN
-- Aggiungere altre lingue modificando `i18n/*.json`
+**Notes**
+- Switches the language of all email templates
+- Fully translated for Italian and English
+- Add more locales via `openfatture/utils/email/i18n/*.json`
 
 ---
 
-## Firma Digitale
+## Digital Signature
 
-Configurazione opzionale per firmare digitalmente le fatture XML.
+Optional configuration to sign XML invoices digitally.
 
 ### `SIGNATURE_CERTIFICATE_PATH`
 
-**Descrizione**: Percorso al certificato di firma digitale
+**Description:** Path to the digital certificate
+**Type:** Path (optional)
+**Default:** None
 
-**Tipo**: Path (opzionale)
-
-**Default**: None
-
-**Esempio**:
 ```env
 SIGNATURE_CERTIFICATE_PATH=/path/to/certificate.p12
 SIGNATURE_CERTIFICATE_PATH=/home/user/.openfatture/cert.pfx
 ```
 
-**Formati supportati**:
-- `.p12` / `.pfx` - PKCS#12 (più comune)
-- `.pem` - PEM format
+**Supported formats**
+- `.p12` / `.pfx` (PKCS#12)
+- `.pem`
 
-**Note**:
-- Opzionale ma fortemente raccomandato
-- Riduce rischio di scarto SDI
-- Aumenta valore legale della fattura
+**Notes**
+- Optional but strongly recommended
+- Reduces SDI rejections
+- Improves legal enforceability
 
 ---
 
 ### `SIGNATURE_CERTIFICATE_PASSWORD`
 
-**Descrizione**: Password del certificato
+**Description:** Certificate password
+**Type:** String (optional)
+**Default:** None
 
-**Tipo**: String (opzionale)
-
-**Default**: None
-
-**Esempio**:
 ```env
-SIGNATURE_CERTIFICATE_PASSWORD=password_certificato
+SIGNATURE_CERTIFICATE_PASSWORD=certificate_password
 ```
 
-**Sicurezza**:
-- ⚠️ MAI committare su Git!
-- Usa password forte
-- Considera vault per produzione
+**Security**
+- ⚠️ Never commit secrets to Git
+- Use a strong password
+- Prefer vault/secret managers in production
 
 ---
 
-## Configurazione AI
+## AI Configuration
 
-Opzionale: abilita funzionalità AI/LLM per suggerimenti intelligenti.
+Enable LLM features for smart suggestions and assistants.
 
 ### `AI_PROVIDER`
 
-**Descrizione**: Provider LLM
+**Description:** LLM provider
+**Type:** String
+**Default:** `openai`
 
-**Tipo**: String
-
-**Default**: `openai`
-
-**Valori supportati**:
 ```env
 AI_PROVIDER=openai     # OpenAI (GPT-4, GPT-3.5)
 AI_PROVIDER=anthropic  # Anthropic (Claude)
-AI_PROVIDER=ollama     # Ollama (modelli locali)
+AI_PROVIDER=ollama     # Ollama (local models)
 ```
 
 ---
 
 ### `AI_MODEL`
 
-**Descrizione**: Nome modello LLM
+**Description:** Model name
+**Type:** String
+**Default:** `gpt-4-turbo-preview`
 
-**Tipo**: String
-
-**Default**: `gpt-4-turbo-preview`
-
-**Esempi**:
 ```env
 # OpenAI
 AI_MODEL=gpt-4-turbo-preview
@@ -685,7 +593,7 @@ AI_MODEL=gpt-3.5-turbo
 AI_MODEL=claude-3-5-sonnet-20241022
 AI_MODEL=claude-3-opus-20240229
 
-# Ollama (locale)
+# Ollama (local)
 AI_MODEL=llama3
 AI_MODEL=mistral
 ```
@@ -694,13 +602,10 @@ AI_MODEL=mistral
 
 ### `AI_API_KEY`
 
-**Descrizione**: API key del provider
+**Description:** Provider API key
+**Type:** String (optional)
+**Default:** None
 
-**Tipo**: String (opzionale)
-
-**Default**: None
-
-**Esempio**:
 ```env
 # OpenAI
 AI_API_KEY=sk-proj-...
@@ -709,23 +614,20 @@ AI_API_KEY=sk-proj-...
 AI_API_KEY=sk-ant-...
 ```
 
-**Note**:
-- Non necessaria per Ollama (locale)
-- ⚠️ MAI committare su Git!
+**Notes**
+- Not required for local Ollama deployments
+- ⚠️ Never commit the key to Git repositories
 
 ---
 
 ### `AI_BASE_URL`
 
-**Descrizione**: URL base API (per modelli locali)
+**Description:** Custom API base URL
+**Type:** String (URL, optional)
+**Default:** None
 
-**Tipo**: String (URL, opzionale)
-
-**Default**: None
-
-**Esempio**:
 ```env
-# Ollama locale
+# Local Ollama
 AI_BASE_URL=http://localhost:11434
 
 # OpenAI proxy
@@ -736,229 +638,255 @@ AI_BASE_URL=https://api.openai-proxy.com/v1
 
 ### `AI_TEMPERATURE`
 
-**Descrizione**: Temperatura LLM (creatività)
+**Description:** LLM temperature (creativity)
+**Type:** Float (0.0 – 2.0)
+**Default:** `0.7`
 
-**Tipo**: Float (0.0 - 2.0)
-
-**Default**: `0.7`
-
-**Esempio**:
 ```env
-AI_TEMPERATURE=0.0  # Deterministico
-AI_TEMPERATURE=0.7  # Bilanciato
-AI_TEMPERATURE=1.5  # Creativo
+AI_TEMPERATURE=0.0  # Deterministic
+AI_TEMPERATURE=0.7  # Balanced
+AI_TEMPERATURE=1.5  # Creative
 ```
 
 ---
 
 ### `AI_MAX_TOKENS`
 
-**Descrizione**: Lunghezza massima risposta
+**Description:** Maximum response length (tokens)
+**Type:** Integer
+**Default:** `2000`
 
-**Tipo**: Integer
-
-**Default**: `2000`
-
-**Esempio**:
 ```env
-AI_MAX_TOKENS=1000   # Risposte brevi
-AI_MAX_TOKENS=4000   # Risposte lunghe
+AI_MAX_TOKENS=1000   # Short answers
+AI_MAX_TOKENS=4000   # Long answers
 ```
 
 ---
 
-## AI Chat Assistant (NEW!)
+### `AI_TIMEOUT`
 
-Configurazione per il sistema di chat interattivo con AI.
+**Description:** Request timeout (seconds)
+**Type:** Integer
+**Default:** `60`
 
-### `AI_CHAT_ENABLED`
-
-**Descrizione**: Abilita/disabilita chat assistant
-
-**Tipo**: Boolean
-
-**Default**: `true`
-
-**Esempio**:
 ```env
-AI_CHAT_ENABLED=true   # Abilita chat
-AI_CHAT_ENABLED=false  # Disabilita chat
+AI_TIMEOUT=30
+AI_TIMEOUT=90
 ```
-
-**Note**:
-- Richiede `AI_PROVIDER` e `AI_API_KEY` configurati
-- Accessibile via `openfatture -i` → "AI Assistant" → "Chat"
 
 ---
 
-### `AI_CHAT_SESSIONS_DIR`
+### `AI_CACHE_ENABLED`
 
-**Descrizione**: Directory per salvare sessioni di chat
+**Description:** Enable in-memory cache for responses
+**Type:** Boolean
+**Default:** `true`
 
-**Tipo**: Path
-
-**Default**: `~/.openfatture/ai/sessions`
-
-**Esempio**:
 ```env
-AI_CHAT_SESSIONS_DIR=/path/to/sessions
-AI_CHAT_SESSIONS_DIR=~/.openfatture/ai/sessions
+AI_CACHE_ENABLED=true
+AI_CACHE_ENABLED=false
 ```
 
-**Note**:
-- Le sessioni vengono salvate in formato JSON
-- Include cronologia messaggi, token usage, costi
-- Supporta export in Markdown
+**Notes**
+- Speeds up repeated prompts
+- Helps reduce API costs
 
 ---
 
-### `AI_CHAT_AUTO_SAVE`
+### `AI_CACHE_TTL_SECONDS`
 
-**Descrizione**: Salvataggio automatico delle conversazioni
+**Description:** Cache lifetime (seconds)
+**Type:** Integer
+**Default:** `900` (15 minutes)
 
-**Tipo**: Boolean
-
-**Default**: `true`
-
-**Esempio**:
 ```env
-AI_CHAT_AUTO_SAVE=true   # Salva dopo ogni messaggio
-AI_CHAT_AUTO_SAVE=false  # Solo salvataggio manuale con /save
+AI_CACHE_TTL_SECONDS=300   # 5 minutes
+AI_CACHE_TTL_SECONDS=3600  # 1 hour
 ```
 
-**Note**:
-- Raccomandato `true` per non perdere conversazioni
-- Le sessioni salvate possono essere riprese successivamente
+---
+
+### `AI_COST_ALERT_THRESHOLD`
+
+**Description:** Cost threshold (EUR) before warnings
+**Type:** Float
+**Default:** `25.0`
+
+```env
+AI_COST_ALERT_THRESHOLD=10.0
+AI_COST_ALERT_THRESHOLD=50.0
+```
+
+---
+
+### `AI_LOG_LEVEL`
+
+**Description:** Logging level for AI modules
+**Type:** String
+**Default:** `INFO`
+
+```env
+AI_LOG_LEVEL=ERROR
+AI_LOG_LEVEL=WARNING
+AI_LOG_LEVEL=INFO
+AI_LOG_LEVEL=DEBUG
+```
+
+---
+
+### `AI_LOG_PROMPTS`
+
+**Description:** Log prompts and responses (debug)
+**Type:** Boolean
+**Default:** `false`
+
+```env
+AI_LOG_PROMPTS=true   # Log prompts and completions
+AI_LOG_PROMPTS=false  # (default) No prompt logging
+```
+
+**Notes**
+- ⚠️ May expose sensitive data
+- Enable only when debugging
+
+---
+
+### `AI_SESSION_DIR`
+
+**Description:** Folder for chat history
+**Type:** Path
+**Default:** `~/.openfatture/ai/sessions`
+
+```env
+AI_SESSION_DIR=/var/lib/openfatture/ai/sessions
+```
+
+---
+
+### `AI_MAX_SESSION_FILES`
+
+**Description:** Maximum number of saved sessions
+**Type:** Integer
+**Default:** `100`
+
+```env
+AI_MAX_SESSION_FILES=50   # Keep the latest 50 sessions
+AI_MAX_SESSION_FILES=200  # Keep the latest 200 sessions
+```
+
+**Notes**
+- Old sessions are deleted when the limit is reached
+- Set to 0 to disable automatic cleanup
 
 ---
 
 ### `AI_CHAT_MAX_MESSAGES`
 
-**Descrizione**: Numero massimo messaggi per sessione
+**Description:** Max chat messages per session
+**Type:** Integer
+**Default:** `100`
 
-**Tipo**: Integer
-
-**Default**: `100`
-
-**Esempio**:
 ```env
-AI_CHAT_MAX_MESSAGES=50    # Limita a 50 messaggi
-AI_CHAT_MAX_MESSAGES=200   # Estendi a 200 messaggi
+AI_CHAT_MAX_MESSAGES=50    # Short sessions
+AI_CHAT_MAX_MESSAGES=200   # Longer sessions
 ```
 
-**Note**:
-- Limita il context window per controllo costi
-- Messaggi più vecchi vengono rimossi automaticamente
-- Non include system message
+**Notes**
+- Controls conversation length to manage costs
+- Oldest messages are pruned beyond the limit
+- System messages are excluded from the count
 
 ---
 
 ### `AI_CHAT_MAX_TOKENS`
 
-**Descrizione**: Numero massimo token per sessione
+**Description:** Max accumulated tokens per session
+**Type:** Integer
+**Default:** `8000`
 
-**Tipo**: Integer
-
-**Default**: `8000`
-
-**Esempio**:
 ```env
-AI_CHAT_MAX_TOKENS=4000    # Sessioni più brevi
-AI_CHAT_MAX_TOKENS=16000   # Sessioni più lunghe
+AI_CHAT_MAX_TOKENS=4000    # Short sessions
+AI_CHAT_MAX_TOKENS=16000   # Long sessions
 ```
 
-**Note**:
-- Aiuta a controllare i costi
-- Quando raggiunto, messaggi più vecchi vengono rimossi
-- Si riferisce al totale di input + output
+**Notes**
+- Includes both input and output tokens
+- Old messages are removed automatically when the limit is reached
 
 ---
 
-## AI Tools & Function Calling (NEW!)
+## AI Tools & Function Calling
 
-Configurazione per il sistema di tool calling.
+Fine-tune the tool-calling behaviour for agents.
 
 ### `AI_TOOLS_ENABLED`
 
-**Descrizione**: Abilita function calling
+**Description:** Enable function calling
+**Type:** Boolean
+**Default:** `true`
 
-**Tipo**: Boolean
-
-**Default**: `true`
-
-**Esempio**:
 ```env
-AI_TOOLS_ENABLED=true   # Abilita tools
-AI_TOOLS_ENABLED=false  # Solo conversazione senza tools
+AI_TOOLS_ENABLED=true   # Enable tools
+AI_TOOLS_ENABLED=false  # Conversation only
 ```
 
-**Note**:
-- Permette all'AI di cercare fatture, clienti, statistiche
-- Richiede database inizializzato
-- 6 tools disponibili (invoice e client operations)
+**Notes**
+- Enables invoice/client search from the chat assistant
+- Requires the database to be initialised
 
 ---
 
 ### `AI_ENABLED_TOOLS`
 
-**Descrizione**: Lista tools abilitati (comma-separated)
+**Description:** Comma-separated list of enabled tools
+**Type:** String
+**Default:** All tools
 
-**Tipo**: String (comma-separated)
-
-**Default**: Tutti i tools
-
-**Esempio**:
 ```env
-# Abilita solo tools invoice
+# Only invoice-related tools
 AI_ENABLED_TOOLS=search_invoices,get_invoice_details,get_invoice_stats
 
-# Abilita tutti i tools
+# All tools
 AI_ENABLED_TOOLS=search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats
 ```
 
-**Tools disponibili**:
-- `search_invoices` - Cerca fatture
-- `get_invoice_details` - Dettagli fattura
-- `get_invoice_stats` - Statistiche fatture
-- `search_clients` - Cerca clienti
-- `get_client_details` - Dettagli cliente
-- `get_client_stats` - Statistiche clienti
+**Available tools**
+- `search_invoices`
+- `get_invoice_details`
+- `get_invoice_stats`
+- `search_clients`
+- `get_client_details`
+- `get_client_stats`
 
 ---
 
 ### `AI_TOOLS_REQUIRE_CONFIRMATION`
 
-**Descrizione**: Richiedi conferma prima di eseguire tools
+**Description:** Ask for confirmation before running tools
+**Type:** Boolean
+**Default:** `true`
 
-**Tipo**: Boolean
-
-**Default**: `true`
-
-**Esempio**:
 ```env
-AI_TOOLS_REQUIRE_CONFIRMATION=true   # Chiedi conferma
-AI_TOOLS_REQUIRE_CONFIRMATION=false  # Esegui direttamente
+AI_TOOLS_REQUIRE_CONFIRMATION=true   # Ask before executing tools
+AI_TOOLS_REQUIRE_CONFIRMATION=false  # Execute immediately
 ```
 
-**Note**:
-- Attualmente tutti i tools sono read-only (nessun rischio)
-- Utile se in futuro verranno aggiunti tools distruttivi
+**Notes**
+- Current tools are read-only, so confirmation is optional
+- Keep enabled if you plan to add write operations later
 
 ---
 
 ## Paths & Directories
 
-Configurazione opzionale delle directory di lavoro.
+Override default storage locations when required.
 
 ### `DATA_DIR`
 
-**Descrizione**: Directory dati applicazione
+**Description:** Application data directory
+**Type:** Path
+**Default:** `~/.openfatture/data`
 
-**Tipo**: Path
-
-**Default**: `~/.openfatture/data`
-
-**Esempio**:
 ```env
 DATA_DIR=/var/lib/openfatture/data
 ```
@@ -967,32 +895,26 @@ DATA_DIR=/var/lib/openfatture/data
 
 ### `ARCHIVIO_DIR`
 
-**Descrizione**: Directory archivio fatture (XML, PDF)
+**Description:** Archive for invoices (XML/PDF)
+**Type:** Path
+**Default:** `~/.openfatture/archivio`
 
-**Tipo**: Path
-
-**Default**: `~/.openfatture/archivio`
-
-**Esempio**:
 ```env
-ARCHIVIO_DIR=/mnt/storage/fatture
+ARCHIVIO_DIR=/mnt/storage/invoices
 ```
 
-**Note**:
-- Conserva per 10 anni (obbligo di legge)
-- Backup regolare raccomandato
+**Notes**
+- Preserve invoices for 10 years (legal requirement)
+- Back up regularly
 
 ---
 
 ### `CERTIFICATES_DIR`
 
-**Descrizione**: Directory certificati
+**Description:** Certificate directory
+**Type:** Path
+**Default:** `~/.openfatture/certificates`
 
-**Tipo**: Path
-
-**Default**: `~/.openfatture/certificates`
-
-**Esempio**:
 ```env
 CERTIFICATES_DIR=/etc/openfatture/certs
 ```
@@ -1001,63 +923,65 @@ CERTIFICATES_DIR=/etc/openfatture/certs
 
 ## Best Practices
 
-### Sicurezza
+### Security
 
-1. **NON committare `.env` su Git**
+1. **Never commit `.env` to Git**
    ```bash
    echo ".env" >> .gitignore
    ```
 
-2. **Usa variabili d'ambiente in produzione**
+2. **Use environment variables in production**
    ```bash
    export PEC_PASSWORD=secret
    ```
 
-3. **Ruota password regolarmente**
+3. **Rotate credentials regularly**
 
-4. **Usa certificati firma digitale**
+4. **Adopt digital signatures for invoices**
 
 ### Performance
 
-1. **PostgreSQL per produzione**
+1. **Prefer PostgreSQL in production**
    ```env
    DATABASE_URL=postgresql://...
    ```
 
-2. **Cache AI responses** (implementazione futura)
+2. **Plan for AI response caching** (coming soon)
 
 ### Backup
 
-1. **Database regolare**
+1. **Database snapshots**
    ```bash
    cp openfatture.db backup_$(date +%Y%m%d).db
    ```
 
-2. **Archivio fatture** (obbligatorio 10 anni)
+2. **Invoice archive**
+   - Mandatory 10-year retention
+   - Store off-site whenever possible
 
 ---
 
 ## Troubleshooting
 
-### Verificare Configurazione
+### Inspect Effective Configuration
 
 ```bash
 uv run python -c "
 from openfatture.utils.config import get_settings
 s = get_settings()
 
-print('=== CONFIGURAZIONE ===')
+print('=== CONFIGURATION ===')
 print(f'Cedente: {s.cedente_denominazione}')
-print(f'P.IVA: {s.cedente_partita_iva}')
+print(f'VAT: {s.cedente_partita_iva}')
 print(f'PEC: {s.pec_address}')
 print(f'SMTP: {s.pec_smtp_server}:{s.pec_smtp_port}')
-print(f'Notifiche: {s.notification_email}')
+print(f'Notifications: {s.notification_email}')
 print(f'Database: {s.database_url}')
 print(f'Locale: {s.locale}')
 "
 ```
 
-### Testare PEC
+### Test PEC Delivery
 
 ```bash
 uv run python -c "
@@ -1080,24 +1004,22 @@ else:
 
 ### `PAYMENT_EVENT_LISTENERS`
 
-**Descrizione**: (facoltativo) elenco di listener personalizzati per il bus eventi dei pagamenti. Ogni listener deve essere una funzione callable che accetta un `PaymentEvent`. I listener vengono registrati in aggiunta al logger di audit predefinito.
+**Description:** Optional comma-separated list of dotted paths to callables that will receive `PaymentEvent` instances in addition to the built-in audit logger.
+**Type:** String (comma-separated dotted paths)
 
-**Tipo**: Stringa (lista separata da virgole di percorsi puntati `modulo.funzione`)
-
-**Esempio**:
 ```env
 PAYMENT_EVENT_LISTENERS=analytics.events.track_payment,monitoring.alerts.on_payment_event
 ```
 
-**Note**:
-- Gli handler vengono importati dinamicamente; assicurati che siano disponibili nel PYTHONPATH del processo.
-- Il bus inoltra ogni evento sia al listener di audit interno sia ai listener aggiuntivi.
-- Per disabilitare i listener extra lascia la variabile vuota o rimuovi la variabile.
+**Notes**
+- Handlers are imported dynamically; ensure they are available on `PYTHONPATH`
+- Every event is sent to the default audit logger plus the custom listeners
+- Leave empty or unset to disable additional listeners
 
 ---
 
-## Riferimenti
+## References
 
-- [FatturaPA Specifiche Tecniche](https://www.fatturapa.gov.it/it/norme-e-regole/documentazione-fattura-elettronica/formato-fatturapa/)
-- [SDI - Sistema di Interscambio](https://www.fatturapa.gov.it/it/sdi/)
-- [Codici Regime Fiscale](https://www.agenziaentrate.gov.it/)
+- [FatturaPA Technical Specifications](https://www.fatturapa.gov.it/it/norme-e-regole/documentazione-fattura-elettronica/formato-fatturapa/)
+- [SDI – Sistema di Interscambio](https://www.fatturapa.gov.it/it/sdi/)
+- [Tax Regime Codes](https://www.agenziaentrate.gov.it/)

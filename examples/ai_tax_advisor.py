@@ -33,7 +33,9 @@ async def example_1_standard_vat():
     agent = TaxAdvisorAgent(provider=provider)
 
     # Create context
-    context = TaxContext(user_input="consulenza IT", tipo_servizio="consulenza IT")
+    context = TaxContext(
+        user_input="IT consulting services", tipo_servizio="IT consulting services"
+    )
 
     # Execute agent
     response = await agent.execute(context)
@@ -41,9 +43,9 @@ async def example_1_standard_vat():
     # Display results
     if response.metadata.get("is_structured"):
         model = response.metadata["parsed_model"]
-        print(f"Aliquota IVA: {model['aliquota_iva']}%")
-        print(f"Spiegazione: {model['spiegazione']}")
-        print(f"Riferimento: {model['riferimento_normativo']}")
+        print(f"VAT rate: {model['aliquota_iva']}%")
+        print(f"Explanation: {model['spiegazione']}")
+        print(f"Reference: {model['riferimento_normativo']}")
     else:
         print(response.content)
 
@@ -53,15 +55,15 @@ async def example_1_standard_vat():
 async def example_2_reverse_charge():
     """Example 2: Reverse charge for construction sector."""
     print("\n" + "=" * 80)
-    print("EXAMPLE 2: Reverse Charge (Edilizia)")
+    print("EXAMPLE 2: Reverse Charge (Construction)")
     print("=" * 80 + "\n")
 
     provider = create_provider()
     agent = TaxAdvisorAgent(provider=provider)
 
     context = TaxContext(
-        user_input="consulenza IT per azienda edile",
-        tipo_servizio="consulenza IT per azienda edile",
+        user_input="IT consulting for a construction company",
+        tipo_servizio="IT consulting for a construction company",
         importo=5000.0,
     )
 
@@ -77,15 +79,15 @@ async def example_2_reverse_charge():
 async def example_3_split_payment():
     """Example 3: Split payment for Public Administration."""
     print("\n" + "=" * 80)
-    print("EXAMPLE 3: Split Payment (Pubblica Amministrazione)")
+    print("EXAMPLE 3: Split Payment (Public Administration)")
     print("=" * 80 + "\n")
 
     provider = create_provider()
     agent = TaxAdvisorAgent(provider=provider)
 
     context = TaxContext(
-        user_input="consulenza IT per Comune di Milano",
-        tipo_servizio="consulenza IT",
+        user_input="IT consulting for the City of Milan",
+        tipo_servizio="IT consulting",
         cliente_pa=True,
         importo=3000.0,
     )
@@ -94,30 +96,30 @@ async def example_3_split_payment():
 
     if response.metadata.get("is_structured"):
         model = response.metadata["parsed_model"]
-        print(f"Aliquota IVA: {model['aliquota_iva']}%")
-        print(f"Split Payment: {'SI' if model['split_payment'] else 'NO'}")
-        print(f"\nSpiegazione:\n{model['spiegazione']}")
-        print(f"\nNota per fattura:\n{model.get('note_fattura', 'N/A')}")
+        print(f"VAT rate: {model['aliquota_iva']}%")
+        print(f"Split Payment: {'YES' if model['split_payment'] else 'NO'}")
+        print(f"\nExplanation:\n{model['spiegazione']}")
+        print(f"\nInvoice note:\n{model.get('note_fattura', 'N/A')}")
 
         if model.get("raccomandazioni"):
-            print("\nRaccomandazioni:")
+            print("\nRecommendations:")
             for racc in model["raccomandazioni"]:
                 print(f"  • {racc}")
 
 
 async def example_4_exempt_services():
-    """Example 4: Exempt services (formazione, sanità)."""
+    """Example 4: Exempt services (education, healthcare)."""
     print("\n" + "=" * 80)
-    print("EXAMPLE 4: Servizi Esenti (Formazione)")
+    print("EXAMPLE 4: Exempt Services (Education)")
     print("=" * 80 + "\n")
 
     provider = create_provider()
     agent = TaxAdvisorAgent(provider=provider)
 
     context = TaxContext(
-        user_input="corso di formazione professionale",
-        tipo_servizio="formazione professionale",
-        categoria_servizio="Educazione",
+        user_input="Professional training course",
+        tipo_servizio="Professional training",
+        categoria_servizio="Education",
         importo=1500.0,
     )
 
@@ -125,25 +127,25 @@ async def example_4_exempt_services():
 
     if response.metadata.get("is_structured"):
         model = response.metadata["parsed_model"]
-        print(f"Aliquota IVA: {model['aliquota_iva']}%")
-        print(f"Codice Natura: {model.get('codice_natura', 'N/A')}")
+        print(f"VAT rate: {model['aliquota_iva']}%")
+        print(f"VAT nature code: {model.get('codice_natura', 'N/A')}")
         print(f"Regime: {model.get('regime_speciale', 'Standard')}")
-        print(f"\nRiferimento normativo:\n{model['riferimento_normativo']}")
+        print(f"\nLegal reference:\n{model['riferimento_normativo']}")
 
 
 async def example_5_reduced_vat():
     """Example 5: Reduced VAT rate (10%, 4%)."""
     print("\n" + "=" * 80)
-    print("EXAMPLE 5: Aliquota Ridotta (Libri)")
+    print("EXAMPLE 5: Reduced VAT Rate (Books)")
     print("=" * 80 + "\n")
 
     provider = create_provider()
     agent = TaxAdvisorAgent(provider=provider)
 
     context = TaxContext(
-        user_input="vendita libri scolastici",
-        tipo_servizio="libri scolastici",
-        categoria_servizio="Editoria",
+        user_input="Sale of school textbooks",
+        tipo_servizio="School textbooks",
+        categoria_servizio="Publishing",
         importo=250.0,
     )
 
@@ -151,8 +153,8 @@ async def example_5_reduced_vat():
 
     if response.metadata.get("is_structured"):
         model = response.metadata["parsed_model"]
-        print(f"Aliquota IVA: {model['aliquota_iva']}%")
-        print(f"Spiegazione: {model['spiegazione']}")
+        print(f"VAT rate: {model['aliquota_iva']}%")
+        print(f"Explanation: {model['spiegazione']}")
 
 
 async def example_6_export():

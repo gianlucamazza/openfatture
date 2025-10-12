@@ -91,7 +91,7 @@ class TestImportCommand:
             result = runner.invoke(
                 app,
                 [
-                    "import-statement",
+                    "import",
                     str(temp_csv),
                     "--account",
                     "1",
@@ -118,7 +118,7 @@ class TestImportCommand:
             ).return_value
             mock_account_repo.get_by_id.return_value = None
 
-            result = runner.invoke(app, ["import-statement", str(temp_csv), "--account", "999"])
+            result = runner.invoke(app, ["import", str(temp_csv), "--account", "999"])
 
         assert result.exit_code == 1
         assert "Account 999 not found" in result.stdout
@@ -142,7 +142,7 @@ class TestImportCommand:
             ).return_value
             mock_factory.create_from_file.side_effect = ValueError("Unknown format")
 
-            result = runner.invoke(app, ["import-statement", str(temp_csv), "--account", "1"])
+            result = runner.invoke(app, ["import", str(temp_csv), "--account", "1"])
 
         assert result.exit_code == 1
         assert "Unknown format" in result.stdout
@@ -177,7 +177,7 @@ class TestImportCommand:
 
             result = runner.invoke(
                 app,
-                ["import-statement", str(temp_csv), "--account", "1", "--no-auto-match"],
+                ["import", str(temp_csv), "--account", "1", "--no-auto-match"],
             )
 
         assert result.exit_code == 0
@@ -211,7 +211,7 @@ class TestImportCommand:
 
             result = runner.invoke(
                 app,
-                ["import-statement", str(temp_csv), "--account", "1", "--no-auto-match"],
+                ["import", str(temp_csv), "--account", "1", "--no-auto-match"],
             )
 
         assert result.exit_code == 0
@@ -1013,13 +1013,13 @@ class TestCLIIntegration:
 
         assert result.exit_code == 0
         assert "Payment tracking & reconciliation" in result.stdout
-        assert "import-statement" in result.stdout
+        assert "import" in result.stdout
         assert "match" in result.stdout
         assert "queue" in result.stdout
 
     def test_command_without_required_args_fails(self):
         """Test that commands fail without required arguments."""
-        result = runner.invoke(app, ["import-statement"])
+        result = runner.invoke(app, ["import"])
 
         # Should fail with missing argument error
         assert result.exit_code != 0

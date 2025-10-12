@@ -51,11 +51,11 @@ def interactive_mode() -> None:
 def show_welcome() -> None:
     """Display welcome message."""
     welcome_text = """
-    [bold blue]🚀 OpenFatture - Modalità Interattiva[/bold blue]
+    [bold blue]🚀 OpenFatture - Interactive Mode[/bold blue]
 
-    [dim]Benvenuto nella modalità interattiva di OpenFatture![/dim]
-    [dim]Usa i tasti [bold]↑↓[/bold] per navigare e [bold]INVIO[/bold] per selezionare.[/dim]
-    [dim]Premi [bold]Ctrl+C[/bold] in qualsiasi momento per uscire.[/dim]
+    [dim]Welcome to OpenFatture's interactive mode![/dim]
+    [dim]Use [bold]↑↓[/bold] to navigate and [bold]ENTER[/bold] to select.[/dim]
+    [dim]Press [bold]Ctrl+C[/bold] at any time to exit.[/dim]
     """
 
     console.print(
@@ -69,9 +69,9 @@ def show_welcome() -> None:
 
 def show_goodbye() -> None:
     """Display goodbye message."""
-    console.print("\n[bold green]👋 Grazie per aver usato OpenFatture![/bold green]")
+    console.print("\n[bold green]👋 Thanks for using OpenFatture![/bold green]")
     console.print(
-        "[dim]Per tornare alla modalità interattiva: [cyan]openfatture interactive start[/cyan][/dim]\n"
+        "[dim]To restart interactive mode: [cyan]openfatture interactive start[/cyan][/dim]\n"
     )
 
 

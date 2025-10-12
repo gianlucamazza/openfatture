@@ -422,23 +422,23 @@ class ReminderScheduler:
             # Overdue
             days_late = -days_before_due
             return (
-                f"ATTENZIONE: La fattura {invoice_number} è scaduta da {days_late} giorni. "
-                f"Importo: €{payment.importo_da_pagare}. "
-                "Si prega di procedere con il pagamento al più presto."
+                f"ATTENTION: Invoice {invoice_number} is {days_late} days overdue. "
+                f"Amount due: €{payment.importo_da_pagare}. "
+                "Please arrange payment as soon as possible."
             )
         elif days_before_due == 0:
             # Due today
             return (
-                f"PROMEMORIA: La fattura {invoice_number} scade OGGI. "
-                f"Importo: €{payment.importo_da_pagare}. "
-                "Si prega di procedere con il pagamento."
+                f"REMINDER: Invoice {invoice_number} is due TODAY. "
+                f"Amount due: €{payment.importo_da_pagare}. "
+                "Please proceed with payment."
             )
         else:
             # Before due date
             return (
-                f"Promemoria: La fattura {invoice_number} scadrà tra {days_before_due} giorni "
+                f"Reminder: Invoice {invoice_number} falls due in {days_before_due} days "
                 f"({payment.data_scadenza.strftime('%d/%m/%Y')}). "
-                f"Importo: €{payment.importo_da_pagare}."
+                f"Amount due: €{payment.importo_da_pagare}."
             )
 
     def __repr__(self) -> str:

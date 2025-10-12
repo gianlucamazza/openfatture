@@ -185,17 +185,17 @@ class PECSender:
         Returns:
             str: Email body
         """
-        return f"""Trasmissione fattura elettronica al Sistema di Interscambio (SDI)
+        return f"""Electronic invoice submission to the SDI (Sistema di Interscambio)
 
-Mittente: {self.settings.cedente_denominazione}
-Partita IVA: {self.settings.cedente_partita_iva}
+Sender: {self.settings.cedente_denominazione}
+VAT number: {self.settings.cedente_partita_iva}
 
-Fattura n. {fattura.numero}/{fattura.anno}
-Data emissione: {fattura.data_emissione.isoformat()}
-Cliente: {fattura.cliente.denominazione}
-Importo totale: €{fattura.totale:.2f}
+Invoice no. {fattura.numero}/{fattura.anno}
+Issue date: {fattura.data_emissione.isoformat()}
+Customer: {fattura.cliente.denominazione}
+Total amount: €{fattura.totale:.2f}
 
-Questa è una trasmissione automatica generata da OpenFatture.
+This message was generated automatically by OpenFatture.
 """
 
     def send_test_email(self) -> tuple[bool, str | None]:
@@ -217,9 +217,9 @@ Questa è una trasmissione automatica generata da OpenFatture.
             msg["To"] = self.settings.pec_address  # Send to self for testing
             msg["Subject"] = "OpenFatture - Test PEC Configuration"
 
-            body = """Questo è un messaggio di test per verificare la configurazione PEC.
+            body = """This is a test message to verify the PEC configuration.
 
-Se ricevi questo messaggio, la tua configurazione PEC è corretta.
+If you receive this message, your PEC setup is correct.
 
 OpenFatture
 """

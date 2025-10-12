@@ -174,7 +174,7 @@ class TestEmailNotifier:
         )
 
         # Should return fallback text
-        assert "Promemoria Pagamento" in result
+        assert "Payment Reminder" in result
         assert "INV-2024-001" in result
         assert "1000.00" in result
         expected_company = (
@@ -247,7 +247,7 @@ class TestEmailNotifier:
 
         result = await notifier._render_template("missing.txt", context, fallback_text=True)
 
-        assert "ATTENZIONE" in result
+        assert "ATTENTION" in result
         assert "Studio Demo SRL" in result
 
 

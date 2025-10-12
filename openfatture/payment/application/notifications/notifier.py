@@ -154,7 +154,7 @@ class EmailNotifier(INotifier):
             # Send email
             await self._send_email(
                 to_email=invoice.cliente.email if hasattr(invoice, "cliente") else None,
-                subject=f"Promemoria Pagamento - Fattura {invoice.numero}",
+                subject=f"Payment Reminder - Invoice {invoice.numero}",
                 html_body=html_body,
                 text_body=text_body,
             )
@@ -223,11 +223,11 @@ class EmailNotifier(INotifier):
         days_to_due = context.get("days_to_due", 0)
 
         if days_to_due < 0:
-            status = f"ATTENZIONE: Scaduto da {-days_to_due} giorni"
+            status = f"ATTENTION: {abs(days_to_due)} days overdue"
         elif days_to_due == 0:
-            status = "Scadenza OGGI"
+            status = "DUE TODAY"
         else:
-            status = f"Scadenza tra {days_to_due} giorni"
+            status = f"Due in {days_to_due} days"
 
         company_name = (
             context.get("company_name")
@@ -237,15 +237,15 @@ class EmailNotifier(INotifier):
         )
 
         return f"""
-Promemoria Pagamento
+Payment Reminder
 
 {status}
 
-Fattura: {invoice.numero if invoice else 'N/A'}
-Importo: €{payment.importo_da_pagare if payment else 0}
-Scadenza: {payment.data_scadenza.strftime('%d/%m/%Y') if payment else 'N/A'}
+Invoice: {invoice.numero if invoice else 'N/A'}
+Amount: €{payment.importo_da_pagare if payment else 0}
+Due date: {payment.data_scadenza.strftime('%d/%m/%Y') if payment else 'N/A'}
 
-Cordiali saluti,
+Kind regards,
 {company_name}
         """.strip()
 

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- Localised the CLI, interactive experience, email templates, and PDF outputs to English for consistency with the refreshed documentation set.
+- Updated documentation, quickstarts, automation tapes, and examples to reflect global English-first messaging.
+
+### Removed
+- Dropped the legacy `openfatture payment import-statement` command alias in favour of `openfatture payment import`.
 
 ## [1.0.0] - 2025-10-10
 

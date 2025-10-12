@@ -398,52 +398,52 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
     async def _show_help(self) -> None:
         """Show help message."""
         help_text = """
-[bold]Comandi Disponibili:[/bold]
+[bold]Available Commands:[/bold]
 
-/help     - Mostra questo messaggio
-/tools    - Mostra strumenti AI disponibili
-/stats    - Mostra statistiche conversazione
-/save     - Salva conversazione corrente
-/export   - Esporta in Markdown o JSON
-/clear    - Pulisci messaggi (mantieni sessione)
-/exit     - Esci dalla chat
+/help     - Show this message
+/tools    - List available AI tools
+/stats    - Display conversation stats
+/save     - Save the current conversation
+/export   - Export to Markdown or JSON
+/clear    - Clear messages (keep session)
+/exit     - Leave the chat
 
-[bold]Esempi di domande:[/bold]
+[bold]Example prompts:[/bold]
 
-• "Quante fatture ho emesso quest'anno?"
-• "Cerca fatture del cliente Rossi"
-• "Mostrami le ultime 5 fatture"
-• "Quali sono i clienti con più fatture?"
-• "Dammi un riepilogo dell'anno corrente"
+• "How many invoices did I issue this year?"
+• "Find invoices for client Rossi"
+• "Show me the last 5 invoices"
+• "Which customers have the most invoices?"
+• "Give me a summary of the current year"
 """
 
-        console.print(Panel(help_text, title="Aiuto", border_style="blue"))
+        console.print(Panel(help_text, title="Help", border_style="blue"))
         return None
 
     async def _clear_chat(self) -> None:
         """Clear chat messages."""
         if questionary.confirm(
-            "Vuoi davvero cancellare tutti i messaggi?",
+            "Do you really want to delete all messages?",
             default=False,
             style=openfatture_style,
         ).ask():
             self.session.clear_messages(keep_system=True)
-            console.print("[green]✓ Chat pulita[/green]\n")
+            console.print("[green]✓ Chat cleared[/green]\n")
         return None
 
     async def _save_session(self) -> None:
         """Save current session."""
         if self.session_manager.save_session(self.session):
-            console.print(f"[green]✓ Sessione salvata: {self.session.id[:8]}...[/green]\n")
+            console.print(f"[green]✓ Session saved: {self.session.id[:8]}...[/green]\n")
         else:
-            console.print("[red]✗ Errore nel salvataggio[/red]\n")
+            console.print("[red]✗ Error while saving[/red]\n")
         return None
 
     async def _export_session(self) -> None:
         """Export session to file."""
         # Ask format
         format_choice = questionary.select(
-            "Formato di export:",
+            "Export format:",
             choices=["Markdown", "JSON"],
             style=openfatture_style,
         ).ask()
@@ -457,28 +457,28 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         )
 
         if output_path:
-            console.print(f"[green]✓ Esportato in: {output_path}[/green]\n")
+            console.print(f"[green]✓ Exported to: {output_path}[/green]\n")
         else:
-            console.print("[red]✗ Errore nell'export[/red]\n")
+            console.print("[red]✗ Error during export[/red]\n")
 
         return None
 
     async def _show_stats(self) -> None:
         """Show session statistics."""
-        table = Table(title="Statistiche Sessione", show_header=False)
+        table = Table(title="Session Statistics", show_header=False)
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="white")
 
         table.add_row("Session ID", self.session.id[:16] + "...")
-        table.add_row("Titolo", self.session.metadata.title)
-        table.add_row("Messaggi", str(self.session.metadata.message_count))
-        table.add_row("Token totali", str(self.session.metadata.total_tokens))
-        table.add_row("Costo totale", f"${self.session.metadata.total_cost_usd:.4f}")
+        table.add_row("Title", self.session.metadata.title)
+        table.add_row("Messages", str(self.session.metadata.message_count))
+        table.add_row("Total tokens", str(self.session.metadata.total_tokens))
+        table.add_row("Total cost", f"${self.session.metadata.total_cost_usd:.4f}")
         table.add_row("Provider", self.session.metadata.primary_provider or "N/A")
         table.add_row("Model", self.session.metadata.primary_model or "N/A")
 
         if self.session.metadata.tools_used:
-            table.add_row("Tools usati", ", ".join(self.session.metadata.tools_used))
+            table.add_row("Tools used", ", ".join(self.session.metadata.tools_used))
 
         console.print()
         console.print(table)
@@ -494,10 +494,10 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 
         tools = self.agent.tool_registry.list_tools()
 
-        table = Table(title="Strumenti AI Disponibili")
-        table.add_column("Nome", style="cyan")
-        table.add_column("Categoria", style="yellow")
-        table.add_column("Descrizione", style="white")
+        table = Table(title="Available AI Tools")
+        table.add_column("Name", style="cyan")
+        table.add_column("Category", style="yellow")
+        table.add_column("Description", style="white")
 
         for tool in tools:
             table.add_row(tool.name, tool.category, tool.description)
@@ -525,13 +525,13 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         summary = self.session.get_summary()
 
         goodbye_text = f"""
-[bold green]👋 Grazie per aver usato OpenFatture AI![/bold green]
+[bold green]👋 Thanks for using OpenFatture AI![/bold green]
 
-[bold]Riepilogo conversazione:[/bold]
+[bold]Conversation summary:[/bold]
 {summary}
 
-[dim]La sessione è stata salvata automaticamente.[/dim]
-[dim]Per riprendere: usa il comando interactive > AI Assistant[/dim]
+[dim]The session was saved automatically.[/dim]
+[dim]Resume anytime via interactive > AI Assistant[/dim]
 """
 
         console.print(Panel(goodbye_text, border_style="green"))

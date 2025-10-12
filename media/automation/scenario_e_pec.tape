@@ -17,7 +17,7 @@ Enter
 Sleep 500ms
 
 # Step 1: Header
-Type "printf '\e[1;36mScenario E: Invio PEC & Gestione SDI\e[0m\\n'"
+Type "printf '\e[1;36mScenario E: PEC Delivery & SDI Handling\e[0m\\n'"
 Enter
 Sleep 1.2s
 
@@ -27,7 +27,7 @@ Enter
 Sleep 2s
 
 # Step 3: Show invoice ready for sending
-Type "printf '\\n\e[1;33m→ Fattura demo pronta per invio:\e[0m\\n'"
+Type "printf '\\n\e[1;33m→ Demo invoice ready for delivery:\e[0m\\n'"
 Enter
 Sleep 800ms
 Type "uv run openfatture fattura show 1"
@@ -35,24 +35,24 @@ Enter
 Sleep 2.5s
 
 # Step 4: Simulate PEC send (won't actually send in demo)
-Type "printf '\\n\e[1;32m→ Invio simulato al SDI via PEC:\e[0m\\n'"
+Type "printf '\\n\e[1;32m→ Simulated SDI delivery via PEC:\e[0m\\n'"
 Enter
 Sleep 800ms
 Type "printf 'openfatture fattura invia 1 --pec\\n'"
 Enter
 Sleep 1s
-Type "printf '  ✓ XML generato: IT04567890123_00001.xml\\n'"
+Type "printf '  ✓ XML generated: IT04567890123_00001.xml\\n'"
 Enter
 Sleep 500ms
-Type "printf '  ✓ Invio PEC a: sdi01@pec.fatturapa.it\\n'"
+Type "printf '  ✓ PEC delivery to: sdi01@pec.fatturapa.it\\n'"
 Enter
 Sleep 500ms
-Type "printf '  ✓ ID trasmissione: 12345678\\n'"
+Type "printf '  ✓ Transmission ID: 12345678\\n'"
 Enter
 Sleep 1.5s
 
 # Step 5: Notifications help
-Type "printf '\\n\e[1;36m→ Gestione notifiche SDI:\e[0m\\n'"
+Type "printf '\\n\e[1;36m→ SDI notification management:\e[0m\\n'"
 Enter
 Sleep 800ms
 Type "uv run openfatture notifiche --help"
@@ -60,15 +60,15 @@ Enter
 Sleep 2s
 
 # Step 6: Show notification files (if available)
-Type "printf '\\n\e[1;33m→ Notifiche esempio disponibili:\e[0m\\n'"
+Type "printf '\\n\e[1;33m→ Example notifications:\e[0m\\n'"
 Enter
 Sleep 800ms
-Type "ls -lh examples/sdi/ 2>/dev/null || echo 'Cartella examples/sdi non trovata (opzionale)'"
+Type "ls -lh examples/sdi/ 2>/dev/null || echo 'examples/sdi folder not found (optional)'"
 Enter
 Sleep 1.5s
 
 # Step 7: Final compliance message
-Type "printf '\\n\e[1;32m✓ Conformità AgID e conservazione digitale garantita\e[0m\\n'"
+Type "printf '\\n\e[1;32m✓ AgID compliance and digital preservation ensured\e[0m\\n'"
 Enter
 Sleep 1.5s
 

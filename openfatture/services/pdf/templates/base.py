@@ -203,7 +203,7 @@ class BaseTemplate(ABC):
         canvas.setFont("Helvetica-Bold", 12)
         canvas.setFillColor(primary_color)
         y -= 0.2 * cm
-        canvas.drawString(box_x + 0.3 * cm, y, "TOTALE:")
+        canvas.drawString(box_x + 0.3 * cm, y, "TOTAL:")
         canvas.drawRightString(box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['totale']:.2f}")
 
         return y_position - 3.5 * cm
@@ -226,19 +226,19 @@ class BaseTemplate(ABC):
 
         canvas.setFont("Helvetica-Bold", 11)
         canvas.setFillColor(HexColor("#333333"))
-        canvas.drawString(2 * cm, y_position, "Modalità di pagamento:")
+        canvas.drawString(2 * cm, y_position, "Payment information:")
 
         canvas.setFont("Helvetica", 10)
         y = y_position - 0.6 * cm
 
         # Payment method
-        canvas.drawString(2 * cm, y, f"Modalità: {pagamento_data.get('modalita', 'Bonifico')}")
+        canvas.drawString(2 * cm, y, f"Method: {pagamento_data.get('modalita', 'Bank transfer')}")
         y -= 0.5 * cm
 
         # Due date
         if pagamento_data.get("data_scadenza"):
             scadenza = pagamento_data["data_scadenza"].strftime("%d/%m/%Y")
-            canvas.drawString(2 * cm, y, f"Scadenza: {scadenza}")
+            canvas.drawString(2 * cm, y, f"Due date: {scadenza}")
             y -= 0.5 * cm
 
         # IBAN

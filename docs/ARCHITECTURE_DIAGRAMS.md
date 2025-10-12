@@ -103,7 +103,7 @@ sequenceDiagram
     participant Tools as Tool Registry
     participant DB as Database
 
-    User->>CLI: ai chat "Crea fattura per consulenza"
+    User->>CLI: ai chat "Create invoice for consulting work"
     CLI->>Agent: execute(context)
 
     Agent->>Context: enrich_context()
@@ -336,9 +336,9 @@ erDiagram
         int id PK
         string codice UK "SKU/Code"
         string descrizione
-        string categoria "consulenza/licenza/servizio"
+        string categoria "consulting/license/service"
         decimal prezzo_unitario
-        string unita_misura "ore/giorni/pezzi"
+        string unita_misura "hours/days/items"
         decimal aliquota_iva_default
         boolean attivo
         datetime created_at
@@ -377,18 +377,18 @@ LangGraph workflow for AI-assisted invoice creation (Phase 4.4):
 
 ```mermaid
 graph TD
-    Start([User input:<br/>"3 ore consulenza GDPR"]) --> DescriptionAgent
+    Start([User input:<br/>"3 hours GDPR consulting"]) --> DescriptionAgent
 
     subgraph "Invoice Assistant Agent"
         DescriptionAgent[Generate detailed description<br/>RAG: previous invoices]
-        DescriptionAgent --> DescriptionOut["Descrizione professionale<br/>Consulenza GDPR:<br/>- Analisi normativa<br/>- Gap assessment<br/>- Action plan<br/>Durata: 3 ore"]
+        DescriptionAgent --> DescriptionOut["Professional description<br/>GDPR consulting:<br/>- Regulatory analysis<br/>- Gap assessment<br/>- Action plan<br/>Duration: 3 hours"]
     end
 
     DescriptionOut --> TaxAgent
 
     subgraph "Tax Advisor Agent"
     TaxAgent[Suggest VAT treatment<br/>Knowledge base: Italian tax law]
-        TaxAgent --> TaxOut["AliquotaIVA: 22%<br/>NaturaIVA: null<br/>ReverseCharge: false<br/>Note: Consulenza ordinaria"]
+        TaxAgent --> TaxOut["VAT rate: 22%<br/>VAT nature: null<br/>ReverseCharge: false<br/>Notes: Standard consulting"]
     end
 
     TaxOut --> ComplianceAgent

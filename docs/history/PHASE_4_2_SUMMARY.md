@@ -78,10 +78,10 @@ Updated `openfatture/cli/commands/ai.py`:
 
 ```bash
 # Basic usage
-openfatture ai describe "3 ore consulenza web"
+openfatture ai describe "3 hours web consulting"
 
 # With options
-openfatture ai describe "sviluppo API" \
+openfatture ai describe "API development" \
   --hours 8 \
   --tech "Python,FastAPI,PostgreSQL" \
   --project "E-commerce" \

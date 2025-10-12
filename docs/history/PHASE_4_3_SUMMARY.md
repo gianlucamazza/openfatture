@@ -93,27 +93,27 @@ Phase 4.3 implements the **Tax Advisor Agent**, an AI-powered assistant that sug
 
 ## 🧾 Italian Tax Rules Coverage
 
-### Aliquote IVA
+### VAT Rates
 | Rate | Description | Examples |
 |------|-------------|----------|
-| 22% | Aliquota ordinaria (default) | Consulenza, software, servizi professionali |
-| 10% | Aliquota ridotta | Alimenti, turismo, edilizia prima casa |
-| 5% | Aliquota super-ridotta | Alimenti prima necessità |
-| 4% | Aliquota minima | Libri, prodotti agricoli |
-| 0% | Esenti/Non imponibili | Formazione, sanità, export |
+| 22% | Standard rate (default) | Consulting, software, professional services |
+| 10% | Reduced rate | Food, tourism, first-home construction |
+| 5% | Super-reduced rate | Essential food items |
+| 4% | Minimum rate | Books, agricultural products |
+| 0% | Exempt / non-taxable | Education, healthcare, exports |
 
-### Codici Natura IVA
+### VAT Nature Codes
 | Code | Description | When to Use |
 |------|-------------|-------------|
-| N1 | Escluse ex art.15 | Operazioni escluse |
-| N2 | Non soggette | Fuori campo IVA |
-| N2.2 | Regime forfettario | Contribuenti RF19 |
-| N3.1 | Non imponibili - Export | Vendite extra-UE |
-| N3.2 | Non imponibili - Intracomunitarie | Vendite UE |
-| N4 | Esenti | Formazione, sanità, assicurazioni |
-| N6.1 | Reverse charge - Cessione rottami | Vendita materiali da recupero |
-| N6.2 | Reverse charge - Oro | Cessione oro industriale |
-| N6.7 | Reverse charge - Edilizia | Subappalto costruzioni |
+| N1 | Excluded under art. 15 | Excluded operations |
+| N2 | Not subject | Out of VAT scope |
+| N2.2 | Flat-tax regime | RF19 taxpayers |
+| N3.1 | Non-taxable – Export | Extra-EU sales |
+| N3.2 | Non-taxable – Intra-EU | EU cross-border sales |
+| N4 | Exempt | Education, healthcare, insurance |
+| N6.1 | Reverse charge – Scrap | Sale of recyclable materials |
+| N6.2 | Reverse charge – Gold | Industrial gold transactions |
+| N6.7 | Reverse charge – Construction | Construction subcontracting |
 
 ### Special Regimes
 - **Reverse Charge** (Art. 17, c. 6, DPR 633/72): Construction, subcontracting, scrap metal, energy
@@ -128,22 +128,22 @@ Phase 4.3 implements the **Tax Advisor Agent**, an AI-powered assistant that sug
 
 ```bash
 # Basic VAT suggestion
-openfatture ai suggest-vat "consulenza IT"
+openfatture ai suggest-vat "IT consulting"
 
 # Public Administration client
-openfatture ai suggest-vat "formazione professionale" --pa
+openfatture ai suggest-vat "Professional training services" --pa
 
 # Foreign client (export)
-openfatture ai suggest-vat "consulenza software" --estero --paese US
+openfatture ai suggest-vat "Software consulting" --estero --paese US
 
 # Complete context
-openfatture ai suggest-vat "servizi pulizia cantiere" \
-  --categoria "Edilizia" \
+openfatture ai suggest-vat "Construction site cleaning services" \
+  --categoria "Construction" \
   --importo 5000 \
   --ateco "81.21.00"
 
 # JSON output
-openfatture ai suggest-vat "libri scolastici" --json
+openfatture ai suggest-vat "School textbooks" --json
 ```
 
 ### Programmatic Usage
@@ -159,8 +159,8 @@ agent = TaxAdvisorAgent(provider=provider)
 
 # Create context
 context = TaxContext(
-    user_input="consulenza IT per azienda edile",
-    tipo_servizio="consulenza IT",
+    user_input="IT consulting for a construction company",
+    tipo_servizio="IT consulting",
     importo=5000.0
 )
 
@@ -313,8 +313,8 @@ from openfatture.models.fattura import Fattura, LineaDettaglio
 
 # 1. Get VAT suggestion
 context = TaxContext(
-    user_input="consulenza IT",
-    tipo_servizio="consulenza IT",
+    user_input="IT consulting",
+    tipo_servizio="IT consulting",
     importo=5000.0
 )
 tax_response = await tax_advisor.execute(context)
@@ -366,9 +366,9 @@ metrics = agent.get_metrics()
 
 ### Common Issues
 
-**Issue**: "tipo_servizio è richiesto"
-- **Cause**: Empty service description
-- **Solution**: Provide a service description: `openfatture ai suggest-vat "consulenza IT"`
+**Issue**: `"tipo_servizio" is required`
+- **Cause**: Service description missing in the prompt
+- **Solution**: Provide a description, e.g. `openfatture ai suggest-vat "IT consulting"`
 
 **Issue**: "Importo irrealistico"
 - **Cause**: Amount over 1,000,000 EUR
