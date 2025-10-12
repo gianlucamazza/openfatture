@@ -228,6 +228,8 @@ jobs:
       - name: Trigger optimization workflow
         if: ${{ steps.check_videos.outputs.found == 'true' && steps.validate_videos.outputs.validated == 'true' && !inputs.skip_optimization }}
         uses: actions/github-script@v7
+        continue-on-error: true  # Continue even if optimization trigger fails
+        id: trigger_optimization
         with:
           script: |
             await github.rest.repos.createDispatchEvent({
@@ -238,6 +240,17 @@ jobs:
                 run_id: context.runId
               }
             })
+
+      - name: Report optimization trigger status
+        if: ${{ steps.check_videos.outputs.found == 'true' && steps.validate_videos.outputs.validated == 'true' && !inputs.skip_optimization }}
+        run: |
+          if [ "${{ steps.trigger_optimization.outcome }}" = "failure" ]; then
+            echo "⚠️  Warning: Failed to trigger optimization workflow"
+            echo "This may be due to repository permissions or the optimization workflow being disabled."
+            echo "Generated videos are valid and available as artifacts, but will not be optimized."
+          else
+            echo "✓ Successfully triggered optimization workflow"
+          fi
 
       - name: Generate summary
         run: |
