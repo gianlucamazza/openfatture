@@ -164,11 +164,18 @@ jobs:
           echo "provider=$PROVIDER" >> "$GITHUB_OUTPUT"
           echo "model=$MODEL" >> "$GITHUB_OUTPUT"
 
-      - name: Reset demo environment
+      - name: Reset demo environment with cost controls
         run: |
           chmod +x scripts/reset_demo.sh
+
+          # Set environment variables to ensure cost-efficient demo
+          export AI_TEMPERATURE=0.1  # Lower temperature = less creativity = fewer retries
+          export AI_CHAT_ENABLED=false  # Disable interactive chat during demo
+          export AI_TOOLS_ENABLED=false  # Disable tools to reduce costs
+
+          # Run reset with the configured provider
           ./scripts/reset_demo.sh
-          echo "✓ Demo environment ready"
+          echo "✓ Demo environment ready with cost controls"
 
       - name: Generate video(s)
         run: |
