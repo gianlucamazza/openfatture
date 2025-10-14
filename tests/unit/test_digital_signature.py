@@ -267,7 +267,6 @@ class TestSignatureVerifier:
         assert is_valid is False
         assert "not found" in error
 
-    @pytest.mark.skip(reason="Content extraction requires pyasn1 - optional dependency")
     def test_extract_content_success(self, temp_certificate, tmp_path):
         """Test extracting content from signed file."""
         # Create signed file
@@ -286,7 +285,6 @@ class TestSignatureVerifier:
         assert error is None
         assert content == original_content
 
-    @pytest.mark.skip(reason="Content extraction requires pyasn1 - optional dependency")
     def test_extract_content_with_output_path(self, temp_certificate, tmp_path):
         """Test extracting content to output file."""
         # Create signed file
@@ -326,7 +324,6 @@ class TestSignatureVerifier:
         assert "valid_from" in info
         assert "valid_until" in info
 
-    @pytest.mark.skip(reason="Content extraction requires pyasn1 - optional dependency")
     def test_verify_and_extract(self, temp_certificate, tmp_path):
         """Test combined verify and extract operation."""
         # Create signed file

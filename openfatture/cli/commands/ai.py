@@ -14,10 +14,12 @@ from rich.json import JSON
 from rich.panel import Panel
 from rich.table import Table
 
+from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
 from openfatture.ai.context import enrich_with_rag
-from openfatture.ai.domain.context import InvoiceContext, TaxContext
+from openfatture.ai.domain.context import ChatContext, InvoiceContext, TaxContext
 from openfatture.ai.domain.response import AgentResponse
+from openfatture.ai.orchestration.workflows import InvoiceCreationWorkflow
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.rag import KnowledgeIndexer, get_rag_config
 from openfatture.utils.logging import get_logger
@@ -42,7 +44,7 @@ def rag_index(
         "--source",
         "-s",
         help="ID sorgente definito nel manifest (opzione ripetibile)",
-    )
+    ),
 ) -> None:
     """Indicizza le sorgenti della knowledge base."""
     asyncio.run(_rag_index(sources))
@@ -505,8 +507,8 @@ def _display_tax_result(response: AgentResponse) -> None:
         data = response.metadata["parsed_model"]
 
         # Main tax info panel
-        tax_info = f"""[bold]Aliquota IVA:[/bold]    {data['aliquota_iva']}%
-[bold]Reverse Charge:[/bold]  {'✓ SI' if data['reverse_charge'] else '✗ NO'}"""
+        tax_info = f"""[bold]Aliquota IVA:[/bold]    {data["aliquota_iva"]}%
+[bold]Reverse Charge:[/bold]  {"✓ SI" if data["reverse_charge"] else "✗ NO"}"""
 
         if data.get("codice_natura"):
             tax_info += f"\n[bold]Natura IVA:[/bold]      {data['codice_natura']}"
@@ -803,7 +805,9 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
     score_color = (
         "green"
         if report.compliance_score >= 80
-        else "yellow" if report.compliance_score >= 60 else "red"
+        else "yellow"
+        if report.compliance_score >= 60
+        else "red"
     )
     scores_table.add_row(
         "Compliance Score:", f"[{score_color}]{report.compliance_score:.1f}/100[/{score_color}]"
@@ -890,3 +894,219 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
         console.print()
     else:
         console.print("[bold green]✅ Invoice is ready for SDI submission![/bold green]\n")
+
+
+@app.command("create-invoice")
+def ai_create_invoice(
+    description: str = typer.Argument(..., help="Service description"),
+    client_id: int = typer.Option(..., "--client", "-c", help="Client ID"),
+    imponibile: float = typer.Option(..., "--amount", "-a", help="Invoice amount (€)"),
+    hours: float | None = typer.Option(None, "--hours", "-h", help="Hours worked"),
+    rate: float | None = typer.Option(None, "--rate", "-r", help="Hourly rate (€)"),
+    project: str | None = typer.Option(None, "--project", "-p", help="Project name"),
+    technologies: str | None = typer.Option(
+        None, "--tech", "-t", help="Technologies used (comma-separated)"
+    ),
+    require_approvals: bool = typer.Option(
+        False, "--require-approvals", help="Require human approval at each step"
+    ),
+    confidence_threshold: float = typer.Option(
+        0.85, "--confidence", help="Confidence threshold for auto-approval (0.0-1.0)"
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """
+    Create a complete invoice using AI workflow orchestration.
+
+    This command uses a multi-agent LangGraph workflow to:
+    1. Generate detailed description
+    2. Suggest VAT treatment
+    3. Check compliance
+    4. Create the invoice
+
+    Example:
+        openfatture ai create-invoice "consulenza web 3 ore" --client 123 --amount 300
+        openfatture ai create-invoice "sviluppo app mobile" --hours 20 --rate 50 --require-approvals
+    """
+    asyncio.run(
+        _run_invoice_workflow(
+            description=description,
+            client_id=client_id,
+            imponibile=imponibile,
+            hours=hours,
+            rate=rate,
+            project=project,
+            technologies=technologies,
+            require_approvals=require_approvals,
+            confidence_threshold=confidence_threshold,
+            json_output=json_output,
+        )
+    )
+
+
+async def _run_invoice_workflow(
+    description: str,
+    client_id: int,
+    imponibile: float,
+    hours: float | None,
+    rate: float | None,
+    project: str | None,
+    technologies: str | None,
+    require_approvals: bool,
+    confidence_threshold: float,
+    json_output: bool,
+) -> None:
+    """Execute invoice creation workflow."""
+    try:
+        # Parse technologies
+        tech_list = [t.strip() for t in technologies.split(",")] if technologies else None
+
+        # Create workflow
+        workflow = InvoiceCreationWorkflow(confidence_threshold=confidence_threshold)
+
+        # Execute workflow
+        result = await workflow.execute(
+            user_input=description,
+            client_id=client_id,
+            imponibile=imponibile,
+            hours=hours,
+            hourly_rate=rate,
+            require_approvals=require_approvals,
+        )
+
+        if json_output:
+            console.print_json(data=result.model_dump())
+        else:
+            # Display results
+            if result.invoice_id:
+                console.print(f"[bold green]✅ Invoice created successfully![/bold green]")
+                console.print(f"Invoice ID: {result.invoice_id}")
+            else:
+                console.print(f"[yellow]⚠️ Workflow completed with status: {result.status}[/yellow]")
+
+            console.print(f"Status: {result.status}")
+
+            if result.warnings:
+                console.print("\n[yellow]Warnings:[/yellow]")
+                for warning in result.warnings:
+                    console.print(f"  • {warning}")
+
+            if result.errors:
+                console.print("\n[red]Errors:[/red]")
+                for error in result.errors:
+                    console.print(f"  • {error}")
+
+    except Exception as e:
+        logger.error("Workflow execution failed", error=str(e))
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
+@app.command("chat")
+def ai_chat(
+    message: str | None = typer.Argument(
+        None, help="Message to send (interactive if not provided)"
+    ),
+    stream: bool = typer.Option(True, "--stream/--no-stream", help="Enable streaming responses"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """
+    Interactive AI chat assistant for invoice and tax questions.
+
+    This command provides a conversational interface to ask questions about:
+    - Invoice creation and management
+    - Tax regulations and VAT rates
+    - Payment tracking and reconciliation
+    - General business advice
+
+    The assistant has access to your business data and can perform actions
+    like creating invoices, checking compliance, and analyzing payments.
+
+    Examples:
+        openfatture ai chat "How do I create an invoice for consulting work?"
+        openfatture ai chat --no-stream "What VAT rate applies to software development?"
+        openfatture ai chat  # Interactive mode
+    """
+    asyncio.run(_run_chat(message, stream, json_output))
+
+
+async def _run_chat(message: str | None, stream: bool, json_output: bool) -> None:
+    """Run interactive chat session."""
+    try:
+        # Create chat agent
+        provider = create_provider()
+        agent = ChatAgent(provider=provider, enable_streaming=stream)
+
+        if message:
+            # Single message mode
+            context = ChatContext(user_input=message)
+            if stream:
+                console.print("[dim]Assistant:[/dim] ", end="")
+                async for chunk in agent.execute_stream(context):
+                    console.print(chunk, end="")
+                console.print()  # New line
+            else:
+                response = await agent.execute(context)
+                if json_output:
+                    console.print_json(data=response.model_dump())
+                else:
+                    console.print(f"[dim]Assistant:[/dim] {response.content}")
+        else:
+            # Interactive mode
+            console.print("[bold blue]🤖 OpenFatture AI Assistant[/bold blue]")
+            console.print(
+                "Type your questions about invoices, taxes, or business. Type 'exit' to quit.\n"
+            )
+
+            conversation_history = []
+
+            while True:
+                try:
+                    user_input = console.input("[bold green]You:[/bold green] ").strip()
+                    if not user_input:
+                        continue
+                    if user_input.lower() in ("exit", "quit", "q"):
+                        console.print("[dim]Goodbye! 👋[/dim]")
+                        break
+
+                    # Add to history
+                    conversation_history.append({"role": "user", "content": user_input})
+
+                    # Create context with history
+                    context = ChatContext(
+                        user_input=user_input, conversation_history=conversation_history
+                    )
+
+                    if stream:
+                        console.print("[dim]Assistant:[/dim] ", end="")
+                        full_response = ""
+                        async for chunk in agent.execute_stream(context):
+                            console.print(chunk, end="")
+                            full_response += chunk
+                        console.print()  # New line
+                        # Add assistant response to history
+                        conversation_history.append({"role": "assistant", "content": full_response})
+                    else:
+                        response = await agent.execute(context)
+                        if json_output:
+                            console.print_json(data=response.model_dump())
+                        else:
+                            console.print(f"[dim]Assistant:[/dim] {response.content}")
+                        # Add to history
+                        conversation_history.append(
+                            {"role": "assistant", "content": response.content}
+                        )
+
+                    console.print()  # Empty line between exchanges
+
+                except KeyboardInterrupt:
+                    console.print("\n[dim]Interrupted. Type 'exit' to quit.[/dim]")
+                    continue
+                except EOFError:
+                    console.print("\n[dim]Goodbye! 👋[/dim]")
+                    break
+
+    except Exception as e:
+        logger.error("Chat execution failed", error=str(e))
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)

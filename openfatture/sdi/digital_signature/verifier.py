@@ -118,12 +118,14 @@ class SignatureVerifier:
             )[0]
 
             # Get encapsulated content
-            encap_content_info = signed_data_content["encapContentInfo"]
+            content_info_field = signed_data_content["contentInfo"]
 
-            if "eContent" not in encap_content_info or encap_content_info["eContent"] is None:
+            if "content" not in content_info_field or content_info_field["content"] is None:
                 return False, "No encapsulated content found (detached signature?)", None
 
-            original_content = bytes(encap_content_info["eContent"])
+            # The content is an OCTET STRING, extract the bytes
+            content_octets = decoder.decode(bytes(content_info_field["content"]))[0]
+            original_content = bytes(content_octets)
 
             # Write to output if requested
             if output_path:

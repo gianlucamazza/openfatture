@@ -61,6 +61,10 @@ uv run python -m pytest tests/ai/ -v                    # AI tests
 uv run python -m pytest tests/payment/ -v               # Payment tests
 uv run python -m pytest tests/unit/test_xml_builder.py  # XML generation
 
+# E2E tests (require Ollama running)
+uv run python -m pytest -m "ollama and e2e" -v          # Ollama E2E tests
+uv run python -m pytest tests/ai/test_ollama_integration.py -v
+
 # Single test function
 uv run python -m pytest tests/ai/test_streaming.py::test_streaming_basic -v
 
@@ -114,11 +118,78 @@ uv run openfatture ai chat                               # Interactive chat assi
 uv run openfatture ai forecast --retrain                 # Train ML models for cash flow
 ```
 
+**E2E Testing with Ollama:**
+```bash
+# Run end-to-end tests with real Ollama (requires Ollama running)
+uv run python -m pytest tests/ai/test_ollama_integration.py -v
+
+# Test specific agent with Ollama
+uv run python -m pytest tests/ai/test_ollama_integration.py::TestOllamaTaxAdvisor -v
+```
+
 **ML Models:**
 - Models stored in `.models/` directory with versioning
 - Files: `cash_flow_prophet.json`, `cash_flow_xgboost.json`, `cash_flow_pipeline.pkl`, `cash_flow_metrics.json`
 - Requires ≥25 invoices/payments for training
 - Test with: `uv run pytest tests/ai/test_cash_flow_predictor_training.py`
+
+**ReAct Orchestration (NEW!):**
+
+ReAct (Reasoning + Acting) enables tool calling for Ollama models without native function calling:
+
+- **Purpose**: Local LLMs (Ollama) can use the same tools as OpenAI/Anthropic
+- **Method**: XML-based prompt engineering + multi-strategy parser
+- **Location**: `openfatture/ai/orchestration/react.py`, `openfatture/ai/orchestration/parsers.py`
+
+**Key Components:**
+- `ToolCallParser`: Parses LLM responses (XML-first, legacy text fallback)
+- `ReActOrchestrator`: Manages tool calling loop (max iterations, metrics tracking)
+
+**Configuration:**
+```bash
+# .env settings for Ollama with ReAct
+OPENFATTURE_AI_PROVIDER=ollama
+OPENFATTURE_AI_OLLAMA_MODEL=qwen3:8b  # Recommended for tool calling
+OPENFATTURE_AI_TEMPERATURE=0.0        # CRITICAL: Deterministic for tool calling
+```
+
+**Best Practices (2025):**
+1. **Always use temperature=0.0** for tool calling with Ollama
+2. **Use qwen3:8b model** (5.2 GB) - optimized for tool calling, 80%+ success rate
+3. **Monitor metrics**: Track `tool_call_success_rate` and `xml_parse_rate`
+4. **Set appropriate max_iterations**: 5 for simple queries, 8+ for multi-step reasoning
+5. **XML format is standard**: LLM should generate `<thought>`, `<action>`, `<action_input>`, `<final_answer>` tags
+
+**Testing:**
+```bash
+# Unit tests (parsers, orchestrator)
+uv run pytest tests/ai/test_react_orchestration.py -v
+
+# Integration tests (with mock tools)
+uv run pytest tests/ai/test_react_orchestration_integration.py -v
+
+# E2E tests (requires Ollama running with qwen3:8b)
+uv run pytest tests/ai/test_react_e2e_ollama.py -v -m "ollama and e2e"
+
+# Success rate test (10 diverse queries, requires ≥80% success)
+uv run pytest tests/ai/test_react_e2e_ollama.py::TestReActOllamaSuccessRate -v
+```
+
+**Performance Benchmarks:**
+- **Success Rate**: ≥80% across diverse queries (validated with real Ollama)
+- **XML Format Adoption**: 60%+ with qwen3:8b (fallback to legacy if needed)
+- **Average Iterations**: 2-3 per successful completion
+- **Latency**: ~2-5s per iteration (local inference)
+
+**Common Issues:**
+- **Low success rate**: Check temperature=0.0, verify model is qwen3:8b, monitor metrics
+- **Infinite loops**: Tool not providing expected data → validate tool outputs
+- **Max iterations reached**: Query too complex → increase max_iterations or split query
+- **Failed tool calls**: Invalid parameters → improve tool parameter descriptions
+
+**See also:**
+- `docs/AI_ARCHITECTURE.md` - Complete ReAct architecture documentation
+- `docs/guidelines/REACT_BEST_PRACTICES.md` - Detailed best practices guide
 
 ## Payment Reconciliation
 
@@ -230,7 +301,8 @@ See `docs/CONFIGURATION.md` for complete reference.
 **Test Markers:**
 ```python
 @pytest.mark.streaming     # Streaming-capable components
-@pytest.mark.integration   # Integration tests (may be slower)
+@pytest.mark.e2e          # End-to-end tests requiring external services
+@pytest.mark.ollama       # Tests requiring Ollama LLM service
 ```
 
 ## Code Style
@@ -312,7 +384,7 @@ git push --follow-tags
 ## CI/CD
 
 GitHub Actions workflows:
-- `.github/workflows/test.yml`: Runs on push/PR (lint, test, coverage gate ≥50%)
+- `.github/workflows/test.yml`: Runs on push/PR (lint, test, coverage gate ≥60%)
 - `.github/workflows/release.yml`: Runs on version tags (build, GitHub release)
 - `.github/workflows/media-generation.yml`: Demo video generation
 

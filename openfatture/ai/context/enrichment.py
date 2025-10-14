@@ -10,6 +10,9 @@ from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Track if DB initialization warning has been shown
+_db_warning_shown = False
+
 
 def enrich_chat_context(context: ChatContext) -> ChatContext:
     """
@@ -27,6 +30,8 @@ def enrich_chat_context(context: ChatContext) -> ChatContext:
     Returns:
         Enriched context
     """
+    global _db_warning_shown
+
     try:
         logger.debug(
             "enriching_chat_context",
@@ -52,11 +57,25 @@ def enrich_chat_context(context: ChatContext) -> ChatContext:
         )
 
     except Exception as e:
-        logger.warning(
-            "context_enrichment_failed",
-            error=str(e),
-            message="Continuing with unenriched context",
-        )
+        error_str = str(e)
+
+        # Check if it's a database initialization error
+        is_db_init_error = "Database not initialized" in error_str
+
+        if is_db_init_error and not _db_warning_shown:
+            # Log warning only once for DB init errors
+            logger.warning(
+                "context_enrichment_db_not_initialized",
+                message="Database not initialized. Context enrichment disabled until DB is ready.",
+            )
+            _db_warning_shown = True
+        elif not is_db_init_error:
+            # Log other errors normally
+            logger.warning(
+                "context_enrichment_failed",
+                error=error_str,
+                message="Continuing with unenriched context",
+            )
 
     return context
 
@@ -188,8 +207,7 @@ async def enrich_with_rag(context: AgentContext, query: str) -> AgentContext:
         Enriched context with relevant documents
     """
     try:
-        import os
-
+        from openfatture.ai.config.settings import get_ai_settings
         from openfatture.ai.rag import KnowledgeIndexer, RAGSystem
         from openfatture.ai.rag.config import get_rag_config
 
@@ -199,11 +217,25 @@ async def enrich_with_rag(context: AgentContext, query: str) -> AgentContext:
             logger.debug("rag_enrichment_disabled")
             return context
 
-        # Get API key for embeddings
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key and config.embedding_provider == "openai":
-            logger.warning("openai_api_key_missing_for_rag")
-            return context
+        # Get API key for embeddings from AI settings
+        api_key = None
+        if config.embedding_provider == "openai":
+            ai_settings = get_ai_settings()
+            if ai_settings.openai_api_key:
+                api_key = ai_settings.openai_api_key.get_secret_value()
+
+            if not api_key:
+                logger.warning(
+                    "openai_api_key_missing_for_rag",
+                    message=(
+                        "RAG is enabled but OPENAI_API_KEY is not set. "
+                        "Options: (1) Set OPENAI_API_KEY=sk-... for OpenAI embeddings, "
+                        "(2) Set OPENFATTURE_RAG_EMBEDDING_PROVIDER=sentence-transformers for local embeddings, "
+                        "(3) Set OPENFATTURE_RAG_ENABLED=false to disable RAG"
+                    ),
+                    current_provider=config.embedding_provider,
+                )
+                return context
 
         # Reset previous RAG fields
         context.relevant_documents = []

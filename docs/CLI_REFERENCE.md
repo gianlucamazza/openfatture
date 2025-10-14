@@ -110,7 +110,22 @@ See [docs/BATCH_OPERATIONS.md](BATCH_OPERATIONS.md) for CSV formats and best pra
 
 ---
 
-## 8. AI & Automation
+## 8. Payment Tracking
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `openfatture payment create-account NAME` | Creates a bank account for transaction import. | `openfatture payment create-account "BCC" --iban IT123...` |
+| `openfatture payment list-accounts` | Lists configured bank accounts. |  |
+| `openfatture payment import FILE.ofx` | Imports bank transactions from OFX/QFX files. | `openfatture payment import statement.ofx --account 1` |
+| `openfatture payment list-transactions` | Shows imported transactions with match status. | `openfatture payment list-transactions --status unmatched` |
+| `openfatture payment reconcile` | Runs automatic reconciliation against unpaid invoices. | `openfatture payment reconcile --account 1` |
+| `openfatture payment match-transaction TX_ID PAYMENT_ID` | Manually matches a transaction to a payment. | `openfatture payment match-transaction 123 456` |
+| `openfatture payment audit [--limit 50]` | Shows payment allocation audit trail. | `openfatture payment audit --payment 123` |
+| `openfatture payment stats [--account ID]` | Payment tracking statistics (matched/unmatched). | `openfatture payment stats` |
+
+---
+
+## 9. AI & Automation
 
 Configure `AI_PROVIDER`, `AI_MODEL`, and `AI_API_KEY` (or Ollama) first. Validate with `openfatture config show`.
 
@@ -120,6 +135,8 @@ Configure `AI_PROVIDER`, `AI_MODEL`, and `AI_API_KEY` (or Ollama) first. Validat
 | `openfatture ai suggest-vat "service"` | Suggests VAT rate, nature code, and fiscal notes with references to DPR 633/72. | `openfatture ai suggest-vat "Online training" --pa` |
 | `openfatture ai forecast [--months 6]` | Cash-flow forecast using Prophet + XGBoost; stores models/metrics; supports `--retrain`. | `openfatture ai forecast --client 12 --retrain` |
 | `openfatture ai check ID [--level advanced]` | Analyses the invoice using rules + AI to catch issues before submission. | `openfatture ai check 45 --level standard --verbose` |
+| `openfatture ai create-invoice "desc"` | Creates complete invoices using AI workflow orchestration. | `openfatture ai create-invoice "consulenza web" --client 123 --amount 300` |
+| `openfatture ai chat ["message"]` | Interactive AI chat assistant for invoice/tax questions. | `openfatture ai chat --stream` (or interactive mode) |
 | `openfatture ai rag status` | Displays knowledge-base sources, document counts, and ChromaDB directory. |  |
 | `openfatture ai rag index [--source id]` | Indexes or re-indexes the RAG sources defined in the manifest. | `openfatture ai rag index --source tax_guides` |
 | `openfatture ai rag search "query"` | Semantic search inside the knowledge base (great for debugging or audits). | `openfatture ai rag search "reverse charge edilizia" --source tax_guides` |
@@ -132,7 +149,7 @@ Compliance analysis (`ai check`) remains in beta; when it fails, use `--json` fo
 
 ---
 
-## 9. Interactive Mode
+## 10. Interactive Mode
 
 `openfatture interactive` (or `openfatture --interactive`) launches the Rich-powered TUI with menu navigation:
 

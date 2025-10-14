@@ -412,6 +412,7 @@ class TestTemplatePECSender:
         success, error = sender.send_invoice_to_sdi(mock_fattura, Path("/nonexistent.xml"))
 
         assert success is False
+        assert error is not None
         assert "not found" in error.lower()
 
     @patch("smtplib.SMTP_SSL")
@@ -545,3 +546,67 @@ class TestEmailIntegration:
 
         assert (i18n_dir / "it.json").exists()
         assert (i18n_dir / "en.json").exists()
+
+    def test_template_filters_error_handling(self, mock_settings):
+        """Test template filters handle invalid inputs gracefully."""
+        renderer = TemplateRenderer(settings=mock_settings)
+
+        # Test currency filter with invalid input
+        assert renderer.env.filters["currency"]("invalid") == "€invalid"
+        assert renderer.env.filters["currency"](None) == "€None"
+
+        # Test percentage filter with invalid input
+        assert renderer.env.filters["percentage"]("invalid") == "invalid%"
+
+        # Test duration filter with invalid input
+        assert renderer.env.filters["duration"]("invalid") == "invalid"
+
+    def test_template_filters_functionality(self, mock_settings):
+        """Test template filters work correctly."""
+        renderer = TemplateRenderer(settings=mock_settings)
+
+        # Test currency filter
+        assert renderer.env.filters["currency"](1234.56) == "€1.234,56"
+        assert renderer.env.filters["currency"](100) == "€100,00"
+
+        # Test percentage filter
+        assert renderer.env.filters["percentage"](85.5) == "85.5%"
+
+        # Test duration filter
+        assert renderer.env.filters["duration"](30) == "30.0s"
+        assert renderer.env.filters["duration"](120) == "2.0m"
+        assert renderer.env.filters["duration"](7200) == "2.0h"
+
+    def test_render_html_template_not_found(self, mock_settings):
+        """Test render_html with non-existent template."""
+        renderer = TemplateRenderer(settings=mock_settings)
+
+        with pytest.raises(FileNotFoundError, match="Template not found"):
+            renderer.render_html("nonexistent/template.html", {})
+
+    def test_render_text_template_not_found(self, mock_settings):
+        """Test render_text with non-existent template."""
+        renderer = TemplateRenderer(settings=mock_settings)
+
+        with pytest.raises(FileNotFoundError, match="Template not found"):
+            renderer.render_text("nonexistent/template.txt", {})
+
+    def test_preview_template(self, mock_settings, tmp_path):
+        """Test template preview generation."""
+        renderer = TemplateRenderer(settings=mock_settings)
+
+        output_path = tmp_path / "preview.html"
+        result_path = renderer.preview("test/test_email.html", {}, output_path)
+
+        assert result_path == output_path
+        assert output_path.exists()
+        content = output_path.read_text()
+        assert "<html" in content.lower()
+
+    def test_get_renderer_factory(self):
+        """Test get_renderer factory function."""
+        from openfatture.utils.email.renderer import get_renderer
+
+        renderer = get_renderer(locale="en")
+        assert renderer.locale == "en"
+        assert renderer.settings is not None

@@ -283,6 +283,7 @@ class PDFGenerator:
         """
         page_width, page_height = A4
         y = page_height - 2 * cm
+        current_page = 1
 
         # Header with company info
         y = draw_header(
@@ -314,13 +315,71 @@ class PDFGenerator:
             primary_color=self.template.get_primary_color(),
         )
 
-        # TODO: Handle pagination if needs_pagination=True
-        # For now, we'll just warn
+        # Draw footer for first page
+        draw_footer(
+            canvas,
+            page_number=1,
+            total_pages=2 if needs_pagination else 1,
+            show_digital_signature_note=True,
+            footer_text=self.config.footer_text,
+        )
+
+        # Handle pagination if table doesn't fit on current page
         if needs_pagination:
-            logger.warning(
-                "invoice_table_pagination_needed",
+            logger.info(
+                "invoice_table_pagination",
                 fattura_id=fattura_data["id"],
-                message="Table too large, pagination not yet implemented",
+                message="Starting new page for invoice table",
+            )
+
+            # Start new page
+            canvas.showPage()
+
+            # Reset Y position for new page
+            page_width, page_height = A4
+            y = page_height - 2 * cm
+
+            # Redraw header on new page
+            y = draw_header(
+                canvas,
+                y,
+                company_name=self.config.company_name or "OpenFatture",
+                company_vat=self.config.company_vat,
+                company_address=self.config.company_address,
+                company_city=self.config.company_city,
+                logo_path=self.config.logo_path,
+                primary_color=self.template.get_primary_color(),
+            )
+
+            # Redraw invoice info on new page
+            y = self.template.draw_invoice_info(canvas, fattura_data, y)
+
+            # Redraw client info on new page
+            y = self.template.draw_client_info(canvas, fattura_data["cliente"], y)
+
+            # Draw table on new page (should fit now)
+            y, still_needs_pagination = draw_invoice_table(
+                canvas,
+                y,
+                fattura_data["righe"],
+                primary_color=self.template.get_primary_color(),
+            )
+
+            # If still doesn't fit, warn (very large tables)
+            if still_needs_pagination:
+                logger.warning(
+                    "invoice_table_still_too_large",
+                    fattura_id=fattura_data["id"],
+                    message="Table still too large for single page after pagination",
+                )
+
+            # Draw footer for second page
+            draw_footer(
+                canvas,
+                page_number=2,
+                total_pages=2,
+                show_digital_signature_note=True,
+                footer_text=self.config.footer_text,
             )
 
         # Summary (totals)
@@ -335,15 +394,6 @@ class PDFGenerator:
 
         # Notes
         y = self.template.draw_notes(canvas, fattura_data.get("note"), y)
-
-        # Footer
-        draw_footer(
-            canvas,
-            page_number=1,
-            total_pages=1,
-            show_digital_signature_note=True,
-            footer_text=self.config.footer_text,
-        )
 
     def _draw_payment_qr(self, canvas: Canvas, fattura_data: dict[str, Any]) -> None:
         """Draw payment QR code.

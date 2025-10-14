@@ -610,6 +610,261 @@ class PromptManager:
 
 ---
 
+### 5. ReAct Orchestration
+
+**File:** `openfatture/ai/orchestration/react.py`
+
+**Purpose:** Enable tool calling for LLM providers without native function calling support (Ollama)
+
+**Background:**
+Local LLMs via Ollama lack native function calling APIs like OpenAI and Anthropic. ReAct (Reasoning + Acting) orchestration implements tool calling through prompt engineering, allowing Ollama models to use the same tools as cloud providers.
+
+**Architecture Components:**
+
+**ReAct Pattern:**
+```
+Thought: [Reasoning about what to do]
+Action: [Tool name]
+Action Input: [JSON parameters]
+Observation: [Tool execution result]
+... (repeat until final answer)
+Final Answer: [Response to user]
+```
+
+**XML Format (2025 Standard):**
+```xml
+<thought>Reasoning about what to do</thought>
+<action>tool_name</action>
+<action_input>{"param": "value"}</action_input>
+
+<!-- After tool execution -->
+<thought>Analysis of result</thought>
+<final_answer>Response to user</final_answer>
+```
+
+**Key Classes:**
+
+```python
+class ToolCallParser:
+    """
+    Multi-strategy parser for LLM tool call responses.
+
+    Supports:
+    - XML format (primary, 2025 standard)
+    - Legacy text format (fallback)
+    - Malformed JSON correction
+    - Case-insensitive keywords
+    """
+
+    def parse(self, response_text: str) -> ParsedResponse:
+        """Parse LLM response into structured tool call or final answer."""
+        # Try XML parsing first (priority)
+        if xml_result := self._try_parse_xml(response_text):
+            self.metrics["xml_parse_count"] += 1
+            return xml_result
+
+        # Fallback to legacy text format
+        if legacy_result := self._try_parse_legacy(response_text):
+            self.metrics["legacy_parse_count"] += 1
+            return legacy_result
+
+        # Treat as final answer if no format detected
+        return ParsedResponse(is_final=True, content=response_text)
+
+    def get_stats(self) -> dict:
+        """Get parser statistics including XML adoption rate."""
+        return {
+            "total_parses": self.metrics["total_parses"],
+            "xml_parse_count": self.metrics["xml_parse_count"],
+            "legacy_parse_count": self.metrics["legacy_parse_count"],
+            "xml_parse_rate": self.metrics["xml_parse_count"] / max(1, self.metrics["total_parses"]),
+            "parse_errors": self.metrics["parse_errors"],
+        }
+
+
+class ReActOrchestrator:
+    """
+    Orchestrates ReAct loop for tool calling with Ollama.
+
+    Flow:
+    1. Build ReAct prompt with tool descriptions
+    2. Send to LLM (with conversation history)
+    3. Parse response (XML or legacy format)
+    4. If tool call: execute tool → add observation → loop
+    5. If final answer: return to user
+    6. Enforce max_iterations to prevent infinite loops
+    """
+
+    def __init__(
+        self,
+        provider: BaseLLMProvider,
+        tool_registry: ToolRegistry,
+        max_iterations: int = 5,
+        parser: ToolCallParser | None = None,
+    ) -> None:
+        self.provider = provider
+        self.tool_registry = tool_registry
+        self.max_iterations = max_iterations
+        self.parser = parser or ToolCallParser()
+
+        # Metrics tracking
+        self.metrics = {
+            "total_executions": 0,
+            "tool_calls_attempted": 0,
+            "tool_calls_succeeded": 0,
+            "tool_calls_failed": 0,
+            "max_iterations_reached": 0,
+            "total_iterations": 0,
+        }
+
+    async def execute(self, context: ChatContext) -> str:
+        """Execute ReAct loop until final answer or max iterations."""
+        conversation_messages = self._build_react_messages(context)
+
+        for iteration in range(1, self.max_iterations + 1):
+            # Generate LLM response
+            response = await self.provider.generate(conversation_messages)
+
+            # Parse response
+            parsed = self.parser.parse(response.content)
+
+            if parsed.is_final:
+                # Final answer reached
+                return parsed.content
+
+            if parsed.tool_call:
+                # Execute tool
+                self.metrics["tool_calls_attempted"] += 1
+
+                try:
+                    result = await self.tool_registry.execute_tool(
+                        parsed.tool_call.tool_name,
+                        parsed.tool_call.parameters,
+                    )
+
+                    if result.success:
+                        observation = self._format_observation(result.data)
+                        self.metrics["tool_calls_succeeded"] += 1
+                    else:
+                        observation = f"Error: {result.error}"
+                        self.metrics["tool_calls_failed"] += 1
+
+                except Exception as e:
+                    observation = f"Tool execution error: {str(e)}"
+                    self.metrics["tool_calls_failed"] += 1
+
+                # Add observation to conversation
+                conversation_messages.append(
+                    Message(role="user", content=f"Observation: {observation}")
+                )
+
+        # Max iterations reached
+        self.metrics["max_iterations_reached"] += 1
+        return "Unable to complete request within iteration limit."
+
+    def get_metrics(self) -> dict:
+        """Get comprehensive orchestrator metrics."""
+        success_rate = 0.0
+        if self.metrics["tool_calls_attempted"] > 0:
+            success_rate = (
+                self.metrics["tool_calls_succeeded"]
+                / self.metrics["tool_calls_attempted"]
+            )
+
+        return {
+            **self.metrics,
+            "tool_call_success_rate": success_rate,
+            "parser_stats": self.parser.get_stats(),
+            "provider": self.provider.provider_name,
+            "model": self.provider.model,
+        }
+```
+
+**Design Rationale:**
+- **XML-First Parsing**: XML tags are more robust than text parsing (qwen3:8b generates XML 60%+ of time)
+- **Deterministic Execution**: Temperature=0.0 for reliable tool calling
+- **Metrics Tracking**: Monitor tool call success rate, XML adoption, iteration counts
+- **Graceful Degradation**: Fallback to legacy format if XML parsing fails
+- **Safety**: Max iterations prevents infinite loops
+- **Observability**: Comprehensive metrics for production monitoring
+
+**Recommended Models:**
+- **qwen3:8b** (Recommended) - 5.2 GB, optimized for tool calling, 80%+ success rate
+- **mistral-small3.1** - 15 GB, more powerful but slower
+- **llama3.2** - 7 GB, good general performance
+
+**Configuration:**
+```python
+# AI Settings for ReAct with Ollama
+OPENFATTURE_AI_PROVIDER=ollama
+OPENFATTURE_AI_OLLAMA_MODEL=qwen3:8b
+OPENFATTURE_AI_OLLAMA_BASE_URL=http://localhost:11434
+OPENFATTURE_AI_TEMPERATURE=0.0  # Deterministic for tool calling
+```
+
+**Performance Benchmarks:**
+- **Success Rate**: ≥80% across diverse queries (validated in E2E tests)
+- **Average Iterations**: 2-3 per successful completion
+- **XML Format Adoption**: 60%+ with qwen3:8b
+- **Latency**: ~2-5s per iteration (local inference)
+
+**Testing:**
+```python
+# E2E tests with real Ollama (tests/ai/test_react_e2e_ollama.py)
+@pytest.mark.e2e
+@pytest.mark.ollama
+async def test_single_tool_call_invoice_stats(
+    ollama_qwen3_provider, tool_registry_with_mock_tools
+):
+    """Test ReAct calls get_invoice_stats correctly."""
+    orchestrator = ReActOrchestrator(
+        provider=ollama_qwen3_provider,
+        tool_registry=tool_registry_with_mock_tools,
+        max_iterations=5,
+    )
+
+    context = ChatContext(
+        user_input="Quante fatture ho emesso quest'anno?",
+        enable_tools=True,
+    )
+
+    result = await orchestrator.execute(context)
+
+    # Verify result contains expected data from tools
+    assert result is not None
+    assert "42" in result  # From mock invoice stats
+
+    # Check metrics
+    metrics = orchestrator.get_metrics()
+    assert metrics["tool_call_success_rate"] >= 0.8
+```
+
+**Best Practices:**
+1. **Always use temperature=0.0** for tool calling (deterministic output)
+2. **Monitor XML parse rate** - should be 60%+ with qwen3:8b
+3. **Set appropriate max_iterations** (5 for simple queries, 8+ for multi-step)
+4. **Track tool call success rate** - alert if drops below 70%
+5. **Use structured tool schemas** - clear descriptions and parameter types
+6. **Provide few-shot examples** in system prompt for better parsing
+7. **Implement retry logic** for transient failures
+8. **Log all iterations** for debugging and optimization
+
+**Common Issues:**
+- **Low XML parse rate**: Model not generating XML → update prompt with more examples
+- **Infinite loops**: Tool not providing expected data → validate tool outputs
+- **Failed tool calls**: Invalid parameters → improve parameter descriptions
+- **Max iterations reached**: Query too complex → increase max_iterations or split query
+
+**Integration with Chat Agent:**
+The Chat Agent automatically uses ReActOrchestrator when:
+- Provider is Ollama
+- `enable_tools=True` in ChatContext
+- Tool registry has available tools
+
+For OpenAI/Anthropic, native function calling is used instead.
+
+---
+
 ## Agent Implementations
 
 ### Invoice Assistant Agent

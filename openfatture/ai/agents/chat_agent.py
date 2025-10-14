@@ -1,10 +1,12 @@
 """Conversational Chat Agent with tool calling capabilities."""
 
+from collections.abc import AsyncIterator
 from typing import Any
 
 from openfatture.ai.domain import AgentConfig, BaseAgent, Message, Role
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.response import AgentResponse
+from openfatture.ai.orchestration.react import ReActOrchestrator
 from openfatture.ai.providers import BaseLLMProvider
 from openfatture.ai.tools import ToolRegistry, get_tool_registry
 from openfatture.utils.logging import get_logger
@@ -99,6 +101,57 @@ class ChatAgent(BaseAgent[ChatContext]):
             return False, "Input troppo lungo (max 5000 caratteri)"
 
         return True, None
+
+    async def execute_stream(self, context: ChatContext) -> AsyncIterator[str]:
+        """
+        Execute chat agent with streaming, using ReAct if needed.
+
+        Override BaseAgent.execute_stream() to add ReAct orchestration
+        for providers that don't support native function calling.
+
+        Args:
+            context: Chat context
+
+        Yields:
+            Response chunks
+        """
+        # Check if we need ReAct orchestration
+        needs_react = (
+            self.enable_tools
+            and not self.provider.supports_tools
+            and len(context.available_tools) > 0
+        )
+
+        if needs_react:
+            logger.info(
+                "using_react_orchestration",
+                agent=self.config.name,
+                provider=self.provider.provider_name,
+                tools_count=len(context.available_tools),
+            )
+
+            # Use ReAct orchestrator for tool calling
+            orchestrator = ReActOrchestrator(
+                provider=self.provider,
+                tool_registry=self.tool_registry,
+                max_iterations=5,
+            )
+
+            async for chunk in orchestrator.stream(context):
+                yield chunk
+
+        else:
+            # Use standard streaming from BaseAgent
+            # (for providers with native function calling or when tools disabled)
+            logger.debug(
+                "using_standard_streaming",
+                agent=self.config.name,
+                provider=self.provider.provider_name,
+                supports_tools=self.provider.supports_tools,
+            )
+
+            async for chunk in super().execute_stream(context):
+                yield chunk
 
     async def _build_prompt(self, context: ChatContext) -> list[Message]:
         """

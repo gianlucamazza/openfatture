@@ -33,7 +33,7 @@ from enum import Enum
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from openfatture.utils.datetime import utc_now
 
@@ -109,6 +109,8 @@ class SharedContext(BaseModel):
     Populated once at workflow start to avoid repeated DB queries.
     """
 
+    model_config = ConfigDict(use_enum_values=True)
+
     # Current year statistics
     total_invoices_ytd: int = 0
     total_revenue_ytd: float = 0.0
@@ -133,6 +135,8 @@ class BaseWorkflowState(BaseModel):
     Contains common fields required by all workflow types.
     """
 
+    model_config = ConfigDict(use_enum_values=True)
+
     # Workflow tracking
     workflow_id: str = Field(default_factory=lambda: str(uuid4()))
     correlation_id: str | None = None
@@ -149,6 +153,14 @@ class BaseWorkflowState(BaseModel):
     # Error handling
     errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def validate_status(cls, v: WorkflowStatus | str) -> WorkflowStatus:
+        """Convert string status to enum if needed."""
+        if isinstance(v, str):
+            return WorkflowStatus(v)
+        return v
 
     # Metadata for extensibility
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -240,7 +252,7 @@ class InvoiceCreationState(BaseWorkflowState):
             return True
         if not self.description_review:
             return False
-        return self.description_review.decision == ApprovalDecision.APPROVE
+        return self.description_review.decision == ApprovalDecision.APPROVE.value
 
     @property
     def is_tax_approved(self) -> bool:
@@ -249,7 +261,7 @@ class InvoiceCreationState(BaseWorkflowState):
             return True
         if not self.tax_review:
             return False
-        return self.tax_review.decision == ApprovalDecision.APPROVE
+        return self.tax_review.decision == ApprovalDecision.APPROVE.value
 
     @property
     def is_compliant(self) -> bool:

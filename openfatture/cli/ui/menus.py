@@ -21,8 +21,10 @@ from openfatture.cli.ui.helpers import (
 )
 from openfatture.cli.ui.progress import process_with_progress, with_spinner
 from openfatture.cli.ui.styles import openfatture_style
+from openfatture.utils.logging import get_logger
 
 console = Console()
+logger = get_logger(__name__)
 
 
 # ============================================================================
@@ -930,8 +932,21 @@ def action_ai_chat() -> None:
     import asyncio
 
     from openfatture.cli.ui.chat import start_interactive_chat
+    from openfatture.storage.database import init_db
 
     try:
+        # Initialize database before starting chat
+        # This ensures tools can access DB when needed
+        try:
+            init_db()
+            logger.debug("database_initialized_for_chat")
+        except Exception as db_error:
+            logger.warning(
+                "database_init_failed",
+                error=str(db_error),
+                message="Chat will continue but tools may have limited functionality",
+            )
+
         # Run async chat
         asyncio.run(start_interactive_chat())
     except Exception as e:

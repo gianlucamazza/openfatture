@@ -146,14 +146,27 @@ class OpenAIProvider(BaseLLMProvider):
                 temperature=self._get_temperature(temperature),
             )
 
-            # Call API
-            response_raw = await self.client.chat.completions.create(
-                model=self.model,
-                messages=prepared_messages,
-                temperature=self._get_temperature(temperature),
-                max_tokens=self._get_max_tokens(max_tokens),
-                **kwargs,
+            # Prepare token limit parameter (varies by model)
+            max_tokens_value = self._get_max_tokens(max_tokens)
+            token_param = (
+                "max_completion_tokens" if self._uses_max_completion_tokens() else "max_tokens"
             )
+
+            # Prepare API call parameters
+            api_params = {
+                "model": self.model,
+                "messages": prepared_messages,
+                **{token_param: max_tokens_value},
+                **kwargs,
+            }
+            
+            # Add temperature parameter only if the model supports it
+            # GPT-5 doesn't support custom temperature values, only the default (1)
+            if not self.model.startswith("gpt-5"):
+                api_params["temperature"] = self._get_temperature(temperature)
+
+            # Call API
+            response_raw = await self.client.chat.completions.create(**api_params)
             response = cast("ChatCompletion", response_raw)
 
             # Extract response
@@ -252,15 +265,28 @@ class OpenAIProvider(BaseLLMProvider):
                 message_count=len(prepared_messages),
             )
 
-            # Stream API call
-            stream_raw = await self.client.chat.completions.create(
-                model=self.model,
-                messages=prepared_messages,
-                temperature=self._get_temperature(temperature),
-                max_tokens=self._get_max_tokens(max_tokens),
-                stream=True,
-                **kwargs,
+            # Prepare token limit parameter (varies by model)
+            max_tokens_value = self._get_max_tokens(max_tokens)
+            token_param = (
+                "max_completion_tokens" if self._uses_max_completion_tokens() else "max_tokens"
             )
+
+            # Prepare API call parameters
+            stream_params = {
+                "model": self.model,
+                "messages": prepared_messages,
+                "stream": True,
+                **{token_param: max_tokens_value},
+                **kwargs,
+            }
+            
+            # Add temperature parameter only if the model supports it
+            # GPT-5 doesn't support custom temperature values, only the default (1)
+            if not self.model.startswith("gpt-5"):
+                stream_params["temperature"] = self._get_temperature(temperature)
+
+            # Stream API call
+            stream_raw = await self.client.chat.completions.create(**stream_params)
             stream = cast("AsyncStream[ChatCompletionChunk]", stream_raw)
 
             # Yield chunks
@@ -309,6 +335,21 @@ class OpenAIProvider(BaseLLMProvider):
         output_cost = (usage.completion_tokens / 1_000_000) * pricing["output"]
 
         return input_cost + output_cost
+
+    def _uses_max_completion_tokens(self) -> bool:
+        """
+        Check if model uses max_completion_tokens instead of max_tokens.
+
+        OpenAI changed the API for newer models (GPT-5, GPT-4o):
+        - Old models (GPT-4, GPT-3.5): use 'max_tokens'
+        - New models (GPT-5, GPT-4o): use 'max_completion_tokens'
+
+        Returns:
+            True if model uses max_completion_tokens, False otherwise
+        """
+        # GPT-5 series and newer GPT-4o models use max_completion_tokens
+        new_model_prefixes = ["gpt-5", "gpt-4o"]
+        return any(self.model.startswith(prefix) for prefix in new_model_prefixes)
 
     async def generate_structured(
         self,
@@ -380,11 +421,16 @@ class OpenAIProvider(BaseLLMProvider):
     async def health_check(self) -> bool:
         """Check if OpenAI API is accessible."""
         try:
+            # Prepare token limit parameter (varies by model)
+            token_param = (
+                "max_completion_tokens" if self._uses_max_completion_tokens() else "max_tokens"
+            )
+
             # Try a simple API call
             response_raw = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": "test"}],
-                max_tokens=5,
+                **{token_param: 5},
             )
 
             response = cast("ChatCompletion", response_raw)

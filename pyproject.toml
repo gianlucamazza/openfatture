@@ -74,6 +74,7 @@ dependencies = [
     # Utilities
     "click>=8.1.7",
     "pandas>=2.3.3",
+    "plotly>=6.3.1",
 ]
 
 [project.optional-dependencies]
@@ -104,6 +105,18 @@ dev = [
     "types-PyYAML>=6.0.0",
     "types-pyasn1>=0.5.0",
     "pandas-stubs>=2.0.0",
+]
+
+web = [
+    # Web UI Framework
+    "streamlit>=1.30.0",
+
+    # Enhanced UI Components
+    "streamlit-aggrid>=0.3.4",  # Advanced tables with filtering/sorting
+    "streamlit-extras>=0.3.6",  # Additional utility components
+
+    # Visualization (note: plotly already in main deps)
+    "altair>=5.2.0",  # Declarative charts for Streamlit
 ]
 
 [project.scripts]
@@ -174,6 +187,8 @@ testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
     "streaming: tests that exercise streaming-capable components",
+    "e2e: end-to-end tests that require external services",
+    "ollama: tests that require Ollama LLM service to be running",
 ]
 
 [tool.coverage.run]

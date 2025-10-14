@@ -21,6 +21,7 @@ def interactive_mode() -> None:
     Example:
         openfatture interactive start
     """
+    console.clear()
     show_welcome()
 
     while True:

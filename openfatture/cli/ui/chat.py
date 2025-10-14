@@ -174,11 +174,11 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         self._show_mini_stats()
 
         # Get input
-        user_input = questionary.text(
+        user_input = await questionary.text(
             "Tu:",
             style=openfatture_style,
             qmark="",
-        ).ask()
+        ).ask_async()
 
         return user_input.strip() if user_input else ""
 
@@ -422,11 +422,11 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 
     async def _clear_chat(self) -> None:
         """Clear chat messages."""
-        if questionary.confirm(
+        if await questionary.confirm(
             "Do you really want to delete all messages?",
             default=False,
             style=openfatture_style,
-        ).ask():
+        ).ask_async():
             self.session.clear_messages(keep_system=True)
             console.print("[green]✓ Chat cleared[/green]\n")
         return None
@@ -442,11 +442,11 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
     async def _export_session(self) -> None:
         """Export session to file."""
         # Ask format
-        format_choice = questionary.select(
+        format_choice = await questionary.select(
             "Export format:",
             choices=["Markdown", "JSON"],
             style=openfatture_style,
-        ).ask()
+        ).ask_async()
 
         format_type = format_choice.lower()
 

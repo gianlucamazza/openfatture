@@ -61,8 +61,8 @@ class AISettings(BaseSettings):
     )
 
     ollama_model: str = Field(
-        default="llama3.2",
-        description="Ollama model to use (llama3.2, llama4, qwen3, mistral-large-2)",
+        default="qwen3:8b",
+        description="Ollama model to use (qwen3:8b recommended for tool calling, mistral-small3.1, llama3.2)",
     )
 
     # Generation Parameters

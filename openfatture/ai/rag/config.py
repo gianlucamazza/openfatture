@@ -134,16 +134,32 @@ def get_rag_config() -> RAGConfig:
     - OPENFATTURE_RAG_TOP_K: Number of results
     - OPENFATTURE_RAG_SIMILARITY_THRESHOLD: Similarity threshold
 
+    Smart defaults:
+    - If AI_PROVIDER=ollama and no embedding provider specified,
+      automatically uses sentence-transformers (local embeddings)
+
     Returns:
         RAGConfig instance with settings from environment
     """
-    provider_raw = os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER", "openai")
+    # Smart default: Use sentence-transformers when using Ollama
+    # to avoid needing OpenAI API key for local-only setup
+    default_provider = "openai"
+    ai_provider = os.getenv("OPENFATTURE_AI_PROVIDER") or os.getenv("AI_PROVIDER")
+    if ai_provider == "ollama" and "OPENFATTURE_RAG_EMBEDDING_PROVIDER" not in os.environ:
+        default_provider = "sentence-transformers"
+        _logger.info(
+            "rag_smart_default",
+            message="Using sentence-transformers for embeddings (AI_PROVIDER=ollama detected)",
+        )
+
+    provider_raw = os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER", default_provider)
     if provider_raw not in {"openai", "sentence-transformers"}:
         _logger.warning(
-            "Invalid embedding provider '%s'. Falling back to 'openai'.",
+            "Invalid embedding provider '%s'. Falling back to '%s'.",
             provider_raw,
+            default_provider,
         )
-        provider_raw = "openai"
+        provider_raw = default_provider
 
     provider = cast(Literal["openai", "sentence-transformers"], provider_raw)
 

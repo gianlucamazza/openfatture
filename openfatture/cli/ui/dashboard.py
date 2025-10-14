@@ -17,6 +17,8 @@ from openfatture.payment.application.services.payment_overview import (
     PaymentDueSummary,
     collect_payment_due_summary,
 )
+from openfatture.payment.domain.enums import TransactionStatus
+from openfatture.payment.infrastructure.repository import BankTransactionRepository
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 
@@ -161,10 +163,19 @@ class DashboardData:
         return self.db.query(Fattura).order_by(Fattura.data_emissione.desc()).limit(limit).all()
 
     def get_payment_due_summary(
-        self, window_days: int = 14, max_upcoming: int = 10
+        self, window_days: int = 30, max_upcoming: int = 10
     ) -> PaymentDueSummary:
         """Return grouped payment due data for dashboard."""
         return collect_payment_due_summary(self.db, window_days, max_upcoming)
+
+    def get_payment_stats(self) -> dict[str, int]:
+        """Get payment tracking statistics."""
+        tx_repo = BankTransactionRepository(self.db)
+        return {
+            "unmatched": len(tx_repo.get_by_status(TransactionStatus.UNMATCHED)),
+            "matched": len(tx_repo.get_by_status(TransactionStatus.MATCHED)),
+            "ignored": len(tx_repo.get_by_status(TransactionStatus.IGNORED)),
+        }
 
 
 def create_overview_panel(data: DashboardData) -> Panel:
@@ -357,10 +368,34 @@ def create_recent_invoices_table(data: DashboardData, limit: int = 5) -> Table:
     return table
 
 
+def create_payment_stats_panel(data: DashboardData) -> Panel:
+    """Create panel with payment tracking statistics."""
+    stats = data.get_payment_stats()
+
+    total = stats["unmatched"] + stats["matched"] + stats["ignored"]
+
+    content = Text()
+    content.append("🔍 Non Abbinati: ", style="bold")
+    content.append(f"{stats['unmatched']}\n", style="yellow")
+
+    content.append("✅ Abbinati: ", style="bold")
+    content.append(f"{stats['matched']}\n", style="green")
+
+    content.append("⏭️  Ignorati: ", style="bold")
+    content.append(f"{stats['ignored']}\n\n", style="dim")
+
+    content.append("📊 Totale Transazioni: ", style="bold")
+    content.append(f"{total}", style="cyan")
+
+    return Panel(
+        Align.center(content),
+        title="[bold magenta]💰 Tracking Pagamenti[/bold magenta]",
+        border_style="magenta",
+    )
+
+
 def create_payment_due_panel(
-    data: DashboardData,
-    window_days: int = 14,
-    max_upcoming: int = 10,
+    data: DashboardData, window_days: int = 30, max_upcoming: int = 10
 ) -> Panel:
     """Create panel summarizing outstanding payments."""
 
@@ -488,10 +523,11 @@ def show_dashboard(refresh: bool = False) -> None:
         # Left side: Overview panel
         layout["left"].update(create_overview_panel(data))
 
-        # Right side: Split into top and bottom
+        # Right side: Split into top, mid, and bottom
         layout["right"].split_column(
             Layout(name="top"),
             Layout(name="mid"),
+            Layout(name="payment_stats"),
             Layout(name="bottom"),
         )
 
@@ -502,6 +538,9 @@ def show_dashboard(refresh: bool = False) -> None:
         )
 
         layout["mid"].update(create_payment_due_panel(data))
+
+        # Payment stats
+        layout["payment_stats"].update(create_payment_stats_panel(data))
 
         # Bottom right: Top Clients and Recent Invoices
         layout["bottom"].split_row(
