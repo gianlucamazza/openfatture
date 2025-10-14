@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from openfatture.ai.domain.message import Message
-from openfatture.ai.domain.response import AgentResponse, UsageMetrics
+from openfatture.ai.domain.response import AgentResponse, StreamChunk, UsageMetrics
 
 
 class BaseLLMProvider(ABC):
@@ -78,7 +78,7 @@ class BaseLLMProvider(ABC):
         pass
 
     @abstractmethod
-    def stream(
+    async def stream(
         self,
         messages: list[Message],
         system_prompt: str | None = None,
@@ -105,12 +105,47 @@ class BaseLLMProvider(ABC):
 
         Raises:
             ProviderError: If streaming fails
-
-        Note:
-            This is NOT an async function - it's a sync function that returns
-            an AsyncIterator. Implement as: async def stream() -> AsyncIterator[str]
         """
-        pass
+        # Default implementation delegates to structured streaming
+        async for chunk in self.stream_structured(
+            messages=messages,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        ):
+            yield chunk.content
+
+    async def stream_structured(
+        self,
+        messages: list[Message],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamChunk]:
+        """
+        Stream structured response chunks from the LLM.
+
+        This method returns an async generator that yields structured chunks
+        containing content, tool calls, and metadata.
+
+        Args:
+            messages: List of conversation messages
+            system_prompt: Optional system prompt override
+            temperature: Optional temperature override
+            max_tokens: Optional max tokens override
+            **kwargs: Provider-specific arguments
+
+        Yields:
+            StreamChunk objects with content and tool calls
+
+        Raises:
+            ProviderError: If streaming fails
+        """
+        # Default implementation - subclasses should override
+        return
+        yield  # pragma: no cover
 
     @abstractmethod
     def count_tokens(self, text: str) -> int:

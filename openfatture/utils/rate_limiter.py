@@ -290,6 +290,53 @@ def retry_with_backoff(
     return decorator
 
 
+def retry_with_backoff_async(
+    max_attempts: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 60.0,
+    exceptions: tuple = (Exception,),
+):
+    """
+    Async decorator for retrying with exponential backoff.
+
+    Args:
+        max_attempts: Maximum retry attempts
+        base_delay: Initial delay in seconds
+        max_delay: Maximum delay in seconds
+        exceptions: Tuple of exceptions to catch
+
+    Usage:
+        @retry_with_backoff_async(max_attempts=3, base_delay=1.0)
+        async def fetch_data():
+            # ... async code that might fail
+            pass
+    """
+    import asyncio
+
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            backoff = ExponentialBackoff(base=base_delay, max_delay=max_delay)
+
+            last_exception = None
+            for attempt in range(max_attempts):
+                try:
+                    return await func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    if attempt < max_attempts - 1:
+                        delay = backoff.get_delay(attempt)
+                        await asyncio.sleep(delay)
+
+            # All attempts failed
+            if last_exception:
+                raise last_exception
+
+        return wrapper
+
+    return decorator
+
+
 # Pre-configured rate limiters for common use cases
 
 # PEC email rate limiter (conservative: 10 emails per minute)

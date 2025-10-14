@@ -27,6 +27,7 @@ class Message(BaseModel):
     content: str
     name: str | None = None  # For tool messages
     tool_call_id: str | None = None  # For tool responses
+    tool_calls: list[dict[str, Any]] | None = None  # For assistant messages with tool calls
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     def __str__(self) -> str:
@@ -46,6 +47,9 @@ class Message(BaseModel):
 
         if self.tool_call_id:
             data["tool_call_id"] = self.tool_call_id
+
+        if self.tool_calls:
+            data["tool_calls"] = self.tool_calls
 
         return data
 

@@ -93,18 +93,33 @@ def add_cliente(
     # Create client
     db = _get_session()
     try:
+        # Parse name into first and last name if possible
+        nome = None
+        cognome = None
+        if denominazione and " " in denominazione:
+            # Try to split the name into first and last name
+            parts = denominazione.split(" ", 1)
+            if len(parts) == 2:
+                nome = parts[0]
+                cognome = parts[1]
+
         cliente = Cliente(
             denominazione=denominazione,
+            nome=nome,
+            cognome=cognome,
             partita_iva=partita_iva,
             codice_fiscale=codice_fiscale,
             codice_destinatario=codice_destinatario,
             pec=pec,
             indirizzo=indirizzo if interactive else None,
+            numero_civico=None,  # Set to None if not provided in interactive mode
             cap=cap if interactive else None,
             comune=comune if interactive else None,
             provincia=provincia if interactive else None,
+            nazione="IT",  # Default to Italy
             email=email if interactive else None,
             telefono=telefono if interactive else None,
+            note=None,  # Set to None if not provided
         )
 
         db.add(cliente)

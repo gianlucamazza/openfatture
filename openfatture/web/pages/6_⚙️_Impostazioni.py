@@ -4,6 +4,7 @@ Display current configuration and provide links to documentation.
 """
 
 import streamlit as st
+
 from openfatture.utils.config import get_settings
 
 st.set_page_config(page_title="Impostazioni - OpenFatture", page_icon="⚙️", layout="wide")
@@ -19,14 +20,26 @@ st.markdown("### 🏢 Dati Azienda")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.text_input("Denominazione", value=settings.cedente_denominazione or "Non configurato", disabled=True)
-    st.text_input("Partita IVA", value=settings.cedente_partita_iva or "Non configurato", disabled=True)
-    st.text_input("Codice Fiscale", value=settings.cedente_codice_fiscale or "Non configurato", disabled=True)
+    st.text_input(
+        "Denominazione", value=settings.cedente_denominazione or "Non configurato", disabled=True
+    )
+    st.text_input(
+        "Partita IVA", value=settings.cedente_partita_iva or "Non configurato", disabled=True
+    )
+    st.text_input(
+        "Codice Fiscale", value=settings.cedente_codice_fiscale or "Non configurato", disabled=True
+    )
 
 with col2:
-    st.text_input("Regime Fiscale", value=settings.cedente_regime_fiscale or "Non configurato", disabled=True)
+    st.text_input(
+        "Regime Fiscale", value=settings.cedente_regime_fiscale or "Non configurato", disabled=True
+    )
     st.text_input("Indirizzo", value=settings.cedente_indirizzo or "Non configurato", disabled=True)
-    st.text_input("CAP - Comune", value=f"{settings.cedente_cap or ''} {settings.cedente_comune or ''}", disabled=True)
+    st.text_input(
+        "CAP - Comune",
+        value=f"{settings.cedente_cap or ''} {settings.cedente_comune or ''}",
+        disabled=True,
+    )
 
 # PEC section
 st.markdown("---")
@@ -35,11 +48,16 @@ st.markdown("### 📧 Configurazione PEC (SDI)")
 pec_col1, pec_col2 = st.columns(2)
 
 with pec_col1:
-    st.text_input("PEC Username", value=settings.pec_username or "Non configurato", disabled=True, type="password")
+    st.text_input(
+        "PEC Address",
+        value=settings.pec_address or "Non configurato",
+        disabled=True,
+        type="password",
+    )
     st.text_input("SMTP Server", value=settings.pec_smtp_server or "Non configurato", disabled=True)
 
 with pec_col2:
-    st.text_input("PEC From", value=settings.pec_from_email or "Non configurato", disabled=True)
+    st.text_input("PEC From", value=settings.pec_address or "Non configurato", disabled=True)
     st.text_input("SMTP Port", value=str(settings.pec_smtp_port), disabled=True)
 
 # AI section
@@ -49,7 +67,7 @@ st.markdown("### 🤖 Configurazione AI")
 ai_col1, ai_col2, ai_col3 = st.columns(3)
 
 with ai_col1:
-    if settings.ai_enabled:
+    if settings.ai_chat_enabled:
         st.success("✅ AI Abilitato")
     else:
         st.warning("⚠️ AI Non Configurato")
@@ -77,7 +95,7 @@ with path_col1:
     st.text_input("Archivio Directory", value=str(settings.archivio_dir), disabled=True)
 
 with path_col2:
-    st.text_input("Temp Directory", value=str(settings.temp_dir), disabled=True)
+    st.text_input("Data Directory", value=str(settings.data_dir), disabled=True)
 
 # Configuration help
 st.markdown("---")
@@ -116,13 +134,16 @@ with link_col3:
 st.markdown("---")
 st.markdown("### ℹ️ Informazioni Sistema")
 
-import sys
 import platform
+import sys
 
 info_col1, info_col2, info_col3 = st.columns(3)
 
 with info_col1:
-    st.metric("Python Version", f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+    st.metric(
+        "Python Version",
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+    )
 
 with info_col2:
     st.metric("Platform", platform.system())

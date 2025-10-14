@@ -96,12 +96,8 @@ class ToolCallParser:
         re.IGNORECASE | re.DOTALL,
     )
     ACTION_PATTERN = re.compile(r"Action:\s*([a-zA-Z_][a-zA-Z0-9_]*)", re.IGNORECASE)
-    ACTION_INPUT_PATTERN = re.compile(
-        r"Action Input:\s*(\{.+?\})", re.IGNORECASE | re.DOTALL
-    )
-    FINAL_ANSWER_PATTERN = re.compile(
-        r"Final Answer:\s*(.+)", re.IGNORECASE | re.DOTALL
-    )
+    ACTION_INPUT_PATTERN = re.compile(r"Action Input:\s*(\{.+?\})", re.IGNORECASE | re.DOTALL)
+    FINAL_ANSWER_PATTERN = re.compile(r"Final Answer:\s*(.+)", re.IGNORECASE | re.DOTALL)
 
     def __init__(self) -> None:
         """Initialize parser."""
@@ -132,17 +128,13 @@ class ToolCallParser:
         # Check for final answer first
         if self._is_final_answer(response_text):
             content = self._extract_final_answer(response_text)
-            return ParsedResponse(
-                is_final=True, content=content, raw_text=response_text
-            )
+            return ParsedResponse(is_final=True, content=content, raw_text=response_text)
 
         # Try to parse as tool call
         try:
             tool_call = self._parse_tool_call(response_text)
             if tool_call:
-                return ParsedResponse(
-                    is_final=False, tool_call=tool_call, raw_text=response_text
-                )
+                return ParsedResponse(is_final=False, tool_call=tool_call, raw_text=response_text)
         except Exception as e:
             logger.warning(
                 "tool_call_parse_failed",
@@ -398,9 +390,7 @@ class ToolCallParser:
         return {
             "total_parses": self.parse_count,
             "parse_errors": self.parse_errors,
-            "error_rate": (
-                self.parse_errors / self.parse_count if self.parse_count > 0 else 0.0
-            ),
+            "error_rate": (self.parse_errors / self.parse_count if self.parse_count > 0 else 0.0),
             "xml_parse_count": self.xml_parse_count,
             "legacy_parse_count": self.legacy_parse_count,
             "xml_parse_rate": (

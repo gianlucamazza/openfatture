@@ -102,12 +102,22 @@ class ChatAgent(BaseAgent[ChatContext]):
 
         return True, None
 
-    async def execute_stream(self, context: ChatContext) -> AsyncIterator[str]:
-        """
-        Execute chat agent with streaming, using ReAct if needed.
+    async def execute(self, context: ChatContext, **kwargs: Any) -> AgentResponse:
+        """Execute chat agent, injecting tool schemas when native tool calling is available."""
+        if self.enable_tools and self.provider.supports_tools and context.available_tools:
+            tool_kwargs = dict(kwargs)
+            tool_kwargs.setdefault("tools", self.get_tools_schema())
+            return await super().execute(context, **tool_kwargs)
 
-        Override BaseAgent.execute_stream() to add ReAct orchestration
-        for providers that don't support native function calling.
+        return await super().execute(context, **kwargs)
+
+    async def execute_stream(self, context: ChatContext, **kwargs: Any) -> AsyncIterator[str]:
+        """
+        Execute chat agent with streaming, using ReAct or native tool calling.
+
+        Override BaseAgent.execute_stream() to add tool calling support:
+        - ReAct orchestration for providers that don't support native function calling
+        - Native tool calling for providers that support it
 
         Args:
             context: Chat context
@@ -137,21 +147,234 @@ class ChatAgent(BaseAgent[ChatContext]):
                 max_iterations=5,
             )
 
+            # Make sure we return something even if ReAct doesn't stream properly
             async for chunk in orchestrator.stream(context):
+                yield chunk
+
+        elif (
+            self.enable_tools and self.provider.supports_tools and len(context.available_tools) > 0
+        ):
+            # Use native tool calling for providers that support it
+            logger.info(
+                "using_native_tool_calling",
+                agent=self.config.name,
+                provider=self.provider.provider_name,
+                tools_count=len(context.available_tools),
+            )
+
+            async for chunk in self._execute_stream_with_tools(context, **kwargs):
                 yield chunk
 
         else:
             # Use standard streaming from BaseAgent
-            # (for providers with native function calling or when tools disabled)
+            # (when tools disabled or no tools available)
             logger.debug(
                 "using_standard_streaming",
                 agent=self.config.name,
                 provider=self.provider.provider_name,
                 supports_tools=self.provider.supports_tools,
+                tools_enabled=self.enable_tools,
+                available_tools=len(context.available_tools),
             )
 
-            async for chunk in super().execute_stream(context):
+            async for chunk in super().execute_stream(context, **kwargs):
                 yield chunk
+
+    async def _execute_stream_with_tools(
+        self,
+        context: ChatContext,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """
+        Execute with native tool calling support using streaming.
+
+        Accumulates streaming response, detects tool calls, executes them,
+        then continues with follow-up streaming for better UX.
+
+        Args:
+            context: Chat context
+
+        Yields:
+            Response chunks with real-time streaming and tool execution feedback
+        """
+        # Get tools schema for the provider
+        tools_schema = self.get_tools_schema()
+
+        # Build prompt
+        messages = await self._build_prompt(context)
+
+        logger.info(
+            "streaming_with_tools_started",
+            agent=self.config.name,
+            tools_count=len(tools_schema),
+        )
+
+        # Use stream_structured for real-time content and tool call streaming
+        accumulated_content = ""
+        pending_tool_calls = []
+
+        try:
+            stream_kwargs = dict(kwargs)
+            stream_kwargs.setdefault("tools", tools_schema)
+
+            async for chunk in self.provider.stream_structured(
+                messages=messages,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+                **stream_kwargs,
+            ):
+                if chunk.content:
+                    # Yield content chunk immediately
+                    accumulated_content += chunk.content
+                    yield chunk.content
+
+                elif chunk.tool_call:
+                    # Accumulate tool calls
+                    pending_tool_calls.append(chunk.tool_call)
+
+                elif chunk.is_final:
+                    # End of response - execute any pending tool calls
+                    if pending_tool_calls:
+                        logger.info(
+                            "tool_calls_detected_in_stream",
+                            agent=self.config.name,
+                            tool_count=len(pending_tool_calls),
+                            content_length=len(accumulated_content),
+                            tool_names=[tc.name for tc in pending_tool_calls],
+                        )
+
+                        # Execute tools with timing
+                        import time
+
+                        start_time = time.time()
+
+                        tool_results = await self._handle_tool_calls(
+                            [
+                                {
+                                    "function": {"name": tc.name, "arguments": tc.arguments},
+                                    "id": tc.id,
+                                }
+                                for tc in pending_tool_calls
+                            ],
+                            context,
+                        )
+
+                        execution_time = time.time() - start_time
+
+                        # Yield tool execution progress with real-time indicators
+                        yield f"\n\n🔧 Eseguendo {len(pending_tool_calls)} strumento/i..."
+
+                        # Execute tools with detailed progress feedback
+                        successful_count = 0
+                        failed_count = 0
+
+                        for i, tool_call in enumerate(pending_tool_calls, 1):
+                            tool_name = tool_call.name
+                            yield f"\n  {i}. 🔄 {tool_name}..."
+
+                            # Find corresponding result
+                            result = next(
+                                (r for r in tool_results if r.get("tool_name") == tool_name), None
+                            )
+
+                            if result and result.get("result"):
+                                tool_data = result["result"]
+                                if tool_data.get("success"):
+                                    successful_count += 1
+                                    # Truncate long results for better UX
+                                    data_str = str(tool_data.get("data", ""))
+                                    if len(data_str) > 200:
+                                        data_str = data_str[:200] + "..."
+                                    yield f"     ✅ {tool_name}: {data_str}"
+                                else:
+                                    failed_count += 1
+                                    error_msg = tool_data.get("error", "Errore sconosciuto")
+                                    yield f"     ❌ {tool_name}: {error_msg}"
+                            else:
+                                failed_count += 1
+                                yield f"     ❌ {tool_name}: Risultato non disponibile"
+
+                        # Summary statistics with timing
+                        if successful_count > 0 or failed_count > 0:
+                            yield f"\n📊 Completato: {successful_count} riuscito/i, {failed_count} fallito/i"
+                            yield f"⏱️  Tempo esecuzione: {execution_time:.1f}s"
+
+                        # Follow-up conversation with tool results
+                        followup_messages = messages.copy()
+
+                        # Add assistant message with tool calls
+                        from openfatture.ai.domain.message import Message, Role
+
+                        # Format tool calls for the assistant message
+                        tool_calls_for_message = [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.name,
+                                    "arguments": tc.arguments,
+                                },
+                            }
+                            for tc in pending_tool_calls
+                        ]
+
+                        followup_messages.append(
+                            Message(
+                                role=Role.ASSISTANT,
+                                content=accumulated_content,
+                                tool_calls=tool_calls_for_message,
+                            )
+                        )
+
+                        # Add tool results as separate messages
+                        for result in tool_results:
+                            tool_data = result.get("result", {})
+                            followup_messages.append(
+                                Message(
+                                    role=Role.TOOL,
+                                    content=str(tool_data.get("data", "")),
+                                    tool_call_id=result.get("tool_call_id"),
+                                )
+                            )
+
+                        # Stream follow-up response
+                        yield "\n\n🤖 Continuando..."
+
+                        followup_content = ""
+                        async for followup_chunk in self.provider.stream(
+                            messages=followup_messages,
+                            temperature=self.config.temperature,
+                            max_tokens=self.config.max_tokens,
+                        ):
+                            followup_content += followup_chunk
+                            yield followup_chunk
+
+                        logger.info(
+                            "streaming_with_tools_completed",
+                            agent=self.config.name,
+                            initial_content_length=len(accumulated_content),
+                            followup_content_length=len(followup_content),
+                            tools_executed=len(tool_results),
+                            successful_tools=successful_count,
+                            failed_tools=failed_count,
+                            execution_time=execution_time,
+                        )
+                    else:
+                        # No tool calls - just log completion
+                        logger.info(
+                            "streaming_with_tools_completed_no_tools",
+                            agent=self.config.name,
+                            content_length=len(accumulated_content),
+                        )
+
+        except Exception as e:
+            logger.error(
+                "streaming_with_tools_failed",
+                agent=self.config.name,
+                error=str(e),
+                accumulated_content_length=len(accumulated_content),
+            )
+            yield f"\n\n❌ Errore durante l'esecuzione: {str(e)}"
 
     async def _build_prompt(self, context: ChatContext) -> list[Message]:
         """
@@ -320,9 +543,9 @@ class ChatAgent(BaseAgent[ChatContext]):
         results = []
 
         for tool_call in tool_calls:
+            tool_name = tool_call.get("function", {}).get("name")
             try:
                 # Extract tool info
-                tool_name = tool_call.get("function", {}).get("name")
                 parameters = tool_call.get("function", {}).get("arguments", {})
 
                 if not tool_name:
@@ -362,13 +585,13 @@ class ChatAgent(BaseAgent[ChatContext]):
             except Exception as e:
                 logger.error(
                     "tool_execution_failed",
-                    tool_name=tool_name,
+                    tool_name=tool_name or "unknown",
                     error=str(e),
                 )
                 results.append(
                     {
                         "tool_call_id": tool_call.get("id"),
-                        "tool_name": tool_name,
+                        "tool_name": tool_name or "unknown",
                         "error": str(e),
                     }
                 )

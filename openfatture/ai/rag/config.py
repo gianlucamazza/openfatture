@@ -147,10 +147,7 @@ def get_rag_config() -> RAGConfig:
     ai_provider = os.getenv("OPENFATTURE_AI_PROVIDER") or os.getenv("AI_PROVIDER")
     if ai_provider == "ollama" and "OPENFATTURE_RAG_EMBEDDING_PROVIDER" not in os.environ:
         default_provider = "sentence-transformers"
-        _logger.info(
-            "rag_smart_default",
-            message="Using sentence-transformers for embeddings (AI_PROVIDER=ollama detected)",
-        )
+        _logger.info("Using sentence-transformers for embeddings (AI_PROVIDER=ollama detected)")
 
     provider_raw = os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER", default_provider)
     if provider_raw not in {"openai", "sentence-transformers"}:

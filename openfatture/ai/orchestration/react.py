@@ -12,7 +12,7 @@ from typing import Any
 
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.message import Message, Role
-from openfatture.ai.orchestration.parsers import ParsedResponse, ToolCallParser
+from openfatture.ai.orchestration.parsers import ToolCallParser
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.tools.registry import ToolRegistry
 from openfatture.utils.logging import get_logger
@@ -255,8 +255,29 @@ class ReActOrchestrator:
 
             # Buffer response for parsing (temperature=0.0 for deterministic tool calling)
             response_buffer = ""
-            async for chunk in self.provider.stream(messages=messages, temperature=0.0):
-                response_buffer += chunk
+            try:
+                async for chunk in self.provider.stream(messages=messages, temperature=0.0):
+                    response_buffer += chunk
+            except Exception as e:
+                logger.error(
+                    "provider_stream_failed",
+                    error=str(e),
+                    iteration=iteration,
+                    message="Falling back to non-streaming generate method",
+                )
+                # If provider streaming fails, try non-streaming method
+                try:
+                    response = await self.provider.generate(messages=messages, temperature=0.0)
+                    response_buffer = response.content
+                except Exception as gen_error:
+                    logger.error(
+                        "provider_generate_failed",
+                        error=str(gen_error),
+                        iteration=iteration,
+                    )
+                    # If both streaming and generate fail, return an error message
+                    yield f"Errore durante la comunicazione con il modello: {str(gen_error)}"
+                    return
 
             # Log raw output for debugging
             logger.debug(
@@ -279,11 +300,12 @@ class ReActOrchestrator:
 
                 # Stream final answer token-by-token
                 # Split into words for smoother streaming
-                words = parsed.content.split()
-                for i, word in enumerate(words):
-                    if i > 0:
-                        yield " "
-                    yield word
+                if parsed.content:
+                    words = parsed.content.split()
+                    for i, word in enumerate(words):
+                        if i > 0:
+                            yield " "
+                        yield word
 
                 break
 
@@ -342,15 +364,16 @@ class ReActOrchestrator:
                     message="Treating as final answer",
                     iteration=iteration,
                 )
-                words = response_buffer.split()
-                for i, word in enumerate(words):
-                    if i > 0:
-                        yield " "
-                    yield word
+                if response_buffer:
+                    words = response_buffer.split()
+                    for i, word in enumerate(words):
+                        if i > 0:
+                            yield " "
+                        yield word
                 break
 
         # Max iterations reached
-        if iteration >= self.max_iterations:
+        if iteration >= self.max_iterations and iteration >= self.max_iterations:
             logger.warning(
                 "stream_max_iterations",
                 iterations=iteration,
@@ -414,7 +437,9 @@ class ReActOrchestrator:
             else:
                 tool_descriptions.append(f"- {tool.name}: {tool.description}")
 
-        tools_section = "\n".join(tool_descriptions) if tool_descriptions else "Nessun tool disponibile"
+        tools_section = (
+            "\n".join(tool_descriptions) if tool_descriptions else "Nessun tool disponibile"
+        )
 
         prompt = f"""Sei un assistente AI per OpenFatture, sistema di fatturazione elettronica italiana.
 
@@ -493,7 +518,7 @@ Ora rispondi alla domanda dell'utente seguendo gli esempi sopra."""
         # Add business context if available
         if context.current_year_stats:
             stats = context.current_year_stats
-            prompt += f"\n\n📊 CONTESTO SISTEMA:\n"
+            prompt += "\n\n📊 CONTESTO SISTEMA:\n"
             prompt += f"- Anno corrente: {stats.get('anno', 'N/A')}\n"
             prompt += f"- Fatture totali YTD: {stats.get('totale_fatture', 0)}\n"
             prompt += f"- Importo totale YTD: €{stats.get('importo_totale', 0):.2f}\n"

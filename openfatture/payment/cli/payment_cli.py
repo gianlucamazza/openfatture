@@ -1075,6 +1075,7 @@ def audit(
     """
     with get_db_session() as session:
         from sqlalchemy import select
+
         from ..domain.payment_allocation import PaymentAllocation
 
         # Build query

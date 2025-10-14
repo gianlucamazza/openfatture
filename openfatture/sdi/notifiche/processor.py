@@ -103,7 +103,7 @@ class NotificationProcessor:
             # Save notification to database log
             log_sdi = LogSDI(
                 fattura_id=fattura.id,
-                tipo_notifica=notification.tipo.value,
+                tipo_notifica=notification.tipo,
                 descrizione=notification.messaggio or "",
                 data_ricezione=notification.data_ricezione,
             )
@@ -185,7 +185,7 @@ class NotificationProcessor:
             notification: Notification data
         """
         note = (
-            f"SDI Notification ({notification.tipo.value}): "
+            f"SDI Notification ({notification.tipo}): "
             f"{notification.messaggio} "
             f"[{notification.data_ricezione.isoformat()}]"
         )
@@ -205,24 +205,15 @@ class NotificationProcessor:
         Send email notification for SDI event.
 
         Args:
-            fattura: Invoice related to notification
-            notification: Notification data
-
-        Raises:
-            RuntimeError: If email_sender is not configured (internal error)
+            fattura: Invoice that received the notification
+            notification: SDI notification details
 
         Note:
-            This method should only be called when email_sender is configured.
-            The caller checks `if self.email_sender:` before calling this method.
-            If email_sender is None here, it indicates a programming error.
+            If email_sender is None, this method does nothing (graceful degradation).
         """
-        # Type narrowing: explicit None check for MyPy
-        # This should never happen if caller follows the contract
+        # Graceful handling: if no email sender configured, just return
         if self.email_sender is None:
-            raise RuntimeError(
-                "Internal error: email_sender is None. "
-                "This method should only be called when email_sender is configured."
-            )
+            return
 
         try:
             # Determine which notification method to call based on type

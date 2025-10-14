@@ -18,6 +18,7 @@ from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
 from openfatture.ai.context import enrich_with_rag
 from openfatture.ai.domain.context import ChatContext, InvoiceContext, TaxContext
+from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.orchestration.workflows import InvoiceCreationWorkflow
 from openfatture.ai.providers.factory import create_provider
@@ -29,6 +30,21 @@ console = Console()
 logger = get_logger(__name__)
 
 rag_app = typer.Typer(help="Gestione knowledge base RAG")
+
+
+def _convert_history(history: list[dict[str, str]]) -> ConversationHistory:
+    """Convert list of dicts to ConversationHistory."""
+    conv_history = ConversationHistory()
+    for msg_dict in history:
+        role_str = msg_dict.get("role", "user")
+        content = msg_dict.get("content", "")
+        try:
+            role = Role(role_str)
+        except ValueError:
+            role = Role.USER  # Default to user if invalid
+        message = Message(role=role, content=content)
+        conv_history.add_message(message)
+    return conv_history
 
 
 @rag_app.command("status")
@@ -805,9 +821,7 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
     score_color = (
         "green"
         if report.compliance_score >= 80
-        else "yellow"
-        if report.compliance_score >= 60
-        else "red"
+        else "yellow" if report.compliance_score >= 60 else "red"
     )
     scores_table.add_row(
         "Compliance Score:", f"[{score_color}]{report.compliance_score:.1f}/100[/{score_color}]"
@@ -979,7 +993,7 @@ async def _run_invoice_workflow(
         else:
             # Display results
             if result.invoice_id:
-                console.print(f"[bold green]✅ Invoice created successfully![/bold green]")
+                console.print("[bold green]✅ Invoice created successfully![/bold green]")
                 console.print(f"Invoice ID: {result.invoice_id}")
             else:
                 console.print(f"[yellow]⚠️ Workflow completed with status: {result.status}[/yellow]")
@@ -1074,7 +1088,8 @@ async def _run_chat(message: str | None, stream: bool, json_output: bool) -> Non
 
                     # Create context with history
                     context = ChatContext(
-                        user_input=user_input, conversation_history=conversation_history
+                        user_input=user_input,
+                        conversation_history=_convert_history(conversation_history),
                     )
 
                     if stream:

@@ -10,7 +10,7 @@ import streamlit as st
 T = TypeVar("T")
 
 
-def init_state(key: str, default: T) -> T:
+def init_state[T](key: str, default: T) -> T:
     """
     Initialize a session state value if it doesn't exist.
 
@@ -29,7 +29,7 @@ def init_state(key: str, default: T) -> T:
     return st.session_state[key]
 
 
-def get_state(key: str, default: T | None = None) -> T | None:
+def get_state[T](key: str, default: T | None = None) -> T | None:
     """
     Get a value from session state with optional default.
 

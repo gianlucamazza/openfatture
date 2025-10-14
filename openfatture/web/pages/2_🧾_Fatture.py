@@ -3,12 +3,11 @@
 List, view, and manage invoices through web interface.
 """
 
-import streamlit as st
 import pandas as pd
-from datetime import date
+import streamlit as st
 
-from openfatture.web.services.invoice_service import StreamlitInvoiceService
 from openfatture.storage.database.models import StatoFattura
+from openfatture.web.services.invoice_service import StreamlitInvoiceService
 
 st.set_page_config(page_title="Fatture - OpenFatture", page_icon="🧾", layout="wide")
 
@@ -49,7 +48,9 @@ if selected_status != "Tutti":
     filters["stato"] = selected_status
 
 # Limit
-limit = st.sidebar.number_input("Risultati massimi", min_value=10, max_value=1000, value=50, step=10)
+limit = st.sidebar.number_input(
+    "Risultati massimi", min_value=10, max_value=1000, value=50, step=10
+)
 
 st.sidebar.markdown("---")
 
@@ -96,7 +97,7 @@ try:
 
         with col3:
             # Count by status
-            status_counts = {}
+            status_counts: dict[str, int] = {}
             for inv in invoices:
                 status = inv["stato"]
                 status_counts[status] = status_counts.get(status, 0) + 1
@@ -280,7 +281,9 @@ try:
                 with action_col1:
                     if st.button("📝 Genera XML", use_container_width=True):
                         with st.spinner("Generando XML..."):
-                            xml_content, error = invoice_service.generate_xml(fattura, validate=True)
+                            xml_content, error = invoice_service.generate_xml(
+                                fattura, validate=True
+                            )
 
                             if error:
                                 st.error(f"❌ Errore: {error}")

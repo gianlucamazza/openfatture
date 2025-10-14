@@ -221,7 +221,7 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
             messages = await self._build_prompt(context)
 
             # 3. Call LLM with retry logic
-            response = await self._call_llm_with_retry(messages, context)
+            response = await self._call_llm_with_retry(messages, context, **kwargs)
 
             # 4. Parse response (allow subclasses to process)
             response = await self._parse_response(response, context)
@@ -327,10 +327,9 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
             messages = await self._build_prompt(context)
 
             # 3. Stream from LLM with retry logic
-            total_tokens = 0
             collected_content = ""
 
-            async for chunk in self._call_llm_streaming_with_retry(messages, context):
+            async for chunk in self._call_llm_streaming_with_retry(messages, context, **kwargs):
                 collected_content += chunk
                 yield chunk
 
@@ -442,6 +441,7 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
         self,
         messages: list[Message],
         context: ContextT,
+        **llm_kwargs: Any,
     ) -> AgentResponse:
         """
         Call LLM with retry logic.
@@ -476,6 +476,7 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
                     system_prompt=system_prompt,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    **llm_kwargs,
                 )
 
                 # Check cost after calling
@@ -519,6 +520,7 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
         self,
         messages: list[Message],
         context: ContextT,
+        **llm_kwargs: Any,
     ) -> AsyncIterator[str]:
         """
         Call LLM in streaming mode with retry logic.
@@ -550,6 +552,7 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
                     system_prompt=system_prompt,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    **llm_kwargs,
                 ):
                     yield chunk
 

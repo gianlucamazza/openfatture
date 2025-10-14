@@ -8,8 +8,6 @@ from rich.console import Console
 from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
 
-from openfatture.core.fatture.service import InvoiceService
-from openfatture.sdi.pec_sender.sender import PECSender
 from openfatture.storage.database.base import SessionLocal, get_session, init_db
 from openfatture.storage.database.models import (
     Cliente,

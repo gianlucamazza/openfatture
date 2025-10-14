@@ -31,6 +31,7 @@ from openfatture.ai.cache.config import (
 from openfatture.ai.cache.memory import LRUCache
 from openfatture.ai.cache.provider import CachedProvider
 from openfatture.ai.cache.strategy import CacheEntry, CacheStrategy
+from openfatture.ai.cache.tool_cache import ToolResultCache, get_tool_cache
 
 __all__ = [
     # Strategy
@@ -39,6 +40,8 @@ __all__ = [
     # Implementations
     "LRUCache",
     "CachedProvider",
+    "ToolResultCache",
+    "get_tool_cache",
     # Configuration
     "CacheConfig",
     "DEFAULT_CACHE_CONFIG",

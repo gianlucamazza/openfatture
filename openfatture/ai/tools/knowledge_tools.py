@@ -3,18 +3,29 @@
 import os
 from typing import Any
 
+from pydantic import validate_call
+
 from openfatture.ai.rag import KnowledgeIndexer, get_rag_config
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
 from openfatture.utils.logging import get_logger
+from openfatture.utils.security import sanitize_string_input, validate_integer_input
 
 logger = get_logger(__name__)
 
 
+@validate_call
 async def search_knowledge_base(
     query: str,
     source: str | None = None,
     top_k: int = 5,
 ) -> dict[str, Any]:
+    # Sanitize and validate inputs
+    query = sanitize_string_input(query, max_length=500)
+
+    if source is not None:
+        source = sanitize_string_input(source, max_length=100)
+
+    top_k = validate_integer_input(top_k, min_value=1, max_value=20)
     """
     Perform semantic search over the knowledge base.
 

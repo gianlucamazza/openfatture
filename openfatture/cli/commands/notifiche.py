@@ -88,7 +88,7 @@ def process_notification(
         table.add_column("Field", style="cyan", width=20)
         table.add_column("Value", style="white")
 
-        table.add_row("Type", notification.tipo.value)
+        table.add_row("Type", notification.tipo)
         table.add_row("SDI ID", notification.identificativo_sdi)
         table.add_row("File", notification.nome_file)
         table.add_row("Date", notification.data_ricezione.strftime("%Y-%m-%d %H:%M:%S"))

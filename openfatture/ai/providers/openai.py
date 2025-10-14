@@ -2,15 +2,25 @@
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from openai import AsyncOpenAI, OpenAIError, RateLimitError
+from openai.types.responses import Response as OpenAIResponse
+from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
+from openai.types.responses.response_output_item import ResponseOutputItem
 from pydantic import BaseModel
 
 from openfatture.ai.domain.message import Message, Role
-from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
+from openfatture.ai.domain.response import (
+    AgentResponse,
+    ResponseStatus,
+    StreamChunk,
+    ToolCall,
+    UsageMetrics,
+)
 from openfatture.ai.providers.base import (
     BaseLLMProvider,
     ProviderAuthError,
@@ -19,22 +29,6 @@ from openfatture.ai.providers.base import (
     ProviderTimeoutError,
 )
 from openfatture.utils.logging import get_logger
-
-if TYPE_CHECKING:
-    from openai._streaming import AsyncStream
-    from openai.types.chat import (
-        ChatCompletion,
-        ChatCompletionChunk,
-        ChatCompletionMessageParam,
-        ChatCompletionToolMessageParam,
-    )
-else:  # pragma: no cover - runtime fallback when type hints unavailable
-    AsyncStream = Any
-    ChatCompletion = Any
-    ChatCompletionChunk = Any
-    ChatCompletionMessageParam = Any
-    ChatCompletionToolMessageParam = Any
-
 
 logger = get_logger(__name__)
 
@@ -114,7 +108,7 @@ class OpenAIProvider(BaseLLMProvider):
         self._encoding = None
         if TIKTOKEN_AVAILABLE:
             try:
-                self._encoding = tiktoken.encoding_for_model(self.model)
+                self._encoding = tiktoken.encoding_for_model(self.model)  # type: ignore
             except KeyError:
                 # Fallback to cl100k_base for unknown models (GPT-4/GPT-5 compatible)
                 logger.info(
@@ -122,7 +116,213 @@ class OpenAIProvider(BaseLLMProvider):
                     model=self.model,
                     message="Using cl100k_base encoding as fallback",
                 )
-                self._encoding = tiktoken.get_encoding("cl100k_base")
+                self._encoding = tiktoken.get_encoding("cl100k_base")  # type: ignore
+
+    _ALLOWED_EXTRA_PARAMS = {
+        "tools",
+        "tool_choice",
+        "parallel_tool_calls",
+        "metadata",
+        "top_p",
+        "top_logprobs",
+        "max_tool_calls",
+        "reasoning",
+        "safety_identifier",
+        "store",
+        "user",
+        "include",
+        "prompt_cache_key",
+        "service_tier",
+        "stream_options",
+        "conversation",
+        "previous_response_id",
+        "background",
+        "text",
+        "max_output_tokens",
+    }
+
+    def _build_usage_metrics(self, usage: Any | None) -> UsageMetrics:
+        """Create UsageMetrics from OpenAI usage payload."""
+        prompt_tokens = getattr(usage, "input_tokens", 0) if usage else 0
+        completion_tokens = getattr(usage, "output_tokens", 0) if usage else 0
+        total_tokens = getattr(usage, "total_tokens", 0) if usage else 0
+
+        metrics = UsageMetrics(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+        )
+        metrics.estimated_cost_usd = self.estimate_cost(metrics)
+        return metrics
+
+    def _build_message_input(self, role: str, content: str) -> dict[str, Any]:
+        """Build Responses API message input item."""
+        return {
+            "role": role,
+            "type": "message",
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": content,
+                }
+            ],
+        }
+
+    def _build_responses_payload(
+        self,
+        messages: list[Message],
+        system_prompt: str | None,
+    ) -> tuple[str | None, list[dict[str, Any]]]:
+        """
+        Convert internal messages into Responses API instructions + input payload.
+        """
+        instructions_parts: list[str] = []
+        inputs: list[dict[str, Any]] = []
+
+        if system_prompt:
+            instructions_parts.append(system_prompt)
+
+        for message in messages:
+            if message.role == Role.SYSTEM:
+                instructions_parts.append(message.content)
+                continue
+
+            if message.role == Role.USER:
+                inputs.append(self._build_message_input("user", message.content))
+                continue
+
+            if message.role == Role.ASSISTANT:
+                if message.tool_calls:
+                    for tool_call in message.tool_calls:
+                        tool_payload = self._convert_tool_call(tool_call)
+                        if tool_payload:
+                            inputs.append(tool_payload)
+
+                if message.content:
+                    inputs.append(self._build_message_input("assistant", message.content))
+                continue
+
+            if message.role == Role.TOOL:
+                if not message.tool_call_id:
+                    logger.warning(
+                        "tool_message_missing_id",
+                        message="Skipping tool message without tool_call_id",
+                    )
+                    continue
+
+                inputs.append(
+                    {
+                        "type": "function_call_output",
+                        "call_id": message.tool_call_id,
+                        "output": message.content,
+                    }
+                )
+
+        instructions = "\n\n".join(part for part in instructions_parts if part)
+        return (instructions or None, inputs)
+
+    def _convert_tool_call(self, tool_call: Any) -> dict[str, Any] | None:
+        """Convert a stored tool call into Responses API format."""
+        try:
+            arguments: Any
+            name: str | None
+            call_id: str | None
+
+            if isinstance(tool_call, ToolCall):
+                arguments = tool_call.arguments
+                name = tool_call.name
+                call_id = tool_call.id
+            else:
+                # Handle OpenAI-style dict tool call
+                if isinstance(tool_call, dict):
+                    function = tool_call.get("function", {})
+                    arguments = function.get("arguments") or tool_call.get("arguments", {})
+                    name = function.get("name") or tool_call.get("name")
+                    call_id = (
+                        tool_call.get("id")
+                        or tool_call.get("call_id")
+                        or f"tool_call_{int(time.time() * 1000)}"
+                    )
+                else:
+                    return None
+
+            if arguments and isinstance(arguments, str):
+                arguments_str = arguments
+            else:
+                arguments_str = json.dumps(arguments or {})
+
+            return {
+                "type": "function_call",
+                "call_id": call_id or f"tool_call_{int(time.time() * 1000)}",
+                "name": name or "unknown_tool",
+                "arguments": arguments_str,
+            }
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("tool_call_conversion_failed", error=str(exc))
+            return None
+
+    def _extract_tool_calls(self, output_items: list[ResponseOutputItem]) -> list[ToolCall]:
+        """Extract tool calls from a Responses output array."""
+        extracted: list[ToolCall] = []
+        for item in output_items:
+            if getattr(item, "type", None) != "function_call":
+                continue
+
+            function_item = cast(ResponseFunctionToolCall, item)
+            try:
+                arguments = json.loads(function_item.arguments) if function_item.arguments else {}
+            except json.JSONDecodeError:
+                logger.warning(
+                    "tool_call_arguments_parse_failed",
+                    tool_name=function_item.name,
+                    arguments=function_item.arguments,
+                )
+                arguments = {}
+
+            extracted.append(
+                ToolCall(
+                    id=function_item.id or function_item.call_id,
+                    name=function_item.name,
+                    arguments=arguments,
+                )
+            )
+        return extracted
+
+    def _extract_extra_params(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Filter kwargs to supported Responses API parameters."""
+        extra: dict[str, Any] = {}
+        for key, value in params.items():
+            if key == "response_format":
+                logger.debug(
+                    "responses_param_dropped",
+                    param=key,
+                    reason="Responses API uses `text.format` for structured outputs",
+                )
+                continue
+            if key in self._ALLOWED_EXTRA_PARAMS:
+                extra[key] = value
+        return extra
+
+    def _build_tool_call_from_state(self, state: dict[str, Any]) -> ToolCall:
+        """Convert accumulated streaming state into a ToolCall."""
+        arguments_raw = state.get("arguments") or "{}"
+        try:
+            arguments = (
+                json.loads(arguments_raw) if isinstance(arguments_raw, str) else arguments_raw
+            )
+        except json.JSONDecodeError:
+            logger.warning(
+                "tool_call_arguments_stream_parse_failed",
+                tool_name=state.get("name"),
+                arguments=arguments_raw,
+            )
+            arguments = {}
+
+        return ToolCall(
+            id=str(state.get("id") or f"tool_call_{int(time.time() * 1000)}"),
+            name=state.get("name", "unknown_tool"),
+            arguments=arguments or {},
+        )
 
     async def generate(
         self,
@@ -136,54 +336,40 @@ class OpenAIProvider(BaseLLMProvider):
         start_time = time.time()
 
         try:
-            # Prepare messages
-            prepared_messages = self._prepare_chat_messages(messages, system_prompt)
+            instructions, input_items = self._build_responses_payload(messages, system_prompt)
 
             logger.info(
                 "openai_request_started",
                 model=self.model,
-                message_count=len(prepared_messages),
+                message_count=len(input_items),
                 temperature=self._get_temperature(temperature),
             )
 
-            # Prepare token limit parameter (varies by model)
-            max_tokens_value = self._get_max_tokens(max_tokens)
-            token_param = (
-                "max_completion_tokens" if self._uses_max_completion_tokens() else "max_tokens"
-            )
+            max_output_tokens = self._get_max_output_tokens(max_tokens)
 
-            # Prepare API call parameters
-            api_params = {
+            api_params: dict[str, Any] = {
                 "model": self.model,
-                "messages": prepared_messages,
-                **{token_param: max_tokens_value},
-                **kwargs,
+                "input": input_items,
             }
-            
+
+            if instructions:
+                api_params["instructions"] = instructions
+
+            if max_output_tokens:
+                api_params["max_output_tokens"] = max_output_tokens
+
             # Add temperature parameter only if the model supports it
-            # GPT-5 doesn't support custom temperature values, only the default (1)
             if not self.model.startswith("gpt-5"):
                 api_params["temperature"] = self._get_temperature(temperature)
 
-            # Call API
-            response_raw = await self.client.chat.completions.create(**api_params)
-            response = cast("ChatCompletion", response_raw)
+            extra_params = self._extract_extra_params(kwargs)
+            api_params.update(extra_params)
 
-            # Extract response
-            content = response.choices[0].message.content or ""
-            finish_reason = response.choices[0].finish_reason
+            response: OpenAIResponse = await self.client.responses.create(**api_params)
+            content = response.output_text or ""
+            tool_calls = self._extract_tool_calls(response.output)
 
-            # Calculate usage
-            usage = UsageMetrics(
-                prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
-                completion_tokens=response.usage.completion_tokens if response.usage else 0,
-                total_tokens=response.usage.total_tokens if response.usage else 0,
-            )
-
-            # Estimate cost
-            usage.estimated_cost_usd = self.estimate_cost(usage)
-
-            # Calculate latency
+            usage = self._build_usage_metrics(response.usage)
             latency_ms = (time.time() - start_time) * 1000
 
             logger.info(
@@ -192,17 +378,26 @@ class OpenAIProvider(BaseLLMProvider):
                 tokens=usage.total_tokens,
                 cost_usd=usage.estimated_cost_usd,
                 latency_ms=latency_ms,
-                finish_reason=finish_reason,
+                status=getattr(response.status, "value", None),
             )
 
-            return AgentResponse(
+            agent_response = AgentResponse(
                 content=content,
                 status=ResponseStatus.SUCCESS,
                 model=self.model,
                 provider=self.provider_name,
                 usage=usage,
                 latency_ms=latency_ms,
+                tool_calls=tool_calls,
             )
+
+            if response.parallel_tool_calls:
+                agent_response.metadata["parallel_tool_calls"] = response.parallel_tool_calls
+
+            if response.status:
+                agent_response.metadata["status"] = response.status
+
+            return agent_response
 
         except RateLimitError as e:
             logger.warning("openai_rate_limit", error=str(e))
@@ -256,48 +451,180 @@ class OpenAIProvider(BaseLLMProvider):
     ) -> AsyncIterator[str]:
         """Stream response tokens from OpenAI."""
         try:
-            # Prepare messages
-            prepared_messages = self._prepare_chat_messages(messages, system_prompt)
+            instructions, input_items = self._build_responses_payload(messages, system_prompt)
 
             logger.info(
                 "openai_stream_started",
                 model=self.model,
-                message_count=len(prepared_messages),
+                message_count=len(input_items),
             )
 
-            # Prepare token limit parameter (varies by model)
-            max_tokens_value = self._get_max_tokens(max_tokens)
-            token_param = (
-                "max_completion_tokens" if self._uses_max_completion_tokens() else "max_tokens"
-            )
+            max_output_tokens = self._get_max_output_tokens(max_tokens)
 
-            # Prepare API call parameters
-            stream_params = {
+            stream_params: dict[str, Any] = {
                 "model": self.model,
-                "messages": prepared_messages,
-                "stream": True,
-                **{token_param: max_tokens_value},
-                **kwargs,
+                "input": input_items,
             }
-            
-            # Add temperature parameter only if the model supports it
-            # GPT-5 doesn't support custom temperature values, only the default (1)
+
+            if instructions:
+                stream_params["instructions"] = instructions
+
+            if max_output_tokens:
+                stream_params["max_output_tokens"] = max_output_tokens
+
             if not self.model.startswith("gpt-5"):
                 stream_params["temperature"] = self._get_temperature(temperature)
 
-            # Stream API call
-            stream_raw = await self.client.chat.completions.create(**stream_params)
-            stream = cast("AsyncStream[ChatCompletionChunk]", stream_raw)
+            stream_params.update(self._extract_extra_params(kwargs))
 
-            # Yield chunks
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+            stream_manager = self.client.responses.stream(**stream_params)
 
-            logger.info("openai_stream_completed", model=self.model)
+            async with stream_manager as stream:
+                async for event in stream:
+                    if event.type == "response.output_text.delta" and getattr(event, "delta", None):
+                        yield event.delta
+
+                # Ensure stream fully consumed and resources released
+                final_response = await stream.get_final_response()
+                logger.info(
+                    "openai_stream_completed",
+                    model=self.model,
+                    status=getattr(final_response.status, "value", None),
+                )
 
         except Exception as e:
             logger.error("openai_stream_error", error=str(e))
+            raise ProviderError(
+                f"Error streaming from OpenAI: {e}",
+                provider=self.provider_name,
+                original_error=e,
+            )
+
+    async def stream_structured(
+        self,
+        messages: list[Message],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamChunk]:
+        """Stream structured response chunks from OpenAI with tool call support."""
+        try:
+            instructions, input_items = self._build_responses_payload(messages, system_prompt)
+
+            logger.info(
+                "openai_stream_structured_started",
+                model=self.model,
+                message_count=len(input_items),
+            )
+
+            max_output_tokens = self._get_max_output_tokens(max_tokens)
+
+            stream_params: dict[str, Any] = {
+                "model": self.model,
+                "input": input_items,
+            }
+
+            if instructions:
+                stream_params["instructions"] = instructions
+
+            if max_output_tokens:
+                stream_params["max_output_tokens"] = max_output_tokens
+
+            if not self.model.startswith("gpt-5"):
+                stream_params["temperature"] = self._get_temperature(temperature)
+
+            stream_params.update(self._extract_extra_params(kwargs))
+
+            tool_state: dict[str, dict[str, Any]] = {}
+            final_response: OpenAIResponse | None = None
+
+            stream_manager = self.client.responses.stream(**stream_params)
+
+            async with stream_manager as stream:
+                async for event in stream:
+                    event_type = getattr(event, "type", "")
+
+                    if event_type == "response.output_text.delta":
+                        try:
+                            delta = getattr(event, "delta", "")
+                            if delta:
+                                yield StreamChunk(content=delta)
+                        except AttributeError:
+                            pass
+                        continue
+
+                    if event_type == "response.output_item.added":
+                        item = getattr(event, "item", None)
+                        if item and getattr(item, "type", None) == "function_call":
+                            identifier = getattr(item, "id", None) or getattr(item, "call_id", None)
+                            if identifier:
+                                tool_state[identifier] = {
+                                    "id": identifier,
+                                    "name": getattr(item, "name", "unknown_tool"),
+                                    "arguments": "",
+                                }
+                        continue
+
+                    if event_type == "response.function_call_arguments.delta":
+                        item_id = getattr(event, "item_id", None)
+                        if item_id:
+                            state = tool_state.setdefault(
+                                item_id,
+                                {
+                                    "id": item_id,
+                                    "name": getattr(event, "name", "unknown_tool"),
+                                    "arguments": "",
+                                },
+                            )
+                            state["arguments"] = getattr(
+                                event, "snapshot", state.get("arguments", "")
+                            )
+                        continue
+
+                    if event_type == "response.function_call_arguments.done":
+                        item_id = getattr(event, "item_id", None)
+                        if item_id:
+                            state = tool_state.setdefault(
+                                item_id,
+                                {
+                                    "id": item_id,
+                                    "name": getattr(event, "name", "unknown_tool"),
+                                    "arguments": "",
+                                },
+                            )
+                            state["name"] = getattr(event, "name", state.get("name"))
+                            state["arguments"] = getattr(
+                                event, "arguments", state.get("arguments", "")
+                            )
+                            tool_call = self._build_tool_call_from_state(state)
+                            yield StreamChunk(content="", tool_call=tool_call)
+                            tool_state.pop(item_id, None)
+                        continue
+
+                    if event_type == "response.completed":
+                        final_response = getattr(event, "response", None)
+
+                if final_response is None:
+                    final_response = await stream.get_final_response()
+
+            finish_reason = None
+            if final_response and final_response.status:
+                finish_reason = final_response.status
+
+            yield StreamChunk(content="", is_final=True, finish_reason=finish_reason)
+
+            usage = self._build_usage_metrics(getattr(final_response, "usage", None))
+            logger.info(
+                "openai_stream_structured_completed",
+                model=self.model,
+                tokens=usage.total_tokens,
+                cost_usd=usage.estimated_cost_usd,
+                status=finish_reason,
+            )
+
+        except Exception as e:
+            logger.error("openai_stream_structured_error", error=str(e))
             raise ProviderError(
                 f"Error streaming from OpenAI: {e}",
                 provider=self.provider_name,
@@ -336,20 +663,20 @@ class OpenAIProvider(BaseLLMProvider):
 
         return input_cost + output_cost
 
-    def _uses_max_completion_tokens(self) -> bool:
+    def _get_max_output_tokens(self, override: int | None) -> int | None:
         """
-        Check if model uses max_completion_tokens instead of max_tokens.
+        Determine the output token cap for a request.
 
-        OpenAI changed the API for newer models (GPT-5, GPT-4o):
-        - Old models (GPT-4, GPT-3.5): use 'max_tokens'
-        - New models (GPT-5, GPT-4o): use 'max_completion_tokens'
+        Args:
+            override: Optional override value for the call
 
         Returns:
-            True if model uses max_completion_tokens, False otherwise
+            Positive integer count or None to defer to model defaults
         """
-        # GPT-5 series and newer GPT-4o models use max_completion_tokens
-        new_model_prefixes = ["gpt-5", "gpt-4o"]
-        return any(self.model.startswith(prefix) for prefix in new_model_prefixes)
+        tokens = override if override is not None else self.max_tokens
+        if tokens is None or tokens <= 0:
+            return None
+        return tokens
 
     async def generate_structured(
         self,
@@ -376,20 +703,21 @@ class OpenAIProvider(BaseLLMProvider):
         Returns:
             Tuple of (AgentResponse, parsed_model or None)
         """
-        import json
-
-        # Add JSON instruction to system prompt
-        json_instruction = f"\n\nRespond with valid JSON matching this schema:\n{response_model.model_json_schema()}"
-
-        enhanced_system_prompt = (system_prompt or "") + json_instruction
-
-        # Request JSON mode
-        kwargs["response_format"] = {"type": "json_object"}
+        schema = response_model.model_json_schema()
+        kwargs = dict(kwargs)
+        kwargs["text"] = {
+            "format": {
+                "type": "json_schema",
+                "name": response_model.__name__,
+                "schema": schema,
+                "strict": True,
+            }
+        }
 
         # Generate with JSON mode
         response = await self.generate(
             messages=messages,
-            system_prompt=enhanced_system_prompt,
+            system_prompt=system_prompt,
             temperature=temperature,
             max_tokens=max_tokens,
             **kwargs,
@@ -421,19 +749,11 @@ class OpenAIProvider(BaseLLMProvider):
     async def health_check(self) -> bool:
         """Check if OpenAI API is accessible."""
         try:
-            # Prepare token limit parameter (varies by model)
-            token_param = (
-                "max_completion_tokens" if self._uses_max_completion_tokens() else "max_tokens"
-            )
-
-            # Try a simple API call
-            response_raw = await self.client.chat.completions.create(
+            response = await self.client.responses.create(
                 model=self.model,
-                messages=[{"role": "user", "content": "test"}],
-                **{token_param: 5},
+                input="health_check",  # type: ignore[arg-type]
+                max_output_tokens=5,
             )
-
-            response = cast("ChatCompletion", response_raw)
             return response is not None
 
         except Exception as e:
@@ -454,66 +774,3 @@ class OpenAIProvider(BaseLLMProvider):
     def supports_tools(self) -> bool:
         """OpenAI supports function calling."""
         return True
-
-    def _prepare_chat_messages(
-        self,
-        messages: list[Message],
-        system_prompt: str | None,
-    ) -> list[ChatCompletionMessageParam]:
-        """
-        Prepare messages in the format expected by OpenAI chat completions.
-
-        Args:
-            messages: Conversation history
-            system_prompt: Optional system instruction prepended to the history
-
-        Returns:
-            List of typed message parameters for the OpenAI SDK
-        """
-        prepared: list[ChatCompletionMessageParam] = []
-
-        if system_prompt:
-            prepared.append(
-                cast(ChatCompletionMessageParam, {"role": "system", "content": system_prompt})
-            )
-
-        for message in messages:
-            if message.role == Role.SYSTEM:
-                prepared.append(
-                    cast(
-                        ChatCompletionMessageParam,
-                        {"role": "system", "content": message.content},
-                    )
-                )
-            elif message.role == Role.USER:
-                prepared.append(
-                    cast(
-                        ChatCompletionMessageParam,
-                        {"role": "user", "content": message.content},
-                    )
-                )
-            elif message.role == Role.ASSISTANT:
-                prepared.append(
-                    cast(
-                        ChatCompletionMessageParam,
-                        {"role": "assistant", "content": message.content},
-                    )
-                )
-            elif message.role == Role.TOOL:
-                if not message.tool_call_id:
-                    logger.warning(
-                        "tool_message_missing_id",
-                        message="Skipping tool message without tool_call_id",
-                    )
-                    continue
-                tool_message: ChatCompletionToolMessageParam = cast(
-                    ChatCompletionToolMessageParam,
-                    {
-                        "role": "tool",
-                        "content": message.content,
-                        "tool_call_id": message.tool_call_id,
-                    },
-                )
-                prepared.append(tool_message)
-
-        return prepared

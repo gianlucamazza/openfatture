@@ -2,10 +2,14 @@
 
 from typing import Any, TypedDict
 
+from pydantic import validate_call
+from sqlalchemy.orm import selectinload
+
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
+from openfatture.utils.security import sanitize_sql_like_input, validate_integer_input
 
 logger = get_logger(__name__)
 
@@ -22,6 +26,7 @@ class InvoiceStats(TypedDict):
 # =============================================================================
 
 
+@validate_call
 def search_invoices(
     query: str | None = None,
     anno: int | None = None,
@@ -29,6 +34,17 @@ def search_invoices(
     cliente_id: int | None = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    # Sanitize and validate inputs
+    if query is not None:
+        query = sanitize_sql_like_input(query)
+
+    if anno is not None:
+        anno = validate_integer_input(anno, min_value=2000, max_value=2100)
+
+    if cliente_id is not None:
+        cliente_id = validate_integer_input(cliente_id, min_value=1)
+
+    limit = validate_integer_input(limit, min_value=1, max_value=100)
     """
     Search for invoices matching criteria.
 
@@ -44,8 +60,8 @@ def search_invoices(
     """
     db = get_session()
     try:
-        # Build query
-        db_query = db.query(Fattura)
+        # Build query with eager loading to avoid N+1 queries
+        db_query = db.query(Fattura).options(selectinload(Fattura.cliente))
 
         if query:
             db_query = db_query.filter(
@@ -104,7 +120,10 @@ def search_invoices(
         db.close()
 
 
+@validate_call
 def get_invoice_details(fattura_id: int) -> dict[str, Any]:
+    # Validate input
+    fattura_id = validate_integer_input(fattura_id, min_value=1)
     """
     Get detailed information about an invoice.
 
@@ -116,7 +135,13 @@ def get_invoice_details(fattura_id: int) -> dict[str, Any]:
     """
     db = get_session()
     try:
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+        # Use selectinload to avoid N+1 queries when accessing relationships
+        fattura = (
+            db.query(Fattura)
+            .options(selectinload(Fattura.cliente), selectinload(Fattura.righe))
+            .filter(Fattura.id == fattura_id)
+            .first()
+        )
 
         if fattura is None:
             return {"error": f"Fattura {fattura_id} non trovata"}
@@ -167,6 +192,7 @@ def get_invoice_details(fattura_id: int) -> dict[str, Any]:
         db.close()
 
 
+@validate_call
 def get_invoice_stats(anno: int | None = None) -> dict[str, Any]:
     """
     Get statistics about invoices.
@@ -177,6 +203,9 @@ def get_invoice_stats(anno: int | None = None) -> dict[str, Any]:
     Returns:
         Dictionary with stats
     """
+    # Validate input after parameter validation
+    if anno is not None:
+        anno = validate_integer_input(anno, min_value=2000, max_value=2100)
     from datetime import datetime
 
     db = get_session()

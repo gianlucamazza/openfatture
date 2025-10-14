@@ -3,13 +3,16 @@
 Provides async/sync bridge and simplified API for AI operations.
 """
 
+from collections.abc import AsyncGenerator
+from typing import Any
+
 import streamlit as st
-from typing import Any, AsyncGenerator
 
 from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
 from openfatture.ai.agents.tax_advisor import TaxAdvisorAgent
 from openfatture.ai.domain.context import ChatContext, InvoiceContext, TaxContext
+from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers.factory import create_provider
 from openfatture.web.utils.async_helpers import run_async
@@ -20,10 +23,24 @@ class StreamlitAIService:
 
     def __init__(self) -> None:
         """Initialize service with AI provider."""
-        self._provider = None
-        self._chat_agent = None
-        self._invoice_agent = None
-        self._tax_agent = None
+        self._provider: Any = None
+        self._chat_agent: ChatAgent | None = None
+        self._invoice_agent: InvoiceAssistantAgent | None = None
+        self._tax_agent: TaxAdvisorAgent | None = None
+
+    def _convert_history(self, history: list[dict[str, str]]) -> ConversationHistory:
+        """Convert list of dicts to ConversationHistory."""
+        conv_history = ConversationHistory()
+        for msg_dict in history:
+            role_str = msg_dict.get("role", "user")
+            content = msg_dict.get("content", "")
+            try:
+                role = Role(role_str)
+            except ValueError:
+                role = Role.USER  # Default to user if invalid
+            message = Message(role=role, content=content)
+            conv_history.add_message(message)
+        return conv_history
 
     @property
     def provider(self) -> Any:
@@ -64,7 +81,9 @@ class StreamlitAIService:
         Returns:
             Agent response with content and metadata
         """
-        context = ChatContext(user_input=message, conversation_history=conversation_history)
+        context = ChatContext(
+            user_input=message, conversation_history=self._convert_history(conversation_history)
+        )
 
         return run_async(self.chat_agent.execute(context))
 
@@ -81,7 +100,9 @@ class StreamlitAIService:
         Yields:
             Response text chunks
         """
-        context = ChatContext(user_input=message, conversation_history=conversation_history)
+        context = ChatContext(
+            user_input=message, conversation_history=self._convert_history(conversation_history)
+        )
 
         async for chunk in self.chat_agent.execute_stream(context):
             yield chunk
@@ -161,7 +182,7 @@ class StreamlitAIService:
             True if AI is configured and working
         """
         try:
-            self.provider
+            _ = self.provider
             return True
         except Exception:
             return False

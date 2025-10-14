@@ -3,10 +3,9 @@
 Displays key business metrics, charts, and recent activity.
 """
 
+import plotly.express as px  # type: ignore[import-untyped]
+import plotly.graph_objects as go  # type: ignore[import-untyped]
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
 
 from openfatture.cli.ui.dashboard import DashboardData
 from openfatture.web.services.invoice_service import StreamlitInvoiceService
@@ -94,7 +93,7 @@ try:
             fig_status.update_layout(
                 showlegend=True,
                 height=350,
-                margin=dict(l=20, r=20, t=40, b=20),
+                margin={"l": 20, "r": 20, "t": 40, "b": 20},
             )
 
             st.plotly_chart(fig_status, use_container_width=True)
@@ -127,7 +126,7 @@ try:
                 yaxis_title="Fatturato (€)",
                 xaxis_title="Mese",
                 height=350,
-                margin=dict(l=20, r=20, t=40, b=20),
+                margin={"l": 20, "r": 20, "t": 40, "b": 20},
                 showlegend=False,
             )
 
@@ -180,9 +179,11 @@ try:
                     {
                         "Numero": f"{f.numero}/{f.anno}",
                         "Data": f.data_emissione.strftime("%d/%m/%Y"),
-                        "Cliente": (f.cliente.denominazione[:30] + "...")
-                        if len(f.cliente.denominazione) > 30
-                        else f.cliente.denominazione,
+                        "Cliente": (
+                            (f.cliente.denominazione[:30] + "...")
+                            if len(f.cliente.denominazione) > 30
+                            else f.cliente.denominazione
+                        ),
                         "Totale": f"€{float(f.totale):,.2f}",
                         "Stato": f.stato.value,
                     }
@@ -237,9 +238,11 @@ try:
             [
                 {
                     "Fattura": entry.invoice_ref,
-                    "Cliente": entry.client_name[:30] + "..."
-                    if len(entry.client_name) > 30
-                    else entry.client_name,
+                    "Cliente": (
+                        entry.client_name[:30] + "..."
+                        if len(entry.client_name) > 30
+                        else entry.client_name
+                    ),
                     "Scadenza": entry.due_date.strftime("%d/%m/%Y"),
                     "Giorni": entry.days_delta,
                     "Residuo": f"€{float(entry.residual):,.2f}",
@@ -247,9 +250,7 @@ try:
                     "Categoria": (
                         "🔴 Scaduto"
                         if entry in payment_due.overdue
-                        else "🟡 In scadenza"
-                        if entry in payment_due.due_soon
-                        else "🟢 Prossimo"
+                        else "🟡 In scadenza" if entry in payment_due.due_soon else "🟢 Prossimo"
                     ),
                 }
                 for entry in all_entries

@@ -4,11 +4,11 @@ Provides interactive AI tools for invoice management and tax compliance.
 """
 
 import streamlit as st
+
 from openfatture.web.services.ai_service import get_ai_service
 from openfatture.web.utils.state import (
-    init_conversation_history,
     clear_conversation_history,
-    init_state,
+    init_conversation_history,
 )
 
 st.set_page_config(page_title="AI Assistant - OpenFatture", page_icon="🤖", layout="wide")

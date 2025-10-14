@@ -2,10 +2,14 @@
 
 from typing import Any
 
+from pydantic import validate_call
+from sqlalchemy.orm import selectinload
+
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente
 from openfatture.utils.logging import get_logger
+from openfatture.utils.security import sanitize_sql_like_input, validate_integer_input
 
 logger = get_logger(__name__)
 
@@ -15,10 +19,16 @@ logger = get_logger(__name__)
 # =============================================================================
 
 
+@validate_call
 def search_clients(
     query: str | None = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    # Sanitize and validate inputs
+    if query is not None:
+        query = sanitize_sql_like_input(query)
+
+    limit = validate_integer_input(limit, min_value=1, max_value=100)
     """
     Search for clients.
 
@@ -76,7 +86,10 @@ def search_clients(
         db.close()
 
 
+@validate_call
 def get_client_details(cliente_id: int) -> dict[str, Any]:
+    # Validate input
+    cliente_id = validate_integer_input(cliente_id, min_value=1)
     """
     Get detailed information about a client.
 
@@ -88,7 +101,13 @@ def get_client_details(cliente_id: int) -> dict[str, Any]:
     """
     db = get_session()
     try:
-        cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+        # Use selectinload to avoid N+1 queries when accessing fatture relationship
+        cliente = (
+            db.query(Cliente)
+            .options(selectinload(Cliente.fatture))
+            .filter(Cliente.id == cliente_id)
+            .first()
+        )
 
         if cliente is None:
             return {"error": f"Cliente {cliente_id} non trovato"}
@@ -143,6 +162,7 @@ def get_client_details(cliente_id: int) -> dict[str, Any]:
         db.close()
 
 
+@validate_call
 def get_client_stats() -> dict[str, Any]:
     """
     Get statistics about clients.

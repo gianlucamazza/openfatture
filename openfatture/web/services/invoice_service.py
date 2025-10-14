@@ -3,10 +3,11 @@
 Provides caching and simplified API for invoice operations.
 """
 
-import streamlit as st
 from datetime import date
 from decimal import Decimal
 from typing import Any
+
+import streamlit as st
 
 from openfatture.core.fatture.service import InvoiceService as CoreInvoiceService
 from openfatture.storage.database.models import Cliente, Fattura, RigaFattura, StatoFattura
@@ -202,27 +203,20 @@ class StreamlitInvoiceService:
                 by_status[stato.value] = count
 
         # Revenue
-        from sqlalchemy import func, extract
         from datetime import datetime
+
+        from sqlalchemy import extract, func
 
         now = datetime.now()
 
         total_revenue = db.query(func.sum(Fattura.totale)).scalar() or Decimal("0")
-        year_revenue = (
-            db.query(func.sum(Fattura.totale))
-            .filter(extract("year", Fattura.data_emissione) == now.year)
-            .scalar()
-            or Decimal("0")
-        )
-        month_revenue = (
-            db.query(func.sum(Fattura.totale))
-            .filter(
-                extract("year", Fattura.data_emissione) == now.year,
-                extract("month", Fattura.data_emissione) == now.month,
-            )
-            .scalar()
-            or Decimal("0")
-        )
+        year_revenue = db.query(func.sum(Fattura.totale)).filter(
+            extract("year", Fattura.data_emissione) == now.year
+        ).scalar() or Decimal("0")
+        month_revenue = db.query(func.sum(Fattura.totale)).filter(
+            extract("year", Fattura.data_emissione) == now.year,
+            extract("month", Fattura.data_emissione) == now.month,
+        ).scalar() or Decimal("0")
 
         return {
             "total": total,

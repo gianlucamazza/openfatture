@@ -3,9 +3,11 @@
 Provides specialized cache decorators and helpers for OpenFatture data.
 """
 
-import streamlit as st
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
+
+import streamlit as st
 
 T = TypeVar("T")
 
@@ -41,7 +43,7 @@ def clear_db_session() -> None:
         del st.session_state.db_session
 
 
-def cache_for_session(func: Callable[..., T]) -> Callable[..., T]:
+def cache_for_session[T](func: Callable[..., T]) -> Callable[..., T]:
     """
     Cache function result for the duration of the Streamlit session.
 

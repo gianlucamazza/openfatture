@@ -73,6 +73,14 @@ class CircuitBreakerConfig:
 
 
 @dataclass
+class BulkheadConfig:
+    """Bulkhead configuration for limiting concurrent executions."""
+
+    max_concurrent_executions: int = 5  # Max concurrent executions per tool
+    acquisition_timeout_seconds: float = 10.0  # Timeout for acquiring semaphore
+
+
+@dataclass
 class CircuitBreakerState:
     """Circuit breaker runtime state."""
 
@@ -287,6 +295,10 @@ class ResiliencePolicy(BaseModel):
     circuit_failure_threshold: int = Field(default=5, ge=1)
     circuit_timeout_seconds: int = Field(default=60, ge=10)
 
+    # Bulkhead (concurrency limiting)
+    bulkhead_max_concurrent: int = Field(default=5, ge=1, le=50)
+    bulkhead_acquisition_timeout: float = Field(default=10.0, gt=0)
+
     # Fallback providers (in order of preference)
     fallback_providers: list[str] = Field(default_factory=list)
 
@@ -307,6 +319,13 @@ class ResiliencePolicy(BaseModel):
         return CircuitBreakerConfig(
             failure_threshold=self.circuit_failure_threshold,
             timeout_seconds=self.circuit_timeout_seconds,
+        )
+
+    def get_bulkhead_config(self) -> BulkheadConfig:
+        """Get bulkhead configuration."""
+        return BulkheadConfig(
+            max_concurrent_executions=self.bulkhead_max_concurrent,
+            acquisition_timeout_seconds=self.bulkhead_acquisition_timeout,
         )
 
 

@@ -11,7 +11,7 @@ from typing import Any, TypeVar
 T = TypeVar("T")
 
 
-def run_async(coro: Coroutine[Any, Any, T]) -> T:
+def run_async[T](coro: Coroutine[Any, Any, T]) -> T:
     """
     Execute an async coroutine in a synchronous context.
 
@@ -50,7 +50,7 @@ def run_async(coro: Coroutine[Any, Any, T]) -> T:
                 pass
 
 
-async def async_generator_to_list(agen: AsyncGenerator[T, None]) -> list[T]:
+async def async_generator_to_list[T](agen: AsyncGenerator[T, None]) -> list[T]:
     """
     Consume an async generator and return all items as a list.
 
@@ -69,7 +69,7 @@ async def async_generator_to_list(agen: AsyncGenerator[T, None]) -> list[T]:
     return result
 
 
-def run_async_generator(agen: AsyncGenerator[T, None]) -> list[T]:
+def run_async_generator[T](agen: AsyncGenerator[T, None]) -> list[T]:
     """
     Execute an async generator in a synchronous context and return all items.
 

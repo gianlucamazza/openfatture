@@ -5,6 +5,7 @@ agents, and the UI layer.
 """
 
 import asyncio
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -15,6 +16,42 @@ from openfatture.ai.domain.context import AgentContext, ChatContext
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 from openfatture.ai.providers.base import BaseLLMProvider, ProviderError
+
+
+def mock_stream(chunks):
+    """Helper to create async iterator from chunk list."""
+
+    async def _stream():
+        for chunk in chunks:
+            yield chunk
+
+    return _stream()
+
+
+class MockResponseStream:
+    """Minimal async response stream used to simulate OpenAI Responses streaming."""
+
+    def __init__(self, events, final_response):
+        self._events = iter(events)
+        self._final_response = final_response
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self._events)
+        except StopIteration:
+            raise StopAsyncIteration
+
+    async def get_final_response(self):
+        return self._final_response
 
 
 class DummyStreamingAgent(BaseAgent):
@@ -86,6 +123,24 @@ def mock_error_streaming_provider():
         raise ProviderError("Streaming connection lost", provider="error_streaming")
 
     provider.stream = mock_stream_with_error
+
+    return provider
+
+
+@pytest.fixture
+def mock_openai_provider():
+    """Create a mock OpenAI provider for testing."""
+    from openfatture.ai.providers.openai import OpenAIProvider
+
+    # Create a real provider instance with a mock client
+    provider = OpenAIProvider(api_key="test-key", model="gpt-4")
+    provider.client = MagicMock()
+    provider.client.responses = MagicMock()
+
+    # Mock basic helpers to keep deterministic behaviour
+    provider._get_max_output_tokens = MagicMock(return_value=2000)
+    provider._get_temperature = MagicMock(return_value=0.7)
+    provider._extract_extra_params = MagicMock(side_effect=lambda params: params)
 
     return provider
 
@@ -321,19 +376,352 @@ class TestProviderStreaming:
 
     async def test_ollama_provider_has_stream_method(self):
         """Verify Ollama provider implements stream method."""
-        import inspect
 
         from openfatture.ai.providers.ollama import OllamaProvider
 
         # Verify method exists
         assert hasattr(OllamaProvider, "stream")
 
+    async def test_openai_provider_has_stream_structured_method(self):
+        """Verify OpenAI provider implements stream_structured method."""
+        import inspect
+
+        from openfatture.ai.providers.openai import OpenAIProvider
+
+        # Verify method exists
+        assert hasattr(OpenAIProvider, "stream_structured")
+
         # Verify it's an async generator
-        assert inspect.isasyncgenfunction(OllamaProvider.stream)
+        assert inspect.isasyncgenfunction(OpenAIProvider.stream_structured)
 
         # Verify signature
-        sig = inspect.signature(OllamaProvider.stream)
+        sig = inspect.signature(OpenAIProvider.stream_structured)
         assert "messages" in sig.parameters
+        assert "system_prompt" in sig.parameters
+        assert "temperature" in sig.parameters
+        assert "max_tokens" in sig.parameters
+
+    async def test_ollama_provider_has_stream_structured_method(self):
+        """Verify Ollama provider implements stream_structured method."""
+        import inspect
+
+        from openfatture.ai.providers.ollama import OllamaProvider
+
+        # Verify method exists
+        assert hasattr(OllamaProvider, "stream_structured")
+
+        # Verify it's an async generator
+        assert inspect.isasyncgenfunction(OllamaProvider.stream_structured)
+
+        # Verify signature
+        sig = inspect.signature(OllamaProvider.stream_structured)
+        assert "messages" in sig.parameters
+
+
+@pytest.mark.asyncio
+@pytest.mark.streaming
+class TestStreamingToolCalls:
+    """Tests for streaming tool calls functionality."""
+
+    async def test_openai_stream_structured_basic_content_only(self, mock_openai_provider):
+        """Test stream_structured yields content chunks without tools."""
+
+        final_response = SimpleNamespace(
+            status=SimpleNamespace(value="stop"),
+            usage=SimpleNamespace(input_tokens=0, output_tokens=0, total_tokens=0),
+        )
+        events = [
+            SimpleNamespace(type="response.output_text.delta", delta="Hello"),
+            SimpleNamespace(type="response.output_text.delta", delta=" world"),
+            SimpleNamespace(type="response.completed", response=final_response),
+        ]
+
+        mock_openai_provider.client.responses.stream.return_value = MockResponseStream(
+            events=events,
+            final_response=final_response,
+        )
+
+        messages = [Message(role=Role.USER, content="Test")]
+        chunks = []
+
+        async for chunk in mock_openai_provider.stream_structured(messages):
+            chunks.append(chunk)
+
+        assert len(chunks) == 3
+        assert chunks[0].content == "Hello"
+        assert chunks[1].content == " world"
+        assert chunks[2].is_final is True
+        assert chunks[2].finish_reason == "stop"
+
+    async def test_openai_stream_structured_tool_calls_single(self, mock_openai_provider):
+        """Test stream_structured yields tool calls correctly."""
+
+        final_response = SimpleNamespace(
+            status=SimpleNamespace(value="tool_calls"),
+            usage=SimpleNamespace(input_tokens=0, output_tokens=0, total_tokens=0),
+        )
+        events = [
+            SimpleNamespace(type="response.output_text.delta", delta="I'll help you"),
+            SimpleNamespace(
+                type="response.output_item.added",
+                item=SimpleNamespace(
+                    type="function_call",
+                    id="call_123",
+                    call_id="call_123",
+                    name="search_invoices",
+                ),
+            ),
+            SimpleNamespace(
+                type="response.function_call_arguments.delta",
+                item_id="call_123",
+                snapshot='{"query": "test"}',
+            ),
+            SimpleNamespace(
+                type="response.function_call_arguments.done",
+                item_id="call_123",
+                name="search_invoices",
+                arguments='{"query": "test"}',
+            ),
+            SimpleNamespace(type="response.completed", response=final_response),
+        ]
+
+        mock_openai_provider.client.responses.stream.return_value = MockResponseStream(
+            events=events,
+            final_response=final_response,
+        )
+
+        messages = [Message(role=Role.USER, content="Search for test invoices")]
+        chunks = []
+
+        async for chunk in mock_openai_provider.stream_structured(messages):
+            chunks.append(chunk)
+
+        # Should have content chunk, tool call chunk, and final chunk
+        assert len(chunks) == 3
+        assert chunks[0].content == "I'll help you"
+        assert chunks[1].tool_call is not None
+        assert chunks[1].tool_call.id == "call_123"
+        assert chunks[1].tool_call.name == "search_invoices"
+        assert chunks[1].tool_call.arguments == {"query": "test"}
+        assert chunks[2].is_final is True
+        assert chunks[2].finish_reason == "tool_calls"
+
+    async def test_openai_stream_structured_tool_calls_multiple(self, mock_openai_provider):
+        """Test stream_structured handles multiple tool calls."""
+
+        final_response = SimpleNamespace(
+            status=SimpleNamespace(value="tool_calls"),
+            usage=SimpleNamespace(input_tokens=0, output_tokens=0, total_tokens=0),
+        )
+        events = [
+            SimpleNamespace(type="response.output_text.delta", delta="I'll search and analyze"),
+            SimpleNamespace(
+                type="response.output_item.added",
+                item=SimpleNamespace(
+                    type="function_call",
+                    id="call_123",
+                    call_id="call_123",
+                    name="search_invoices",
+                ),
+            ),
+            SimpleNamespace(
+                type="response.function_call_arguments.delta",
+                item_id="call_123",
+                snapshot='{"query": "revenue"}',
+            ),
+            SimpleNamespace(
+                type="response.function_call_arguments.done",
+                item_id="call_123",
+                name="search_invoices",
+                arguments='{"query": "revenue"}',
+            ),
+            SimpleNamespace(
+                type="response.output_item.added",
+                item=SimpleNamespace(
+                    type="function_call",
+                    id="call_456",
+                    call_id="call_456",
+                    name="analyze_revenue",
+                ),
+            ),
+            SimpleNamespace(
+                type="response.function_call_arguments.delta",
+                item_id="call_456",
+                snapshot='{"period": "2024"}',
+            ),
+            SimpleNamespace(
+                type="response.function_call_arguments.done",
+                item_id="call_456",
+                name="analyze_revenue",
+                arguments='{"period": "2024"}',
+            ),
+            SimpleNamespace(type="response.completed", response=final_response),
+        ]
+
+        mock_openai_provider.client.responses.stream.return_value = MockResponseStream(
+            events=events,
+            final_response=final_response,
+        )
+
+        messages = [Message(role=Role.USER, content="Analyze revenue for 2024")]
+        chunks = []
+
+        async for chunk in mock_openai_provider.stream_structured(messages):
+            chunks.append(chunk)
+
+        # Should have content chunk, two tool call chunks, and final chunk
+        assert len(chunks) == 4
+        assert chunks[0].content == "I'll search and analyze"
+        assert chunks[1].tool_call.name == "search_invoices"
+        assert chunks[1].tool_call.arguments == {"query": "revenue"}
+        assert chunks[2].tool_call.name == "analyze_revenue"
+        assert chunks[2].tool_call.arguments == {"period": "2024"}
+        assert chunks[3].is_final is True
+
+    async def test_openai_stream_structured_malformed_json(self, mock_openai_provider):
+        """Test stream_structured handles malformed tool call arguments."""
+
+        final_response = SimpleNamespace(
+            status=SimpleNamespace(value="tool_calls"),
+            usage=SimpleNamespace(input_tokens=0, output_tokens=0, total_tokens=0),
+        )
+        events = [
+            SimpleNamespace(type="response.output_text.delta", delta="Calling tool"),
+            SimpleNamespace(
+                type="response.output_item.added",
+                item=SimpleNamespace(
+                    type="function_call",
+                    id="call_123",
+                    call_id="call_123",
+                    name="search_invoices",
+                ),
+            ),
+            SimpleNamespace(
+                type="response.function_call_arguments.delta",
+                item_id="call_123",
+                snapshot="{invalid json",
+            ),
+            SimpleNamespace(
+                type="response.function_call_arguments.done",
+                item_id="call_123",
+                name="search_invoices",
+                arguments="{invalid json",
+            ),
+            SimpleNamespace(type="response.completed", response=final_response),
+        ]
+
+        mock_openai_provider.client.responses.stream.return_value = MockResponseStream(
+            events=events,
+            final_response=final_response,
+        )
+
+        messages = [Message(role=Role.USER, content="Test malformed JSON")]
+        chunks = []
+
+        async for chunk in mock_openai_provider.stream_structured(messages):
+            chunks.append(chunk)
+
+        # Should have content chunk, tool call chunk (with empty args), and final chunk
+        assert len(chunks) == 3
+        assert chunks[0].content == "Calling tool"
+        assert chunks[1].tool_call.name == "search_invoices"
+        assert chunks[1].tool_call.arguments == {}  # Should default to empty dict
+        assert chunks[2].is_final is True
+
+    async def test_chat_agent_message_construction_with_tool_calls(self, mock_openai_provider):
+        """Test that ChatAgent properly constructs messages with tool_calls for follow-up."""
+        from unittest.mock import AsyncMock
+
+        from openfatture.ai.domain.response import StreamChunk, ToolCall
+        from openfatture.ai.tools import get_tool_registry
+
+        class MockToolResult:
+            def __init__(self, data):
+                self.data = data
+                self.success = True
+
+            def to_dict(self):
+                return {"success": self.success, "data": self.data}
+
+        # Mock tool registry
+        tool_registry = get_tool_registry()
+        tool_registry.get_tool = AsyncMock(return_value=AsyncMock())
+        tool_registry.execute_tool = AsyncMock(return_value=MockToolResult({"total_clients": 3}))
+
+        initial_chunks = [
+            StreamChunk(content="I'll check your clients"),
+            StreamChunk(
+                content="",
+                tool_call=ToolCall(id="call_123", name="get_client_stats", arguments={}),
+            ),
+            StreamChunk(content="", is_final=True, finish_reason="tool_calls"),
+        ]
+
+        async def fake_stream_structured(messages, **kwargs):
+            for chunk in initial_chunks:
+                yield chunk
+
+        followup_calls = []
+
+        async def fake_followup_stream(messages, **kwargs):
+            followup_calls.append({"messages": messages, "kwargs": kwargs})
+            for part in ["You have 3 clients", ""]:
+                yield part
+
+        mock_openai_provider.stream_structured = fake_stream_structured
+        mock_openai_provider.stream = fake_followup_stream
+
+        agent = ChatAgent(
+            provider=mock_openai_provider,
+            tool_registry=tool_registry,
+            enable_tools=True,
+            enable_streaming=True,
+        )
+
+        context = ChatContext(user_input="How many clients do I have?")
+        context.available_tools = ["get_client_stats"]
+
+        # Collect all chunks
+        chunks = []
+        async for chunk in agent.execute_stream(context):
+            chunks.append(chunk)
+
+        # Verify that tool calls were detected and executed
+        assert any("Eseguendo" in chunk for chunk in chunks)
+        assert any("get_client_stats" in chunk for chunk in chunks)
+
+        # Verify that the follow-up stream was called
+        assert len(followup_calls) == 1
+
+        followup_messages = followup_calls[0]["messages"]
+
+        # Verify message structure
+        assert len(followup_messages) >= 3  # Original + assistant + tool
+
+        # Find the assistant message
+        assistant_msg = None
+        tool_msg = None
+        for msg in followup_messages:
+            if msg.role == Role.ASSISTANT:
+                assistant_msg = msg
+            elif msg.role == Role.TOOL:
+                tool_msg = msg
+
+        assert assistant_msg is not None, "Assistant message should be present"
+        assert tool_msg is not None, "Tool message should be present"
+
+        # Verify assistant message has tool_calls
+        assert assistant_msg.tool_calls is not None, "Assistant message should have tool_calls"
+        assert len(assistant_msg.tool_calls) == 1, "Should have one tool call"
+
+        tool_call = assistant_msg.tool_calls[0]
+        assert tool_call["id"] == "call_123"
+        assert tool_call["type"] == "function"
+        assert tool_call["function"]["name"] == "get_client_stats"
+        assert tool_call["function"]["arguments"] == {}
+
+        # Verify tool message has correct tool_call_id
+        assert tool_msg.tool_call_id == "call_123"
 
 
 @pytest.mark.asyncio

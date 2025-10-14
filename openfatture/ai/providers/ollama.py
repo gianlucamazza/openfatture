@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 
 from openfatture.ai.domain.message import Message
-from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
+from openfatture.ai.domain.response import AgentResponse, ResponseStatus, StreamChunk, UsageMetrics
 from openfatture.ai.providers.base import (
     BaseLLMProvider,
     ProviderError,
@@ -257,6 +257,65 @@ class OllamaProvider(BaseLLMProvider):
         except Exception as e:
             logger.warning("ollama_health_check_failed", error=str(e))
             return False
+
+    async def stream_structured(
+        self,
+        messages: list[Message],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamChunk]:
+        """
+        Stream structured response chunks from Ollama.
+
+        Ollama doesn't support native tool calls like OpenAI, so this method
+        only yields content chunks. Tool calling is handled via ReAct orchestration
+        at the agent level for Ollama models.
+
+        Args:
+            messages: List of conversation messages
+            system_prompt: Optional system prompt override
+            temperature: Optional temperature override
+            max_tokens: Optional max tokens override
+            **kwargs: Additional provider-specific arguments
+
+        Yields:
+            StreamChunk objects with content (no tool calls for Ollama)
+        """
+        try:
+            logger.info(
+                "ollama_stream_structured_started",
+                model=self.model,
+                message_count=len(messages),
+            )
+
+            # Stream content chunks
+            async for content_chunk in self.stream(
+                messages=messages,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs,
+            ):
+                yield StreamChunk(content=content_chunk, is_final=False)
+
+            # Final chunk
+            yield StreamChunk(content="", is_final=True)
+
+            logger.info("ollama_stream_structured_completed", model=self.model)
+
+        except Exception as e:
+            logger.error(
+                "ollama_stream_structured_failed",
+                model=self.model,
+                error=str(e),
+            )
+            raise ProviderError(
+                message=f"Ollama streaming failed: {str(e)}",
+                provider=self.provider_name,
+                original_error=e,
+            )
 
     async def list_models(self) -> list[str]:
         """

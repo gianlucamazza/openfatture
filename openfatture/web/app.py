@@ -70,7 +70,7 @@ def render_sidebar() -> None:
         st.text(f"P.IVA: {settings.cedente_partita_iva or 'N/A'}")
         st.text(f"Regime: {settings.cedente_regime_fiscale or 'N/A'}")
 
-        if settings.ai_enabled:
+        if settings.ai_chat_enabled:
             st.success("🤖 AI Abilitato")
             st.text(f"Provider: {settings.ai_provider}")
         else:

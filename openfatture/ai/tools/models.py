@@ -143,38 +143,94 @@ class Tool(BaseModel):
         Returns:
             ToolResult with execution outcome
         """
+        import asyncio
+        import time
+
+        from openfatture.utils.rate_limiter import ExponentialBackoff
+
+        start_time = time.time()
+
         try:
             # Validate parameters (basic check)
             for param in self.parameters:
                 if param.required and param.name not in kwargs:
+                    execution_time = time.time() - start_time
                     return ToolResult(
                         success=False,
                         error=f"Required parameter '{param.name}' missing",
                         tool_name=self.name,
+                        execution_time=execution_time,
                     )
 
-            # Execute function
-            # Check if async
-            import inspect
+            # Execute function with retry logic
+            backoff = ExponentialBackoff(base=0.5, max_delay=5.0)
+            last_exception = None
+            max_retries = 3
 
-            if inspect.iscoroutinefunction(self.func):
-                result = await self.func(**kwargs)
-            else:
-                result = self.func(**kwargs)
+            for attempt in range(max_retries):
+                try:
+                    # Check if async
+                    import inspect
 
-            return ToolResult(
-                success=True,
-                data=result,
-                tool_name=self.name,
-            )
+                    if inspect.iscoroutinefunction(self.func):
+                        result = await self.func(**kwargs)
+                    else:
+                        result = self.func(**kwargs)
+
+                    execution_time = time.time() - start_time
+                    return ToolResult(
+                        success=True,
+                        data=result,
+                        tool_name=self.name,
+                        execution_time=execution_time,
+                        retries=attempt,
+                    )
+
+                except Exception as e:
+                    last_exception = e
+                    error_type = type(e).__name__
+
+                    # Check if this is a retryable error
+                    retryable_errors = (
+                        ConnectionError,
+                        TimeoutError,
+                        OSError,
+                        # Add database-specific errors
+                        Exception,  # For now, retry all exceptions
+                    )
+
+                    if attempt < max_retries - 1 and isinstance(e, retryable_errors):
+                        delay = backoff.get_delay(attempt)
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        # Final failure
+                        execution_time = time.time() - start_time
+                        return ToolResult(
+                            success=False,
+                            error=str(e),
+                            error_type=error_type,
+                            tool_name=self.name,
+                            execution_time=execution_time,
+                            retries=attempt,
+                        )
 
         except Exception as e:
+            execution_time = time.time() - start_time
             return ToolResult(
                 success=False,
                 error=str(e),
                 error_type=type(e).__name__,
                 tool_name=self.name,
+                execution_time=execution_time,
             )
+
+        # This should never be reached, but mypy requires it
+        return ToolResult(
+            success=False,
+            error="Unexpected execution path",
+            tool_name=self.name,
+        )
 
 
 class ToolResult(BaseModel):
@@ -187,6 +243,16 @@ class ToolResult(BaseModel):
     tool_name: str
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    # Execution metadata (Phase 2 enhancements)
+    execution_time: float | None = None  # Seconds
+    retries: int = 0  # Number of retry attempts
+    cache_hit: bool = False  # Whether result came from cache
+    cache_key: str | None = None  # Cache key used (if cached)
+
+    # Resilience metadata (Phase 3 enhancements)
+    circuit_breaker_state: str | None = None  # "closed", "open", "half_open"
+    bulkhead_queue_length: int | None = None  # Number of waiting requests in bulkhead queue
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -196,6 +262,12 @@ class ToolResult(BaseModel):
             "error_type": self.error_type,
             "tool_name": self.tool_name,
             "metadata": self.metadata,
+            "execution_time": self.execution_time,
+            "retries": self.retries,
+            "cache_hit": self.cache_hit,
+            "cache_key": self.cache_key,
+            "circuit_breaker_state": self.circuit_breaker_state,
+            "bulkhead_queue_length": self.bulkhead_queue_length,
         }
 
     def to_string(self) -> str:
