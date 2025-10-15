@@ -54,30 +54,20 @@ class ToolCallParser:
     """
     Parser for extracting tool calls from LLM text responses.
 
-    Modern parser (2025) with multi-strategy approach:
-    1. XML tags (preferred): <thought>, <action>, <action_input>, <final_answer>
-    2. Legacy text format: Thought: / Action: / Action Input:
-    3. JSON extraction fallback
+    Modern XML-only parser (2025) - Legacy text format removed.
 
     Supports ReAct format:
         <thought>reasoning</thought>
         <action>tool_name</action>
         <action_input>{"param": "value"}</action_input>
 
-    Or legacy format:
-        Thought: [reasoning]
-        Action: tool_name
-        Action Input: {"param": "value"}
-
     Or final answer:
         <final_answer>response</final_answer>
-        Final Answer: [response to user]
 
     Features:
-    - Multi-strategy parsing (XML-first)
+    - XML-only parsing (simplified architecture)
     - Case-insensitive
     - Robust JSON parsing with auto-fix
-    - Graceful degradation
     """
 
     # Regex patterns for XML tags (preferred)
@@ -90,21 +80,11 @@ class ToolCallParser:
         r"<final_answer>(.*?)</final_answer>", re.IGNORECASE | re.DOTALL
     )
 
-    # Legacy regex patterns for text format
-    THOUGHT_PATTERN = re.compile(
-        r"(?:Thought|Ragionamento):\s*(.+?)(?=\n(?:Action|Final Answer|$))",
-        re.IGNORECASE | re.DOTALL,
-    )
-    ACTION_PATTERN = re.compile(r"Action:\s*([a-zA-Z_][a-zA-Z0-9_]*)", re.IGNORECASE)
-    ACTION_INPUT_PATTERN = re.compile(r"Action Input:\s*(\{.+?\})", re.IGNORECASE | re.DOTALL)
-    FINAL_ANSWER_PATTERN = re.compile(r"Final Answer:\s*(.+)", re.IGNORECASE | re.DOTALL)
-
     def __init__(self) -> None:
         """Initialize parser."""
         self.parse_count = 0
         self.parse_errors = 0
         self.xml_parse_count = 0
-        self.legacy_parse_count = 0
 
     def parse(self, response_text: str) -> ParsedResponse:
         """
@@ -154,7 +134,7 @@ class ToolCallParser:
         """
         Check if response contains a final answer.
 
-        Checks both XML tags and legacy format.
+        Checks XML tags only (legacy format removed).
 
         Args:
             text: Response text
@@ -162,17 +142,13 @@ class ToolCallParser:
         Returns:
             True if final answer detected
         """
-        # Check XML format first
-        if self.XML_FINAL_ANSWER_PATTERN.search(text):
-            return True
-        # Check legacy format
-        return bool(self.FINAL_ANSWER_PATTERN.search(text))
+        return bool(self.XML_FINAL_ANSWER_PATTERN.search(text))
 
     def _extract_final_answer(self, text: str) -> str:
         """
         Extract final answer content from response.
 
-        Tries XML format first, then legacy format.
+        Uses XML format only (legacy format removed).
 
         Args:
             text: Response text
@@ -180,15 +156,9 @@ class ToolCallParser:
         Returns:
             Final answer content
         """
-        # Try XML format first
         xml_match = self.XML_FINAL_ANSWER_PATTERN.search(text)
         if xml_match:
             return xml_match.group(1).strip()
-
-        # Try legacy format
-        legacy_match = self.FINAL_ANSWER_PATTERN.search(text)
-        if legacy_match:
-            return legacy_match.group(1).strip()
 
         return text.strip()
 
@@ -196,17 +166,14 @@ class ToolCallParser:
         """
         Parse tool call from response text.
 
-        Multi-strategy parsing:
-        1. Try XML tags (preferred)
-        2. Fall back to legacy text format
+        XML-only parsing (legacy format removed).
 
         Args:
             text: Response text
 
         Returns:
-            ParsedToolCall if found, None otherwise
+            ParsedToolCall if XML tags found, None otherwise
         """
-        # Strategy 1: Try XML format first
         xml_result = self._parse_xml_tool_call(text)
         if xml_result:
             self.xml_parse_count += 1
@@ -217,18 +184,6 @@ class ToolCallParser:
                 has_thought=xml_result.thought is not None,
             )
             return xml_result
-
-        # Strategy 2: Try legacy format
-        legacy_result = self._parse_legacy_tool_call(text)
-        if legacy_result:
-            self.legacy_parse_count += 1
-            logger.info(
-                "tool_call_parsed_legacy",
-                tool_name=legacy_result.tool_name,
-                parameters=legacy_result.parameters,
-                has_thought=legacy_result.thought is not None,
-            )
-            return legacy_result
 
         return None
 
@@ -285,67 +240,6 @@ class ToolCallParser:
             raw_text=text,
         )
 
-    def _parse_legacy_tool_call(self, text: str) -> ParsedToolCall | None:
-        """
-        Parse tool call from legacy text format.
-
-        Args:
-            text: Response text
-
-        Returns:
-            ParsedToolCall if found, None otherwise
-        """
-        # Extract thought (optional)
-        thought = None
-        thought_match = self.THOUGHT_PATTERN.search(text)
-        if thought_match:
-            thought = thought_match.group(1).strip()
-
-        # Extract action (required)
-        action_match = self.ACTION_PATTERN.search(text)
-        if not action_match:
-            return None
-
-        tool_name = action_match.group(1).strip()
-
-        # Extract action input (required)
-        input_match = self.ACTION_INPUT_PATTERN.search(text)
-        if not input_match:
-            logger.warning(
-                "legacy_action_without_input",
-                tool_name=tool_name,
-                message="Using empty parameters",
-            )
-            parameters = {}
-        else:
-            # Parse JSON parameters
-            json_str = input_match.group(1).strip()
-            try:
-                parameters = json.loads(json_str)
-                if not isinstance(parameters, dict):
-                    logger.warning(
-                        "legacy_invalid_parameters_type",
-                        tool_name=tool_name,
-                        type=type(parameters).__name__,
-                    )
-                    parameters = {}
-            except json.JSONDecodeError as e:
-                logger.error(
-                    "legacy_json_parse_failed",
-                    tool_name=tool_name,
-                    json_str=json_str[:100],
-                    error=str(e),
-                )
-                # Try to fix common JSON issues
-                parameters = self._attempt_json_fix(json_str)
-
-        return ParsedToolCall(
-            tool_name=tool_name,
-            parameters=parameters,
-            thought=thought,
-            raw_text=text,
-        )
-
     def _attempt_json_fix(self, json_str: str) -> dict[str, Any]:
         """
         Attempt to fix common JSON formatting issues.
@@ -384,15 +278,14 @@ class ToolCallParser:
         Get parser statistics.
 
         Returns:
-            Dictionary with stats including XML vs legacy parse counts
+            Dictionary with XML parse statistics (legacy format removed)
         """
-        successful_parses = self.xml_parse_count + self.legacy_parse_count
+        successful_parses = self.xml_parse_count
         return {
             "total_parses": self.parse_count,
             "parse_errors": self.parse_errors,
             "error_rate": (self.parse_errors / self.parse_count if self.parse_count > 0 else 0.0),
             "xml_parse_count": self.xml_parse_count,
-            "legacy_parse_count": self.legacy_parse_count,
             "xml_parse_rate": (
                 self.xml_parse_count / successful_parses if successful_parses > 0 else 0.0
             ),

@@ -12,6 +12,11 @@ from openfatture.cli.commands.init import app
 runner = CliRunner()
 pytestmark = pytest.mark.unit
 
+# Test constants - use secure test values
+TEST_PEC_PASSWORD = "test_pec_password_secure_123"
+TEST_CODICE_DESTINATARIO = "TESTCODE"
+TEST_BIC_SWIFT = "TESTBIC123"
+
 
 class TestInitCommand:
     """Test 'init' command."""
@@ -68,7 +73,7 @@ class TestInitCommand:
             "Roma",  # comune
             "RM",  # provincia
             "test@pec.it",  # pec_address
-            "password123",  # pec_password
+            TEST_PEC_PASSWORD,  # pec_password
             "smtp.pec.aruba.it",  # pec_smtp
         ]
 
@@ -167,7 +172,7 @@ class TestInitCommand:
             "Roma",  # comune
             "RM",  # provincia
             "test@pec.it",  # pec_address
-            "password123",  # pec_password
+            TEST_PEC_PASSWORD,  # pec_password
             "smtp.pec.aruba.it",  # pec_smtp
         ]
 
@@ -221,7 +226,7 @@ class TestInitCommand:
             "Roma",  # comune
             "RM",  # provincia
             "test@pec.it",  # pec_address
-            "password123",  # pec_password
+            TEST_PEC_PASSWORD,  # pec_password
             "smtp.pec.aruba.it",  # pec_smtp
         ]
 
@@ -275,7 +280,7 @@ class TestInitCommand:
             "Roma",  # comune
             "RM",  # provincia
             "test@pec.it",  # pec_address
-            "password123",  # pec_password
+            TEST_PEC_PASSWORD,  # pec_password
             "smtp.pec.aruba.it",  # pec_smtp
         ]
 
@@ -328,7 +333,7 @@ class TestInitCommand:
             "Roma",  # comune
             "RM",  # provincia
             "test@pec.it",  # pec_address
-            "password123",  # pec_password
+            TEST_PEC_PASSWORD,  # pec_password
             "smtp.pec.aruba.it",  # pec_smtp
         ]
 

@@ -7,6 +7,7 @@ Run with: streamlit run openfatture/web/app.py
 import streamlit as st
 
 from openfatture.utils.config import get_settings
+from openfatture.utils.logging import configure_dynamic_logging
 from openfatture.web.utils.state import init_state
 
 # Page configuration MUST be first Streamlit command
@@ -29,6 +30,10 @@ st.set_page_config(
         """,
     },
 )
+
+# Initialize dynamic logging configuration
+settings = get_settings()
+configure_dynamic_logging(settings.debug_config)
 
 
 def render_sidebar() -> None:

@@ -16,9 +16,7 @@ import pytest
 from openfatture.ai.orchestration.states import (
     AgentResult,
     AgentType,
-    ApprovalDecision,
     InvoiceCreationState,
-    WorkflowStatus,
 )
 
 
@@ -101,7 +99,7 @@ def sample_workflow_state():
         imponibile_target=Decimal("300.00"),
         hours=3.0,
         hourly_rate=Decimal("100.00"),
-        status=WorkflowStatus.IN_PROGRESS,
+        status="in_progress",
     )
 
 
@@ -188,7 +186,7 @@ class TestInvoiceCreationWorkflow:
             result_state = await workflow._enrich_context_node(sample_workflow_state)
 
             # Verify state enrichment - just check that it ran
-            assert result_state.status == WorkflowStatus.IN_PROGRESS
+            assert result_state.status == "in_progress"
             assert result_state.workflow_id == sample_workflow_state.workflow_id
 
     @pytest.mark.asyncio
@@ -527,7 +525,16 @@ class TestInvoiceCreationWorkflow:
                 # This node expects a previous invoice to exist, so it may fail in unit test
                 # Just verify it doesn't crash and returns a state
                 assert result_state is not None
-                assert isinstance(result_state.status, WorkflowStatus)
+                assert result_state.status in [
+                    "pending",
+                    "in_progress",
+                    "awaiting_approval",
+                    "approved",
+                    "rejected",
+                    "completed",
+                    "failed",
+                    "cancelled",
+                ]
 
     @pytest.mark.asyncio
     async def test_handle_error_node(self, mock_provider, sample_workflow_state):
@@ -535,13 +542,13 @@ class TestInvoiceCreationWorkflow:
         workflow = InvoiceCreationWorkflow(provider=mock_provider, enable_checkpointing=False)
 
         # Set error state
-        sample_workflow_state.status = WorkflowStatus.FAILED
+        sample_workflow_state.status = "failed"
         sample_workflow_state.errors = ["Test error"]
 
         result_state = await workflow._handle_error_node(sample_workflow_state)
 
         # Verify error handling
-        assert result_state.status == WorkflowStatus.FAILED
+        assert result_state.status == "failed"
         assert "Test error" in result_state.errors
 
     def test_build_graph_structure(self, mock_provider):

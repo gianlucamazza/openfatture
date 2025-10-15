@@ -4,6 +4,8 @@ import typer
 from rich.console import Console
 
 from openfatture import __version__
+from openfatture.utils.config import get_settings
+from openfatture.utils.logging import configure_dynamic_logging
 
 # Payment CLI lives in the payment package to keep the top-level commands lean.
 from ..payment.cli import app as payment_app
@@ -65,6 +67,10 @@ def main(
     A modern, CLI-first tool for Italian freelancers to create and manage
     FatturaPA electronic invoices with AI-powered workflows.
     """
+    # Initialize dynamic logging configuration
+    settings = get_settings()
+    configure_dynamic_logging(settings.debug_config)
+
     # If --interactive flag is set and no subcommand, launch interactive mode
     if ctx.invoked_subcommand is None and interactive_mode:
         from .commands.interactive import interactive_mode as start_interactive

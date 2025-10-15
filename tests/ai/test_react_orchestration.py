@@ -2,7 +2,7 @@
 
 import pytest
 
-from openfatture.ai.orchestration.parsers import ParsedResponse, ToolCallParser
+from openfatture.ai.orchestration.parsers import ToolCallParser
 
 
 class TestToolCallParser:
@@ -28,9 +28,9 @@ Final Answer: Ecco le tue fatture:
         """Test parsing a tool call with JSON parameters."""
         parser = ToolCallParser()
         response_text = """
-Thought: I need to search for invoices with specific status
-Action: search_invoices
-Action Input: {"stato": "da_inviare", "limit": 5}
+<thought>I need to search for invoices with specific status</thought>
+<action>search_invoices</action>
+<action_input>{"stato": "da_inviare", "limit": 5}</action_input>
 """
 
         parsed = parser.parse(response_text)
@@ -46,8 +46,8 @@ Action Input: {"stato": "da_inviare", "limit": 5}
         """Test parsing tool call without thought section."""
         parser = ToolCallParser()
         response_text = """
-Action: get_client_details
-Action Input: {"client_id": 123}
+<action>get_client_details</action>
+<action_input>{"client_id": 123}</action_input>
 """
 
         parsed = parser.parse(response_text)
@@ -62,8 +62,8 @@ Action Input: {"client_id": 123}
         """Test parsing with malformed JSON (should attempt fix)."""
         parser = ToolCallParser()
         response_text = """
-Action: search_invoices
-Action Input: {'stato': 'da_inviare'}
+<action>search_invoices</action>
+<action_input>{'stato': 'da_inviare'}</action_input>
 """
 
         parsed = parser.parse(response_text)
@@ -77,9 +77,9 @@ Action Input: {'stato': 'da_inviare'}
         """Test case-insensitive parsing."""
         parser = ToolCallParser()
         response_text = """
-THOUGHT: Need to check something
-ACTION: get_invoice_stats
-ACTION INPUT: {"year": 2025}
+<THOUGHT>Need to check something</THOUGHT>
+<ACTION>get_invoice_stats</ACTION>
+<ACTION_INPUT>{"year": 2025}</ACTION_INPUT>
 """
 
         parsed = parser.parse(response_text)
@@ -92,9 +92,9 @@ ACTION INPUT: {"year": 2025}
         """Test parsing with Italian keywords."""
         parser = ToolCallParser()
         response_text = """
-Ragionamento: Devo cercare le fatture
-Action: search_invoices
-Action Input: {"limit": 10}
+<thought>Devo cercare le fatture</thought>
+<action>search_invoices</action>
+<action_input>{"limit": 10}</action_input>
 """
 
         parsed = parser.parse(response_text)
@@ -227,7 +227,7 @@ class TestXMLToolCallParser:
         assert parsed.tool_call.parameters == {}
 
     def test_parse_xml_metrics_tracking(self):
-        """Test that XML parsing is tracked separately."""
+        """Test that XML parsing is tracked."""
         parser = ToolCallParser()
 
         # Parse XML format
@@ -238,60 +238,37 @@ class TestXMLToolCallParser:
 """
         parser.parse(xml_response)
 
-        # Parse legacy format
-        legacy_response = "Thought: Test\nAction: tool2\nAction Input: {}"
-        parser.parse(legacy_response)
+        # Parse another XML format
+        xml_response2 = """
+<thought>Test2</thought>
+<action>tool2</action>
+<action_input>{"param": "value"}</action_input>
+"""
+        parser.parse(xml_response2)
 
         stats = parser.get_stats()
 
-        assert stats["xml_parse_count"] == 1
-        assert stats["legacy_parse_count"] == 1
-        assert stats["xml_parse_rate"] == 0.5  # 1 out of 2
+        assert stats["xml_parse_count"] == 2
+        assert stats["xml_parse_rate"] == 1.0  # All parses are XML
 
-    def test_fallback_to_legacy_when_xml_missing(self):
-        """Test fallback to legacy parsing when XML tags not found."""
+    def test_legacy_format_no_longer_supported(self):
+        """Test that legacy text format is no longer supported."""
         parser = ToolCallParser()
-        response_text = """
-I'll use the legacy format.
+        legacy_response = """
 Thought: Need to check something
 Action: get_data
 Action Input: {"id": 123}
 """
 
-        parsed = parser.parse(response_text)
+        parsed = parser.parse(legacy_response)
 
-        assert parsed.is_final is False
-        assert parsed.tool_call is not None
-        assert parsed.tool_call.tool_name == "get_data"
+        # Should be treated as final answer since no XML tags found
+        assert parsed.is_final is True
+        assert parsed.tool_call is None
 
-        # Verify legacy parsing was used
+        # Verify no parsing occurred
         stats = parser.get_stats()
-        assert stats["legacy_parse_count"] == 1
         assert stats["xml_parse_count"] == 0
-
-    def test_xml_priority_over_legacy(self):
-        """Test that XML parsing takes priority when both formats present."""
-        parser = ToolCallParser()
-        response_text = """
-<thought>XML format</thought>
-<action>xml_tool</action>
-<action_input>{"xml": true}</action_input>
-
-Thought: Legacy format
-Action: legacy_tool
-Action Input: {"legacy": true}
-"""
-
-        parsed = parser.parse(response_text)
-
-        # Should parse XML first
-        assert parsed.is_final is False
-        assert parsed.tool_call.tool_name == "xml_tool"
-        assert parsed.tool_call.parameters == {"xml": True}
-
-        stats = parser.get_stats()
-        assert stats["xml_parse_count"] == 1
-        assert stats["legacy_parse_count"] == 0
 
     def test_xml_with_multiline_thought(self):
         """Test XML parsing with multiline thought content."""
@@ -422,7 +399,7 @@ class TestReActIntegration:
 
     async def test_react_system_prompt_includes_tools(self):
         """Test that ReAct system prompt includes tool descriptions."""
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import MagicMock
 
         from openfatture.ai.domain.context import ChatContext
         from openfatture.ai.orchestration.react import ReActOrchestrator
@@ -462,18 +439,18 @@ class TestReActIntegration:
         assert "get_invoice_details" in system_prompt
 
     async def test_parser_handles_multiple_formats(self):
-        """Test parser robustness with various response formats."""
+        """Test parser robustness with various XML response formats."""
         parser = ToolCallParser()
 
         formats = [
-            # Standard format
-            """Thought: Test\nAction: tool1\nAction Input: {"key": "value"}""",
+            # Standard XML format
+            """<thought>Test</thought><action>tool1</action><action_input>{"key": "value"}</action_input>""",
             # With extra whitespace
-            """  Thought:   Test  \n  Action:  tool1  \n  Action Input:  {"key": "value"}  """,
-            # Uppercase keywords
-            """THOUGHT: Test\nACTION: tool1\nACTION INPUT: {"key": "value"}""",
-            # Mixed case
-            """ThOuGhT: Test\nActiOn: tool1\nAction InPut: {"key": "value"}""",
+            """  <thought>   Test  </thought>  <action>  tool1  </action>  <action_input>  {"key": "value"}  </action_input>  """,
+            # Uppercase XML tags
+            """<THOUGHT>Test</THOUGHT><ACTION>tool1</ACTION><ACTION_INPUT>{"key": "value"}</ACTION_INPUT>""",
+            # Mixed case XML tags
+            """<ThOuGhT>Test</ThOuGhT><ActiOn>tool1</ActiOn><Action_InPut>{"key": "value"}</Action_InPut>""",
         ]
 
         for response_text in formats:

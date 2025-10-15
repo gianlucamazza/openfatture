@@ -15,7 +15,8 @@ from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.orchestration.parsers import ToolCallParser
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.tools.registry import ToolRegistry
-from openfatture.utils.logging import get_logger
+from openfatture.utils.config import DebugConfig
+from openfatture.utils.logging import get_dynamic_logger, get_logger
 
 logger = get_logger(__name__)
 
@@ -41,6 +42,7 @@ class ReActOrchestrator:
         tool_registry: ToolRegistry,
         max_iterations: int = 5,
         parser: ToolCallParser | None = None,
+        debug_config: DebugConfig | None = None,
     ) -> None:
         """
         Initialize ReAct orchestrator.
@@ -50,11 +52,16 @@ class ReActOrchestrator:
             tool_registry: Tool registry for executing tools
             max_iterations: Maximum ReAct loop iterations
             parser: Tool call parser (creates default if None)
+            debug_config: Debug configuration for tracing controls
         """
         self.provider = provider
         self.tool_registry = tool_registry
         self.max_iterations = max_iterations
         self.parser = parser or ToolCallParser()
+        self.debug_config = debug_config
+
+        # Get dynamic logger for this module
+        self.logger = get_dynamic_logger(__name__, debug_config)
 
         # Metrics tracking
         self.metrics = {
@@ -66,11 +73,12 @@ class ReActOrchestrator:
             "total_iterations": 0,
         }
 
-        logger.info(
+        self.logger.info(
             "react_orchestrator_initialized",
             provider=provider.provider_name,
             model=provider.model,
             max_iterations=max_iterations,
+            react_tracing_enabled=debug_config.enable_react_tracing if debug_config else False,
         )
 
     async def execute(self, context: ChatContext) -> str:
@@ -101,24 +109,33 @@ class ReActOrchestrator:
         while iteration < self.max_iterations:
             iteration += 1
 
-            logger.debug(
-                "react_iteration",
-                iteration=iteration,
-                max_iterations=self.max_iterations,
-                message_count=len(messages),
-            )
+            # Conditional debug logging based on configuration
+            if self.debug_config and self.debug_config.enable_react_tracing:
+                max_trace_iterations = self.debug_config.react_trace_max_iterations
+                if iteration <= max_trace_iterations:
+                    self.logger.debug(
+                        "react_iteration",
+                        iteration=iteration,
+                        max_iterations=self.max_iterations,
+                        message_count=len(messages),
+                        correlation_id=context.correlation_id,
+                    )
 
             # Get LLM response with temperature=0.0 for deterministic tool calling
             response = await self.provider.generate(messages=messages, temperature=0.0)
             response_text = response.content
 
-            # Log raw output for debugging
-            logger.debug(
-                "react_raw_response",
-                iteration=iteration,
-                response_preview=response_text[:500],
-                response_length=len(response_text),
-            )
+            # Conditional raw response logging
+            if self.debug_config and self.debug_config.enable_react_tracing:
+                max_trace_iterations = self.debug_config.react_trace_max_iterations
+                if iteration <= max_trace_iterations:
+                    self.logger.debug(
+                        "react_raw_response",
+                        iteration=iteration,
+                        response_preview=response_text[:500],
+                        response_length=len(response_text),
+                        correlation_id=context.correlation_id,
+                    )
 
             # Parse response
             parsed = self.parser.parse(response_text)
@@ -486,7 +503,7 @@ User: Mostrami le ultime 3 fatture
 
 <thought>Devo cercare le fatture più recenti usando search_invoices con limit=3</thought>
 <action>search_invoices</action>
-<action_input>{{"limit": 3, "order_by": "data_emissione"}}</action_input>
+<action_input>{{"limit": 3}}</action_input>
 
 Observation: [{{"numero": "003/2025", "cliente": "Acme Corp", "totale": 1200.0, "data": "2025-01-20"}}, {{"numero": "002/2025", "cliente": "Beta Ltd", "totale": 850.0, "data": "2025-01-15"}}, {{"numero": "001/2025", "cliente": "Gamma SpA", "totale": 2100.0, "data": "2025-01-10"}}]
 

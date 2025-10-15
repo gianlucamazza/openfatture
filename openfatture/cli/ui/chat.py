@@ -214,6 +214,10 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         """
         Process message with streaming response.
 
+        Best Practice (2025): Separate transient progress from persistent content.
+        - Progress indicators (🔧, ✅, ❌, 📊, ⏱️) are printed directly
+        - Content is streamed via Live display
+
         Args:
             context: Chat context
         """
@@ -221,17 +225,39 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 
         # Collect response chunks for session storage
         full_response = ""
+        content_chunks = []  # Only actual content (no progress messages)
 
         try:
             if self.agent is None:
                 raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
 
-            # Stream response with Live rendering
+            # Stream response with Live rendering for content
             with Live("", console=console, refresh_per_second=10) as live:
                 async for chunk in self.agent.execute_stream(context):
                     full_response += chunk
-                    # Update live display with markdown
-                    live.update(Markdown(full_response))
+
+                    # Detect progress messages vs content
+                    # Progress messages start with: \n\n🔧, \n  (numbered), "     " (indented results), \n📊, ⏱️
+                    is_progress = (
+                        chunk.startswith("\n\n🔧")
+                        or chunk.startswith("\n  ")
+                        or chunk.startswith("     ")
+                        or chunk.startswith("\n📊")
+                        or chunk.startswith("⏱️")
+                        or chunk.startswith("\n\n🤖 Continuando")
+                    )
+
+                    if is_progress:
+                        # Print progress directly (transient, outside Live)
+                        # Stop Live temporarily to print progress
+                        live.stop()
+                        console.print(chunk, end="", style="dim")
+                        live.start()
+                    else:
+                        # Accumulate content and update Live display
+                        content_chunks.append(chunk)
+                        if content_chunks:  # Only update if we have content
+                            live.update(Markdown("".join(content_chunks)))
 
             console.print()  # Add newline after response
 

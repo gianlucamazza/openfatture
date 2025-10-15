@@ -1,10 +1,8 @@
 """Tests for orchestration state models."""
 
-import pytest
-import sys
-from datetime import date, datetime
-from decimal import Decimal
 import importlib.util
+import sys
+from decimal import Decimal
 
 # Mock sklearn/scipy to avoid import issues
 sys.modules["sklearn"] = type(sys)("sklearn")
@@ -121,7 +119,7 @@ class TestBaseWorkflowState:
         state = BaseWorkflowState()
         state.add_error("Test error")
         assert state.errors == ["Test error"]
-        assert state.status == WorkflowStatus.FAILED
+        assert state.status == WorkflowStatus.FAILED.value
 
     def test_add_warning(self):
         """Test adding warnings to workflow state."""
@@ -133,7 +131,7 @@ class TestBaseWorkflowState:
         """Test marking workflow as completed."""
         state = BaseWorkflowState()
         state.mark_completed()
-        assert state.status == WorkflowStatus.COMPLETED
+        assert state.status == WorkflowStatus.COMPLETED.value
         assert state.completed_at is not None
 
 

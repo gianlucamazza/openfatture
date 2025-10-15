@@ -73,7 +73,7 @@ def create_sample_invoice(session: Session, numero: str = "001", year: int = 202
             denominazione="Acme Corporation S.r.l.",
             partita_iva="12345678901",
             codice_fiscale="ACMCRP80A01H501X",
-            codice_destinatario="XXXXXXX",
+            codice_destinatario="TESTCODE",
             indirizzo="Via Roma",
             numero_civico="123",
             cap="20100",
@@ -128,7 +128,7 @@ def create_sample_invoice(session: Session, numero: str = "001", year: int = 202
         modalita="Bonifico bancario",
         data_scadenza=date.today() + timedelta(days=30),
         iban="IT60X0542811101000000123456",
-        bic_swift="BPMOIT22XXX",
+        bic_swift="TESTBIC123",
         importo_da_pagare=Decimal("1220.00"),
         importo_pagato=Decimal("0.00"),
     )

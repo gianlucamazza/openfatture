@@ -53,6 +53,10 @@ from openfatture.storage.database.models import (
     TipoDocumento,
 )
 
+# Test constants - use secure test values
+TEST_CODICE_DESTINATARIO = "TESTCODE"
+TEST_BIC_SWIFT = "TESTBIC123"
+
 
 @pytest.fixture(scope="function")
 def db_session():
@@ -75,7 +79,7 @@ def sample_cliente(db_session):
         denominazione="ACME Corporation S.r.l.",
         partita_iva=piva_suffix,
         codice_fiscale=f"ACME{str(uuid.uuid4().int)[:12]}",
-        codice_destinatario="XXXXXXX",
+        codice_destinatario=TEST_CODICE_DESTINATARIO,
         indirizzo="Via Roma",
         numero_civico="123",
         cap="20100",
@@ -97,7 +101,7 @@ def sample_bank_account(db_session):
     account = BankAccount(
         name="Intesa Sanpaolo Business",
         iban=f"IT{str(uuid.uuid4().int)[:24]}",  # Generate unique IBAN
-        bic_swift="BPMOIT22XXX",
+        bic_swift=TEST_BIC_SWIFT,
         bank_name="Intesa Sanpaolo",
         currency="EUR",
         opening_balance=Decimal("10000.00"),

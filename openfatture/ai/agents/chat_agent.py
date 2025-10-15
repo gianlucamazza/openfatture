@@ -9,7 +9,9 @@ from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.orchestration.react import ReActOrchestrator
 from openfatture.ai.providers import BaseLLMProvider
 from openfatture.ai.tools import ToolRegistry, get_tool_registry
-from openfatture.utils.logging import get_logger
+from openfatture.utils.config import DebugConfig
+from openfatture.utils.logging import get_dynamic_logger, get_logger
+from openfatture.utils.metrics import MetricsTimer, get_metrics_collector, record_ai_request
 
 logger = get_logger(__name__)
 
@@ -46,6 +48,7 @@ class ChatAgent(BaseAgent[ChatContext]):
         tool_registry: ToolRegistry | None = None,
         enable_tools: bool = True,
         enable_streaming: bool = True,
+        debug_config: DebugConfig | None = None,
     ) -> None:
         """
         Initialize Chat Agent.
@@ -55,6 +58,7 @@ class ChatAgent(BaseAgent[ChatContext]):
             tool_registry: Tool registry (uses global if None)
             enable_tools: Enable tool calling
             enable_streaming: Enable streaming responses (default: True for better UX)
+            debug_config: Debug configuration for logging controls
         """
         # Agent configuration
         config = AgentConfig(
@@ -74,13 +78,18 @@ class ChatAgent(BaseAgent[ChatContext]):
         # Tool management
         self.tool_registry = tool_registry or get_tool_registry()
         self.enable_tools = enable_tools
+        self.debug_config = debug_config
 
-        logger.info(
+        # Get dynamic logger
+        self.logger = get_dynamic_logger(__name__, debug_config)
+
+        self.logger.info(
             "chat_agent_initialized",
             provider=provider.provider_name,
             model=provider.model,
             tools_enabled=enable_tools,
             streaming_enabled=enable_streaming,
+            chat_debug_enabled=debug_config.enable_chat_debug if debug_config else False,
         )
 
     async def validate_input(self, context: ChatContext) -> tuple[bool, str | None]:
@@ -104,12 +113,38 @@ class ChatAgent(BaseAgent[ChatContext]):
 
     async def execute(self, context: ChatContext, **kwargs: Any) -> AgentResponse:
         """Execute chat agent, injecting tool schemas when native tool calling is available."""
-        if self.enable_tools and self.provider.supports_tools and context.available_tools:
-            tool_kwargs = dict(kwargs)
-            tool_kwargs.setdefault("tools", self.get_tools_schema())
-            return await super().execute(context, **tool_kwargs)
+        collector = get_metrics_collector()
 
-        return await super().execute(context, **kwargs)
+        with MetricsTimer("chat_agent_execute", {"agent": self.config.name}):
+            try:
+                if self.enable_tools and self.provider.supports_tools and context.available_tools:
+                    tool_kwargs = dict(kwargs)
+                    tool_kwargs.setdefault("tools", self.get_tools_schema())
+                    response = await super().execute(context, **tool_kwargs)
+                else:
+                    response = await super().execute(context, **kwargs)
+
+                # Record successful execution
+                collector.increment_counter(
+                    "chat_agent_executions", tags={"agent": self.config.name, "success": "true"}
+                )
+                if hasattr(response, "usage") and response.usage:
+                    record_ai_request(
+                        provider=self.provider.provider_name,
+                        model=self.provider.model,
+                        tokens=response.usage.total_tokens,
+                        duration_ms=0,  # Would need to track timing separately
+                        success=True,
+                    )
+
+                return response
+
+            except Exception as e:
+                collector.increment_counter(
+                    "chat_agent_executions", tags={"agent": self.config.name, "success": "false"}
+                )
+                collector.record_error("chat_agent_error", str(e), {"agent": self.config.name})
+                raise
 
     async def execute_stream(self, context: ChatContext, **kwargs: Any) -> AsyncIterator[str]:
         """
@@ -145,6 +180,7 @@ class ChatAgent(BaseAgent[ChatContext]):
                 provider=self.provider,
                 tool_registry=self.tool_registry,
                 max_iterations=5,
+                debug_config=self.debug_config,
             )
 
             # Make sure we return something even if ReAct doesn't stream properly

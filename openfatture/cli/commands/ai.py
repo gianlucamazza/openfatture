@@ -15,14 +15,17 @@ from rich.panel import Panel
 from rich.table import Table
 
 from openfatture.ai.agents.chat_agent import ChatAgent
+from openfatture.ai.agents.compliance import ComplianceChecker
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
-from openfatture.ai.context import enrich_with_rag
+from openfatture.ai.context.enrichment import enrich_with_rag
 from openfatture.ai.domain.context import ChatContext, InvoiceContext, TaxContext
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.response import AgentResponse
-from openfatture.ai.orchestration.workflows import InvoiceCreationWorkflow
+from openfatture.ai.orchestration.workflows.invoice_creation import InvoiceCreationWorkflow
 from openfatture.ai.providers.factory import create_provider
-from openfatture.ai.rag import KnowledgeIndexer, get_rag_config
+from openfatture.ai.rag.config import get_rag_config
+from openfatture.ai.rag.knowledge_indexer import KnowledgeIndexer
+from openfatture.utils.config import get_settings
 from openfatture.utils.logging import get_logger
 
 app = typer.Typer()
@@ -744,7 +747,7 @@ async def _run_compliance_check(
     verbose: bool,
 ) -> None:
     """Run compliance check on invoice."""
-    from openfatture.ai.agents.compliance import ComplianceChecker, ComplianceLevel
+    from openfatture.ai.agents.compliance import ComplianceLevel
 
     # Parse level
     level_map = {
@@ -1047,9 +1050,13 @@ def ai_chat(
 async def _run_chat(message: str | None, stream: bool, json_output: bool) -> None:
     """Run interactive chat session."""
     try:
+        # Get debug configuration
+        settings = get_settings()
+        debug_config = settings.debug_config
+
         # Create chat agent
         provider = create_provider()
-        agent = ChatAgent(provider=provider, enable_streaming=stream)
+        agent = ChatAgent(provider=provider, enable_streaming=stream, debug_config=debug_config)
 
         if message:
             # Single message mode

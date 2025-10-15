@@ -17,7 +17,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from openfatture.ai.domain.context import ChatContext
-from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 from openfatture.ai.orchestration.react import ReActOrchestrator
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolResult
@@ -39,7 +38,7 @@ def mock_provider_for_react():
         """Pop next response from queue."""
         if not provider._response_queue:
             # Default final answer
-            content = "Final Answer: Default response"
+            content = "<final_answer>Default response</final_answer>"
         else:
             content = provider._response_queue.pop(0)
 
@@ -60,7 +59,7 @@ def mock_provider_for_react():
     async def mock_stream(messages, **kwargs):
         """Stream response word by word."""
         if not provider._response_queue:
-            content = "Final Answer: Default response"
+            content = "<final_answer>Default response</final_answer>"
         else:
             content = provider._response_queue.pop(0)
 
@@ -173,9 +172,9 @@ class TestReActExecute:
         # Setup provider responses
         mock_provider_for_react._response_queue = [
             # First iteration: tool call
-            "Thought: I need to get the invoice count\nAction: get_invoice_count\nAction Input: {}",
+            "<thought>I need to get the invoice count</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
             # Second iteration: final answer after seeing observation
-            "Final Answer: Hai emesso 42 fatture quest'anno.",
+            "<final_answer>Hai emesso 42 fatture quest'anno.</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -201,11 +200,11 @@ class TestReActExecute:
         """Test execute with multiple tool calls in sequence."""
         mock_provider_for_react._response_queue = [
             # First tool call
-            "Thought: Get count\nAction: get_invoice_count\nAction Input: {}",
+            "<thought>Get count</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
             # Second tool call
-            'Thought: Search details\nAction: search_invoices\nAction Input: {"limit": 2}',
+            '<thought>Search details</thought>\n<action>search_invoices</action>\n<action_input>{"limit": 2}</action_input>',
             # Final answer
-            "Final Answer: Hai 42 fatture, ultime 2: 001/2025 e 002/2025",
+            "<final_answer>Hai 42 fatture, ultime 2: 001/2025 e 002/2025</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -227,9 +226,9 @@ class TestReActExecute:
         """Test execute when max iterations is reached without final answer."""
         # Provider keeps making tool calls without final answer
         mock_provider_for_react._response_queue = [
-            "Thought: Call 1\nAction: get_invoice_count\nAction Input: {}",
-            "Thought: Call 2\nAction: get_invoice_count\nAction Input: {}",
-            "Thought: Call 3\nAction: get_invoice_count\nAction Input: {}",
+            "<thought>Call 1</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
+            "<thought>Call 2</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
+            "<thought>Call 3</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -251,9 +250,9 @@ class TestReActExecute:
         """Test execute when tool execution fails."""
         mock_provider_for_react._response_queue = [
             # Call unknown tool
-            "Thought: Try unknown\nAction: unknown_tool\nAction Input: {}",
+            "<thought>Try unknown</thought>\n<action>unknown_tool</action>\n<action_input>{}</action_input>",
             # LLM should handle error and provide final answer
-            "Final Answer: Mi dispiace, non posso recuperare quel dato.",
+            "<final_answer>Mi dispiace, non posso recuperare quel dato.</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -275,7 +274,7 @@ class TestReActExecute:
     ):
         """Test execute when LLM gives immediate final answer (no tools needed)."""
         mock_provider_for_react._response_queue = [
-            "Final Answer: OpenFatture è un sistema di fatturazione elettronica.",
+            "<final_answer>OpenFatture è un sistema di fatturazione elettronica.</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -321,8 +320,8 @@ class TestReActStream:
     ):
         """Test basic streaming with tool call and final answer."""
         mock_provider_for_react._response_queue = [
-            "Thought: Check count\nAction: get_invoice_count\nAction Input: {}",
-            "Final Answer: Hai emesso 42 fatture",
+            "<thought>Check count</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
+            "<final_answer>Hai emesso 42 fatture</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -348,7 +347,7 @@ class TestReActStream:
     ):
         """Test streaming with immediate final answer (no tools)."""
         mock_provider_for_react._response_queue = [
-            "Final Answer: La risposta è semplice e diretta",
+            "<final_answer>La risposta è semplice e diretta</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -371,8 +370,8 @@ class TestReActStream:
     ):
         """Test streaming when max iterations is reached."""
         mock_provider_for_react._response_queue = [
-            "Thought: Try 1\nAction: get_invoice_count\nAction Input: {}",
-            "Thought: Try 2\nAction: get_invoice_count\nAction Input: {}",
+            "<thought>Try 1</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
+            "<thought>Try 2</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -403,7 +402,7 @@ class TestReActIntegration:
         real_registry = ToolRegistry()
 
         mock_provider_for_react._response_queue = [
-            "Final Answer: No tools available, answering directly",
+            "<final_answer>No tools available, answering directly</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -479,7 +478,9 @@ class TestReActIntegration:
         assert "totale=1200" in result
         assert "numero=002" in result
 
-    async def test_react_format_observation_empty(self, mock_provider_for_react, mock_tool_registry):
+    async def test_react_format_observation_empty(
+        self, mock_provider_for_react, mock_tool_registry
+    ):
         """Test observation formatting for None/empty data."""
         orchestrator = ReActOrchestrator(
             provider=mock_provider_for_react,
@@ -511,11 +512,11 @@ class TestReActIntegration:
         """Test that metrics are tracked correctly during execution."""
         mock_provider_for_react._response_queue = [
             # First: tool call (success)
-            "Thought: Get count\nAction: get_invoice_count\nAction Input: {}",
+            "<thought>Get count</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
             # Second: another tool call (success)
-            'Thought: Search\nAction: search_invoices\nAction Input: {"limit": 2}',
+            '<thought>Search</thought>\n<action>search_invoices</action>\n<action_input>{"limit": 2}</action_input>',
             # Third: final answer
-            "Final Answer: Found results",
+            "<final_answer>Found results</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -543,6 +544,7 @@ class TestReActIntegration:
         self, mock_provider_for_react, mock_tool_registry, sample_chat_context
     ):
         """Test metrics tracking when tool calls fail."""
+
         # Setup tool to fail
         async def mock_execute_fail(tool_name, parameters, confirm=False):
             return ToolResult(
@@ -555,9 +557,9 @@ class TestReActIntegration:
 
         mock_provider_for_react._response_queue = [
             # Tool call (will fail)
-            "Thought: Try\nAction: get_invoice_count\nAction Input: {}",
+            "<thought>Try</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
             # Final answer after failure
-            "Final Answer: Could not complete",
+            "<final_answer>Could not complete</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -581,8 +583,8 @@ class TestReActIntegration:
         """Test metrics when max iterations is reached."""
         # Setup infinite loop (no final answer)
         mock_provider_for_react._response_queue = [
-            "Thought: 1\nAction: get_invoice_count\nAction Input: {}",
-            "Thought: 2\nAction: get_invoice_count\nAction Input: {}",
+            "<thought>1</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
+            "<thought>2</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -608,6 +610,7 @@ class TestReActErrorHandling:
         self, mock_provider_for_react, mock_tool_registry, sample_chat_context
     ):
         """Test that ReAct handles tool execution exceptions gracefully."""
+
         # Make tool raise exception
         async def mock_execute_with_error(tool_name, parameters, confirm=False):
             raise RuntimeError("Tool execution failed!")
@@ -615,8 +618,8 @@ class TestReActErrorHandling:
         mock_tool_registry.execute_tool = AsyncMock(side_effect=mock_execute_with_error)
 
         mock_provider_for_react._response_queue = [
-            "Thought: Try tool\nAction: get_invoice_count\nAction Input: {}",
-            "Final Answer: Error occurred, cannot complete",
+            "<thought>Try tool</thought>\n<action>get_invoice_count</action>\n<action_input>{}</action_input>",
+            "<final_answer>Error occurred, cannot complete</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(
@@ -638,8 +641,8 @@ class TestReActErrorHandling:
         """Test parsing of invalid JSON in Action Input."""
         mock_provider_for_react._response_queue = [
             # Invalid JSON (will be handled by parser)
-            "Thought: Try\nAction: search_invoices\nAction Input: {invalid json}",
-            "Final Answer: Completed",
+            "<thought>Try</thought>\n<action>search_invoices</action>\n<action_input>{invalid json}</action_input>",
+            "<final_answer>Completed</final_answer>",
         ]
 
         orchestrator = ReActOrchestrator(

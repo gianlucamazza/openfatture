@@ -236,7 +236,7 @@ class TestAICheckCommandValidation:
         assert result.exit_code != 0
         # Should show argument type conversion error
 
-    @patch("openfatture.cli.commands.ai.ComplianceChecker")
+    @patch("openfatture.ai.agents.compliance.ComplianceChecker")
     def test_check_valid_invoice_id(self, mock_checker_class):
         """Test check command with valid invoice ID."""
         # Mock checker
@@ -246,12 +246,17 @@ class TestAICheckCommandValidation:
         mock_report.level = Mock()
         mock_report.level.value = "standard"
         mock_report.is_compliant = True
-        mock_report.compliance_score = 95.0
-        mock_report.get_errors = Mock(return_value=[])
-        mock_report.get_warnings = Mock(return_value=[])
-        mock_report.get_info = Mock(return_value=[])
+        # Set actual values for comparison
+        type(mock_report).compliance_score = 95.0
+        type(mock_report).risk_score = 10.0
+        mock_report.risk_score = 10.0
+        mock_report.get_errors.return_value = []
+        mock_report.get_warnings.return_value = []
+        mock_report.get_info.return_value = []
         mock_report.to_dict = Mock(return_value={})
-        mock_checker.check_invoice.return_value = mock_report
+        mock_report.sdi_pattern_matches = []
+        mock_report.recommendations = []
+        mock_checker.check_invoice = AsyncMock(return_value=mock_report)
         mock_checker_class.return_value = mock_checker
 
         result = runner.invoke(app, ["check", "123"])
@@ -259,7 +264,7 @@ class TestAICheckCommandValidation:
         assert result.exit_code == 0
         assert "Compliance Check" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.ComplianceChecker")
+    @patch("openfatture.ai.agents.compliance.ComplianceChecker")
     def test_check_invalid_level(self, mock_checker_class):
         """Test check command with invalid level."""
         result = runner.invoke(app, ["check", "123", "--level", "invalid_level"])

@@ -21,7 +21,7 @@ from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.message import ConversationHistory
 from openfatture.ai.orchestration.react import ReActOrchestrator
 from openfatture.ai.providers.ollama import OllamaProvider
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolResult
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
 from openfatture.ai.tools.registry import ToolRegistry
 
 
@@ -104,7 +104,7 @@ def tool_registry_with_mock_tools():
         """Get invoice statistics for a specific year."""
         return mock_invoice_stats
 
-    def search_invoices(limit: int = 10, stato: str = None):
+    def search_invoices(limit: int = 10, stato: str | None = None, **kwargs):
         """Search invoices with optional filters."""
         results = mock_invoices[:limit]
         if stato:
@@ -118,7 +118,7 @@ def tool_registry_with_mock_tools():
                 return inv
         return {"error": f"Invoice {numero} not found"}
 
-    def search_clients(query: str = None, limit: int = 10):
+    def search_clients(query: str | None = None, limit: int = 10):
         """Search clients."""
         if query:
             results = [c for c in mock_clients if query.lower() in c["denominazione"].lower()]
@@ -249,9 +249,9 @@ class TestReActOllamaSingleToolCall:
         # Check parser stats
         stats = orchestrator.parser.get_stats()
         assert stats["total_parses"] > 0
-        # Should prefer XML parsing with qwen3:8b
-        if stats["xml_parse_count"] + stats["legacy_parse_count"] > 0:
-            assert stats["xml_parse_rate"] >= 0.5  # At least 50% XML
+        # Should use XML parsing with qwen3:8b (legacy removed)
+        if stats["xml_parse_count"] > 0:
+            assert stats["xml_parse_rate"] >= 0.8  # At least 80% XML (legacy removed)
 
     async def test_search_invoices_with_limit(
         self, ollama_qwen3_provider, tool_registry_with_mock_tools
@@ -275,9 +275,7 @@ class TestReActOllamaSingleToolCall:
         assert result is not None
         assert any(inv_num in result for inv_num in ["003/2025", "002/2025"])
 
-    async def test_client_search(
-        self, ollama_qwen3_provider, tool_registry_with_mock_tools
-    ):
+    async def test_client_search(self, ollama_qwen3_provider, tool_registry_with_mock_tools):
         """Test ReAct searches clients correctly."""
         orchestrator = ReActOrchestrator(
             provider=ollama_qwen3_provider,
@@ -376,12 +374,12 @@ class TestReActOllamaXMLCompliance:
 
         assert result is not None
 
-        # Check that XML parsing was used
+        # Check that XML parsing was used (legacy removed)
         stats = orchestrator.parser.get_stats()
-        if stats["xml_parse_count"] + stats["legacy_parse_count"] > 0:
+        if stats["xml_parse_count"] > 0:
             # qwen3:8b should generate XML format most of the time
             xml_rate = stats["xml_parse_rate"]
-            assert xml_rate >= 0.6, f"XML parse rate too low: {xml_rate:.2f}"
+            assert xml_rate >= 0.8, f"XML parse rate too low: {xml_rate:.2f}"
 
 
 @pytest.mark.asyncio
@@ -450,7 +448,9 @@ class TestReActOllamaSuccessRate:
                 pass
 
         success_rate = successes / total
-        assert success_rate >= 0.8, f"Tool calling success rate too low: {success_rate:.2%} (expected ≥80%)"
+        assert (
+            success_rate >= 0.8
+        ), f"Tool calling success rate too low: {success_rate:.2%} (expected ≥80%)"
 
         # Print stats for analysis
         print(f"\n✅ Success Rate: {success_rate:.2%} ({successes}/{total})")
@@ -485,9 +485,7 @@ class TestReActOllamaErrorHandling:
         assert result is not None
         assert len(result) > 0
 
-    async def test_max_iterations_limit(
-        self, ollama_qwen3_provider, tool_registry_with_mock_tools
-    ):
+    async def test_max_iterations_limit(self, ollama_qwen3_provider, tool_registry_with_mock_tools):
         """Test that max_iterations prevents infinite loops."""
         orchestrator = ReActOrchestrator(
             provider=ollama_qwen3_provider,
@@ -496,7 +494,7 @@ class TestReActOllamaErrorHandling:
         )
 
         context = ChatContext(
-            user_input="Analizza tutte le fatture in dettaglio",
+            user_input="Prima ottieni le statistiche delle fatture, poi cerca tutte le fatture, quindi analizza i dettagli di ogni fattura una per una e fornisci un riassunto completo",
             enable_tools=True,
             conversation_history=ConversationHistory(),
         )

@@ -8,10 +8,12 @@ Best practices 2025:
 - Performance metrics
 """
 
+import json
 import logging
 import sys
 import uuid
 from contextvars import ContextVar
+from logging.handlers import RotatingFileHandler
 from typing import Any, cast
 
 import structlog
@@ -261,6 +263,130 @@ def log_sdi_notification(
         notification_type=notification_type,
         status=status,
     )
+
+
+def configure_dynamic_logging(debug_config) -> None:
+    """
+    Configure logging with dynamic debug controls.
+
+    Args:
+        debug_config: Debug configuration instance
+    """
+    logger = get_logger(__name__)
+    # Determine base log level
+    base_log_level = "DEBUG" if debug_config.enable_debug_logging else "INFO"
+
+    # Configure with file logging if enabled
+    handlers = []
+
+    if debug_config.log_to_file:
+        # Create rotating file handler
+        file_handler = RotatingFileHandler(
+            filename=str(debug_config.log_file_path),
+            maxBytes=debug_config.log_file_max_size_mb * 1024 * 1024,
+            backupCount=debug_config.log_file_backup_count,
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
+        handlers.append(file_handler)
+
+    # Configure logging
+    configure_logging(
+        log_level=base_log_level,
+        json_logs=False,  # Keep human-readable for now
+        dev_mode=True,  # Enable colors and development format
+    )
+
+    # Add file handler to root logger if file logging enabled
+    if handlers:
+        root_logger = logging.getLogger()
+        for handler in handlers:
+            root_logger.addHandler(handler)
+
+    # Set module-specific log levels
+    if debug_config.log_level_per_module:
+        try:
+            module_levels = json.loads(debug_config.log_level_per_module)
+            for module_name, level in module_levels.items():
+                logging.getLogger(module_name).setLevel(getattr(logging, level.upper()))
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning("invalid_module_log_levels", error=str(e))
+
+
+def cleanup_old_logs(debug_config, max_age_days: int = 30) -> int:
+    """
+    Clean up old log files beyond retention period.
+
+    Args:
+        debug_config: Debug configuration instance
+        max_age_days: Maximum age of log files to keep
+
+    Returns:
+        Number of files cleaned up
+    """
+    import time
+
+    logger = get_logger(__name__)
+
+    if not debug_config.log_to_file:
+        return 0
+
+    log_dir = debug_config.log_file_path.parent
+
+    cleaned_count = 0
+    current_time = time.time()
+    max_age_seconds = max_age_days * 24 * 60 * 60
+
+    # Find all log files matching pattern
+    for log_file in log_dir.glob(
+        f"{debug_config.log_file_path.stem}*{debug_config.log_file_path.suffix}"
+    ):
+        if log_file.is_file():
+            # Check file age
+            file_age = current_time - log_file.stat().st_mtime
+            if file_age > max_age_seconds:
+                try:
+                    log_file.unlink()
+                    cleaned_count += 1
+                    logger.info(
+                        "old_log_file_cleaned",
+                        file_path=str(log_file),
+                        age_days=file_age / (24 * 60 * 60),
+                    )
+                except OSError as e:
+                    logger.warning(
+                        "failed_to_clean_log_file",
+                        file_path=str(log_file),
+                        error=str(e),
+                    )
+
+    return cleaned_count
+
+
+def get_dynamic_logger(name: str, debug_config=None) -> structlog.stdlib.BoundLogger:
+    """
+    Get a logger with dynamic debug controls.
+
+    Args:
+        name: Logger name (usually __name__)
+        debug_config: Optional debug config override
+
+    Returns:
+        Configured logger instance
+    """
+    logger_instance = get_logger(name)
+
+    # Apply module-specific log level if configured
+    if debug_config:
+        module_level = debug_config.get_module_log_level(name)
+        if module_level:
+            # Set level on the underlying stdlib logger
+            stdlib_logger = logging.getLogger(name)
+            stdlib_logger.setLevel(getattr(logging, module_level.upper()))
+
+    return logger_instance
 
 
 # Initialize logging on module import

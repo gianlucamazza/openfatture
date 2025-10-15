@@ -51,6 +51,9 @@ from openfatture.storage.database import base as db_base
 from openfatture.storage.database import init_db
 from openfatture.storage.database.models import Pagamento
 
+# Test constants - use secure test values
+TEST_BIC_SWIFT = "TESTBIC123"
+
 if TYPE_CHECKING:
     pass
 
@@ -162,7 +165,7 @@ async def example_1_basic_workflow():
         account = BankAccount(
             name="Intesa Sanpaolo Business",
             iban="IT60X0542811101000000123456",
-            bic_swift="BPMOIT22XXX",
+            bic_swift=TEST_BIC_SWIFT,
             bank_name="Intesa Sanpaolo",
             currency="EUR",
             opening_balance=Decimal("10000.00"),
@@ -211,8 +214,7 @@ async def example_1_basic_workflow():
         print(f"✅ Imported {len(transactions)} transactions")
         for tx in transactions[:3]:  # Show first 3
             print(
-                f"   • {tx.date}: €{tx.amount:,.2f} - {tx.description[:40]}... "
-                f"({tx.status.value})"
+                f"   • {tx.date}: €{tx.amount:,.2f} - {tx.description[:40]}... ({tx.status.value})"
             )
 
         # STEP 2: Auto-match transactions with payments
@@ -483,9 +485,7 @@ async def example_3_matching_strategies():
             # Show best match
             best = max([exact_match, fuzzy_match, iban_match], key=lambda m: m.confidence)
             if best.confidence > 0.5:
-                print(
-                    f"   ✅ Best: {best.match_type.value} " f"(confidence: {best.confidence:.1%})"
-                )
+                print(f"   ✅ Best: {best.match_type.value} (confidence: {best.confidence:.1%})")
             print()
 
     finally:
@@ -660,7 +660,8 @@ async def example_5_batch_operations():
 
         for account in accounts:
             result = await reconciliation_service.reconcile_batch(
-                account_id=account.id, auto_apply=False  # Just analyze, don't auto-apply
+                account_id=account.id,
+                auto_apply=False,  # Just analyze, don't auto-apply
             )
 
             print(f"\n   Account: {account.name}")

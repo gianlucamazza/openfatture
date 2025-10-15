@@ -59,8 +59,9 @@ class OllamaProvider(BaseLLMProvider):
             timeout=timeout,
         )
 
-        # HTTP client for Ollama API
-        self.client = httpx.AsyncClient(base_url=base_url, timeout=timeout)
+        # Store config, create client per request to avoid event loop issues
+        self._base_url = base_url
+        self._timeout = timeout
 
     async def generate(
         self,
@@ -83,54 +84,55 @@ class OllamaProvider(BaseLLMProvider):
                 prompt_length=len(prompt),
             )
 
-            # Call Ollama generate API
-            response = await self.client.post(
-                "/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "temperature": self._get_temperature(temperature),
-                    "num_predict": self._get_max_tokens(max_tokens),
-                    "stream": False,
-                    **kwargs,
-                },
-            )
+            # Create fresh client for each request to avoid event loop issues
+            async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
+                response = await client.post(
+                    "/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": prompt,
+                        "temperature": self._get_temperature(temperature),
+                        "num_predict": self._get_max_tokens(max_tokens),
+                        "stream": False,
+                        **kwargs,
+                    },
+                )
+                response.raise_for_status()
 
-            response.raise_for_status()
-            data = response.json()
+                data = response.json()
 
-            # Extract response
-            content = data.get("response", "")
+                # Extract response
+                content = data.get("response", "")
 
-            # Estimate token usage (Ollama doesn't provide exact counts)
-            prompt_tokens = self.count_tokens(prompt)
-            completion_tokens = self.count_tokens(content)
+                # Estimate token usage (Ollama doesn't provide exact counts)
+                prompt_tokens = self.count_tokens(prompt)
+                completion_tokens = self.count_tokens(content)
 
-            usage = UsageMetrics(
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                total_tokens=prompt_tokens + completion_tokens,
-                estimated_cost_usd=0.0,  # Free for local models
-            )
+                usage = UsageMetrics(
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=prompt_tokens + completion_tokens,
+                    estimated_cost_usd=0.0,  # Free for local models
+                )
 
-            # Calculate latency
-            latency_ms = (time.time() - start_time) * 1000
+                # Calculate latency
+                latency_ms = (time.time() - start_time) * 1000
 
-            logger.info(
-                "ollama_request_completed",
-                model=self.model,
-                tokens=usage.total_tokens,
-                latency_ms=latency_ms,
-            )
+                logger.info(
+                    "ollama_request_completed",
+                    model=self.model,
+                    tokens=usage.total_tokens,
+                    latency_ms=latency_ms,
+                )
 
-            return AgentResponse(
-                content=content,
-                status=ResponseStatus.SUCCESS,
-                model=self.model,
-                provider=self.provider_name,
-                usage=usage,
-                latency_ms=latency_ms,
-            )
+                return AgentResponse(
+                    content=content,
+                    status=ResponseStatus.SUCCESS,
+                    model=self.model,
+                    provider=self.provider_name,
+                    usage=usage,
+                    latency_ms=latency_ms,
+                )
 
         except httpx.TimeoutException as e:
             logger.error("ollama_timeout", error=str(e))
@@ -194,38 +196,39 @@ class OllamaProvider(BaseLLMProvider):
                 prompt_length=len(prompt),
             )
 
-            # Stream API call
-            async with self.client.stream(
-                "POST",
-                "/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "temperature": self._get_temperature(temperature),
-                    "num_predict": self._get_max_tokens(max_tokens),
-                    "stream": True,
-                    **kwargs,
-                },
-            ) as response:
-                response.raise_for_status()
+            # Stream API call with fresh client
+            async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
+                async with client.stream(
+                    "POST",
+                    "/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": prompt,
+                        "temperature": self._get_temperature(temperature),
+                        "num_predict": self._get_max_tokens(max_tokens),
+                        "stream": True,
+                        **kwargs,
+                    },
+                ) as response:
+                    response.raise_for_status()
 
-                async for line in response.aiter_lines():
-                    if line:
-                        import json
+                    async for line in response.aiter_lines():
+                        if line:
+                            import json
 
-                        try:
-                            data = json.loads(line)
-                            if "response" in data:
-                                yield data["response"]
+                            try:
+                                data = json.loads(line)
+                                if "response" in data:
+                                    yield data["response"]
 
-                            # Check if done
-                            if data.get("done", False):
-                                break
+                                # Check if done
+                                if data.get("done", False):
+                                    break
 
-                        except json.JSONDecodeError:
-                            continue
+                            except json.JSONDecodeError:
+                                continue
 
-            logger.info("ollama_stream_completed", model=self.model)
+                logger.info("ollama_stream_completed", model=self.model)
 
         except Exception as e:
             logger.error("ollama_stream_error", error=str(e))
@@ -251,8 +254,9 @@ class OllamaProvider(BaseLLMProvider):
     async def health_check(self) -> bool:
         """Check if Ollama server is accessible."""
         try:
-            response = await self.client.get("/api/tags")
-            return response.status_code == 200
+            async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
+                response = await client.get("/api/tags")
+                return response.status_code == 200
 
         except Exception as e:
             logger.warning("ollama_health_check_failed", error=str(e))
@@ -325,11 +329,12 @@ class OllamaProvider(BaseLLMProvider):
             List of model names
         """
         try:
-            response = await self.client.get("/api/tags")
-            response.raise_for_status()
+            async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
+                response = await client.get("/api/tags")
+                response.raise_for_status()
 
-            data = response.json()
-            models = [model["name"] for model in data.get("models", [])]
+                data = response.json()
+                models = [model["name"] for model in data.get("models", [])]
 
             return models
 
@@ -395,5 +400,5 @@ class OllamaProvider(BaseLLMProvider):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit - close HTTP client."""
-        await self.client.aclose()
+        """Async context manager exit - no persistent client to close."""
+        pass

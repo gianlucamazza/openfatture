@@ -3,6 +3,10 @@
 Provides interactive AI tools for invoice management and tax compliance.
 """
 
+import asyncio
+from collections.abc import Callable
+from typing import Any
+
 import streamlit as st
 
 from openfatture.web.services.ai_service import get_ai_service
@@ -10,6 +14,96 @@ from openfatture.web.utils.state import (
     clear_conversation_history,
     init_conversation_history,
 )
+
+
+async def retry_with_backoff(
+    func: Callable[[], Any],
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 10.0,
+    backoff_factor: float = 2.0,
+) -> Any:
+    """
+    Execute a function with exponential backoff retry logic.
+
+    Args:
+        func: Async function to execute
+        max_retries: Maximum number of retry attempts
+        base_delay: Initial delay between retries (seconds)
+        max_delay: Maximum delay between retries (seconds)
+        backoff_factor: Factor to multiply delay by on each retry
+
+    Returns:
+        Result of the function call
+
+    Raises:
+        Exception: Last exception if all retries fail
+    """
+    last_exception = None
+    delay = base_delay
+
+    for attempt in range(max_retries + 1):
+        try:
+            return await func()
+        except Exception as e:
+            last_exception = e
+
+            if attempt == max_retries:
+                # Last attempt failed
+                raise e
+
+            # Calculate delay with exponential backoff
+            delay = min(delay * backoff_factor, max_delay)
+
+            # Show retry message to user
+            retry_msg = (
+                f"🔄 Tentativo {attempt + 1}/{max_retries + 1} fallito. Riprovo tra {delay:.1f}s..."
+            )
+            st.warning(retry_msg)
+
+            # Wait before retry
+            await asyncio.sleep(delay)
+
+    # This should never be reached, but just in case
+    if last_exception:
+        raise last_exception
+    else:
+        raise RuntimeError("Retry logic failed with unknown error")
+
+
+def handle_chat_error(error: Exception, context: str = "chat") -> str:
+    """
+    Handle chat-related errors with user-friendly messages.
+
+    Args:
+        error: The exception that occurred
+        context: Context where the error occurred
+
+    Returns:
+        User-friendly error message
+    """
+    error_str = str(error).lower()
+
+    # Network/API errors
+    if any(keyword in error_str for keyword in ["connection", "timeout", "network", "api"]):
+        return "🌐 Errore di connessione. Verifica la tua connessione internet e riprova."
+
+    # Authentication errors
+    elif any(keyword in error_str for keyword in ["auth", "token", "key", "unauthorized"]):
+        return "🔐 Errore di autenticazione. Verifica le tue credenziali AI."
+
+    # Rate limiting
+    elif any(keyword in error_str for keyword in ["rate", "limit", "quota"]):
+        return "⏱️ Limite di richieste raggiunto. Riprova tra qualche minuto."
+
+    # Model/service unavailable
+    elif any(keyword in error_str for keyword in ["model", "service", "unavailable"]):
+        return "🚫 Servizio temporaneamente non disponibile. Riprova più tardi."
+
+    # Generic error
+    else:
+        return f"❌ Errore imprevisto: {str(error)[:100]}..."
+
 
 st.set_page_config(page_title="AI Assistant - OpenFatture", page_icon="🤖", layout="wide")
 
@@ -82,17 +176,90 @@ with tab1:
                 with st.chat_message("assistant", avatar="🤖"):
                     st.markdown(content)
 
+    # File upload section
+    with st.expander("📎 Allega File (Opzionale)", expanded=False):
+        uploaded_file = st.file_uploader(
+            "Carica un documento per discuterne con l'AI",
+            type=["pdf", "txt", "md", "png", "jpg", "jpeg"],
+            help="Supporta PDF, testo, immagini e altri documenti",
+            key="file_upload",
+        )
+
+        if uploaded_file:
+            file_details = {
+                "name": uploaded_file.name,
+                "type": uploaded_file.type,
+                "size": uploaded_file.size,
+            }
+            st.success(f"📄 File caricato: {file_details['name']} ({file_details['size']} bytes)")
+
+            # Store file in session state for processing
+            if "uploaded_files" not in st.session_state:
+                st.session_state.uploaded_files = []
+            st.session_state.uploaded_files.append({"file": uploaded_file, "details": file_details})
+            st.rerun()  # Refresh to show updated file list
+
+    # Show currently uploaded files
+    if "uploaded_files" in st.session_state and st.session_state.uploaded_files:
+        st.markdown("### 📎 File Allegati")
+        cols = st.columns([3, 1])
+
+        with cols[0]:
+            for i, file_data in enumerate(st.session_state.uploaded_files):
+                file_type = file_data["details"]["type"]
+                if file_type.startswith("image/"):
+                    st.image(file_data["file"], caption=file_data["details"]["name"], width=150)
+                else:
+                    st.info(
+                        f"📄 {file_data['details']['name']} ({file_data['details']['size']} bytes)"
+                    )
+
+        with cols[1]:
+            if st.button("🗑️ Cancella Tutti", use_container_width=True):
+                st.session_state.uploaded_files = []
+                st.success("File cancellati!")
+                st.rerun()
+
     # Chat input
     user_input = st.chat_input("Scrivi il tuo messaggio...", key="chat_input")
 
     if user_input:
+        # Process uploaded files if any
+        attached_files = []
+        if "uploaded_files" in st.session_state and st.session_state.uploaded_files:
+            attached_files = st.session_state.uploaded_files.copy()
+            # Clear uploaded files after processing
+            st.session_state.uploaded_files = []
+
+        # Prepare message content with file information
+        message_content = user_input
+        if attached_files:
+            file_info = "\n\n📎 File allegati:\n" + "\n".join(
+                [f"- {f['details']['name']} ({f['details']['type']})" for f in attached_files]
+            )
+            message_content += file_info
+
         # Add user message to history
-        history.append({"role": "user", "content": user_input})
+        history.append({"role": "user", "content": message_content})
 
         # Display user message
         with chat_container:
             with st.chat_message("user", avatar="🧑"):
-                st.markdown(user_input)
+                st.markdown(message_content)
+
+                # Show file attachments
+                if attached_files:
+                    st.markdown("**Allegati:**")
+                    for file_data in attached_files:
+                        file_type = file_data["details"]["type"]
+                        if file_type.startswith("image/"):
+                            st.image(
+                                file_data["file"], caption=file_data["details"]["name"], width=200
+                            )
+                        else:
+                            st.info(
+                                f"📄 {file_data['details']['name']} ({file_data['details']['size']} bytes)"
+                            )
 
         # Get AI response with streaming
         with chat_container:
@@ -100,24 +267,42 @@ with tab1:
                 response_placeholder = st.empty()
                 full_response = ""
 
-                # Stream response
+                # Stream response with retry logic
                 with st.spinner("Pensando..."):
                     try:
-                        import asyncio
 
                         async def stream_chat():
                             chunks = []
-                            async for chunk in ai_service.chat_stream(user_input, history[:-1]):
+                            # For now, pass the message with file info as text
+                            # Future enhancement: implement proper file processing
+                            async for chunk in ai_service.chat_stream(
+                                message_content, history[:-1]
+                            ):
                                 chunks.append(chunk)
                                 response_placeholder.markdown("".join(chunks) + "▌")
                             return "".join(chunks)
 
-                        full_response = asyncio.run(stream_chat())
+                        # Execute with retry logic
+                        full_response = asyncio.run(
+                            retry_with_backoff(
+                                stream_chat,
+                                max_retries=2,  # Allow 2 retries for chat
+                                base_delay=1.0,
+                                max_delay=5.0,
+                            )
+                        )
                         response_placeholder.markdown(full_response)
 
                     except Exception as e:
-                        full_response = f"❌ Errore: {e}"
-                        response_placeholder.error(full_response)
+                        error_message = handle_chat_error(e, "chat_streaming")
+                        full_response = error_message
+                        response_placeholder.error(error_message)
+
+                        # Show additional help for common errors
+                        if "connessione" in error_message.lower():
+                            st.info("💡 Suggerimento: Controlla la tua connessione internet")
+                        elif "autenticazione" in error_message.lower():
+                            st.info("💡 Suggerimento: Verifica le impostazioni AI nelle preferenze")
 
         # Add assistant response to history
         history.append({"role": "assistant", "content": full_response})
@@ -185,18 +370,30 @@ with tab2:
         else:
             with st.spinner("🤖 Generando descrizione professionale..."):
                 try:
-                    tech_list = (
-                        [t.strip() for t in tecnologie.split(",") if t.strip()]
-                        if tecnologie
-                        else None
-                    )
 
-                    response = ai_service.generate_invoice_description(
-                        servizio=servizio,
-                        ore=ore if ore > 0 else None,
-                        tariffa=tariffa if tariffa > 0 else None,
-                        progetto=progetto if progetto else None,
-                        tecnologie=tech_list,
+                    async def generate_description():
+                        tech_list = (
+                            [t.strip() for t in tecnologie.split(",") if t.strip()]
+                            if tecnologie
+                            else None
+                        )
+
+                        return ai_service.generate_invoice_description(
+                            servizio=servizio,
+                            ore=ore if ore > 0 else None,
+                            tariffa=tariffa if tariffa > 0 else None,
+                            progetto=progetto if progetto else None,
+                            tecnologie=tech_list,
+                        )
+
+                    # Execute with retry logic
+                    response = asyncio.run(
+                        retry_with_backoff(
+                            generate_description,
+                            max_retries=2,  # Allow 2 retries for description generation
+                            base_delay=1.0,
+                            max_delay=3.0,
+                        )
                     )
 
                     if response.status.value == "success":
@@ -239,10 +436,20 @@ with tab2:
                             st.metric("Costo", f"${response.usage.estimated_cost_usd:.4f}")
 
                     else:
-                        st.error(f"❌ Errore: {response.error}")
+                        error_message = handle_chat_error(
+                            Exception(response.error), "description_generation"
+                        )
+                        st.error(error_message)
 
                 except Exception as e:
-                    st.error(f"❌ Errore durante generazione: {e}")
+                    error_message = handle_chat_error(e, "description_generation")
+                    st.error(error_message)
+
+                    # Show additional help for common errors
+                    if "connessione" in error_message.lower():
+                        st.info("💡 Suggerimento: Controlla la tua connessione internet")
+                    elif "autenticazione" in error_message.lower():
+                        st.info("💡 Suggerimento: Verifica le impostazioni AI nelle preferenze")
 
 # =============================================================================
 # TAB 3: VAT Suggestion

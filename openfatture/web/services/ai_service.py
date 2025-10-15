@@ -15,18 +15,20 @@ from openfatture.ai.domain.context import ChatContext, InvoiceContext, TaxContex
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers.factory import create_provider
+from openfatture.utils.config import DebugConfig, get_settings
 from openfatture.web.utils.async_helpers import run_async
 
 
 class StreamlitAIService:
     """Adapter service for AI operations in Streamlit."""
 
-    def __init__(self) -> None:
+    def __init__(self, debug_config: DebugConfig | None = None) -> None:
         """Initialize service with AI provider."""
         self._provider: Any = None
         self._chat_agent: ChatAgent | None = None
         self._invoice_agent: InvoiceAssistantAgent | None = None
         self._tax_agent: TaxAdvisorAgent | None = None
+        self.debug_config = debug_config or get_settings().debug_config
 
     def _convert_history(self, history: list[dict[str, str]]) -> ConversationHistory:
         """Convert list of dicts to ConversationHistory."""
@@ -53,7 +55,9 @@ class StreamlitAIService:
     def chat_agent(self) -> ChatAgent:
         """Get or create chat agent (cached)."""
         if self._chat_agent is None:
-            self._chat_agent = ChatAgent(provider=self.provider, enable_streaming=True)
+            self._chat_agent = ChatAgent(
+                provider=self.provider, enable_streaming=True, debug_config=self.debug_config
+            )
         return self._chat_agent
 
     @property

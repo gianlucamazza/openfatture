@@ -20,6 +20,9 @@ from openfatture.payment.domain.models import (
 )
 from openfatture.storage.database.models import Cliente, Fattura, Pagamento, StatoPagamento
 
+# Test constants - use secure test values
+TEST_CODICE_DESTINATARIO = "TESTCODE"
+
 
 @pytest.fixture
 def sample_cliente(db_session: Session) -> Cliente:
@@ -28,7 +31,7 @@ def sample_cliente(db_session: Session) -> Cliente:
         denominazione="Test Client S.r.l.",
         partita_iva="12345678901",
         codice_fiscale="TSTCLN80A01H501X",
-        codice_destinatario="XXXXXXX",
+        codice_destinatario=TEST_CODICE_DESTINATARIO,
         indirizzo="Via Test",
         numero_civico="1",
         cap="00100",

@@ -25,6 +25,9 @@ from openfatture.storage.database.models import (
 )
 from openfatture.utils.config import Settings
 
+# Test constants - use secure test values
+TEST_PEC_PASSWORD = "test_pec_password_secure_123"
+
 
 @pytest.fixture(scope="session")
 def test_data_dir() -> Generator[Path, None, None]:
@@ -80,7 +83,7 @@ def test_settings(test_data_dir: Path) -> Settings:
         cedente_nazione="IT",
         # PEC for testing
         pec_address="test@pec.example.com",
-        pec_password="test_password",
+        pec_password=TEST_PEC_PASSWORD,
         pec_smtp_server="smtp.test.com",
         pec_smtp_port=465,
     )
@@ -322,3 +325,38 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
     config.addinivalue_line("markers", "ai: marks tests that require AI/LLM integration")
     config.addinivalue_line("markers", "sdi: marks tests that interact with SDI")
+    config.addinivalue_line("markers", "openai: marks tests that require OpenAI API key")
+    config.addinivalue_line("markers", "anthropic: marks tests that require Anthropic API key")
+    config.addinivalue_line("markers", "ollama: marks tests that require Ollama service")
+    config.addinivalue_line("markers", "e2e: marks tests as end-to-end with real providers")
+
+
+# AI Provider Fixtures
+@pytest.fixture(scope="session")
+def openai_api_available():
+    """Check if OpenAI API key is configured."""
+    from openfatture.ai.config import get_ai_settings
+
+    settings = get_ai_settings()
+    return bool(settings.openai_api_key and settings.openai_api_key.get_secret_value())
+
+
+@pytest.fixture(scope="session")
+def anthropic_api_available():
+    """Check if Anthropic API key is configured."""
+    from openfatture.ai.config import get_ai_settings
+
+    settings = get_ai_settings()
+    return bool(settings.anthropic_api_key and settings.anthropic_api_key.get_secret_value())
+
+
+@pytest.fixture(scope="session")
+def ollama_available():
+    """Check if Ollama service is available."""
+    try:
+        import httpx
+
+        response = httpx.get("http://localhost:11434/api/tags", timeout=5.0)
+        return response.status_code == 200
+    except Exception:
+        return False

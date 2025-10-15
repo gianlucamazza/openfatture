@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import time
+import warnings
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
@@ -85,12 +86,30 @@ class AnthropicProvider(BaseLLMProvider):
 
         self.enable_prompt_caching = enable_prompt_caching
 
+        # Check for deprecated models
+        if model in self._get_deprecated_models():
+            warnings.warn(
+                f"Model '{model}' is deprecated and will be removed in a future version. "
+                f"Please use a newer model like 'claude-4.5-sonnet' or 'claude-4.5-opus'.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         # Initialize async client
         self.client = AsyncAnthropic(
             api_key=api_key,
             base_url=base_url,
             timeout=timeout,
         )
+
+    def _get_deprecated_models(self) -> list[str]:
+        """Get list of deprecated model names."""
+        return [
+            "claude-2.1",
+            "claude-3-opus-20240229",
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+        ]
 
     async def generate(
         self,

@@ -109,7 +109,15 @@ class SharedContext(BaseModel):
     Populated once at workflow start to avoid repeated DB queries.
     """
 
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(
+        use_enum_values=True,
+        # Allow dict input for LangGraph compatibility
+        extra="ignore",
+        # Ensure proper serialization for LangGraph
+        json_encoders={
+            datetime: lambda v: v.isoformat(),
+        },
+    )
 
     # Current year statistics
     total_invoices_ytd: int = 0
@@ -147,8 +155,16 @@ class BaseWorkflowState(BaseModel):
     updated_at: datetime = Field(default_factory=utc_now)
     completed_at: datetime | None = None
 
-    # Shared context
-    context: SharedContext = Field(default_factory=SharedContext)
+    # Shared context (stored as dict for LangGraph compatibility)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("context", mode="before")
+    @classmethod
+    def validate_context(cls, v: Any) -> dict[str, Any]:
+        """Convert SharedContext to dict if needed."""
+        if isinstance(v, SharedContext):
+            return v.model_dump()
+        return v
 
     # Error handling
     errors: list[str] = Field(default_factory=list)
@@ -156,10 +172,10 @@ class BaseWorkflowState(BaseModel):
 
     @field_validator("status", mode="before")
     @classmethod
-    def validate_status(cls, v: WorkflowStatus | str) -> WorkflowStatus:
-        """Convert string status to enum if needed."""
-        if isinstance(v, str):
-            return WorkflowStatus(v)
+    def validate_status(cls, v: WorkflowStatus | str) -> str:
+        """Convert enum status to string if needed."""
+        if isinstance(v, WorkflowStatus):
+            return v.value
         return v
 
     # Metadata for extensibility

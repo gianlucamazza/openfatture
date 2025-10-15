@@ -335,11 +335,17 @@ class ToolRegistry:
         """
         Get tools in OpenAI function calling format.
 
+        For Chat Completions API, tools should be in the format:
+        {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
+
+        NOT the old Responses API format:
+        {"type": "function", "name": ..., "description": ..., "parameters": ...}
+
         Args:
             category: Filter by category
 
         Returns:
-            List of function schemas for OpenAI API
+            List of function schemas for OpenAI Chat Completions API
         """
         tools = self.list_tools(category=category, enabled_only=True)
         return [{"type": "function", "function": tool.to_openai_function()} for tool in tools]

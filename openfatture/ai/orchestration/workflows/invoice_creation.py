@@ -252,14 +252,14 @@ class InvoiceCreationWorkflow:
             if not cliente:
                 raise ValueError(f"Cliente {state.client_id} non trovato")
 
-            state.context.total_invoices_ytd = (
+            state.context["total_invoices_ytd"] = (
                 db.query(func.count(Fattura.id))
                 .filter(extract("year", Fattura.data_emissione) == current_year)
                 .scalar()
                 or 0
             )
 
-            state.context.total_revenue_ytd = (
+            state.context["total_revenue_ytd"] = (
                 db.query(func.sum(Fattura.totale))
                 .filter(extract("year", Fattura.data_emissione) == current_year)
                 .scalar()
@@ -284,7 +284,7 @@ class InvoiceCreationWorkflow:
             state.payment_due_date = state.payment_due_date or (
                 issue_date + timedelta(days=state.payment_terms_days)
             )
-            state.context.default_payment_terms = state.payment_terms_days
+            state.context["default_payment_terms"] = state.payment_terms_days
 
             state.status = WorkflowStatus.IN_PROGRESS
             state.updated_at = utc_now()
@@ -292,7 +292,7 @@ class InvoiceCreationWorkflow:
             logger.info(
                 "context_enriched",
                 workflow_id=state.workflow_id,
-                invoices_ytd=state.context.total_invoices_ytd,
+                invoices_ytd=state.context["total_invoices_ytd"],
                 cliente_id=cliente.id,
             )
 

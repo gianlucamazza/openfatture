@@ -283,27 +283,54 @@ class TestGetInvoiceDetails:
 class TestGetInvoiceStats:
     """Test get_invoice_stats tool function."""
 
-    @patch("openfatture.storage.database.base.get_session")
+    @patch("openfatture.ai.tools.invoice_tools.get_session")
     def test_get_invoice_stats_success(self, mock_get_session):
         """Test successful invoice statistics retrieval."""
         mock_session = MagicMock(spec=Session)
         mock_get_session.return_value = mock_session
 
-        # Mock status counts
-        mock_session.query.return_value.filter.return_value.count.side_effect = [
+        # Mock query chain - need separate mocks for different filter calls
+        mock_query = MagicMock()
+        mock_session.query.return_value = mock_query
+
+        # Create separate filter mocks for status counts and total calculation
+        mock_filter_status = MagicMock()
+        mock_filter_total = MagicMock()
+
+        # Make filter return different mocks based on call pattern
+        # For status counts: filter is called with anno and stato
+        # For total: filter is called with just anno
+        filter_call_count = 0
+
+        def filter_side_effect(*args, **kwargs):
+            nonlocal filter_call_count
+            filter_call_count += 1
+            # First 8 calls are for status counts, 9th is for total
+            if filter_call_count <= 8:
+                return mock_filter_status
+            else:
+                return mock_filter_total
+
+        mock_query.filter.side_effect = filter_side_effect
+
+        # Mock count calls for each status (8 statuses)
+        mock_filter_status.count.side_effect = [
             5,  # BOZZA
             3,  # DA_INVIARE
             2,  # INVIATA
             1,  # CONSEGNATA
+            0,  # ACCETTATA
             0,  # RIFIUTATA
+            0,  # SCARTATA
+            0,  # ERRORE
         ]
 
-        # Mock total calculation
+        # Mock total calculation query
         mock_fattura1 = MagicMock()
         mock_fattura1.totale = 1000.0
         mock_fattura2 = MagicMock()
         mock_fattura2.totale = 2000.0
-        mock_session.query.return_value.filter.return_value.all.return_value = [
+        mock_filter_total.all.return_value = [
             mock_fattura1,
             mock_fattura2,
         ]
@@ -327,9 +354,33 @@ class TestGetInvoiceStats:
         mock_session = MagicMock(spec=Session)
         mock_get_session.return_value = mock_session
 
-        # Mock minimal data
-        mock_session.query.return_value.filter.return_value.count.side_effect = [0] * 5
-        mock_session.query.return_value.filter.return_value.all.return_value = []
+        # Mock query chain - need separate mocks for different filter calls
+        mock_query = MagicMock()
+        mock_session.query.return_value = mock_query
+
+        # Create separate filter mocks for status counts and total calculation
+        mock_filter_status = MagicMock()
+        mock_filter_total = MagicMock()
+
+        # Make filter return different mocks based on call pattern
+        filter_call_count = 0
+
+        def filter_side_effect(*args, **kwargs):
+            nonlocal filter_call_count
+            filter_call_count += 1
+            # First 8 calls are for status counts, 9th is for total
+            if filter_call_count <= 8:
+                return mock_filter_status
+            else:
+                return mock_filter_total
+
+        mock_query.filter.side_effect = filter_side_effect
+
+        # Mock count calls for each status (8 statuses, all zero)
+        mock_filter_status.count.side_effect = [0] * 8
+
+        # Mock total calculation query (empty)
+        mock_filter_total.all.return_value = []
 
         result = get_invoice_stats()  # No year specified
 
