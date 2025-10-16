@@ -4,21 +4,15 @@ Unit tests for fattura CLI command functions.
 Tests the actual command logic with proper mocking of dependencies.
 """
 
-from datetime import date
-from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from openfatture.cli.commands.fattura import (
     crea_fattura,
-    delete_fattura,
     genera_xml,
-    invia_fattura,
     list_fatture,
-    show_fattura,
 )
-from openfatture.storage.database.models import StatoFattura, TipoDocumento
 
 
 class TestListFattureFunction:

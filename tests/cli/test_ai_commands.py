@@ -4,8 +4,7 @@ Tests for AI-powered CLI commands.
 Tests Typer commands with mocking of AI providers, agents, and external dependencies.
 """
 
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner

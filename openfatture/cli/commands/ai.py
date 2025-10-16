@@ -25,6 +25,8 @@ from openfatture.ai.orchestration.workflows.invoice_creation import InvoiceCreat
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.rag.config import get_rag_config
 from openfatture.ai.rag.knowledge_indexer import KnowledgeIndexer
+from openfatture.cli.lifespan import get_event_bus, run_sync_with_lifespan
+from openfatture.core.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
 from openfatture.utils.config import get_settings
 from openfatture.utils.logging import get_logger
 
@@ -33,6 +35,9 @@ console = Console()
 logger = get_logger(__name__)
 
 rag_app = typer.Typer(help="Gestione knowledge base RAG")
+feedback_app = typer.Typer(help="Gestione feedback utente e ML predictions")
+retrain_app = typer.Typer(help="Gestione retraining automatico modelli ML")
+auto_update_app = typer.Typer(help="Gestione auto-update RAG su modifiche dati")
 
 
 def _convert_history(history: list[dict[str, str]]) -> ConversationHistory:
@@ -200,8 +205,821 @@ async def _rag_search(query: str, top: int, source: str | None) -> None:
     console.print(results_table)
 
 
+@feedback_app.command("stats")
+def feedback_stats(
+    days: int = typer.Option(30, "--days", "-d", help="Number of days to analyze"),
+) -> None:
+    """Show user feedback and prediction feedback statistics."""
+    from openfatture.ai.feedback import FeedbackAnalytics
+
+    analytics = FeedbackAnalytics()
+
+    # User feedback stats
+    console.print("\n[bold blue]📊 User Feedback Statistics[/bold blue]\n")
+    user_stats = analytics.get_user_feedback_stats(days=days)
+
+    stats_table = Table(title=f"Last {days} Days", show_header=False)
+    stats_table.add_column("Metric", style="cyan bold")
+    stats_table.add_column("Value", style="white")
+
+    stats_table.add_row("Total Feedback", str(user_stats.total_feedback))
+    if user_stats.average_rating:
+        stars = "⭐" * int(user_stats.average_rating)
+        stats_table.add_row("Average Rating", f"{stars} ({user_stats.average_rating:.1f}/5)")
+    stats_table.add_row("Total Corrections", str(user_stats.total_corrections))
+    stats_table.add_row("Recent (7 days)", str(user_stats.recent_feedback_count))
+
+    console.print(stats_table)
+    console.print()
+
+    # By type
+    if user_stats.by_type:
+        console.print("[bold cyan]By Type:[/bold cyan]")
+        for feedback_type, count in user_stats.by_type.items():
+            console.print(f"  • {feedback_type}: {count}")
+        console.print()
+
+    # By agent
+    if user_stats.by_agent:
+        console.print("[bold cyan]By Agent:[/bold cyan]")
+        for agent, count in user_stats.by_agent.items():
+            console.print(f"  • {agent}: {count}")
+        console.print()
+
+    # Prediction feedback stats
+    console.print("[bold blue]🤖 ML Prediction Feedback Statistics[/bold blue]\n")
+    pred_stats = analytics.get_prediction_feedback_stats(days=days)
+
+    pred_table = Table(title=f"Last {days} Days", show_header=False)
+    pred_table.add_column("Metric", style="cyan bold")
+    pred_table.add_column("Value", style="white")
+
+    pred_table.add_row("Total Predictions", str(pred_stats.total_predictions))
+    pred_table.add_row("Acceptance Rate", f"{pred_stats.acceptance_rate:.1f}%")
+    if pred_stats.average_confidence:
+        pred_table.add_row("Avg Confidence", f"{pred_stats.average_confidence:.1%}")
+    pred_table.add_row("Total Corrections", str(pred_stats.total_corrections))
+    pred_table.add_row("Unprocessed (for retraining)", str(pred_stats.unprocessed_count))
+
+    console.print(pred_table)
+    console.print()
+
+    # By prediction type
+    if pred_stats.by_type:
+        console.print("[bold cyan]By Prediction Type:[/bold cyan]")
+        for pred_type, count in pred_stats.by_type.items():
+            console.print(f"  • {pred_type}: {count}")
+        console.print()
+
+    # By model version
+    if pred_stats.by_model_version:
+        console.print("[bold cyan]By Model Version:[/bold cyan]")
+        version_table = Table(box=None)
+        version_table.add_column("Version", style="cyan")
+        version_table.add_column("Total", style="white")
+        version_table.add_column("Acceptance", style="green")
+        version_table.add_column("Avg Confidence", style="yellow")
+
+        for version, data in pred_stats.by_model_version.items():
+            version_table.add_row(
+                version,
+                str(data["total"]),
+                f"{data['acceptance_rate']:.1f}%",
+                f"{data['avg_confidence']:.1%}" if data["avg_confidence"] else "N/A",
+            )
+
+        console.print(version_table)
+        console.print()
+
+
+@feedback_app.command("export")
+def feedback_export(
+    output: Path = typer.Option("feedback_export.json", "--output", "-o", help="Output file path"),
+    days: int = typer.Option(30, "--days", "-d", help="Number of days to export"),
+) -> None:
+    """Export feedback data to JSON file."""
+    from datetime import datetime, timedelta
+
+    from openfatture.ai.feedback import FeedbackService
+
+    service = FeedbackService()
+    cutoff_date = datetime.utcnow() - timedelta(days=days)
+
+    # This is a simplified export - in production, you'd query with date filters
+    console.print(f"\n[bold blue]📤 Exporting feedback data (last {days} days)[/bold blue]\n")
+
+    # Export user feedback (simplified - would need proper date filtering in service)
+    console.print("[dim]Note: Full export functionality requires additional service methods[/dim]")
+    console.print(f"[green]✓ Export location: {output}[/green]\n")
+
+
+@feedback_app.command("analyze")
+def feedback_analyze(
+    limit: int = typer.Option(20, "--limit", "-l", help="Number of patterns to show"),
+    threshold: float = typer.Option(
+        0.6, "--threshold", "-t", help="Confidence threshold for low-confidence predictions"
+    ),
+) -> None:
+    """Analyze feedback patterns and low-confidence predictions."""
+    from openfatture.ai.feedback import FeedbackAnalytics
+
+    analytics = FeedbackAnalytics()
+
+    # Correction patterns
+    console.print("\n[bold blue]🔍 Correction Patterns Analysis[/bold blue]\n")
+    patterns = analytics.get_correction_patterns(limit=limit)
+
+    if patterns:
+        patterns_table = Table(title="Recent Corrections", box=None)
+        patterns_table.add_column("Agent", style="cyan")
+        patterns_table.add_column("Feature", style="yellow")
+        patterns_table.add_column("Original", style="white", no_wrap=False, max_width=40)
+        patterns_table.add_column("Corrected", style="green", no_wrap=False, max_width=40)
+
+        for pattern in patterns[:10]:  # Show first 10
+            patterns_table.add_row(
+                pattern.get("agent_type", "N/A"),
+                pattern.get("feature_name", "N/A"),
+                pattern.get("original", "")[:50] + "..." if pattern.get("original") else "",
+                pattern.get("corrected", "")[:50] + "..." if pattern.get("corrected") else "",
+            )
+
+        console.print(patterns_table)
+        console.print()
+    else:
+        console.print("[dim]No correction patterns found.[/dim]\n")
+
+    # Low confidence predictions
+    console.print("[bold blue]⚠️  Low Confidence Predictions (Requires Review)[/bold blue]\n")
+    low_conf = analytics.get_low_confidence_predictions(threshold=threshold, limit=limit)
+
+    if low_conf:
+        low_conf_table = Table(title=f"Confidence < {threshold:.0%}", box=None)
+        low_conf_table.add_column("ID", style="dim")
+        low_conf_table.add_column("Type", style="cyan")
+        low_conf_table.add_column("Entity", style="yellow")
+        low_conf_table.add_column("Confidence", style="red")
+        low_conf_table.add_column("Accepted", style="green")
+
+        for pred in low_conf:
+            low_conf_table.add_row(
+                str(pred["id"]),
+                pred["prediction_type"],
+                pred["entity"],
+                f"{pred['confidence']:.1%}" if pred["confidence"] else "N/A",
+                "✓" if pred["user_accepted"] else "✗",
+            )
+
+        console.print(low_conf_table)
+        console.print()
+
+        console.print(
+            f"[bold yellow]💡 Tip:[/bold yellow] These {len(low_conf)} predictions need human review "
+            "for model improvement.\n"
+        )
+    else:
+        console.print(
+            f"[dim]No low-confidence predictions found (threshold: {threshold:.0%}).[/dim]\n"
+        )
+
+
+@retrain_app.command("trigger")
+def retrain_trigger(
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Force retraining even if triggers not met"
+    ),
+) -> None:
+    """Manually trigger model retraining.
+
+    Checks retraining triggers and executes retraining if conditions are met.
+    Use --force to skip trigger checks.
+
+    Examples:
+        openfatture ai retrain trigger
+        openfatture ai retrain trigger --force
+    """
+    from openfatture.ai.ml.retraining import get_scheduler
+
+    scheduler = get_scheduler()
+
+    console.print("\n[bold blue]🔄 Manual Model Retraining[/bold blue]\n")
+
+    # Run async retraining
+    import asyncio
+
+    with console.status("[bold green]Triggering retraining..."):
+        result = asyncio.run(scheduler.trigger_manual_retraining("cash_flow", force=force))
+
+    # Display results
+    if result["success"]:
+        console.print(f"[bold green]✅ {result['message']}[/bold green]\n")
+
+        if result.get("deployed"):
+            console.print(f"[cyan]Version ID:[/cyan] {result.get('version_id')}")
+            console.print(f"[cyan]Feedback processed:[/cyan] {result.get('feedback_count')}")
+
+            if result.get("evaluation"):
+                eval_data = result["evaluation"]
+                metrics = eval_data.get("metrics", {})
+
+                console.print("\n[bold]New Model Metrics:[/bold]")
+                console.print(f"  MAE: {metrics.get('mae', 0):.2f} days")
+                console.print(f"  RMSE: {metrics.get('rmse', 0):.2f} days")
+                console.print(f"  Confidence: {metrics.get('avg_confidence', 0):.1%}")
+
+                if eval_data.get("comparison"):
+                    console.print("\n[bold]Improvement:[/bold]")
+                    for metric, data in eval_data["comparison"].items():
+                        if data["is_better"]:
+                            console.print(f"  {metric.upper()}: +{data['improvement_pct']:.1f}%")
+        else:
+            console.print(f"[dim]Model not deployed: {result.get('message')}[/dim]")
+    else:
+        console.print(f"[bold red]❌ {result['message']}[/bold red]\n")
+
+
+@retrain_app.command("status")
+def retrain_status() -> None:
+    """Show retraining scheduler status and trigger conditions.
+
+    Displays:
+    - Scheduler running status
+    - Next scheduled check
+    - Trigger conditions (feedback count, time elapsed)
+    - Last retraining time
+
+    Example:
+        openfatture ai retrain status
+    """
+    from openfatture.ai.ml.retraining import get_scheduler
+
+    scheduler = get_scheduler()
+    status = scheduler.get_status()
+
+    console.print("\n[bold blue]🔄 Retraining Scheduler Status[/bold blue]\n")
+
+    # Main status
+    status_table = Table(show_header=False, box=None)
+    status_table.add_column("Setting", style="cyan bold")
+    status_table.add_column("Value")
+
+    # Enabled/Running
+    enabled_icon = "✅" if status["enabled"] else "❌"
+    running_icon = "🟢" if status["running"] else "⚫"
+
+    status_table.add_row("Enabled:", f"{enabled_icon} {status['enabled']}")
+    status_table.add_row("Running:", f"{running_icon} {status['running']}")
+    status_table.add_row("Dry Run:", "Yes" if status["dry_run"] else "No")
+    status_table.add_row("Check Interval:", f"{status['interval_hours']}h")
+
+    if status.get("last_check_time"):
+        status_table.add_row("Last Check:", status["last_check_time"])
+
+    if status.get("last_retrain_time"):
+        status_table.add_row("Last Retrain:", status["last_retrain_time"])
+
+    if status.get("next_run_time"):
+        status_table.add_row("Next Run:", status["next_run_time"])
+
+    status_table.add_row("Retraining Active:", "Yes" if status["retraining_in_progress"] else "No")
+
+    console.print(status_table)
+    console.print()
+
+    # Trigger status
+    trigger_status = status.get("trigger_status", {})
+    should_trigger = trigger_status.get("should_trigger", False)
+
+    if should_trigger:
+        console.print("[bold yellow]⚠️  Retraining Triggers Met[/bold yellow]\n")
+    else:
+        console.print("[bold green]✅ No Retraining Needed[/bold green]\n")
+
+    # Feedback stats
+    feedback_stats = trigger_status.get("feedback_stats", {})
+    console.print("[bold]Feedback Status:[/bold]")
+    console.print(f"  Unprocessed: {feedback_stats.get('unprocessed_count', 0)}")
+    console.print(f"  Threshold: {feedback_stats.get('threshold', 0)}")
+    ready_icon = "✅" if feedback_stats.get("ready") else "❌"
+    console.print(f"  Ready: {ready_icon}")
+    console.print()
+
+    # Time stats
+    time_stats = trigger_status.get("time_stats", {})
+    console.print("[bold]Time Status:[/bold]")
+    if time_stats.get("last_training"):
+        console.print(f"  Last Training: {time_stats['last_training']}")
+    if time_stats.get("days_since_training") is not None:
+        console.print(f"  Days Elapsed: {time_stats['days_since_training']}")
+    console.print(f"  Threshold: {time_stats.get('threshold_days', 0)} days")
+    ready_icon = "✅" if time_stats.get("ready") else "❌"
+    console.print(f"  Ready: {ready_icon}")
+    console.print()
+
+    # Active triggers
+    if trigger_status.get("triggers"):
+        console.print("[bold yellow]Active Triggers:[/bold yellow]")
+        for trigger in trigger_status["triggers"]:
+            console.print(f"  • {trigger['message']}")
+        console.print()
+
+
+@retrain_app.command("history")
+def retrain_history(
+    limit: int = typer.Option(10, "--limit", "-l", help="Number of versions to show"),
+) -> None:
+    """Show model version history.
+
+    Displays all saved model versions with metrics and creation times.
+
+    Example:
+        openfatture ai retrain history
+        openfatture ai retrain history --limit 5
+    """
+    from openfatture.ai.ml.retraining import ModelVersionManager
+
+    version_manager = ModelVersionManager()
+    versions = version_manager.list_versions("cash_flow")
+
+    console.print("\n[bold blue]📦 Model Version History[/bold blue]\n")
+
+    if not versions:
+        console.print("[dim]No model versions found.[/dim]\n")
+        return
+
+    # Version table
+    versions_table = Table(title="Cash Flow Model Versions", box=None)
+    versions_table.add_column("Version ID", style="cyan")
+    versions_table.add_column("Created", style="white")
+    versions_table.add_column("MAE", style="green")
+    versions_table.add_column("RMSE", style="green")
+    versions_table.add_column("Notes", style="dim", no_wrap=False, max_width=40)
+
+    for version in versions[:limit]:
+        created = version.created_at.strftime("%Y-%m-%d %H:%M")
+        mae = version.metrics.get("mae", "N/A")
+        rmse = version.metrics.get("rmse", "N/A")
+
+        mae_str = f"{mae:.2f}" if isinstance(mae, (int, float)) else mae
+        rmse_str = f"{rmse:.2f}" if isinstance(rmse, (int, float)) else rmse
+
+        notes = version.notes or ""
+
+        versions_table.add_row(
+            version.version_id,
+            created,
+            mae_str,
+            rmse_str,
+            notes,
+        )
+
+    console.print(versions_table)
+    console.print()
+
+    if len(versions) > limit:
+        console.print(
+            f"[dim]Showing {limit} of {len(versions)} versions. Use --limit to see more.[/dim]\n"
+        )
+
+
+@retrain_app.command("rollback")
+def retrain_rollback(
+    version_id: str = typer.Argument(..., help="Version ID to rollback to"),
+    confirm: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
+) -> None:
+    """Rollback to a previous model version.
+
+    Restores a previous model version to the current model location.
+    This overwrites the current model.
+
+    Example:
+        openfatture ai retrain rollback 20250116_143022
+        openfatture ai retrain rollback 20250116_143022 --yes
+    """
+    from openfatture.ai.ml.retraining import ModelVersionManager
+
+    version_manager = ModelVersionManager()
+
+    console.print("\n[bold blue]🔄 Model Rollback[/bold blue]\n")
+
+    # Verify version exists
+    try:
+        version = version_manager.load_version("cash_flow", version_id, restore_to_current=False)
+    except FileNotFoundError:
+        console.print(f"[bold red]❌ Version '{version_id}' not found[/bold red]\n")
+        raise typer.Exit(1)
+
+    # Show version info
+    console.print(f"[bold]Rolling back to version:[/bold] {version_id}")
+    console.print(f"[bold]Created:[/bold] {version.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+    if version.notes:
+        console.print(f"[bold]Notes:[/bold] {version.notes}")
+
+    # Show metrics
+    if version.metrics:
+        console.print("\n[bold]Metrics:[/bold]")
+        for key, value in version.metrics.items():
+            if isinstance(value, (int, float)):
+                console.print(f"  {key}: {value:.2f}")
+
+    console.print()
+
+    # Confirmation
+    if not confirm:
+        proceed = typer.confirm("⚠️  This will overwrite the current model. Continue?")
+        if not proceed:
+            console.print("[dim]Rollback cancelled.[/dim]\n")
+            raise typer.Exit(0)
+
+    # Perform rollback
+    try:
+        version_manager.rollback_to_version("cash_flow", version_id)
+        console.print(
+            f"[bold green]✅ Successfully rolled back to version {version_id}[/bold green]\n"
+        )
+    except Exception as e:
+        console.print(f"[bold red]❌ Rollback failed: {e}[/bold red]\n")
+        raise typer.Exit(1)
+
+
+@auto_update_app.command("status")
+def auto_update_status() -> None:
+    """Show RAG auto-update service status.
+
+    Displays:
+    - Service enabled/running status
+    - Queue statistics (pending changes, processed count)
+    - Configuration settings
+    - Tracker statistics
+
+    Example:
+        openfatture ai auto-update status
+    """
+    from openfatture.ai.rag.auto_update import get_auto_indexing_service
+
+    service = get_auto_indexing_service()
+    status = service.get_status()
+
+    console.print("\n[bold blue]🔄 RAG Auto-Update Service Status[/bold blue]\n")
+
+    # Main status
+    status_table = Table(show_header=False, box=None)
+    status_table.add_column("Setting", style="cyan bold")
+    status_table.add_column("Value")
+
+    # Enabled/Running
+    enabled_icon = "✅" if status["enabled"] else "❌"
+    running_icon = "🟢" if status["running"] else "⚫"
+
+    status_table.add_row("Enabled:", f"{enabled_icon} {status['enabled']}")
+    status_table.add_row("Running:", f"{running_icon} {status['running']}")
+
+    console.print(status_table)
+    console.print()
+
+    # Configuration
+    config = status.get("config", {})
+    console.print("[bold]Configuration:[/bold]")
+    console.print(f"  Batch Size: {config.get('batch_size', 0)}")
+    console.print(f"  Debounce: {config.get('debounce_seconds', 0)}s")
+    console.print(f"  Incremental Updates: {config.get('incremental_updates', False)}")
+    tracked = config.get("tracked_entities", [])
+    if tracked:
+        console.print(f"  Tracked Entities: {', '.join(tracked)}")
+    console.print()
+
+    # Queue statistics
+    queue_stats = status.get("queue_stats", {})
+    console.print("[bold]Queue Statistics:[/bold]")
+    console.print(f"  Running: {queue_stats.get('running', False)}")
+    console.print(f"  Total Processed: {queue_stats.get('total_processed', 0)}")
+    console.print(f"  Total Batches: {queue_stats.get('total_batches', 0)}")
+    if queue_stats.get("last_process_time_ms"):
+        console.print(f"  Last Process Time: {queue_stats['last_process_time_ms']:.0f}ms")
+    console.print()
+
+    # Tracker statistics
+    tracker_stats = status.get("tracker_stats", {})
+    if tracker_stats:
+        console.print("[bold]Tracker Statistics:[/bold]")
+        for entity_type, count in tracker_stats.items():
+            console.print(f"  {entity_type}: {count} pending")
+        console.print()
+
+
+@auto_update_app.command("start")
+def auto_update_start() -> None:
+    """Start the RAG auto-indexing service.
+
+    Starts background processing of data changes for automatic
+    reindexing of the vector store.
+
+    Example:
+        openfatture ai auto-update start
+    """
+    import asyncio
+
+    from openfatture.ai.rag.auto_update import get_auto_indexing_service
+
+    service = get_auto_indexing_service()
+
+    console.print("\n[bold blue]🔄 Starting RAG Auto-Update Service[/bold blue]\n")
+
+    with console.status("[bold green]Starting service..."):
+        asyncio.run(service.start())
+
+    console.print("[bold green]✅ Service started successfully[/bold green]\n")
+
+
+@auto_update_app.command("stop")
+def auto_update_stop() -> None:
+    """Stop the RAG auto-indexing service.
+
+    Stops background processing and optionally persists pending
+    changes to disk based on configuration.
+
+    Example:
+        openfatture ai auto-update stop
+    """
+    import asyncio
+
+    from openfatture.ai.rag.auto_update import get_auto_indexing_service
+
+    service = get_auto_indexing_service()
+
+    console.print("\n[bold blue]🔄 Stopping RAG Auto-Update Service[/bold blue]\n")
+
+    with console.status("[bold yellow]Stopping service..."):
+        asyncio.run(service.stop())
+
+    console.print("[bold yellow]⏸️  Service stopped[/bold yellow]\n")
+
+
+@auto_update_app.command("queue")
+def auto_update_queue() -> None:
+    """Show detailed queue statistics.
+
+    Displays pending changes by entity type and processing metrics.
+
+    Example:
+        openfatture ai auto-update queue
+    """
+    from openfatture.ai.rag.auto_update import get_change_tracker, get_reindex_queue
+
+    tracker = get_change_tracker()
+    queue = get_reindex_queue()
+
+    console.print("\n[bold blue]📊 RAG Auto-Update Queue Statistics[/bold blue]\n")
+
+    # Queue stats
+    queue_stats = queue.get_stats()
+    stats_table = Table(show_header=False, box=None)
+    stats_table.add_column("Metric", style="cyan bold")
+    stats_table.add_column("Value")
+
+    stats_table.add_row("Running:", "🟢 Yes" if queue_stats["running"] else "⚫ No")
+    stats_table.add_row("Total Processed:", str(queue_stats["total_processed"]))
+    stats_table.add_row("Total Batches:", str(queue_stats["total_batches"]))
+    if queue_stats.get("last_process_time_ms"):
+        stats_table.add_row("Last Process Time:", f"{queue_stats['last_process_time_ms']:.0f}ms")
+
+    console.print(stats_table)
+    console.print()
+
+    # Tracker stats (pending changes)
+    tracker_stats = tracker.get_queue_stats()
+    console.print("[bold]Pending Changes:[/bold]")
+    if tracker_stats:
+        pending_table = Table(box=None)
+        pending_table.add_column("Entity Type", style="cyan")
+        pending_table.add_column("Count", justify="right", style="yellow")
+
+        total_pending = 0
+        for entity_type, count in tracker_stats.items():
+            pending_table.add_row(entity_type, str(count))
+            total_pending += count
+
+        console.print(pending_table)
+        console.print(f"\n[bold]Total Pending:[/bold] {total_pending}")
+    else:
+        console.print("[dim]No pending changes[/dim]")
+    console.print()
+
+
+@auto_update_app.command("manual")
+def auto_update_manual(
+    entity_type: str = typer.Argument(..., help="Entity type to reindex (invoice, client)"),
+    entity_ids: list[int] = typer.Argument(..., help="Entity IDs to reindex (space-separated)"),
+) -> None:
+    """Manually trigger reindexing for specific entities.
+
+    Forces immediate reindexing of specified invoices or clients,
+    bypassing the normal queue processing.
+
+    Examples:
+        openfatture ai auto-update manual invoice 1 2 3
+        openfatture ai auto-update manual client 123
+    """
+    import asyncio
+
+    from openfatture.ai.rag.auto_update import get_auto_indexing_service
+
+    service = get_auto_indexing_service()
+
+    console.print("\n[bold blue]🔄 Manual Reindexing[/bold blue]\n")
+    console.print(f"[bold]Entity Type:[/bold] {entity_type}")
+    console.print(f"[bold]Entity IDs:[/bold] {', '.join(map(str, entity_ids))}\n")
+
+    with console.status("[bold green]Reindexing..."):
+        result = asyncio.run(service.manual_reindex(entity_type, entity_ids))
+
+    # Display results
+    console.print("[bold green]✅ Reindexing completed[/bold green]\n")
+    console.print(f"[cyan]Requested:[/cyan] {result['requested_count']}")
+    console.print(f"[green]Successful:[/green] {len(result['successful'])}")
+    console.print(f"[red]Failed:[/red] {len(result['failed'])}")
+
+    if result["successful"]:
+        console.print("\n[bold green]Successfully reindexed:[/bold green]")
+        for entity_id in result["successful"][:10]:  # Show first 10
+            console.print(f"  • {entity_type} {entity_id}")
+        if len(result["successful"]) > 10:
+            console.print(f"  ... and {len(result['successful']) - 10} more")
+
+    if result["failed"]:
+        console.print("\n[bold red]Failed to reindex:[/bold red]")
+        for failure in result["failed"][:5]:  # Show first 5 errors
+            console.print(f"  • {entity_type} {failure['entity_id']}: {failure['error']}")
+        if len(result["failed"]) > 5:
+            console.print(f"  ... and {len(result['failed']) - 5} more")
+
+    console.print()
+
+
+app.add_typer(feedback_app, name="feedback")
+app.add_typer(retrain_app, name="retrain")
+app.add_typer(auto_update_app, name="auto-update")
+
+
+@app.command("status")
+def self_learning_status() -> None:
+    """Show comprehensive self-learning system status.
+
+    Displays unified dashboard of all self-learning components:
+    - RAG Auto-Update service
+    - ML Model Retraining scheduler
+    - Feedback Collection statistics
+
+    This provides a quick overview of the entire self-learning system health.
+
+    Example:
+        openfatture ai status
+    """
+    from openfatture.ai.feedback import FeedbackAnalytics
+    from openfatture.ai.ml.retraining import get_scheduler
+    from openfatture.ai.rag.auto_update import get_auto_indexing_service
+
+    console.print("\n[bold blue]🤖 Self-Learning System Dashboard[/bold blue]\n")
+
+    # RAG Auto-Update Status
+    console.print("[bold cyan]═══ RAG Auto-Update ═══[/bold cyan]\n")
+    try:
+        service = get_auto_indexing_service()
+        status = service.get_status()
+
+        # Status indicators
+        enabled_icon = "✅" if status["enabled"] else "❌"
+        running_icon = "🟢" if status["running"] else "⚫"
+
+        rag_table = Table(show_header=False, box=None)
+        rag_table.add_column("Metric", style="dim")
+        rag_table.add_column("Value")
+
+        rag_table.add_row("Enabled:", f"{enabled_icon} {status['enabled']}")
+        rag_table.add_row("Running:", f"{running_icon} {status['running']}")
+
+        config = status.get("config", {})
+        tracked = config.get("tracked_entities", [])
+        if tracked:
+            rag_table.add_row("Tracking:", ", ".join(tracked))
+
+        queue_stats = status.get("queue_stats", {})
+        rag_table.add_row("Processed:", str(queue_stats.get("total_processed", 0)))
+
+        tracker_stats = status.get("tracker_stats", {})
+        pending_total = sum(tracker_stats.values()) if tracker_stats else 0
+        rag_table.add_row("Pending:", str(pending_total))
+
+        console.print(rag_table)
+        console.print()
+
+        # Show pending by type if any
+        if tracker_stats:
+            console.print("[dim]Pending by type:[/dim]")
+            for entity_type, count in tracker_stats.items():
+                console.print(f"  • {entity_type}: {count}")
+            console.print()
+
+    except Exception as e:
+        console.print(f"[yellow]⚠️  Could not fetch RAG auto-update status: {e}[/yellow]\n")
+
+    # ML Retraining Status
+    console.print("[bold cyan]═══ ML Model Retraining ═══[/bold cyan]\n")
+    try:
+        scheduler = get_scheduler()
+        status = scheduler.get_status()
+
+        # Status indicators
+        enabled_icon = "✅" if status["enabled"] else "❌"
+        running_icon = "🟢" if status["running"] else "⚫"
+
+        retrain_table = Table(show_header=False, box=None)
+        retrain_table.add_column("Metric", style="dim")
+        retrain_table.add_column("Value")
+
+        retrain_table.add_row("Enabled:", f"{enabled_icon} {status['enabled']}")
+        retrain_table.add_row("Running:", f"{running_icon} {status['running']}")
+
+        if status.get("last_retrain_time"):
+            retrain_table.add_row("Last Retrain:", status["last_retrain_time"])
+
+        if status.get("next_run_time"):
+            retrain_table.add_row("Next Check:", status["next_run_time"])
+
+        # Trigger status
+        trigger_status = status.get("trigger_status", {})
+        should_trigger = trigger_status.get("should_trigger", False)
+        trigger_icon = "⚠️" if should_trigger else "✅"
+        retrain_table.add_row("Ready to Train:", f"{trigger_icon} {should_trigger}")
+
+        # Feedback count
+        feedback_stats = trigger_status.get("feedback_stats", {})
+        unprocessed = feedback_stats.get("unprocessed_count", 0)
+        threshold = feedback_stats.get("threshold", 0)
+        retrain_table.add_row("Feedback:", f"{unprocessed}/{threshold}")
+
+        console.print(retrain_table)
+        console.print()
+
+        # Show active triggers if any
+        if trigger_status.get("triggers"):
+            console.print("[yellow]Active triggers:[/yellow]")
+            for trigger in trigger_status["triggers"][:3]:  # Show first 3
+                console.print(f"  • {trigger['message']}")
+            console.print()
+
+    except Exception as e:
+        console.print(f"[yellow]⚠️  Could not fetch retraining status: {e}[/yellow]\n")
+
+    # Feedback Collection Stats
+    console.print("[bold cyan]═══ Feedback Collection ═══[/bold cyan]\n")
+    try:
+        analytics = FeedbackAnalytics()
+
+        # Last 7 days stats
+        user_stats = analytics.get_user_feedback_stats(days=7)
+        pred_stats = analytics.get_prediction_feedback_stats(days=7)
+
+        feedback_table = Table(show_header=False, box=None)
+        feedback_table.add_column("Metric", style="dim")
+        feedback_table.add_column("Value")
+
+        # User feedback
+        feedback_table.add_row("User Feedback (7d):", str(user_stats.total_feedback))
+        if user_stats.average_rating:
+            stars = "⭐" * min(5, int(user_stats.average_rating))
+            feedback_table.add_row("Avg Rating:", f"{stars} ({user_stats.average_rating:.1f}/5)")
+
+        # Prediction feedback
+        feedback_table.add_row("Predictions (7d):", str(pred_stats.total_predictions))
+        feedback_table.add_row("Acceptance Rate:", f"{pred_stats.acceptance_rate:.1f}%")
+        feedback_table.add_row("Unprocessed:", str(pred_stats.unprocessed_count))
+
+        console.print(feedback_table)
+        console.print()
+
+        # Top agent types if available
+        if user_stats.by_agent:
+            console.print("[dim]Top agents:[/dim]")
+            for agent, count in list(user_stats.by_agent.items())[:3]:
+                console.print(f"  • {agent}: {count}")
+            console.print()
+
+    except Exception as e:
+        console.print(f"[yellow]⚠️  Could not fetch feedback stats: {e}[/yellow]\n")
+
+    # Footer with helpful commands
+    console.print("[dim]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/dim]")
+    console.print("\n[bold]Detailed Commands:[/bold]")
+    console.print("  • RAG Auto-Update:    [cyan]openfatture ai auto-update status[/cyan]")
+    console.print("  • ML Retraining:      [cyan]openfatture ai retrain status[/cyan]")
+    console.print("  • Feedback Analysis:  [cyan]openfatture ai feedback stats[/cyan]")
+    console.print("\n[dim]See docs/SELF_LEARNING.md for complete documentation[/dim]\n")
+
+
 @app.command("describe")
 def ai_describe(
+    ctx: typer.Context,
     text: str = typer.Argument(..., help="Service description to expand"),
     hours: float | None = typer.Option(None, "--hours", "-h", help="Hours worked"),
     rate: float | None = typer.Option(None, "--rate", "-r", help="Hourly rate (€)"),
@@ -209,7 +1027,9 @@ def ai_describe(
     technologies: str | None = typer.Option(
         None, "--tech", "-t", help="Technologies used (comma-separated)"
     ),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output as JSON (deprecated, use --format json)"
+    ),
 ) -> None:
     """
     Use AI to generate detailed invoice descriptions.
@@ -217,11 +1037,13 @@ def ai_describe(
     Example:
         openfatture ai describe "3 ore consulenza web"
         openfatture ai describe "sviluppo backend API" --hours 5 --tech "Python,FastAPI"
+        openfatture ai describe "consulenza" --format markdown
     """
-    asyncio.run(_run_invoice_assistant(text, hours, rate, project, technologies, json_output))
+    asyncio.run(_run_invoice_assistant(ctx, text, hours, rate, project, technologies, json_output))
 
 
 async def _run_invoice_assistant(
+    ctx: typer.Context,
     text: str,
     hours: float | None,
     rate: float | None,
@@ -230,7 +1052,44 @@ async def _run_invoice_assistant(
     json_output: bool,
 ) -> None:
     """Run the Invoice Assistant agent."""
-    console.print("\n[bold blue]🤖 AI Invoice Description Generator[/bold blue]\n")
+    import time
+
+    from openfatture.cli.formatters.utils import (
+        get_format_from_context,
+        render_data,
+        render_response,
+    )
+
+    # Determine output format
+    format_type = get_format_from_context(ctx, json_output)
+
+    if format_type == "rich":
+        console.print("\n[bold blue]🤖 AI Invoice Description Generator[/bold blue]\n")
+
+    # Track execution metrics
+    start_time = time.time()
+    success = False
+    tokens_used = 0
+    cost_usd = 0.0
+
+    # Publish AICommandStartedEvent
+    event_bus = get_event_bus()
+    if event_bus:
+        settings = get_settings()
+        event_bus.publish(
+            AICommandStartedEvent(
+                command="describe",
+                user_input=text,
+                provider=settings.ai_provider,
+                model=settings.ai_model,
+                parameters={
+                    "hours": hours,
+                    "rate": rate,
+                    "project": project,
+                    "technologies": technologies,
+                },
+            )
+        )
 
     try:
         # Parse technologies
@@ -255,42 +1114,75 @@ async def _run_invoice_assistant(
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.warning("invoice_context_rag_failed", error=str(exc))
 
-        # Show input
-        _display_input(context)
+        # Show input (only for rich format)
+        if format_type == "rich":
+            _display_input(context)
 
         # Create provider and agent
-        with console.status("[bold green]Generating description with AI..."):
+        if format_type == "rich":
+            with console.status("[bold green]Generating description with AI..."):
+                provider = create_provider()
+                agent = InvoiceAssistantAgent(provider=provider)
+                response = await agent.execute(context)
+        else:
             provider = create_provider()
             agent = InvoiceAssistantAgent(provider=provider)
-
-            # Execute agent
             response = await agent.execute(context)
 
         # Check for errors
         if response.status.value == "error":
-            console.print(f"\n[bold red]❌ Error:[/bold red] {response.error}\n")
+            if format_type == "rich":
+                console.print(f"\n[bold red]❌ Error:[/bold red] {response.error}\n")
+            else:
+                from openfatture.cli.formatters.utils import render_error
+
+                render_error(response.error or "Unknown error", format_type, console)
             logger.error("ai_describe_failed", error=response.error)
             return
 
-        # Display results
-        if json_output:
-            # Raw JSON output
+        # Display results using formatter
+        if json_output or format_type == "json":
+            # Raw JSON output (backward compatibility)
             if response.metadata.get("is_structured"):
                 output = response.metadata["parsed_model"]
             else:
                 output = {"descrizione_completa": response.content}
-            console.print(JSON(json.dumps(output, indent=2, ensure_ascii=False)))
-        else:
-            # Formatted output
+            render_data(output, format_type, console)
+        elif format_type == "rich":
+            # Use existing rich display
             _display_result(response)
+            _display_metrics(response)
+        else:
+            # Use formatter for other formats
+            render_response(response, format_type, console, show_metrics=True)
 
-        # Show metrics
-        _display_metrics(response)
+        # Track success and metrics
+        success = True
+        tokens_used = response.usage.total_tokens
+        cost_usd = response.usage.estimated_cost_usd
 
     except Exception as e:
-        console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
+        if format_type == "rich":
+            console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
+        else:
+            from openfatture.cli.formatters.utils import render_error
+
+            render_error(e, format_type, console)
         logger.error("ai_describe_error", error=str(e), error_type=type(e).__name__)
         raise typer.Exit(1)
+    finally:
+        # Publish AICommandCompletedEvent
+        if event_bus:
+            latency_ms = (time.time() - start_time) * 1000
+            event_bus.publish(
+                AICommandCompletedEvent(
+                    command="describe",
+                    success=success,
+                    tokens_used=tokens_used,
+                    cost_usd=cost_usd,
+                    latency_ms=latency_ms,
+                )
+            )
 
 
 def _display_input(context: InvoiceContext) -> None:
@@ -393,6 +1285,7 @@ def _display_metrics(response: AgentResponse) -> None:
 
 @app.command("suggest-vat")
 def ai_suggest_vat(
+    ctx: typer.Context,
     description: str = typer.Argument(..., help="Service/product description"),
     pa: bool = typer.Option(False, "--pa", help="Client is Public Administration"),
     estero: bool = typer.Option(False, "--estero", help="Foreign client"),
@@ -402,7 +1295,9 @@ def ai_suggest_vat(
     categoria: str | None = typer.Option(None, "--categoria", "-c", help="Service category"),
     importo: float | None = typer.Option(None, "--importo", "-i", help="Amount in EUR"),
     ateco: str | None = typer.Option(None, "--ateco", help="ATECO code"),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output as JSON (deprecated, use --format json)"
+    ),
 ) -> None:
     """
     Use AI to suggest appropriate VAT rate and fiscal treatment.
@@ -411,14 +1306,17 @@ def ai_suggest_vat(
         openfatture ai suggest-vat "consulenza IT"
         openfatture ai suggest-vat "consulenza IT per azienda edile"
         openfatture ai suggest-vat "formazione professionale" --pa
-        openfatture ai suggest-vat "consulenza" --estero --paese US
+        openfatture ai suggest-vat "consulenza" --estero --paese US --format markdown
     """
     asyncio.run(
-        _run_tax_advisor(description, pa, estero, paese, categoria, importo, ateco, json_output)
+        _run_tax_advisor(
+            ctx, description, pa, estero, paese, categoria, importo, ateco, json_output
+        )
     )
 
 
 async def _run_tax_advisor(
+    ctx: typer.Context,
     description: str,
     pa: bool,
     estero: bool,
@@ -429,7 +1327,44 @@ async def _run_tax_advisor(
     json_output: bool,
 ) -> None:
     """Run the Tax Advisor agent."""
-    console.print("\n[bold blue]🧾 AI Tax Advisor - Suggerimento Fiscale[/bold blue]\n")
+    import time
+
+    from openfatture.cli.formatters.utils import (
+        get_format_from_context,
+    )
+
+    # Determine output format
+    format_type = get_format_from_context(ctx, json_output)
+
+    if format_type == "rich":
+        console.print("\n[bold blue]🧾 AI Tax Advisor - Suggerimento Fiscale[/bold blue]\n")
+
+    # Track execution metrics
+    start_time = time.time()
+    success = False
+    tokens_used = 0
+    cost_usd = 0.0
+
+    # Publish AICommandStartedEvent
+    event_bus = get_event_bus()
+    if event_bus:
+        settings = get_settings()
+        event_bus.publish(
+            AICommandStartedEvent(
+                command="suggest-vat",
+                user_input=description,
+                provider=settings.ai_provider,
+                model=settings.ai_model,
+                parameters={
+                    "pa": pa,
+                    "estero": estero,
+                    "paese": paese,
+                    "categoria": categoria,
+                    "importo": importo,
+                    "ateco": ateco,
+                },
+            )
+        )
 
     try:
         # Import TaxContext
@@ -486,10 +1421,28 @@ async def _run_tax_advisor(
         # Show metrics
         _display_metrics(response)
 
+        # Track success and metrics
+        success = True
+        tokens_used = response.usage.total_tokens
+        cost_usd = response.usage.estimated_cost_usd
+
     except Exception as e:
         console.print(f"\n[bold red]❌ Errore:[/bold red] {e}\n")
         logger.error("ai_suggest_vat_error", error=str(e), error_type=type(e).__name__)
         raise typer.Exit(1)
+    finally:
+        # Publish AICommandCompletedEvent
+        if event_bus:
+            latency_ms = (time.time() - start_time) * 1000
+            event_bus.publish(
+                AICommandCompletedEvent(
+                    command="suggest-vat",
+                    success=success,
+                    tokens_used=tokens_used,
+                    cost_usd=cost_usd,
+                    latency_ms=latency_ms,
+                )
+            )
 
 
 def _display_tax_input(context: TaxContext) -> None:
@@ -581,10 +1534,13 @@ def _display_tax_result(response: AgentResponse) -> None:
 
 @app.command("forecast")
 def ai_forecast(
+    ctx: typer.Context,
     months: int = typer.Option(3, "--months", "-m", help="Months to forecast"),
     client_id: int | None = typer.Option(None, "--client", "-c", help="Filter by client ID"),
     retrain: bool = typer.Option(False, "--retrain", help="Force model retraining"),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output as JSON (deprecated, use --format json)"
+    ),
 ) -> None:
     """
     Use AI/ML to forecast cash flow based on invoice payment predictions.
@@ -596,25 +1552,54 @@ def ai_forecast(
         openfatture ai forecast --months 6
         openfatture ai forecast --client 123 --months 3
         openfatture ai forecast --retrain --months 12
+        openfatture ai forecast --months 6 --format markdown
     """
-    asyncio.run(_run_cash_flow_forecast(months, client_id, retrain, json_output))
+    asyncio.run(_run_cash_flow_forecast(ctx, months, client_id, retrain, json_output))
 
 
 async def _run_cash_flow_forecast(
+    ctx: typer.Context,
     months: int,
     client_id: int | None,
     retrain: bool,
     json_output: bool,
 ) -> None:
     """Run cash flow forecasting with ML models."""
-    if not json_output:
+    import time
+
+    from openfatture.cli.formatters.utils import get_format_from_context, render_data
+
+    format_type = get_format_from_context(ctx, json_output)
+
+    if format_type == "rich":
         console.print("\n[bold blue]💰 AI Cash Flow Forecasting[/bold blue]\n")
+
+    # Track execution metrics (ML model, not LLM, so no tokens)
+    start_time = time.time()
+    success = False
+
+    # Publish AICommandStartedEvent
+    event_bus = get_event_bus()
+    if event_bus:
+        event_bus.publish(
+            AICommandStartedEvent(
+                command="forecast",
+                user_input=f"{months} months forecast",
+                provider="ml_ensemble",
+                model="prophet_xgboost",
+                parameters={
+                    "months": months,
+                    "client_id": client_id,
+                    "retrain": retrain,
+                },
+            )
+        )
 
     try:
         from openfatture.ai.agents.cash_flow_predictor import CashFlowPredictorAgent
 
         # Create agent
-        if not json_output:
+        if format_type == "rich":
             with console.status("[bold green]Initializing ML models..."):
                 agent = CashFlowPredictorAgent()
                 await agent.initialize(force_retrain=retrain)
@@ -623,7 +1608,7 @@ async def _run_cash_flow_forecast(
             await agent.initialize(force_retrain=retrain)
 
         # Generate forecast
-        if not json_output:
+        if format_type == "rich":
             status_msg = f"[bold green]Forecasting {months} months..."
             if client_id:
                 status_msg += f" (client {client_id})"
@@ -639,10 +1624,16 @@ async def _run_cash_flow_forecast(
             )
 
         # Display results
-        if json_output:
-            console.print(JSON(json.dumps(forecast.to_dict(), indent=2, ensure_ascii=False)))
-        else:
+        if json_output or format_type == "json":
+            render_data(forecast.to_dict(), format_type, console)
+        elif format_type == "rich":
             _display_forecast(forecast)
+        else:
+            # For other formats, render forecast as data
+            render_data(forecast.to_dict(), format_type, console)
+
+        # Track success
+        success = True
 
     except ValueError as e:
         console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
@@ -652,6 +1643,19 @@ async def _run_cash_flow_forecast(
         console.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}\n")
         logger.error("forecast_unexpected_error", error=str(e), error_type=type(e).__name__)
         raise typer.Exit(1)
+    finally:
+        # Publish AICommandCompletedEvent (ML model, no tokens/cost)
+        if event_bus:
+            latency_ms = (time.time() - start_time) * 1000
+            event_bus.publish(
+                AICommandCompletedEvent(
+                    command="forecast",
+                    success=success,
+                    tokens_used=0,  # ML model, not LLM
+                    cost_usd=0.0,  # ML model, not LLM
+                    latency_ms=latency_ms,
+                )
+            )
 
 
 def _display_forecast(forecast: Any) -> None:
@@ -713,6 +1717,7 @@ def _display_forecast(forecast: Any) -> None:
 
 @app.command("check")
 def ai_check(
+    ctx: typer.Context,
     fattura_id: int = typer.Argument(..., help="Invoice ID to check"),
     level: str = typer.Option(
         "standard",
@@ -720,7 +1725,9 @@ def ai_check(
         "-l",
         help="Check level: basic, standard, advanced",
     ),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output as JSON (deprecated, use --format json)"
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show all issues (including INFO)"),
 ) -> None:
     """
@@ -736,18 +1743,25 @@ def ai_check(
         openfatture ai check 123 --level advanced
         openfatture ai check 123 --json > report.json
         openfatture ai check 123 -v  # Show all issues
+        openfatture ai check 123 --format markdown
     """
-    asyncio.run(_run_compliance_check(fattura_id, level, json_output, verbose))
+    asyncio.run(_run_compliance_check(ctx, fattura_id, level, json_output, verbose))
 
 
 async def _run_compliance_check(
+    ctx: typer.Context,
     fattura_id: int,
     level_str: str,
     json_output: bool,
     verbose: bool,
 ) -> None:
     """Run compliance check on invoice."""
+    import time
+
     from openfatture.ai.agents.compliance import ComplianceLevel
+    from openfatture.cli.formatters.utils import get_format_from_context, render_data
+
+    format_type = get_format_from_context(ctx, json_output)
 
     # Parse level
     level_map = {
@@ -762,23 +1776,48 @@ async def _run_compliance_check(
         console.print("Valid levels: basic, standard, advanced")
         raise typer.Exit(1)
 
-    if not json_output:
+    if format_type == "rich":
         console.print(f"\n[bold blue]🔍 Compliance Check (Level: {level.value})[/bold blue]\n")
+
+    # Track execution metrics (rules-based, not LLM)
+    start_time = time.time()
+    success = False
+
+    # Publish AICommandStartedEvent
+    event_bus = get_event_bus()
+    if event_bus:
+        event_bus.publish(
+            AICommandStartedEvent(
+                command="check",
+                user_input=f"Invoice {fattura_id}",
+                provider="compliance_engine",
+                model=level.value,
+                parameters={"fattura_id": fattura_id, "level": level_str, "verbose": verbose},
+            )
+        )
 
     try:
         # Create checker
         status_context = (
-            console.status("[bold green]Analyzing invoice...") if not json_output else nullcontext()
+            console.status("[bold green]Analyzing invoice...")
+            if format_type == "rich"
+            else nullcontext()
         )
         with status_context:
             checker = ComplianceChecker(level=level)
             report = await checker.check_invoice(fattura_id)
 
         # Output results
-        if json_output:
-            console.print(JSON(json.dumps(report.to_dict(), indent=2, ensure_ascii=False)))
-        else:
+        if json_output or format_type == "json":
+            render_data(report.to_dict(), format_type, console)
+        elif format_type == "rich":
             _display_compliance_report(report, verbose)
+        else:
+            # For other formats, output as data
+            render_data(report.to_dict(), format_type, console)
+
+        # Track success
+        success = True
 
     except ValueError as e:
         console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
@@ -787,6 +1826,19 @@ async def _run_compliance_check(
         console.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}\n")
         logger.error("compliance_check_error", error=str(e), error_type=type(e).__name__)
         raise typer.Exit(1)
+    finally:
+        # Publish AICommandCompletedEvent (rules-based, no tokens/cost)
+        if event_bus:
+            latency_ms = (time.time() - start_time) * 1000
+            event_bus.publish(
+                AICommandCompletedEvent(
+                    command="check",
+                    success=success,
+                    tokens_used=0,  # Rules-based, not LLM
+                    cost_usd=0.0,  # Rules-based, not LLM
+                    latency_ms=latency_ms,
+                )
+            )
 
 
 def _display_compliance_report(report: Any, verbose: bool) -> None:
@@ -915,6 +1967,7 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
 
 @app.command("create-invoice")
 def ai_create_invoice(
+    ctx: typer.Context,
     description: str = typer.Argument(..., help="Service description"),
     client_id: int = typer.Option(..., "--client", "-c", help="Client ID"),
     imponibile: float = typer.Option(..., "--amount", "-a", help="Invoice amount (€)"),
@@ -930,7 +1983,9 @@ def ai_create_invoice(
     confidence_threshold: float = typer.Option(
         0.85, "--confidence", help="Confidence threshold for auto-approval (0.0-1.0)"
     ),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output as JSON (deprecated, use --format json)"
+    ),
 ) -> None:
     """
     Create a complete invoice using AI workflow orchestration.
@@ -944,9 +1999,11 @@ def ai_create_invoice(
     Example:
         openfatture ai create-invoice "consulenza web 3 ore" --client 123 --amount 300
         openfatture ai create-invoice "sviluppo app mobile" --hours 20 --rate 50 --require-approvals
+        openfatture ai create-invoice "development" --client 1 --amount 500 --format json
     """
     asyncio.run(
         _run_invoice_workflow(
+            ctx=ctx,
             description=description,
             client_id=client_id,
             imponibile=imponibile,
@@ -962,6 +2019,7 @@ def ai_create_invoice(
 
 
 async def _run_invoice_workflow(
+    ctx: typer.Context,
     description: str,
     client_id: int,
     imponibile: float,
@@ -974,6 +2032,39 @@ async def _run_invoice_workflow(
     json_output: bool,
 ) -> None:
     """Execute invoice creation workflow."""
+    import time
+
+    from openfatture.cli.formatters.utils import get_format_from_context, render_data
+
+    format_type = get_format_from_context(ctx, json_output)
+
+    # Track execution metrics
+    start_time = time.time()
+    success = False
+
+    # Publish AICommandStartedEvent
+    event_bus = get_event_bus()
+    if event_bus:
+        settings = get_settings()
+        event_bus.publish(
+            AICommandStartedEvent(
+                command="create-invoice",
+                user_input=description,
+                provider=settings.ai_provider,
+                model=settings.ai_model,
+                parameters={
+                    "client_id": client_id,
+                    "imponibile": imponibile,
+                    "hours": hours,
+                    "rate": rate,
+                    "project": project,
+                    "technologies": technologies,
+                    "require_approvals": require_approvals,
+                    "confidence_threshold": confidence_threshold,
+                },
+            )
+        )
+
     try:
         # Parse technologies
         tech_list = [t.strip() for t in technologies.split(",")] if technologies else None
@@ -991,10 +2082,10 @@ async def _run_invoice_workflow(
             require_approvals=require_approvals,
         )
 
-        if json_output:
-            console.print_json(data=result.model_dump())
-        else:
-            # Display results
+        if json_output or format_type == "json":
+            render_data(result.model_dump(), format_type, console)
+        elif format_type == "rich":
+            # Display results in rich format
             if result.invoice_id:
                 console.print("[bold green]✅ Invoice created successfully![/bold green]")
                 console.print(f"Invoice ID: {result.invoice_id}")
@@ -1012,20 +2103,42 @@ async def _run_invoice_workflow(
                 console.print("\n[red]Errors:[/red]")
                 for error in result.errors:
                     console.print(f"  • {error}")
+        else:
+            # For other formats, render as data
+            render_data(result.model_dump(), format_type, console)
+
+        # Track success (workflow may have succeeded even with warnings)
+        success = result.invoice_id is not None
 
     except Exception as e:
         logger.error("Workflow execution failed", error=str(e))
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
+    finally:
+        # Publish AICommandCompletedEvent (workflow uses LLMs, but we don't track tokens here)
+        if event_bus:
+            latency_ms = (time.time() - start_time) * 1000
+            event_bus.publish(
+                AICommandCompletedEvent(
+                    command="create-invoice",
+                    success=success,
+                    tokens_used=0,  # Workflow aggregates multiple steps
+                    cost_usd=0.0,  # Workflow aggregates multiple steps
+                    latency_ms=latency_ms,
+                )
+            )
 
 
 @app.command("chat")
 def ai_chat(
+    ctx: typer.Context,
     message: str | None = typer.Argument(
         None, help="Message to send (interactive if not provided)"
     ),
     stream: bool = typer.Option(True, "--stream/--no-stream", help="Enable streaming responses"),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output as JSON (deprecated, use --format json)"
+    ),
 ) -> None:
     """
     Interactive AI chat assistant for invoice and tax questions.
@@ -1042,16 +2155,46 @@ def ai_chat(
     Examples:
         openfatture ai chat "How do I create an invoice for consulting work?"
         openfatture ai chat --no-stream "What VAT rate applies to software development?"
+        openfatture ai chat "Help me" --format json
         openfatture ai chat  # Interactive mode
     """
-    asyncio.run(_run_chat(message, stream, json_output))
+    run_sync_with_lifespan(_run_chat(ctx, message, stream, json_output))
 
 
-async def _run_chat(message: str | None, stream: bool, json_output: bool) -> None:
+async def _run_chat(
+    ctx: typer.Context, message: str | None, stream: bool, json_output: bool
+) -> None:
     """Run interactive chat session."""
+    import time
+
+    from openfatture.cli.formatters.utils import get_format_from_context, render_response
+
+    format_type = get_format_from_context(ctx, json_output)
+
+    # Track execution metrics
+    start_time = time.time()
+    success = False
+    tokens_used = 0
+    cost_usd = 0.0
+
+    # Get event bus and settings
+    event_bus = get_event_bus()
+    settings = get_settings()
+
+    # Publish AICommandStartedEvent (for single message mode)
+    if message and event_bus:
+        event_bus.publish(
+            AICommandStartedEvent(
+                command="chat",
+                user_input=message,
+                provider=settings.ai_provider,
+                model=settings.ai_model,
+                parameters={"stream": stream, "interactive": False},
+            )
+        )
+
     try:
         # Get debug configuration
-        settings = get_settings()
         debug_config = settings.debug_config
 
         # Create chat agent
@@ -1059,20 +2202,40 @@ async def _run_chat(message: str | None, stream: bool, json_output: bool) -> Non
         agent = ChatAgent(provider=provider, enable_streaming=stream, debug_config=debug_config)
 
         if message:
-            # Single message mode
+            # Single message mode - use formatters
             context = ChatContext(user_input=message)
-            if stream:
+            if stream and format_type == "rich":
                 console.print("[dim]Assistant:[/dim] ", end="")
                 async for chunk in agent.execute_stream(context):
                     console.print(chunk, end="")
                 console.print()  # New line
             else:
                 response = await agent.execute(context)
-                if json_output:
+                if json_output or format_type == "json":
                     console.print_json(data=response.model_dump())
-                else:
+                elif format_type == "rich":
                     console.print(f"[dim]Assistant:[/dim] {response.content}")
+                else:
+                    # Use formatter for other formats
+                    render_response(response, format_type, console, show_metrics=False)
+
+                # Track metrics for single message mode
+                success = True
+                tokens_used = response.usage.total_tokens
+                cost_usd = response.usage.estimated_cost_usd
         else:
+            # Interactive mode - publish started event
+            if event_bus:
+                event_bus.publish(
+                    AICommandStartedEvent(
+                        command="chat",
+                        user_input="Interactive chat session",
+                        provider=settings.ai_provider,
+                        model=settings.ai_model,
+                        parameters={"stream": stream, "interactive": True},
+                    )
+                )
+
             # Interactive mode
             console.print("[bold blue]🤖 OpenFatture AI Assistant[/bold blue]")
             console.print(
@@ -1128,7 +2291,34 @@ async def _run_chat(message: str | None, stream: bool, json_output: bool) -> Non
                     console.print("\n[dim]Goodbye! 👋[/dim]")
                     break
 
+            # Interactive mode completed successfully
+            success = True
+
     except Exception as e:
         logger.error("Chat execution failed", error=str(e))
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
+    finally:
+        # Publish AICommandCompletedEvent (only for single message mode or on exit from interactive)
+        if event_bus and message:  # Single message mode
+            latency_ms = (time.time() - start_time) * 1000
+            event_bus.publish(
+                AICommandCompletedEvent(
+                    command="chat",
+                    success=success,
+                    tokens_used=tokens_used,
+                    cost_usd=cost_usd,
+                    latency_ms=latency_ms,
+                )
+            )
+        elif event_bus and not message:  # Interactive mode on exit
+            latency_ms = (time.time() - start_time) * 1000
+            event_bus.publish(
+                AICommandCompletedEvent(
+                    command="chat",
+                    success=success,
+                    tokens_used=0,  # Interactive mode - tokens tracked per message
+                    cost_usd=0.0,  # Interactive mode - cost tracked per message
+                    latency_ms=latency_ms,
+                )
+            )

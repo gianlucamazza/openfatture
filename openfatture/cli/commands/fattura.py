@@ -8,6 +8,13 @@ from rich.console import Console
 from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
 
+from openfatture.cli.lifespan import get_event_bus
+from openfatture.core.events import (
+    InvoiceCreatedEvent,
+    InvoiceDeletedEvent,
+    InvoiceSentEvent,
+    InvoiceValidatedEvent,
+)
 from openfatture.storage.database.base import SessionLocal, get_session, init_db
 from openfatture.storage.database.models import (
     Cliente,
@@ -162,6 +169,19 @@ def crea_fattura(
 
         db.commit()
         db.refresh(fattura)
+
+        # Publish InvoiceCreatedEvent
+        event_bus = get_event_bus()
+        if event_bus:
+            event_bus.publish(
+                InvoiceCreatedEvent(
+                    invoice_id=fattura.id,
+                    invoice_number=f"{fattura.numero}/{fattura.anno}",
+                    client_id=fattura.cliente_id,
+                    client_name=cliente.denominazione,
+                    total_amount=fattura.totale,
+                )
+            )
 
         # Summary
         console.print("\n[bold green]✓ Invoice created successfully![/bold green]\n")
@@ -368,10 +388,25 @@ def delete_fattura(
             console.print("Cancelled.")
             return
 
+        # Store info before deletion
+        invoice_number = f"{fattura.numero}/{fattura.anno}"
+        invoice_id = fattura.id
+
         db.delete(fattura)
         db.commit()
 
-        console.print(f"[green]✓ Invoice {fattura.numero}/{fattura.anno} deleted[/green]")
+        # Publish InvoiceDeletedEvent
+        event_bus = get_event_bus()
+        if event_bus:
+            event_bus.publish(
+                InvoiceDeletedEvent(
+                    invoice_id=invoice_id,
+                    invoice_number=invoice_number,
+                    reason="User requested deletion",
+                )
+            )
+
+        console.print(f"[green]✓ Invoice {invoice_number} deleted[/green]")
 
     except Exception as e:
         db.rollback()
@@ -393,12 +428,24 @@ def genera_xml(
     console.print("\n[bold blue]🔧 Generating FatturaPA XML[/bold blue]\n")
 
     db = _get_session()
+
+    # Track validation status for event publishing
+    validation_status = "failed"
+    issues = []
+    xml_path_str = None
+    invoice_number = None
+    invoice_id = None
+
     try:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
             console.print(f"[red]Invoice {fattura_id} not found[/red]")
             raise typer.Exit(1)
+
+        # Store for event publishing
+        invoice_number = f"{fattura.numero}/{fattura.anno}"
+        invoice_id = fattura.id
 
         # Import service
         from openfatture.core.fatture.service import InvoiceService
@@ -412,6 +459,7 @@ def genera_xml(
         xml_content, error = service.generate_xml(fattura, validate=not no_validate)
 
         if error:
+            issues.append(error)
             console.print(f"\n[red]❌ Error: {error}[/red]")
             if "XSD schema not found" in error:
                 console.print(
@@ -429,14 +477,19 @@ def genera_xml(
             output_path = Path(output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(xml_content, encoding="utf-8")
-            console.print(f"\n[green]✓ XML saved to: {output_path.absolute()}[/green]")
+            xml_path_str = str(output_path.absolute())
+            console.print(f"\n[green]✓ XML saved to: {xml_path_str}[/green]")
         else:
             xml_path = service.get_xml_path(fattura)
+            xml_path_str = str(xml_path.absolute())
             console.print("\n[green]✓ XML generated successfully![/green]")
-            console.print(f"Path: {xml_path.absolute()}")
+            console.print(f"Path: {xml_path_str}")
 
         # Update database
         db.commit()
+
+        # Mark as passed
+        validation_status = "passed"
 
         # Preview
         console.print("\n[dim]Preview (first 500 chars):[/dim]")
@@ -444,9 +497,25 @@ def genera_xml(
 
     except Exception as e:
         db.rollback()
+        if not issues:  # Only add if not already captured
+            issues.append(str(e))
         console.print(f"\n[red]Error generating XML: {e}[/red]")
         raise typer.Exit(1)
     finally:
+        # Publish InvoiceValidatedEvent
+        if invoice_id and invoice_number:
+            event_bus = get_event_bus()
+            if event_bus:
+                event_bus.publish(
+                    InvoiceValidatedEvent(
+                        invoice_id=invoice_id,
+                        invoice_number=invoice_number,
+                        validation_status=validation_status,
+                        issues=issues,
+                        xml_path=xml_path_str,
+                    )
+                )
+
         db.close()
 
 
@@ -516,6 +585,20 @@ def invia_fattura(
             console.print("[green]✓ Invoice sent to SDI via PEC with professional template[/green]")
 
             db.commit()
+
+            # Publish InvoiceSentEvent
+            event_bus = get_event_bus()
+            if event_bus:
+                event_bus.publish(
+                    InvoiceSentEvent(
+                        invoice_id=fattura.id,
+                        invoice_number=f"{fattura.numero}/{fattura.anno}",
+                        recipient=fattura.cliente.codice_destinatario or settings.sdi_pec_address,
+                        pec_address=settings.sdi_pec_address,
+                        xml_path=str(xml_path),
+                        signed=False,
+                    )
+                )
 
             console.print(
                 f"\n[bold green]✓ Invoice {fattura.numero}/{fattura.anno} sent successfully![/bold green]"

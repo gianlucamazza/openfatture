@@ -17,12 +17,16 @@ from .commands import (
     cliente,
     config,
     email,
+    events,
     fattura,
+    hooks,
     init,
     interactive,
     notifiche,
     pec,
+    preventivo,
     report,
+    web_scraper,
 )
 
 # Create main app and console
@@ -60,6 +64,12 @@ def main(
         "-i",
         help="Launch interactive mode with menus",
     ),
+    format_type: str = typer.Option(
+        "rich",
+        "--format",
+        "-f",
+        help="Output format: rich, json, markdown, stream-json, html",
+    ),
 ) -> None:
     """
     OpenFatture - Electronic invoicing made simple.
@@ -70,6 +80,10 @@ def main(
     # Initialize dynamic logging configuration
     settings = get_settings()
     configure_dynamic_logging(settings.debug_config)
+
+    # Store format option in context for subcommands to access
+    ctx.ensure_object(dict)
+    ctx.obj["format"] = format_type
 
     # If --interactive flag is set and no subcommand, launch interactive mode
     if ctx.invoked_subcommand is None and interactive_mode:
@@ -85,12 +99,16 @@ app.add_typer(init.app, name="init", help="🚀 Initialize OpenFatture")
 app.add_typer(config.app, name="config", help="⚙️  Manage configuration")
 app.add_typer(cliente.app, name="cliente", help="👤 Manage clients")
 app.add_typer(fattura.app, name="fattura", help="🧾 Manage invoices")
+app.add_typer(preventivo.app, name="preventivo", help="📋 Manage quotes/estimates")
 app.add_typer(pec.app, name="pec", help="📧 PEC configuration and testing")
 app.add_typer(email.app, name="email", help="📧 Email templates & testing")
 app.add_typer(notifiche.app, name="notifiche", help="📬 SDI notifications")
 app.add_typer(batch.app, name="batch", help="📦 Batch operations")
 app.add_typer(ai.app, name="ai", help="🤖 AI-powered assistance")
+app.add_typer(hooks.app, name="hooks", help="🪝 Manage lifecycle hooks")
+app.add_typer(events.app, name="events", help="📜 View event history & audit log")
 app.add_typer(report.app, name="report", help="📊 Generate reports")
+app.add_typer(web_scraper.app, name="web-scraper", help="🕷️ Regulatory web scraping")
 app.add_typer(payment_app, name="payment", help="💰 Payment tracking & reconciliation")
 
 

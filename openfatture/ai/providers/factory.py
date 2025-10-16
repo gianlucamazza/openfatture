@@ -1,8 +1,18 @@
 """Factory for creating LLM providers."""
 
-from typing import Literal
+from typing import Any, Literal
+
+import httpx
 
 from openfatture.ai.config import AISettings, get_ai_settings
+
+try:
+    from openfatture.cli.lifespan import _http_client_context  # type: ignore
+
+    _has_context = True
+except ImportError:
+    _http_client_context = None  # type: ignore
+    _has_context = False
 from openfatture.ai.providers.anthropic import AnthropicProvider
 from openfatture.ai.providers.base import BaseLLMProvider, ProviderError
 from openfatture.ai.providers.ollama import OllamaProvider
@@ -15,6 +25,7 @@ logger = get_logger(__name__)
 def create_provider(
     provider_type: Literal["openai", "anthropic", "ollama"] | None = None,
     settings: AISettings | None = None,
+    http_client: Any = None,
     **kwargs,
 ) -> BaseLLMProvider:
     """
@@ -26,6 +37,85 @@ def create_provider(
     Args:
         provider_type: Provider type (if None, uses settings)
         settings: AI settings (if None, uses global settings)
+        http_client: Optional shared HTTP client for connection reuse
+        **kwargs: Additional arguments passed to provider constructor
+
+    Returns:
+        BaseLLMProvider instance
+
+    Raises:
+        ProviderError: If provider cannot be created
+
+    Examples:
+        # Use default settings
+        provider = create_provider()
+
+        # Specify provider
+        provider = create_provider(provider_type="anthropic")
+
+        # Override settings
+        provider = create_provider(
+            provider_type="openai",
+            model="gpt-4",
+            temperature=0.5
+        )
+    """
+    # Get settings if not provided
+    if settings is None:
+        settings = get_ai_settings()
+
+    # Determine provider type
+    if provider_type is None:
+        provider_type = settings.provider
+
+    # Get HTTP client from context if not provided
+    if http_client is None and _has_context and _http_client_context is not None:
+        try:
+            http_client = _http_client_context.get()
+        except LookupError:
+            pass  # No context available
+
+    # Validate provider type
+    if provider_type not in ("openai", "anthropic", "ollama"):
+        raise ProviderError(
+            f"Unsupported provider: {provider_type}. Supported: openai, anthropic, ollama",
+            provider=provider_type,
+        )
+
+    try:
+        if provider_type == "openai":
+            return _create_openai_provider(settings, http_client, **kwargs)
+
+        elif provider_type == "anthropic":
+            return _create_anthropic_provider(settings, http_client, **kwargs)
+
+        elif provider_type == "ollama":
+            return _create_ollama_provider(settings, http_client, **kwargs)
+
+        else:
+            raise ProviderError(
+                f"Unknown provider: {provider_type}. Supported: openai, anthropic, ollama",
+                provider=provider_type,
+            )
+
+    except Exception as e:
+        logger.error(
+            "provider_creation_failed",
+            provider=provider_type,
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+        raise
+    """
+    Create an LLM provider instance.
+
+    Factory function that creates the appropriate provider based on
+    configuration settings.
+
+    Args:
+        provider_type: Provider type (if None, uses settings)
+        settings: AI settings (if None, uses global settings)
+        http_client: Optional shared HTTP client for connection reuse
         **kwargs: Additional arguments passed to provider constructor
 
     Returns:
@@ -63,17 +153,17 @@ def create_provider(
 
     try:
         if provider == "openai":
-            return _create_openai_provider(settings, **kwargs)
+            return _create_openai_provider(settings, http_client, **kwargs)
 
         elif provider == "anthropic":
-            return _create_anthropic_provider(settings, **kwargs)
+            return _create_anthropic_provider(settings, http_client, **kwargs)
 
         elif provider == "ollama":
-            return _create_ollama_provider(settings, **kwargs)
+            return _create_ollama_provider(settings, http_client, **kwargs)
 
         else:
             raise ProviderError(
-                f"Unknown provider: {provider}. " f"Supported: openai, anthropic, ollama",
+                f"Unknown provider: {provider}. Supported: openai, anthropic, ollama",
                 provider=provider,
             )
 
@@ -141,6 +231,7 @@ def _pop_int_param(
 
 def _create_openai_provider(
     settings: AISettings,
+    http_client: httpx.AsyncClient | None = None,
     **kwargs: str | int | float,
 ) -> OpenAIProvider:
     """Create OpenAI provider."""
@@ -149,8 +240,7 @@ def _create_openai_provider(
 
     if not api_key:
         raise ProviderError(
-            "OpenAI API key not configured. "
-            "Set OPENFATTURE_AI_OPENAI_API_KEY environment variable",
+            "OpenAI API key not configured. Set OPENFATTURE_AI_OPENAI_API_KEY environment variable",
             provider="openai",
         )
 
@@ -181,6 +271,7 @@ def _create_openai_provider(
 
 def _create_anthropic_provider(
     settings: AISettings,
+    http_client: httpx.AsyncClient | None = None,
     **kwargs: str | int | float,
 ) -> AnthropicProvider:
     """Create Anthropic provider."""
@@ -241,6 +332,7 @@ def _create_anthropic_provider(
 
 def _create_ollama_provider(
     settings: AISettings,
+    http_client: httpx.AsyncClient | None = None,
     **kwargs: str | int | float,
 ) -> OllamaProvider:
     """Create Ollama provider."""
@@ -267,6 +359,7 @@ def _create_ollama_provider(
         temperature=temperature,
         max_tokens=max_tokens,
         timeout=timeout,
+        http_client=http_client,
     )
 
 

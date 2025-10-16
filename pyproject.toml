@@ -71,6 +71,14 @@ dependencies = [
     "structlog>=24.1.0",
     # PDF Generation
     "reportlab>=4.0.9",
+    # Web Scraping (Regulatory Updates)
+    "playwright>=1.40.0",
+    "beautifulsoup4>=4.12.0",
+    "pypdf>=4.0.0",
+    # Rate Limiting
+    "aiolimiter>=1.1.0",
+    # Scheduling
+    "apscheduler>=3.10.4",
     # Utilities
     "click>=8.1.7",
     "pandas>=2.3.3",

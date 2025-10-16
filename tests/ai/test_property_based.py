@@ -6,14 +6,14 @@ across a wide range of inputs, ensuring robustness of AI functionality.
 """
 
 import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck
-from hypothesis.provisional import urls
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
+from openfatture.ai.domain.agent import AgentConfig
 from openfatture.ai.domain.context import AgentContext, InvoiceContext
-from openfatture.ai.domain.message import Message, Role, ConversationHistory
+from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.prompt import PromptTemplate
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
-from openfatture.ai.domain.agent import AgentConfig
 
 
 class TestAgentContextProperties:

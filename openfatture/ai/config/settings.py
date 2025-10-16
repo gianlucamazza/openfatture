@@ -52,7 +52,7 @@ class AISettings(BaseSettings):
     # Model Selection (per provider) - Updated October 2025
     openai_model: str = Field(
         default="gpt-5",
-        description="OpenAI model to use (gpt-5, gpt-5-turbo, gpt-5-mini, gpt-4o)",
+        description="OpenAI model to use (gpt-5, gpt-4o, gpt-4-turbo, gpt-4, gpt-3.5-turbo)",
     )
 
     anthropic_model: str = Field(

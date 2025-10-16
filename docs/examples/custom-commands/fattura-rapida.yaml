@@ -1,0 +1,30 @@
+# Quick Invoice Creation Command
+# Usage: /fattura-rapida "Client Name" "Service Description" "Amount"
+# Example: /fattura-rapida "Acme Corp" "Web consulting 3h" "300"
+
+name: fattura-rapida
+description: Crea una fattura completa velocemente con AI workflow
+category: invoicing
+aliases: [fr, quick-invoice, qinv]
+author: OpenFatture Team
+version: "1.0"
+
+template: |
+  Crea una fattura completa seguendo questo workflow:
+
+  **Cliente:** {{ arg1 }}
+  **Servizio/Descrizione:** {{ arg2 }}
+  **Importo imponibile:** {{ arg3 }}€
+
+  Esegui questi step in ordine:
+  1. Genera una descrizione dettagliata e professionale per "{{ arg2 }}" seguendo le best practices per fatture elettroniche
+  2. Suggerisci l'aliquota IVA corretta e il trattamento fiscale appropriato considerando la natura del servizio
+  3. Verifica la compliance della fattura secondo le normative SDI vigenti
+  4. Crea la fattura nel sistema con i dati generati
+
+  Mostrami ogni step e chiedi conferma prima di procedere con la creazione definitiva.
+
+examples:
+  - "/fattura-rapida \"Rossi SRL\" \"Consulenza IT 5 ore\" \"500\""
+  - "/fr \"Studio Legale Bianchi\" \"Sviluppo software custom\" \"2500\""
+  - "/quick-invoice \"Acme Corp\" \"Design grafico logo\" \"800\""

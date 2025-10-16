@@ -71,7 +71,7 @@ class OpenAIProvider(BaseLLMProvider):
     def __init__(
         self,
         api_key: str,
-        model: str = "gpt-5",  # Updated to GPT-5 (October 2025)
+        model: str = "gpt-5",  # Updated to GPT-5 (latest model - October 2025)
         temperature: float = 0.7,
         max_tokens: int = 2000,
         timeout: int = 30,

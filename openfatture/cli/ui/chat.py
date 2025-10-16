@@ -1,8 +1,10 @@
 """Interactive chat UI for AI assistant."""
 
+import asyncio
 from typing import cast
 
 import questionary
+from rich.align import Align
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -13,10 +15,13 @@ from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.context import enrich_chat_context, enrich_with_rag
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.message import Message
+from openfatture.ai.feedback import FeedbackCreate, FeedbackService
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.session import ChatSession, SessionManager
+from openfatture.cli.commands.custom_commands import get_command_registry
 from openfatture.cli.ui.styles import openfatture_style
+from openfatture.storage.database.models import FeedbackType
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -53,7 +58,10 @@ class InteractiveChatUI:
         self.agent: ChatAgent | None = None
         self.provider: BaseLLMProvider | None = None
 
-        # Commands
+        # Initialize custom commands registry
+        self.custom_commands = get_command_registry()
+
+        # Built-in commands
         self.commands = {
             "/help": self._show_help,
             "/clear": self._clear_chat,
@@ -61,9 +69,16 @@ class InteractiveChatUI:
             "/export": self._export_session,
             "/stats": self._show_stats,
             "/tools": self._show_tools,
+            "/custom": self._show_custom_commands,
+            "/reload": self._reload_custom_commands,
+            "/feedback": self._submit_feedback,
             "/exit": self._exit_chat,
             "/quit": self._exit_chat,
         }
+
+        # Feedback tracking
+        self.last_ai_message: str | None = None
+        self.feedback_service = FeedbackService()
 
     async def start(self) -> None:
         """Start the interactive chat loop."""
@@ -140,154 +155,235 @@ class InteractiveChatUI:
             raise
 
     def _show_welcome(self) -> None:
-        """Show welcome message."""
-        welcome_text = f"""
-[bold blue]🤖 OpenFatture AI Assistant[/bold blue]
+        """Show compact welcome header with essential information."""
+        # Header principale compatto
+        header = Panel.fit(
+            "[bold blue]🤖 OpenFatture AI Assistant[/bold blue]\n"
+            "[dim]Sessione attiva • Provider: "
+            + f"{self.provider.provider_name if self.provider else 'N/A'} • "
+            + f"Modello: {self.provider.model if self.provider else 'N/A'}[/dim]\n"
+            "[dim]Comandi: /help /tools /stats /save /clear /exit[/dim]",
+            border_style="blue",
+            padding=(0, 1),
+        )
+        console.print(header)
 
-Ciao! Sono il tuo assistente per la fatturazione elettronica.
-
-[bold]Posso aiutarti a:[/bold]
-• Cercare fatture e clienti
-• Fornire statistiche e analytics
-• Rispondere a domande sulla fatturazione
-• Guidarti attraverso i workflow
-
-[bold]Comandi disponibili:[/bold]
-/help     - Mostra aiuto
-/tools    - Mostra strumenti disponibili
-/stats    - Mostra statistiche sessione
-/save     - Salva conversazione
-/export   - Esporta conversazione
-/clear    - Pulisci chat
-/exit     - Esci
-
-[dim]Session ID: {self.session.id[:8]}...[/dim]
-[dim]Provider: {self.provider.provider_name if self.provider else 'N/A'} | Model: {self.provider.model if self.provider else 'N/A'}[/dim]
-"""
-
-        console.print(Panel(welcome_text, border_style="blue"))
-        console.print()
+        # Capabilities summary (compact)
+        capabilities = Panel(
+            "[bold]💡 Capacità:[/bold] Ricerca fatture/clienti • Statistiche • Workflow guidance\n"
+            "[bold]🎯 Pronto per aiutarti![/bold] Digita un messaggio o usa /help per i comandi",
+            border_style="green",
+            padding=(0, 1),
+        )
+        console.print(capabilities)
+        console.print()  # Breathing room
 
     async def _get_user_input(self) -> str:
-        """Get user input."""
-        # Show token counter
+        """Get user input with improved UX."""
+        # Show token counter with better formatting
+        console.print()  # Spacing
         self._show_mini_stats()
+        console.print()  # Spacing
 
-        # Get input
+        # Get input with better prompt
         user_input = await questionary.text(
-            "Tu:",
+            "💬 Messaggio:",
             style=openfatture_style,
             qmark="",
+            instruction="(Digita il tuo messaggio o usa /comando. Premi Ctrl+C per uscire)",
         ).ask_async()
 
         return user_input.strip() if user_input else ""
 
     async def _process_message(self, user_input: str) -> None:
         """
-        Process user message and get AI response.
+        Process user message and get AI response with modern bubble UI.
 
         Args:
             user_input: User message
         """
+        # Display user message in bubble format
+        self._display_user_message_bubble(user_input)
+
         # Add user message to session
         self.session.add_user_message(user_input)
 
-        # Build context
-        context = await self._build_context(user_input)
+        # Check if streaming is enabled
+        if self.agent is None:
+            raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
+        if self.agent.config.streaming_enabled:
+            # Start Live display with thinking message
+            from datetime import datetime
 
-        try:
-            # Check if streaming is enabled
-            if self.agent is None:
-                raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
-            if self.agent.config.streaming_enabled:
+            timestamp = datetime.now().strftime("%H:%M")
+            thinking_content = Panel(
+                "🤖 AI sta pensando...",
+                border_style="green",
+                padding=(0, 1),
+                title=f"[dim]🤖 AI • {timestamp}[/dim]",
+                title_align="left",
+                width=min(int(console.width * 0.8), 100),
+            )
+            with Live(thinking_content, console=console, refresh_per_second=10) as live:
+                # Build context while showing thinking
+                context = await self._build_context(user_input)
                 # Stream response with real-time rendering
-                await self._process_message_streaming(context)
-            else:
-                # Use non-streaming mode (fallback)
-                await self._process_message_non_streaming(context)
+                await self._process_message_streaming(context, live)
+        else:
+            # Build context
+            context = await self._build_context(user_input)
+            # Use non-streaming mode (fallback)
+            await self._process_message_non_streaming(context)
 
-        except Exception as e:
-            logger.error("message_processing_failed", error=str(e))
-            console.print(f"\n[red]Errore nell'elaborazione: {e}[/red]\n")
-
-    async def _process_message_streaming(self, context: ChatContext) -> None:
+    async def _process_message_streaming(self, context: ChatContext, live: Live) -> None:
         """
-        Process message with streaming response.
+        Process message with streaming response and modern bubble UI.
 
-        Best Practice (2025): Separate transient progress from persistent content.
-        - Progress indicators (🔧, ✅, ❌, 📊, ⏱️) are printed directly
-        - Content is streamed via Live display
+        Best Practice (2025): Use Live display for entire bubble to prevent text leakage.
+        - All content is managed within Live context
+        - Progress indicators are integrated into bubble content
+        - No direct console printing during streaming
 
         Args:
             context: Chat context
         """
-        console.print("\n[bold cyan]AI:[/bold cyan]")
-
         # Collect response chunks for session storage
         full_response = ""
-        content_chunks = []  # Only actual content (no progress messages)
+        content_chunks: list[str] = []  # Only actual content (no progress messages)
+        progress_messages: list[str] = []  # Progress messages to show in bubble
 
         try:
             if self.agent is None:
                 raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
 
-            # Stream response with Live rendering for content
-            with Live("", console=console, refresh_per_second=10) as live:
-                async for chunk in self.agent.execute_stream(context):
-                    full_response += chunk
+            # Create initial bubble content for Live display
+            from datetime import datetime
 
-                    # Detect progress messages vs content
-                    # Progress messages start with: \n\n🔧, \n  (numbered), "     " (indented results), \n📊, ⏱️
-                    is_progress = (
-                        chunk.startswith("\n\n🔧")
-                        or chunk.startswith("\n  ")
-                        or chunk.startswith("     ")
-                        or chunk.startswith("\n📊")
-                        or chunk.startswith("⏱️")
-                        or chunk.startswith("\n\n🤖 Continuando")
-                    )
+            timestamp = datetime.now().strftime("%H:%M")
 
-                    if is_progress:
-                        # Print progress directly (transient, outside Live)
-                        # Stop Live temporarily to print progress
-                        live.stop()
-                        console.print(chunk, end="", style="dim")
-                        live.start()
+            def create_live_content(content: str = "", progress: list[str] | None = None) -> Panel:
+                """Create the complete bubble content for Live display."""
+                bubble_content = content
+                if progress:
+                    if bubble_content:
+                        bubble_content += "\n\n" + "\n".join(progress)
                     else:
-                        # Accumulate content and update Live display
-                        content_chunks.append(chunk)
-                        if content_chunks:  # Only update if we have content
-                            live.update(Markdown("".join(content_chunks)))
+                        bubble_content = "\n".join(progress)
 
-            console.print()  # Add newline after response
+                # Truncate long lines for bubble
+                if bubble_content:
+                    lines = []
+                    for line in bubble_content.split("\n"):
+                        if line.strip():
+                            truncated_line = line[:80] + "..." if len(line) > 80 else line
+                            lines.append(truncated_line)
+                        else:
+                            lines.append("")
+                    bubble_content = "\n".join(lines)
 
-            # Add assistant message to session
-            # Note: Token count is estimated in streaming mode
-            estimated_tokens = len(full_response) // 4
-            estimated_cost = estimated_tokens * 0.00001  # Rough estimate
+                return Panel(
+                    bubble_content,
+                    border_style="green",
+                    padding=(0, 1),
+                    title=f"[dim]🤖 AI • {timestamp}[/dim]",
+                    title_align="left",
+                    width=min(int(console.width * 0.8), 100),
+                )
 
+                # Live is already started in caller
+
+            async for chunk in self.agent.execute_stream(context):
+                full_response += chunk
+
+                # Detect progress messages vs content
+                is_progress = (
+                    chunk.startswith("\n\n🔧")
+                    or chunk.startswith("\n  ")
+                    or chunk.startswith("     ")
+                    or chunk.startswith("\n📊")
+                    or chunk.startswith("⏱️")
+                    or chunk.startswith("\n\n🤖 Continuando")
+                )
+
+                if is_progress:
+                    # Add progress to bubble content
+                    progress_messages.append(chunk.strip())
+                    live.update(
+                        create_live_content(
+                            "".join(content_chunks) if content_chunks else "", progress_messages
+                        )
+                    )
+                else:
+                    # Accumulate content and update bubble
+                    content_chunks.append(chunk)
+                    rendered_content = "".join(content_chunks)
+                    live.update(create_live_content(rendered_content, progress_messages))
+
+            # Final display in proper bubble format via Live
+            if content_chunks:
+                final_content = "".join(content_chunks)
+                md = Markdown(final_content)
+                with console.capture() as capture:
+                    console.print(md)
+                rendered_final = capture.get().strip()
+                # Create final bubble content
+                from datetime import datetime
+
+                timestamp = datetime.now().strftime("%H:%M")
+                live.update(
+                    Panel(
+                        rendered_final,
+                        border_style="green",
+                        padding=(0, 1),
+                        title=f"[dim]🤖 AI • {timestamp}[/dim]",
+                        title_align="left",
+                        width=min(int(console.width * 0.8), 100),
+                    )
+                )
+
+            # Add assistant message to session with proper token/cost tracking
             if self.provider is None:
                 raise RuntimeError("Provider not initialized.")
+
+            # Try to get actual token usage from provider if available
+            actual_tokens = getattr(self.provider, "_last_response_tokens", None)
+            actual_cost = getattr(self.provider, "_last_response_cost", None)
+
+            if actual_tokens is not None and actual_cost is not None:
+                tokens = actual_tokens
+                cost = actual_cost
+            else:
+                # Fallback to estimation
+                estimated_tokens = len(full_response) // 4
+                estimated_cost = estimated_tokens * 0.00001  # Rough estimate
+                tokens = estimated_tokens
+                cost = estimated_cost
 
             self.session.add_assistant_message(
                 full_response,
                 provider=self.provider.provider_name,
                 model=self.provider.model,
-                tokens=estimated_tokens,
-                cost=estimated_cost,
+                tokens=tokens,
+                cost=cost,
             )
+
+            # Save last AI message for feedback
+            self.last_ai_message = full_response
 
             # Auto-save if configured
             if self.session.auto_save:
                 self._auto_save()
 
+            # Ask for feedback (optional, quick)
+            await self._ask_for_feedback()
+
         except Exception as e:
             logger.error("streaming_failed", error=str(e))
-            console.print(f"\n[red]Errore nello streaming: {e}[/red]\n")
+            self._display_error_bubble(str(e))
 
     async def _process_message_non_streaming(self, context: ChatContext) -> None:
         """
-        Process message without streaming (fallback).
+        Process message without streaming (fallback) with modern UI.
 
         Args:
             context: Chat context
@@ -295,39 +391,40 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         if self.agent is None:
             raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
 
-        # Show "thinking" indicator
-        with console.status("[bold green]AI sta pensando...") as status:
-            try:
-                # Execute agent
-                response = await self.agent.execute(context)
+        try:
+            # Execute agent
+            response = await self.agent.execute(context)
 
-                status.stop()
+            # Check for errors
+            if response.status.value == "error":
+                self._display_error_bubble(response.error or "Errore sconosciuto")
+                return
 
-                # Check for errors
-                if response.status.value == "error":
-                    console.print(f"\n[red]❌ Errore: {response.error}[/red]\n")
-                    return
+            # Add assistant message to session
+            self.session.add_assistant_message(
+                response.content,
+                provider=response.provider,
+                model=response.model,
+                tokens=response.usage.total_tokens,
+                cost=response.usage.estimated_cost_usd,
+            )
 
-                # Add assistant message to session
-                self.session.add_assistant_message(
-                    response.content,
-                    provider=response.provider,
-                    model=response.model,
-                    tokens=response.usage.total_tokens,
-                    cost=response.usage.estimated_cost_usd,
-                )
+            # Display response in bubble format
+            self._display_response(response.content)
 
-                # Display response
-                self._display_response(response.content)
+            # Save last AI message for feedback
+            self.last_ai_message = response.content
 
-                # Auto-save if configured
-                if self.session.auto_save:
-                    self._auto_save()
+            # Auto-save if configured
+            if self.session.auto_save:
+                self._auto_save()
 
-            except Exception as e:
-                status.stop()
-                logger.error("non_streaming_failed", error=str(e))
-                console.print(f"\n[red]Errore nell'elaborazione: {e}[/red]\n")
+            # Ask for feedback (optional, quick)
+            await self._ask_for_feedback()
+
+        except Exception as e:
+            logger.error("non_streaming_failed", error=str(e))
+            self._display_error_bubble(str(e))
 
     async def _build_context(self, user_input: str) -> ChatContext:
         """
@@ -379,17 +476,79 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 
     def _display_response(self, content: str) -> None:
         """
-        Display AI response with markdown rendering.
+        Display AI response with modern bubble design and markdown rendering.
 
         Args:
             content: Response content
         """
-        # Render as markdown
+        # For non-streaming responses, render as markdown and display in bubble
         md = Markdown(content)
+        with console.capture() as capture:
+            console.print(md)
+        rendered_content = capture.get()
+        self._display_ai_message_bubble(rendered_content.strip())
 
-        console.print("\n[bold cyan]AI:[/bold cyan]")
-        console.print(md)
+    def _display_user_message_bubble(self, message: str) -> None:
+        """Display user message in modern bubble format."""
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%H:%M")
+        bubble = Panel(
+            f"[bold white]{message}[/bold white]",
+            border_style="blue",
+            padding=(0, 1),
+            title=f"[dim]👤 Tu • {timestamp}[/dim]",
+            title_align="right",
+        )
+        console.print(Align.right(bubble, width=min(int(console.width * 0.8), 100)))
+        console.print()  # Spacing
+
+    def _display_ai_message_bubble(self, content: str) -> None:
+        """Display AI message in modern bubble format."""
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%H:%M")
+
+        bubble = Panel(
+            content,
+            border_style="green",
+            padding=(0, 1),
+            title=f"[dim]🤖 AI • {timestamp}[/dim]",
+            title_align="left",
+            width=min(int(console.width * 0.8), 100),
+        )
+        console.print(Align.left(bubble, width=min(int(console.width * 0.8), 100)))
+        console.print()  # Spacing
+
+    def _display_error_bubble(self, error_message: str) -> None:
+        """Display error in dedicated error bubble."""
+        error_bubble = Panel(
+            f"[red]❌ Errore:[/red] {error_message}\n\n"
+            "[yellow]💡 Suggerimenti:[/yellow]\n"
+            "• Riprova il messaggio\n"
+            "• Usa /help per assistenza\n"
+            "• Controlla la connessione",
+            title="🚨 Errore Rilevato",
+            border_style="red",
+            padding=(1, 2),
+        )
+        console.print(error_bubble)
         console.print()
+
+    async def _show_typing_indicator(self, max_duration: int = 10) -> None:
+        """Show typing indicator during AI processing."""
+        frames = [
+            "🤖 AI sta pensando",
+            "🤖 AI sta pensando.",
+            "🤖 AI sta pensando..",
+            "🤖 AI sta pensando...",
+        ]
+
+        with Live("", console=console, refresh_per_second=2) as live:
+            for i in range(max_duration * 2):  # 2 updates per second
+                frame = frames[i % len(frames)]
+                live.update(f"[dim]{frame}[/dim]")
+                await asyncio.sleep(0.5)
 
     def _show_mini_stats(self) -> None:
         """Show mini stats bar."""
@@ -413,22 +572,52 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
         # Parse command (handle arguments)
         parts = command.split()
         cmd = parts[0].lower()
+        args = parts[1:] if len(parts) > 1 else []
 
+        # Check built-in commands first
         if cmd in self.commands:
             return await self.commands[cmd]()
-        else:
-            console.print(f"[yellow]Comando sconosciuto: {cmd}[/yellow]")
-            console.print("[dim]Usa /help per vedere i comandi disponibili[/dim]")
+
+        # Check custom commands
+        if self.custom_commands.has_command(cmd.lstrip("/")):
+            try:
+                # Expand custom command template
+                expanded = self.custom_commands.execute(cmd.lstrip("/"), args=args)
+
+                # Display expansion preview
+                console.print("\n[dim]🔧 Custom command expanded:[/dim]")
+                preview = expanded[:200] + "..." if len(expanded) > 200 else expanded
+                console.print(Panel(preview, border_style="blue", padding=(0, 1)))
+                console.print()
+
+                # Process as regular message
+                await self._process_message(expanded)
+
+            except ValueError as e:
+                console.print(f"[red]❌ Command error: {e}[/red]")
+
             return None
+
+        # Unknown command
+        console.print(f"[yellow]Comando sconosciuto: {cmd}[/yellow]")
+        console.print(
+            "[dim]Usa /help per comandi built-in o /custom per comandi personalizzati[/dim]"
+        )
+        return None
 
     async def _show_help(self) -> None:
         """Show help message."""
-        help_text = """
-[bold]Available Commands:[/bold]
+        custom_count = len(self.custom_commands.list_commands())
+
+        help_text = f"""
+[bold]Built-in Commands:[/bold]
 
 /help     - Show this message
 /tools    - List available AI tools
 /stats    - Display conversation stats
+/feedback - Submit detailed feedback on AI response
+/custom   - Show custom commands ({custom_count} available)
+/reload   - Reload custom commands from disk
 /save     - Save the current conversation
 /export   - Export to Markdown or JSON
 /clear    - Clear messages (keep session)
@@ -441,6 +630,11 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 • "Show me the last 5 invoices"
 • "Which customers have the most invoices?"
 • "Give me a summary of the current year"
+
+[bold]Custom Commands:[/bold]
+
+Create custom commands in: [cyan]~/.openfatture/commands/[/cyan]
+Use /custom to see available custom commands
 """
 
         console.print(Panel(help_text, title="Help", border_style="blue"))
@@ -534,6 +728,31 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
 
         return None
 
+    async def _show_custom_commands(self) -> None:
+        """Show available custom commands."""
+        self.custom_commands.display_commands()
+
+        # Show usage examples if commands exist
+        commands = self.custom_commands.list_commands()
+        if commands and commands[0].examples:
+            console.print("[bold cyan]Example usage:[/bold cyan]")
+            for example in commands[0].examples[:3]:  # Show first 3 examples
+                console.print(f"  [dim]{example}[/dim]")
+            console.print()
+
+        return None
+
+    async def _reload_custom_commands(self) -> None:
+        """Reload custom commands from disk."""
+        try:
+            self.custom_commands.reload()
+            count = len(self.custom_commands.list_commands())
+            console.print(f"[green]✓ Custom commands reloaded: {count} available[/green]\n")
+        except Exception as e:
+            console.print(f"[red]✗ Error reloading commands: {e}[/red]\n")
+
+        return None
+
     async def _exit_chat(self) -> str:
         """Exit chat."""
         return "exit"
@@ -545,6 +764,172 @@ Ciao! Sono il tuo assistente per la fatturazione elettronica.
             logger.debug("session_auto_saved", session_id=self.session.id)
         except Exception as e:
             logger.warning("session_auto_save_failed", error=str(e))
+
+    async def _ask_for_feedback(self) -> None:
+        """Ask user for quick feedback on AI response."""
+        if not self.last_ai_message:
+            return
+
+        console.print()
+        console.print("[dim]👍/👎 Rate questa risposta? (1-5, o Enter per saltare):[/dim] ", end="")
+
+        try:
+            # Get rating with timeout (non-blocking)
+            import sys
+
+            rating_input = await asyncio.wait_for(
+                asyncio.to_thread(sys.stdin.readline), timeout=3.0
+            )
+            rating_str = rating_input.strip()
+
+            if not rating_str:
+                return
+
+            # Parse rating
+            if rating_str in ["1", "2", "3", "4", "5"]:
+                rating = int(rating_str)
+
+                # Create feedback
+                feedback = FeedbackCreate(
+                    session_id=self.session.id,
+                    feedback_type=FeedbackType.RATING,
+                    rating=rating,
+                    original_text=self.last_ai_message[:500],  # Truncate
+                    agent_type="chat_agent",
+                )
+
+                # Save feedback
+                self.feedback_service.create_user_feedback(feedback)
+
+                # Show confirmation
+                emoji = "👍" if rating >= 4 else ("👌" if rating == 3 else "👎")
+                console.print(f"[green]{emoji} Grazie per il feedback![/green]")
+
+            elif rating_str in ["👍", "+", "y", "yes", "si", "sì"]:
+                # Quick thumbs up
+                feedback = FeedbackCreate(
+                    session_id=self.session.id,
+                    feedback_type=FeedbackType.THUMBS_UP,
+                    original_text=self.last_ai_message[:500],
+                    agent_type="chat_agent",
+                )
+                self.feedback_service.create_user_feedback(feedback)
+                console.print("[green]👍 Grazie![/green]")
+
+            elif rating_str in ["👎", "-", "n", "no"]:
+                # Quick thumbs down
+                feedback = FeedbackCreate(
+                    session_id=self.session.id,
+                    feedback_type=FeedbackType.THUMBS_DOWN,
+                    original_text=self.last_ai_message[:500],
+                    agent_type="chat_agent",
+                )
+                self.feedback_service.create_user_feedback(feedback)
+                console.print(
+                    "[yellow]👎 Grazie per il feedback. Usa /feedback per dettagli.[/yellow]"
+                )
+
+        except TimeoutError:
+            # User didn't respond in time, skip feedback
+            pass
+        except Exception as e:
+            logger.warning("feedback_prompt_error", error=str(e))
+
+        console.print()
+
+    async def _submit_feedback(self) -> None:
+        """Submit detailed feedback via command."""
+        if not self.last_ai_message:
+            console.print("[yellow]Nessun messaggio AI recente da valutare[/yellow]\n")
+            return None
+
+        console.print("\n[bold cyan]📝 Feedback Dettagliato[/bold cyan]\n")
+
+        # Ask for feedback type
+        feedback_type_choice = await questionary.select(
+            "Tipo di feedback:",
+            choices=[
+                "Rating (1-5 stelle)",
+                "Correzione (testo corretto)",
+                "Commento generale",
+            ],
+            style=openfatture_style,
+        ).ask_async()
+
+        if "Rating" in feedback_type_choice:
+            # Rating feedback
+            rating = await questionary.select(
+                "Rating:",
+                choices=["1 ⭐", "2 ⭐⭐", "3 ⭐⭐⭐", "4 ⭐⭐⭐⭐", "5 ⭐⭐⭐⭐⭐"],
+                style=openfatture_style,
+            ).ask_async()
+
+            rating_value = int(rating[0])
+
+            comment = await questionary.text(
+                "Commento opzionale:",
+                style=openfatture_style,
+            ).ask_async()
+
+            feedback = FeedbackCreate(
+                session_id=self.session.id,
+                feedback_type=FeedbackType.RATING,
+                rating=rating_value,
+                original_text=self.last_ai_message[:1000],
+                user_comment=comment if comment else None,
+                agent_type="chat_agent",
+            )
+
+        elif "Correzione" in feedback_type_choice:
+            # Correction feedback
+            console.print("\n[dim]Messaggio originale (troncato):[/dim]")
+            console.print(self.last_ai_message[:200] + "...\n")
+
+            corrected = await questionary.text(
+                "Versione corretta:",
+                style=openfatture_style,
+                multiline=True,
+            ).ask_async()
+
+            comment = await questionary.text(
+                "Spiega la correzione:",
+                style=openfatture_style,
+            ).ask_async()
+
+            feedback = FeedbackCreate(
+                session_id=self.session.id,
+                feedback_type=FeedbackType.CORRECTION,
+                original_text=self.last_ai_message[:1000],
+                corrected_text=corrected,
+                user_comment=comment if comment else None,
+                agent_type="chat_agent",
+            )
+
+        else:
+            # Comment feedback
+            comment = await questionary.text(
+                "Il tuo commento:",
+                style=openfatture_style,
+                multiline=True,
+            ).ask_async()
+
+            feedback = FeedbackCreate(
+                session_id=self.session.id,
+                feedback_type=FeedbackType.COMMENT,
+                original_text=self.last_ai_message[:1000],
+                user_comment=comment,
+                agent_type="chat_agent",
+            )
+
+        # Save feedback
+        try:
+            self.feedback_service.create_user_feedback(feedback)
+            console.print("[green]✓ Feedback salvato! Grazie per aiutarci a migliorare.[/green]\n")
+        except Exception as e:
+            console.print(f"[red]✗ Errore nel salvataggio: {e}[/red]\n")
+            logger.error("feedback_save_error", error=str(e))
+
+        return None
 
     def _show_goodbye(self) -> None:
         """Show goodbye message."""

@@ -1,0 +1,55 @@
+# Monthly Business Report
+# Usage: /report-mensile [Month] [Year]
+# Example: /report-mensile October 2025
+
+name: report-mensile
+description: Genera report mensile completo con statistiche e analisi
+category: reporting
+aliases: [rm, monthly-report, report]
+author: OpenFatture Team
+version: "1.0"
+
+template: |
+  Genera un report completo per il mese di {{ arg1 | default('questo mese') }}{% if arg2 %} {{ arg2 }}{% endif %}:
+
+  **📊 REPORT MENSILE - {{ arg1 | default('MESE CORRENTE') | upper }}{% if arg2 %} {{ arg2 }}{% endif %}**
+
+  Includi le seguenti sezioni:
+
+  ## 1. Fatturazione
+  - Numero totale fatture emesse
+  - Importo totale imponibile
+  - Importo totale IVA
+  - Importo totale fatturato (imponibile + IVA)
+  - Confronto con mese precedente (% variazione)
+  - Valore medio per fattura
+
+  ## 2. Incassi
+  - Totale incassato nel mese
+  - Fatture pagate
+  - Fatture in sospeso
+  - Tempo medio di incasso
+  - Cash flow projection per i prossimi 3 mesi
+
+  ## 3. Top Clienti
+  - Top 5 clienti per fatturato
+  - Nuovi clienti acquisiti
+  - Clienti con fatture scadute
+
+  ## 4. Analisi Fiscale
+  - IVA a debito/credito
+  - Ritenute d'acconto subite
+  - Bolli virtuali applicati
+
+  ## 5. Insights & Raccomandazioni
+  - Tendenze rispetto ai mesi precedenti
+  - Anomalie o criticità rilevate
+  - Azioni consigliate per il mese prossimo
+
+  Usa grafici, tabelle e evidenzia metriche chiave con emoji.
+  Sii conciso ma completo. Evidenzia in **grassetto** i dati importanti.
+
+examples:
+  - "/report-mensile"
+  - "/rm October 2025"
+  - "/monthly-report Settembre"

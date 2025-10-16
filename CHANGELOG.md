@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Event System & Audit Trail**:
+  - `EventLog` database model for complete event audit trail with UUID, timestamps, and entity tracking
+  - Automatic event persistence with `EventPersistenceListener` (priority -100, error isolation)
+  - Entity tracking (invoice, client, etc.) for filtering and timeline generation
+  - Metadata support for additional context (JSON format)
+  - JSON serialization for datetime, Decimal, nested objects, and lists
+  - Global event bus initialization and shutdown management
+
+- **Event Repository**:
+  - Advanced query methods with flexible filtering (event_type, entity_type, entity_id, date_range)
+  - Full-text search in event data with SQLite LIKE queries
+  - Timeline generation for entities with human-readable summaries
+  - Statistics aggregation (by type, by entity, total counts)
+  - Pagination support (limit, offset)
+  - Session management (internal or external session support)
+
+- **Event Analytics Service**:
+  - Time-based aggregations: daily, weekly, monthly activity
+  - Event type distribution with percentages
+  - Entity activity metrics (most active entities)
+  - Activity trends comparing recent vs previous periods
+  - Event velocity metrics (events per hour)
+  - Hourly distribution patterns (0-23h analysis)
+  - Comprehensive dashboard summary with key metrics
+
+- **CLI Event Commands** (`openfatture events`):
+  - `list` - List events with rich filtering (type, entity, date range, limit)
+  - `show <event-id>` - Detailed event view with JSON-formatted data and metadata
+  - `stats [--last-days N]` - Statistics summary with event type and entity breakdowns
+  - `timeline <entity-type> <entity-id>` - Entity event timeline with tree-style visualization
+  - `search <query> [--limit N]` - Full-text search with result snippets
+  - `types` - List all event types with counts
+  - `dashboard [--days N]` - Comprehensive analytics dashboard with:
+    - Key metrics (total events, event types, velocity, trends)
+    - Top event types with ASCII bar charts
+    - Entity activity distribution
+    - Trend indicators (📈 increasing, 📉 decreasing, ➡️ stable)
+  - `trends [--days N] [--type TYPE]` - Time-based activity trends with bar charts
+
+- **Visualizations**:
+  - ASCII bar charts using Rich (█ blocks scaled to data)
+  - Timeline view with tree-style connectors (┌ ├ └)
+  - Trend indicators with color coding (green/red/yellow)
+  - Formatted tables with proper alignment and styling
+  - Panels for headers and detailed views
+
+### Technical
+- **Tests**: 45+ new comprehensive tests for event system
+  - 13 tests for event persistence (100% passing)
+  - 27 tests for EventRepository (filters, search, stats, pagination)
+  - 5 integration tests for fattura events (creation, validation, deletion, sending, timeline)
+  - All tests passing with proper timezone handling
+- **Test Coverage**:
+  - Event persistence: 100%
+  - Event repository: 91%
+  - Event base (event bus): 88%
+  - Event analytics: 15% (new module, will increase with usage)
+- **Total Project Tests**: ~170 (increased from 117)
+- **Architecture**: Observer pattern for event bus, Repository pattern for data access, error isolation for reliability
+
 ## [1.1.0] - 2025-10-12
 ### Changed
 - Localised the CLI, interactive experience, email templates, and PDF outputs to English for consistency across platforms.

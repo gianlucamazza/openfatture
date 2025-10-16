@@ -1,7 +1,6 @@
 """Unit tests for SDI notifications parser and processor."""
 
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest

@@ -10,6 +10,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from openfatture.core.events import SDINotificationReceivedEvent, get_global_event_bus
 from openfatture.sdi.notifiche.parser import NotificaSDI, SDINotificationParser, TipoNotifica
 from openfatture.storage.database.models import Fattura, LogSDI, StatoFattura
 
@@ -111,6 +112,19 @@ class NotificationProcessor:
 
             # Commit changes
             self.db.commit()
+
+            # Publish SDINotificationReceivedEvent
+            event_bus = get_global_event_bus()
+            if event_bus:
+                event_bus.publish(
+                    SDINotificationReceivedEvent(
+                        notification_type=notification.tipo,
+                        invoice_id=fattura.id,
+                        invoice_number=f"{fattura.numero}/{fattura.anno}",
+                        message=notification.messaggio or "",
+                        sdi_identifier=notification.identificativo_sdi,
+                    )
+                )
 
             # Send email notification if email sender is configured
             if self.email_sender:

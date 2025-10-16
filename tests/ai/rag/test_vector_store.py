@@ -7,7 +7,7 @@ Run with: pytest tests/ai/rag/test_vector_store.py -v
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -52,9 +52,7 @@ def temp_rag_config():
 class TestVectorStore:
     """Test VectorStore operations."""
 
-    async def test_vector_store_initialization(
-        self, temp_rag_config, mock_embedding_strategy
-    ):
+    async def test_vector_store_initialization(self, temp_rag_config, mock_embedding_strategy):
         """Test vector store initializes correctly."""
         store = VectorStore(temp_rag_config, mock_embedding_strategy)
 

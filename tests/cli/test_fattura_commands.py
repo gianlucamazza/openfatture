@@ -11,7 +11,7 @@ import pytest
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.fattura import app
-from openfatture.storage.database.models import StatoFattura, TipoDocumento
+from openfatture.storage.database.models import StatoFattura
 
 runner = CliRunner()
 pytestmark = pytest.mark.unit

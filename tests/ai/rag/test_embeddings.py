@@ -74,9 +74,7 @@ class TestOpenAIEmbeddings:
         with patch("openai.AsyncOpenAI") as mock_openai_class:
             # Setup mock client
             mock_client = MagicMock()
-            mock_client.embeddings.create = AsyncMock(
-                return_value=mock_openai_response["single"]
-            )
+            mock_client.embeddings.create = AsyncMock(return_value=mock_openai_response["single"])
             mock_openai_class.return_value = mock_client
 
             embeddings = OpenAIEmbeddings(api_key="test-key")
@@ -94,9 +92,7 @@ class TestOpenAIEmbeddings:
         """Test generating embeddings for multiple texts."""
         with patch("openai.AsyncOpenAI") as mock_openai_class:
             mock_client = MagicMock()
-            mock_client.embeddings.create = AsyncMock(
-                return_value=mock_openai_response["batch"]
-            )
+            mock_client.embeddings.create = AsyncMock(return_value=mock_openai_response["batch"])
             mock_openai_class.return_value = mock_client
 
             embeddings = OpenAIEmbeddings(api_key="test-key")
@@ -112,15 +108,11 @@ class TestOpenAIEmbeddings:
             assert results[1][0] == 0.2
             assert results[2][0] == 0.3
 
-    async def test_embed_text_with_cache_miss(
-        self, mock_openai_response, mock_embedding_cache
-    ):
+    async def test_embed_text_with_cache_miss(self, mock_openai_response, mock_embedding_cache):
         """Test embedding with cache miss."""
         with patch("openai.AsyncOpenAI") as mock_openai_class:
             mock_client = MagicMock()
-            mock_client.embeddings.create = AsyncMock(
-                return_value=mock_openai_response["single"]
-            )
+            mock_client.embeddings.create = AsyncMock(return_value=mock_openai_response["single"])
             mock_openai_class.return_value = mock_client
 
             embeddings = OpenAIEmbeddings(
@@ -136,15 +128,11 @@ class TestOpenAIEmbeddings:
             # Verify cache was set
             assert mock_embedding_cache.set.call_count == 1
 
-    async def test_embed_text_with_cache_hit(
-        self, mock_openai_response, mock_embedding_cache
-    ):
+    async def test_embed_text_with_cache_hit(self, mock_openai_response, mock_embedding_cache):
         """Test embedding with cache hit."""
         with patch("openai.AsyncOpenAI") as mock_openai_class:
             mock_client = MagicMock()
-            mock_client.embeddings.create = AsyncMock(
-                return_value=mock_openai_response["single"]
-            )
+            mock_client.embeddings.create = AsyncMock(return_value=mock_openai_response["single"])
             mock_openai_class.return_value = mock_client
 
             embeddings = OpenAIEmbeddings(
@@ -167,9 +155,7 @@ class TestOpenAIEmbeddings:
         """Test error handling in embedding generation."""
         with patch("openai.AsyncOpenAI") as mock_openai_class:
             mock_client = MagicMock()
-            mock_client.embeddings.create = AsyncMock(
-                side_effect=Exception("API Error")
-            )
+            mock_client.embeddings.create = AsyncMock(side_effect=Exception("API Error"))
             mock_openai_class.return_value = mock_client
 
             embeddings = OpenAIEmbeddings(api_key="test-key")
@@ -210,9 +196,7 @@ class TestSentenceTransformerEmbeddings:
     async def test_sentence_transformer_initialization(self):
         """Test SentenceTransformer initializes correctly."""
         with patch("openfatture.ai.rag.embeddings.SentenceTransformer"):
-            embeddings = SentenceTransformerEmbeddings(
-                model_name="all-MiniLM-L6-v2"
-            )
+            embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
             assert embeddings.model_name == "all-MiniLM-L6-v2"
             assert embeddings.dimension == 384
@@ -228,9 +212,7 @@ class TestSentenceTransformerEmbeddings:
             mock_model.encode.return_value = mock_embedding
             mock_st.return_value = mock_model
 
-            embeddings = SentenceTransformerEmbeddings(
-                model_name="all-MiniLM-L6-v2"
-            )
+            embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
             # Generate embedding
             result = await embeddings.embed_text("Test text")
@@ -247,17 +229,17 @@ class TestSentenceTransformerEmbeddings:
             import numpy as np
 
             mock_model = MagicMock()
-            mock_embeddings = np.array([
-                [0.1] * 384,
-                [0.2] * 384,
-                [0.3] * 384,
-            ])
+            mock_embeddings = np.array(
+                [
+                    [0.1] * 384,
+                    [0.2] * 384,
+                    [0.3] * 384,
+                ]
+            )
             mock_model.encode.return_value = mock_embeddings
             mock_st.return_value = mock_model
 
-            embeddings = SentenceTransformerEmbeddings(
-                model_name="all-MiniLM-L6-v2"
-            )
+            embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
             # Generate batch embeddings
             texts = ["Text 1", "Text 2", "Text 3"]

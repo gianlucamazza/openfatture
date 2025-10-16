@@ -5,6 +5,8 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
+from openfatture.cli.lifespan import get_event_bus
+from openfatture.core.events import ClientCreatedEvent, ClientDeletedEvent
 from openfatture.storage.database.base import SessionLocal, get_session, init_db
 from openfatture.storage.database.models import Cliente
 from openfatture.utils.config import get_settings
@@ -125,6 +127,20 @@ def add_cliente(
         db.add(cliente)
         db.commit()
         db.refresh(cliente)
+
+        # Publish ClientCreatedEvent
+        event_bus = get_event_bus()
+        if event_bus:
+            event_bus.publish(
+                ClientCreatedEvent(
+                    client_id=cliente.id,
+                    client_name=cliente.denominazione,
+                    partita_iva=cliente.partita_iva,
+                    codice_fiscale=cliente.codice_fiscale,
+                    codice_destinatario=cliente.codice_destinatario,
+                    pec=cliente.pec,
+                )
+            )
 
         console.print(f"\n[green]✓ Client added successfully (ID: {cliente.id})[/green]")
 
@@ -271,10 +287,27 @@ def delete_cliente(
             console.print("Cancelled.")
             return
 
+        # Store info before deletion
+        client_name = cliente.denominazione
+        client_id = cliente.id
+        invoice_count = len(cliente.fatture)
+
         db.delete(cliente)
         db.commit()
 
-        console.print(f"[green]✓ Client '{cliente.denominazione}' deleted[/green]")
+        # Publish ClientDeletedEvent
+        event_bus = get_event_bus()
+        if event_bus:
+            event_bus.publish(
+                ClientDeletedEvent(
+                    client_id=client_id,
+                    client_name=client_name,
+                    invoice_count=invoice_count,
+                    reason="User requested deletion",
+                )
+            )
+
+        console.print(f"[green]✓ Client '{client_name}' deleted[/green]")
 
     except Exception as e:
         db.rollback()

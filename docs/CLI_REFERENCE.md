@@ -16,8 +16,110 @@ Complete catalogue of the `openfatture` CLI commands and the tasks you can run f
 - Show global help: `openfatture --help`
 - Install shell completion (recommended): `openfatture --install-completion zsh` / `bash`
 - Launch the interactive TUI: `openfatture --interactive` or `openfatture interactive`
+- Control output format globally: `openfatture --format json ai describe "text"`
 
 Every command group ships with its own `--help`, e.g. `openfatture fattura --help`.
+
+---
+
+## Output Formats
+
+OpenFatture supports multiple output formats for AI commands, making it easy to integrate with scripts, CI/CD pipelines, or other tools.
+
+### Available Formats
+
+| Format | Description | Use Case |
+|--------|-------------|----------|
+| `rich` (default) | Rich terminal UI with colors, panels, and formatting | Interactive CLI usage |
+| `json` | Structured JSON with full metadata | Scripting, API integration, programmatic parsing |
+| `markdown` | Formatted Markdown with headers and sections | Documentation, reports, human-readable exports |
+| `stream-json` | JSON Lines format for streaming responses | Real-time processing, log ingestion |
+| `html` | Styled HTML document with embedded CSS | Email, web display, archival |
+
+### Usage
+
+**Global format flag** (applies to all AI commands):
+```bash
+openfatture --format json ai describe "consulting"
+openfatture --format markdown ai suggest-vat "training"
+openfatture --format html ai forecast --months 6
+```
+
+**Per-command format** (overrides global):
+```bash
+openfatture ai describe "consulting" --format json
+```
+
+**Backward compatibility** (existing `--json` flag still works):
+```bash
+openfatture ai describe "consulting" --json  # Same as --format json
+```
+
+### Format Priority
+
+When multiple format options are specified, the priority order is:
+1. Explicit `--format` on the command itself
+2. Legacy `--json` flag on the command
+3. Global `--format` flag
+4. Default (`rich`)
+
+### Examples
+
+**JSON output** for scripting:
+```bash
+# Get structured data for parsing
+result=$(openfatture --format json ai describe "Backend development" --hours 8)
+echo "$result" | jq '.content'
+```
+
+**Markdown output** for documentation:
+```bash
+# Generate invoice description for docs
+openfatture --format markdown ai describe "Cloud migration consulting" > docs/services.md
+```
+
+**HTML output** for email/reports:
+```bash
+# Create formatted report
+openfatture --format html ai forecast --months 6 > reports/forecast.html
+```
+
+**StreamJSON output** for real-time processing:
+```bash
+# Process streaming responses line-by-line
+openfatture --format stream-json ai chat "Analyze my invoices" | while read -r line; do
+  echo "$line" | jq '.content'
+done
+```
+
+### Format Details
+
+**JSON format** includes:
+- `content`: AI response text
+- `status`: Response status (success/error)
+- `provider`: LLM provider used
+- `model`: Model name
+- `tokens_used`: Total tokens consumed
+- `cost_usd`: Estimated cost in USD
+- `latency_ms`: Response time
+
+**Markdown format** includes:
+- Formatted headers and sections
+- Response content
+- Metadata table (provider, model, tokens, cost, latency)
+
+**HTML format** includes:
+- Complete HTML document with DOCTYPE
+- Embedded CSS styling (light/dark mode support)
+- Responsive design
+- Metadata section (optional)
+
+**StreamJSON format** includes:
+- Each chunk as a separate JSON object
+- `type`: "chunk", "metadata", "complete", or "error"
+- `index`: Chunk sequence number
+- `content`: Chunk text
+- Final `complete` message with total chunks and status
 
 ---
 
@@ -125,9 +227,114 @@ See [docs/BATCH_OPERATIONS.md](BATCH_OPERATIONS.md) for CSV formats and best pra
 
 ---
 
-## 9. AI & Automation
+## 9. Events & Audit Log
+
+View and analyze event history and audit logs. All domain events are automatically persisted for compliance and analytics.
+
+### List Events
+```bash
+# List recent events
+openfatture events list
+
+# Filter by event type
+openfatture events list --type InvoiceCreatedEvent
+
+# Filter by entity (invoice, client, etc.)
+openfatture events list --entity invoice --entity-id 123
+
+# Last 7 days
+openfatture events list --last-days 7
+
+# Limit results
+openfatture events list --limit 100
+```
+
+### Show Event Details
+```bash
+# View full event details with JSON data
+openfatture events show <event-id>
+```
+
+### Statistics
+```bash
+# All-time statistics
+openfatture events stats
+
+# Last 30 days
+openfatture events stats --last-days 30
+```
+
+### Entity Timeline
+```bash
+# View all events for an invoice
+openfatture events timeline invoice 123
+
+# View all events for a client
+openfatture events timeline client 5
+```
+
+### Search Events
+```bash
+# Full-text search in event data
+openfatture events search "Client A"
+openfatture events search "001/2025"
+openfatture events search "invoice" --limit 50
+```
+
+### List Event Types
+```bash
+# View all available event types with counts
+openfatture events types
+```
+
+### Analytics Dashboard
+```bash
+# Comprehensive analytics dashboard (last 30 days by default)
+openfatture events dashboard
+
+# Custom period (last 7 days)
+openfatture events dashboard --days 7
+
+# Dashboard includes:
+# - Total events, event types, velocity (events/hour)
+# - Activity trends (comparing periods)
+# - Top event types with ASCII bar charts
+# - Entity activity distribution
+# - Trend indicators (📈 increasing, 📉 decreasing, ➡️ stable)
+```
+
+### Trends Analysis
+```bash
+# Activity trends for last 30 days
+openfatture events trends
+
+# Filter by event type
+openfatture events trends --type InvoiceCreatedEvent
+
+# Custom period (last 90 days)
+openfatture events trends --days 90
+```
+
+**Available Event Types:**
+- `InvoiceCreatedEvent` - Invoice creation
+- `InvoiceValidatedEvent` - XML validation
+- `InvoiceSentEvent` - Sent via PEC to SDI
+- `InvoiceDeletedEvent` - Invoice deletion
+- `ClientCreatedEvent` - Client creation
+- `ClientDeletedEvent` - Client deletion
+- `AICommandStartedEvent` - AI command execution
+- `AICommandCompletedEvent` - AI command completion
+- `BatchImportStartedEvent` - Batch import start
+- `BatchImportCompletedEvent` - Batch import completion
+- `SDINotificationReceivedEvent` - SDI notification received
+
+---
+
+## 10. AI & Automation
 
 Configure `AI_PROVIDER`, `AI_MODEL`, and `AI_API_KEY` (or Ollama) first. Validate with `openfatture config show`.
+
+### AI Commands
 
 | Command | Purpose | Example |
 |---------|---------|---------|
@@ -141,15 +348,69 @@ Configure `AI_PROVIDER`, `AI_MODEL`, and `AI_API_KEY` (or Ollama) first. Validat
 | `openfatture ai rag index [--source id]` | Indexes or re-indexes the RAG sources defined in the manifest. | `openfatture ai rag index --source tax_guides` |
 | `openfatture ai rag search "query"` | Semantic search inside the knowledge base (great for debugging or audits). | `openfatture ai rag search "reverse charge edilizia" --source tax_guides` |
 
+### Output Format Examples
+
+All AI commands support output formatting. Use `--format` to control the output:
+
+```bash
+# JSON output for scripting
+openfatture --format json ai describe "3 hours consulting"
+openfatture ai suggest-vat "training course" --format json
+
+# Markdown output for documentation
+openfatture --format markdown ai forecast --months 12 > forecast.md
+openfatture ai check 45 --format markdown > compliance_report.md
+
+# HTML output for reports
+openfatture --format html ai describe "Migration project" > description.html
+
+# Backward compatibility (--json flag)
+openfatture ai describe "consulting" --json
+```
+
+**Example JSON output:**
+```json
+{
+  "content": "Consulenza tecnica backend per sviluppo API RESTful...",
+  "status": "success",
+  "provider": "openai",
+  "model": "gpt-4",
+  "tokens_used": 450,
+  "cost_usd": 0.0045,
+  "latency_ms": 850
+}
+```
+
+**Example Markdown output:**
+```markdown
+# AI Response
+
+## Response
+
+Consulenza tecnica backend per sviluppo API RESTful...
+
+---
+
+## Metadata
+
+**Provider:** openai
+**Model:** gpt-4
+**Tokens Used:** 450
+**Cost:** $0.0045
+**Latency:** 850ms
+```
+
+### Notes
+
 `ai forecast` reads models from `MLConfig.model_path` (default `.models/`). If missing, it performs the initial training and generates `cash_flow_*` files. Use `--retrain` to rebuild models after updating your data.
 
-Compliance analysis (`ai check`) remains in beta; when it fails, use `--json` for easier diagnostics.
+Compliance analysis (`ai check`) remains in beta; when it fails, use `--format json` for easier diagnostics.
 
 > ℹ️ **Tip:** After setting `OPENAI_API_KEY` (or a local embedding provider), run `openfatture ai rag index` to populate the knowledge base. Agents will automatically cite normative sources such as `[1] DPR 633/72 art...`.
 
 ---
 
-## 10. Interactive Mode
+## 11. Interactive Mode
 
 `openfatture interactive` (or `openfatture --interactive`) launches the Rich-powered TUI with menu navigation:
 

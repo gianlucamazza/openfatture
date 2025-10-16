@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
-from openfatture.ai.agents.models import InvoiceDescriptionOutput
 from openfatture.ai.domain.context import InvoiceContext
 from openfatture.ai.domain.prompt import PromptManager
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics

@@ -39,6 +39,7 @@ class OllamaProvider(BaseLLMProvider):
         temperature: float = 0.7,
         max_tokens: int = 2000,
         timeout: int = 60,  # Longer timeout for local inference
+        http_client: httpx.AsyncClient | None = None,
     ) -> None:
         """
         Initialize Ollama provider.
@@ -49,19 +50,25 @@ class OllamaProvider(BaseLLMProvider):
             temperature: Generation temperature
             max_tokens: Maximum tokens to generate
             timeout: Request timeout in seconds
+            http_client: Optional shared HTTP client for connection reuse
         """
         super().__init__(
-            api_key=None,  # No API key needed
             base_url=base_url,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
             timeout=timeout,
         )
-
-        # Store config, create client per request to avoid event loop issues
         self._base_url = base_url
         self._timeout = timeout
+        self._http_client = http_client
+
+    def _get_http_client(self) -> httpx.AsyncClient:
+        """Get HTTP client, using shared client if available."""
+        if self._http_client is not None:
+            return self._http_client
+        # Fallback: create temporary client (not recommended for production)
+        return httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout)
 
     async def generate(
         self,
@@ -84,55 +91,55 @@ class OllamaProvider(BaseLLMProvider):
                 prompt_length=len(prompt),
             )
 
-            # Create fresh client for each request to avoid event loop issues
-            async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
-                response = await client.post(
-                    "/api/generate",
-                    json={
-                        "model": self.model,
-                        "prompt": prompt,
-                        "temperature": self._get_temperature(temperature),
-                        "num_predict": self._get_max_tokens(max_tokens),
-                        "stream": False,
-                        **kwargs,
-                    },
-                )
-                response.raise_for_status()
+            # Use shared HTTP client for connection reuse and proper cleanup
+            client = self._get_http_client()
+            response = await client.post(
+                "/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "temperature": self._get_temperature(temperature),
+                    "num_predict": self._get_max_tokens(max_tokens),
+                    "stream": False,
+                    **kwargs,
+                },
+            )
+            response.raise_for_status()
 
-                data = response.json()
+            data = response.json()
 
-                # Extract response
-                content = data.get("response", "")
+            # Extract response
+            content = data.get("response", "")
 
-                # Estimate token usage (Ollama doesn't provide exact counts)
-                prompt_tokens = self.count_tokens(prompt)
-                completion_tokens = self.count_tokens(content)
+            # Estimate token usage (Ollama doesn't provide exact counts)
+            prompt_tokens = self.count_tokens(prompt)
+            completion_tokens = self.count_tokens(content)
 
-                usage = UsageMetrics(
-                    prompt_tokens=prompt_tokens,
-                    completion_tokens=completion_tokens,
-                    total_tokens=prompt_tokens + completion_tokens,
-                    estimated_cost_usd=0.0,  # Free for local models
-                )
+            usage = UsageMetrics(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=prompt_tokens + completion_tokens,
+                estimated_cost_usd=0.0,  # Free for local models
+            )
 
-                # Calculate latency
-                latency_ms = (time.time() - start_time) * 1000
+            # Calculate latency
+            latency_ms = (time.time() - start_time) * 1000
 
-                logger.info(
-                    "ollama_request_completed",
-                    model=self.model,
-                    tokens=usage.total_tokens,
-                    latency_ms=latency_ms,
-                )
+            logger.info(
+                "ollama_request_completed",
+                model=self.model,
+                tokens=usage.total_tokens,
+                latency_ms=latency_ms,
+            )
 
-                return AgentResponse(
-                    content=content,
-                    status=ResponseStatus.SUCCESS,
-                    model=self.model,
-                    provider=self.provider_name,
-                    usage=usage,
-                    latency_ms=latency_ms,
-                )
+            return AgentResponse(
+                content=content,
+                status=ResponseStatus.SUCCESS,
+                model=self.model,
+                provider=self.provider_name,
+                usage=usage,
+                latency_ms=latency_ms,
+            )
 
         except httpx.TimeoutException as e:
             logger.error("ollama_timeout", error=str(e))
@@ -196,39 +203,39 @@ class OllamaProvider(BaseLLMProvider):
                 prompt_length=len(prompt),
             )
 
-            # Stream API call with fresh client
-            async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
-                async with client.stream(
-                    "POST",
-                    "/api/generate",
-                    json={
-                        "model": self.model,
-                        "prompt": prompt,
-                        "temperature": self._get_temperature(temperature),
-                        "num_predict": self._get_max_tokens(max_tokens),
-                        "stream": True,
-                        **kwargs,
-                    },
-                ) as response:
-                    response.raise_for_status()
+            # Stream API call with shared client
+            client = self._get_http_client()
+            async with client.stream(
+                "POST",
+                "/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "temperature": self._get_temperature(temperature),
+                    "num_predict": self._get_max_tokens(max_tokens),
+                    "stream": True,
+                    **kwargs,
+                },
+            ) as response:
+                response.raise_for_status()
 
-                    async for line in response.aiter_lines():
-                        if line:
-                            import json
+                async for line in response.aiter_lines():
+                    if line:
+                        import json
 
-                            try:
-                                data = json.loads(line)
-                                if "response" in data:
-                                    yield data["response"]
+                        try:
+                            data = json.loads(line)
+                            if "response" in data:
+                                yield data["response"]
 
-                                # Check if done
-                                if data.get("done", False):
-                                    break
+                            # Check if done
+                            if data.get("done", False):
+                                break
 
-                            except json.JSONDecodeError:
-                                continue
+                        except json.JSONDecodeError:
+                            continue
 
-                logger.info("ollama_stream_completed", model=self.model)
+            logger.info("ollama_stream_completed", model=self.model)
 
         except Exception as e:
             logger.error("ollama_stream_error", error=str(e))
@@ -254,9 +261,9 @@ class OllamaProvider(BaseLLMProvider):
     async def health_check(self) -> bool:
         """Check if Ollama server is accessible."""
         try:
-            async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
-                response = await client.get("/api/tags")
-                return response.status_code == 200
+            client = self._get_http_client()
+            response = await client.get("/api/tags")
+            return response.status_code == 200
 
         except Exception as e:
             logger.warning("ollama_health_check_failed", error=str(e))
@@ -329,12 +336,12 @@ class OllamaProvider(BaseLLMProvider):
             List of model names
         """
         try:
-            async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
-                response = await client.get("/api/tags")
-                response.raise_for_status()
+            client = self._get_http_client()
+            response = await client.get("/api/tags")
+            response.raise_for_status()
 
-                data = response.json()
-                models = [model["name"] for model in data.get("models", [])]
+            data = response.json()
+            models = [model["name"] for model in data.get("models", [])]
 
             return models
 

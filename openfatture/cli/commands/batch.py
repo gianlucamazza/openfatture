@@ -8,7 +8,9 @@ from rich.console import Console
 from rich.table import Table
 from sqlalchemy.orm import Session
 
+from openfatture.cli.lifespan import get_event_bus
 from openfatture.core.batch.invoice_processor import InvoiceBatchProcessor
+from openfatture.core.events import BatchImportCompletedEvent, BatchImportStartedEvent
 from openfatture.storage.database.base import SessionLocal, init_db
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.config import get_settings
@@ -68,11 +70,36 @@ def import_invoices(
     db = _get_session()
     settings = get_settings()
 
+    # Publish BatchImportStartedEvent
+    event_bus = get_event_bus()
+    if event_bus:
+        event_bus.publish(
+            BatchImportStartedEvent(
+                file_path=str(file.absolute()),
+                operation_type="import",
+                dry_run=dry_run,
+            )
+        )
+
+    # Track for completion event
+    success = False
+    records_processed = 0
+    records_succeeded = 0
+    records_failed = 0
+    errors = []
+
     try:
         processor = InvoiceBatchProcessor(db_session=db)
 
         # Start import
         result = processor.import_from_csv(file, dry_run=dry_run)
+
+        # Store results for event
+        success = result.failed == 0
+        records_processed = result.processed
+        records_succeeded = result.succeeded
+        records_failed = result.failed
+        errors = result.errors or []
 
         # Show results
         console.print("\n[bold]Import Results:[/bold]\n")
@@ -132,9 +159,25 @@ def import_invoices(
 
     except Exception as e:
         db.rollback()
+        if not errors:
+            errors = [str(e)]
         console.print(f"\n[red]❌ Error: {e}[/red]")
         raise typer.Exit(1)
     finally:
+        # Publish BatchImportCompletedEvent
+        if event_bus:
+            event_bus.publish(
+                BatchImportCompletedEvent(
+                    file_path=str(file.absolute()),
+                    operation_type="import",
+                    success=success,
+                    records_processed=records_processed,
+                    records_succeeded=records_succeeded,
+                    records_failed=records_failed,
+                    errors=errors if errors else None,
+                )
+            )
+
         db.close()
 
 
@@ -157,6 +200,25 @@ def export_invoices(
     console.print("\n[bold blue]📦 Batch Export Invoices[/bold blue]\n")
 
     db = _get_session()
+
+    # Publish BatchImportStartedEvent
+    event_bus = get_event_bus()
+    output_path = Path(output_file)
+    if event_bus:
+        event_bus.publish(
+            BatchImportStartedEvent(
+                file_path=str(output_path.absolute()),
+                operation_type="export",
+                dry_run=False,
+            )
+        )
+
+    # Track for completion event
+    success = False
+    records_processed = 0
+    records_succeeded = 0
+    records_failed = 0
+    errors = []
 
     try:
         # Build query
@@ -185,9 +247,15 @@ def export_invoices(
 
         # Export
         processor = InvoiceBatchProcessor(db_session=db)
-        output_path = Path(output_file)
 
         result = processor.export_to_csv(fatture, output_path)
+
+        # Store results for event
+        success = result.succeeded > 0
+        records_processed = len(fatture)
+        records_succeeded = result.succeeded
+        records_failed = result.failed
+        errors = result.errors or []
 
         if result.succeeded > 0:
             console.print(f"[bold green]✓ Exported {result.succeeded} invoices![/bold green]")
@@ -199,9 +267,25 @@ def export_invoices(
                 console.print(f"  • {error}")
 
     except Exception as e:
+        if not errors:
+            errors = [str(e)]
         console.print(f"\n[red]❌ Error: {e}[/red]")
         raise typer.Exit(1)
     finally:
+        # Publish BatchImportCompletedEvent
+        if event_bus:
+            event_bus.publish(
+                BatchImportCompletedEvent(
+                    file_path=str(output_path.absolute()),
+                    operation_type="export",
+                    success=success,
+                    records_processed=records_processed,
+                    records_succeeded=records_succeeded,
+                    records_failed=records_failed,
+                    errors=errors if errors else None,
+                )
+            )
+
         db.close()
 
 

@@ -31,7 +31,7 @@
 - **Core invoicing** – Generates FatturaPA XML v1.9, handles PEC delivery to SDI, supports digital signatures, and validates automatically.
 - **Payment & reconciliation** – Multi-bank imports, intelligent reconciliation, and configurable reminders (`docs/PAYMENT_TRACKING.md`).
 - **AI workflows** – Chat assistant, VAT guidance, and description generation powered by OpenAI, Anthropic, or Ollama (`examples/AI_CHAT_ASSISTANT.md`).
-- **Developer experience** – Modern Python toolchain (uv, Typer, Pydantic), 117 automated tests with CI coverage gate at 50% (targeting 60%), plus Docker and Makefile automation.
+- **Developer experience** – Modern Python toolchain (uv, Typer, Pydantic), 170+ automated tests with CI coverage gate at 50% (targeting 60%), plus Docker and Makefile automation.
 - **Compliance & operations** – GDPR-ready logging, professional email templates, and turnkey PEC workflows.
 
 ---

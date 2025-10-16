@@ -259,6 +259,17 @@ class Settings(BaseSettings):
         description="Comma-separated dotted paths to custom payment event listeners",
     )
 
+    # Global event system
+    event_listeners: str | None = Field(
+        default=None,
+        description="Comma-separated dotted paths to custom global event listeners",
+    )
+
+    # Web scraper configuration
+    web_scraper_enabled: bool = Field(
+        default=True, description="Enable regulatory web scraping system"
+    )
+
     # Debug configuration
     debug_config: DebugConfig = Field(default_factory=DebugConfig)
 
@@ -269,6 +280,13 @@ class Settings(BaseSettings):
     def create_dir_if_not_exists(cls, v: Path) -> Path:
         """Create directory if it doesn't exist."""
         v.mkdir(parents=True, exist_ok=True)
+        return v
+
+    @field_validator("web_scraper_enabled")
+    @classmethod
+    def validate_web_scraper_enabled(cls, v: bool) -> bool:
+        """Validate web scraper configuration."""
+        # Could add additional validation logic here
         return v
 
 

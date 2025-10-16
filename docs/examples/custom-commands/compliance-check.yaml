@@ -1,0 +1,67 @@
+# Invoice Compliance Quick Check
+# Usage: /compliance-check "Invoice Number"
+# Example: /compliance-check 2025-042
+
+name: compliance-check
+description: Verifica rapida compliance fattura prima dell'invio a SDI
+category: compliance
+aliases: [cc, check, verifica]
+author: OpenFatture Team
+version: "1.0"
+
+template: |
+  Esegui un controllo di compliance completo sulla fattura {{ arg1 }}:
+
+  **🔍 COMPLIANCE CHECK - FATTURA {{ arg1 | upper }}**
+
+  Verifica i seguenti aspetti (livello: ADVANCED):
+
+  ## 1. Validazione Formale
+  - ✓ Dati cedente completi e corretti
+  - ✓ Dati cessionario completi e corretti
+  - ✓ Numero fattura valido e progressivo
+  - ✓ Data emissione valida
+  - ✓ Codice destinatario / PEC presente
+
+  ## 2. Righe Fattura
+  - ✓ Descrizioni dettagliate (min 20 caratteri)
+  - ✓ Quantità e unità di misura
+  - ✓ Prezzi unitari corretti
+  - ✓ Totali calcolati correttamente
+
+  ## 3. Trattamento Fiscale
+  - ✓ Aliquote IVA corrette
+  - ✓ Codici natura IVA appropriati
+  - ✓ Reverse charge applicato correttamente
+  - ✓ Split payment se necessario
+  - ✓ Ritenuta d'acconto se applicabile
+  - ✓ Bollo virtuale se richiesto
+
+  ## 4. Compliance SDI
+  - ✓ XML valido secondo schema FatturaPA v1.9
+  - ✓ Codici ATECO validi
+  - ✓ CIG/CUP per PA (se richiesti)
+  - ✓ Pattern noti di rigetto SDI
+
+  ## 5. Best Practices
+  - ✓ Descrizioni professionali
+  - ✓ Riferimenti normativi corretti
+  - ✓ Note fattura appropriate
+
+  Per ogni problema rilevato:
+  - Indica il livello di gravità (ERROR/WARNING/INFO)
+  - Spiega il problema
+  - Fornisci la soluzione suggerita
+  - Cita il riferimento normativo
+
+  **Risultato finale:**
+  - ✅ READY per invio SDI
+  - ⚠️ Richiede correzioni (specificare quali)
+  - ❌ NON CONFORME (bloccare l'invio)
+
+  Stima la probabilità di accettazione da parte di SDI (0-100%).
+
+examples:
+  - "/compliance-check \"2025-042\""
+  - "/cc 123"
+  - "/verifica \"FAT-2025-10-001\""

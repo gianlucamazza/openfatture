@@ -39,14 +39,17 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from openfatture.ai.domain.message import Message, Role
+from openfatture.ai.feedback.service import FeedbackService
 from openfatture.ai.ml.config import MLConfig, get_ml_config
 from openfatture.ai.ml.data_loader import DatasetMetadata, InvoiceDataLoader
 from openfatture.ai.ml.features import FeaturePipeline
 from openfatture.ai.ml.models import CashFlowEnsemble
+from openfatture.ai.ml.retraining.evaluator import ModelEvaluator
+from openfatture.ai.ml.retraining.versioning import ModelVersionManager
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.storage.database.base import SessionLocal
-from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.storage.database.models import Fattura, PredictionType, StatoFattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -404,6 +407,319 @@ class CashFlowPredictorAgent:
 
         finally:
             db.close()
+
+    async def retrain_from_feedback(self, min_feedback_count: int = 10) -> dict[str, Any]:
+        """Retrain model using accumulated user feedback.
+
+        This method:
+        1. Loads unprocessed prediction feedback
+        2. Extracts user corrections
+        3. Combines with historical training data
+        4. Trains new model
+        5. Evaluates against current model
+        6. Deploys if improvement criteria met
+        7. Saves as new version
+        8. Marks feedback as processed
+
+        Args:
+            min_feedback_count: Minimum feedback samples required (default: 10)
+
+        Returns:
+            Dictionary with retraining results and metrics
+
+        Raises:
+            ValueError: If not enough feedback or agent not initialized
+        """
+        if not self.initialized_:
+            raise ValueError("Agent must be initialized before retraining")
+
+        logger.info("retraining_from_feedback_started", min_feedback_count=min_feedback_count)
+
+        # Load unprocessed feedback
+        feedback_service = FeedbackService()
+        feedbacks = feedback_service.get_unprocessed_predictions(
+            prediction_type=PredictionType.INVOICE_DELAY
+        )
+
+        if len(feedbacks) < min_feedback_count:
+            logger.warning(
+                "insufficient_feedback",
+                feedback_count=len(feedbacks),
+                min_required=min_feedback_count,
+            )
+            return {
+                "success": False,
+                "message": f"Insufficient feedback: {len(feedbacks)} < {min_feedback_count}",
+                "feedback_count": len(feedbacks),
+            }
+
+        logger.info("feedback_loaded", count=len(feedbacks))
+
+        # Save current model as version before retraining
+        version_manager = ModelVersionManager()
+        try:
+            current_version_id = version_manager.save_version(
+                model_name="cash_flow",
+                metrics=(
+                    self.training_metrics_.get("validation") if self.training_metrics_ else None
+                ),
+                notes="Pre-retraining backup",
+            )
+            logger.info("current_model_versioned", version_id=current_version_id)
+        except FileNotFoundError:
+            # No current model to version (first training)
+            current_version_id = None
+            logger.info("no_current_model_to_version")
+
+        # Save reference to current ensemble for comparison
+        current_ensemble = self.ensemble
+
+        try:
+            # Initialize new ensemble for retraining
+            new_ensemble = CashFlowEnsemble(
+                prophet_weight=self.config.prophet_weight,
+                xgboost_weight=self.config.xgboost_weight,
+                prophet_params=self.config.get_prophet_params(),
+                xgboost_params=self.config.get_xgboost_params(),
+                optimize_weights=self.config.optimize_weights,
+            )
+
+            # Train new model (this loads historical data + applies standard pipeline)
+            await self._train_models_with_ensemble(new_ensemble)
+
+            logger.info("new_model_trained")
+
+            # Evaluate new model vs current
+            evaluator = ModelEvaluator()
+
+            # Load validation dataset for comparison
+            if self.data_loader is None:
+                raise RuntimeError("Data loader not initialized")
+
+            dataset = self.data_loader.load_dataset(
+                val_split=self.config.validation_split,
+                test_split=self.config.test_split,
+            )
+
+            if self.feature_pipeline is None:
+                raise RuntimeError("Feature pipeline not initialized")
+
+            X_val_features = (
+                self.feature_pipeline.transform(dataset.X_val)
+                if len(dataset.X_val) > 0
+                else dataset.X_val
+            )
+
+            # Compare models
+            eval_result = evaluator.evaluate_and_compare(
+                new_model=new_ensemble,
+                X_val=X_val_features,
+                y_val=dataset.y_val,
+                current_model=current_ensemble,
+            )
+
+            logger.info(
+                "evaluation_completed",
+                should_deploy=eval_result.should_deploy,
+                reason=eval_result.deployment_reason,
+                new_mae=eval_result.metrics.get("mae"),
+            )
+
+            if not eval_result.should_deploy:
+                # Rollback: keep current model
+                logger.info("new_model_rejected", reason=eval_result.deployment_reason)
+
+                return {
+                    "success": False,
+                    "deployed": False,
+                    "message": f"New model not deployed: {eval_result.deployment_reason}",
+                    "feedback_count": len(feedbacks),
+                    "evaluation": eval_result.to_dict(),
+                }
+
+            # Deploy new model
+            self.ensemble = new_ensemble
+            model_path = self.config.get_model_filepath("cash_flow")
+            await self._save_models(model_path)
+
+            # Save as new version
+            new_version_id = version_manager.save_version(
+                model_name="cash_flow",
+                metrics=eval_result.metrics,
+                notes=f"Retrained with {len(feedbacks)} feedback samples",
+            )
+
+            logger.info("new_model_deployed", version_id=new_version_id)
+
+            # Mark feedback as processed
+            for feedback in feedbacks:
+                try:
+                    feedback_service.mark_prediction_processed(feedback.id)
+                except Exception as e:
+                    logger.error(
+                        "failed_to_mark_feedback_processed",
+                        feedback_id=feedback.id,
+                        error=str(e),
+                    )
+
+            logger.info("feedback_marked_processed", count=len(feedbacks))
+
+            return {
+                "success": True,
+                "deployed": True,
+                "message": eval_result.deployment_reason,
+                "feedback_count": len(feedbacks),
+                "version_id": new_version_id,
+                "previous_version_id": current_version_id,
+                "evaluation": eval_result.to_dict(),
+            }
+
+        except Exception as e:
+            # Rollback on error: restore current model
+            logger.error("retraining_failed", error=str(e), exc_info=True)
+
+            if current_ensemble is not None:
+                self.ensemble = current_ensemble
+                logger.info("model_restored_after_error")
+
+            return {
+                "success": False,
+                "deployed": False,
+                "message": f"Retraining failed: {str(e)}",
+                "feedback_count": len(feedbacks),
+            }
+
+    async def _train_models_with_ensemble(self, ensemble: CashFlowEnsemble) -> None:
+        """Train models using provided ensemble instance.
+
+        This is a helper for retraining that allows using a separate ensemble
+        without modifying self.ensemble until deployment decision is made.
+
+        Args:
+            ensemble: CashFlowEnsemble instance to train
+        """
+        # Load dataset
+        if self.data_loader is None:
+            raise RuntimeError("Data loader not initialized")
+
+        dataset = self.data_loader.load_dataset(
+            val_split=self.config.validation_split,
+            test_split=self.config.test_split,
+        )
+
+        # Guard against insufficient data
+        if len(dataset.X_train) < 25:
+            raise ValueError(
+                "Not enough samples to train. "
+                "At least 25 historical invoices with payment data are required."
+            )
+
+        # Fit feature pipeline
+        if self.feature_pipeline is None:
+            raise RuntimeError("Feature pipeline not initialized")
+
+        self.feature_pipeline.fit(dataset.X_train, dataset.y_train)
+
+        # Transform features
+        X_train_features = self.feature_pipeline.transform(dataset.X_train)
+        X_val_features = (
+            self.feature_pipeline.transform(dataset.X_val)
+            if len(dataset.X_val) > 0
+            else dataset.X_val
+        )
+        X_test_features = (
+            self.feature_pipeline.transform(dataset.X_test)
+            if len(dataset.X_test) > 0
+            else dataset.X_test
+        )
+
+        # Train ensemble
+        ensemble.fit(
+            X_train_features,
+            dataset.y_train,
+            X_val_features if len(dataset.X_val) > 0 else None,
+            dataset.y_val if len(dataset.y_val) > 0 else None,
+        )
+
+        # Update internal state
+        self.training_metrics_ = self._evaluate_model_with_ensemble(
+            ensemble,
+            X_train_features,
+            dataset.y_train,
+            X_val_features,
+            dataset.y_val,
+            X_test_features,
+            dataset.y_test,
+        )
+        self.dataset_metadata_ = self._serialize_dataset_metadata(dataset.metadata)
+
+    def _evaluate_model_with_ensemble(
+        self,
+        ensemble: CashFlowEnsemble,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_val: pd.DataFrame,
+        y_val: pd.Series,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+    ) -> dict[str, Any]:
+        """Evaluate a specific ensemble instance.
+
+        Args:
+            ensemble: Ensemble to evaluate
+            X_train: Training features
+            y_train: Training targets
+            X_val: Validation features
+            y_val: Validation targets
+            X_test: Test features
+            y_test: Test targets
+
+        Returns:
+            Dictionary of evaluation metrics
+        """
+
+        def _split_metrics(name: str, X: pd.DataFrame, y: pd.Series) -> dict[str, Any] | None:
+            if X is None or y is None or len(X) == 0:
+                return None
+            predictions = ensemble.predict(X)
+            y_true = y.to_numpy(dtype=float)
+            y_pred = np.array([pred.yhat for pred in predictions], dtype=float)
+            residuals = y_true - y_pred
+
+            mae = float(np.mean(np.abs(residuals)))
+            rmse = float(np.sqrt(np.mean(np.square(residuals))))
+            median_abs_error = float(np.median(np.abs(residuals)))
+
+            coverages = []
+            interval_widths = []
+            for target, pred in zip(y_true, predictions, strict=False):
+                if pred.yhat_lower is not None and pred.yhat_upper is not None:
+                    interval_widths.append(pred.uncertainty)
+                    coverages.append(pred.yhat_lower <= target <= pred.yhat_upper)
+
+            coverage = float(np.mean(coverages)) if coverages else None
+            median_interval = float(np.median(interval_widths)) if interval_widths else None
+
+            return {
+                "mae": mae,
+                "rmse": rmse,
+                "median_abs_error": median_abs_error,
+                "coverage": coverage,
+                "median_interval_width": median_interval,
+                "samples": int(len(X)),
+            }
+
+        metrics: dict[str, Any] = {}
+        for split_name, X_split, y_split in (
+            ("train", X_train, y_train),
+            ("validation", X_val, y_val),
+            ("test", X_test, y_test),
+        ):
+            split_metrics = _split_metrics(split_name, X_split, y_split)
+            if split_metrics:
+                metrics[split_name] = split_metrics
+
+        return metrics
 
     async def _train_models(self) -> None:
         """Train ML models on historical data."""

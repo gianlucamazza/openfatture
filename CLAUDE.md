@@ -118,6 +118,86 @@ uv run openfatture ai chat                               # Interactive chat assi
 uv run openfatture ai forecast --retrain                 # Train ML models for cash flow
 ```
 
+### Custom Slash Commands (NEW!)
+
+**Purpose**: User-defined slash commands for the interactive AI chat, inspired by Gemini CLI's extensibility
+
+**Location**: `openfatture/cli/commands/custom_commands.py`
+
+**Key Components:**
+- `CustomCommand`: Dataclass with Jinja2 template expansion
+- `CustomCommandRegistry`: Loads commands from `~/.openfatture/commands/*.yaml`
+- Integration in `InteractiveChatUI`: `/custom`, `/reload` built-in commands
+
+**Command File Structure** (`~/.openfatture/commands/mycommand.yaml`):
+```yaml
+name: mycommand
+description: Command description
+category: invoicing  # invoicing, tax, clients, reporting, compliance, general
+aliases: [mc, my-cmd]
+template: |
+  Your prompt template here.
+  Use {{ arg1 }}, {{ arg2 }} for positional arguments.
+  Use {% if arg2 %}conditional{% endif %} for logic.
+  Full Jinja2 syntax supported.
+
+examples:
+  - "/mycommand arg1 arg2"
+```
+
+**Usage in Chat:**
+```bash
+openfatture ai chat
+> /help           # Show all built-in commands
+> /custom         # List custom commands
+> /reload         # Reload commands from disk
+> /mycommand "arg1" "arg2"  # Execute custom command
+```
+
+**Example Commands** (in `docs/examples/custom-commands/`):
+1. `/fattura-rapida` - Quick invoice creation workflow (description + VAT + compliance + create)
+2. `/iva` - VAT rate suggestion shortcut with legal references
+3. `/cliente-info` - Client lookup with statistics and payment status
+4. `/report-mensile` - Monthly business report with insights
+5. `/compliance-check` - Pre-submission compliance verification
+
+**Template Variables:**
+- `{{ arg1 }}`, `{{ arg2 }}`, ... - Positional arguments
+- `{{ args }}` - List of all arguments
+- `{{ argN | default('value') }}` - Default values
+- `{{ argN | upper }}` - Jinja2 filters (upper, lower, title, etc.)
+- Conditionals: `{% if arg2 %}...{% endif %}`
+- Loops: `{% for item in args %}...{% endfor %}`
+
+**Installation:**
+```bash
+# Copy example commands
+mkdir -p ~/.openfatture/commands/
+cp docs/examples/custom-commands/*.yaml ~/.openfatture/commands/
+
+# Use in chat
+openfatture ai chat
+> /custom          # See 5 example commands
+> /fattura-rapida "Acme Corp" "Web consulting" "500"
+```
+
+**Testing:**
+```bash
+# Run custom commands tests (28 tests, 79% coverage)
+uv run python -m pytest tests/cli/test_custom_commands.py -v
+```
+
+**Benefits:**
+- ⚡ **Productivity**: Reusable workflows eliminate repetitive prompts
+- 🔧 **Customization**: Tailor commands to your specific business needs
+- 🎯 **Consistency**: Standardized prompts ensure reliable AI outputs
+- 📚 **Shareability**: YAML files can be shared across team/community
+- 🔄 **Hot Reload**: `/reload` command picks up changes without restart
+
+**See also:**
+- `docs/examples/custom-commands/README.md` - Complete usage guide
+- Example commands in `docs/examples/custom-commands/*.yaml`
+
 **E2E Testing with Ollama:**
 ```bash
 # Run end-to-end tests with real Ollama (requires Ollama running)
