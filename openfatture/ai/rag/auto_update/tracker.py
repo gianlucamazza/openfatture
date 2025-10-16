@@ -236,26 +236,28 @@ class ChangeTracker:
         Returns:
             Dictionary with queue statistics
         """
-        stats = {
+        # Explicit type annotations for nested dicts to help mypy
+        by_entity_type: dict[str, int] = {}
+        by_change_type: dict[str, int] = {}
+
+        stats: dict[str, Any] = {
             "total_pending": sum(len(entities) for entities in self._pending.values()),
-            "by_entity_type": {},
-            "by_change_type": {},
+            "by_entity_type": by_entity_type,
+            "by_change_type": by_change_type,
             "oldest_change": None,
             "newest_change": None,
         }
 
         all_changes = []
         for entity_type, entities in self._pending.items():
-            stats["by_entity_type"][entity_type] = len(entities)
+            by_entity_type[entity_type] = len(entities)
 
             for change in entities.values():
                 all_changes.append(change)
 
                 # Count by change type
                 change_type_str = change.change_type.value
-                stats["by_change_type"][change_type_str] = (
-                    stats["by_change_type"].get(change_type_str, 0) + 1
-                )
+                by_change_type[change_type_str] = by_change_type.get(change_type_str, 0) + 1
 
         # Find oldest and newest
         if all_changes:

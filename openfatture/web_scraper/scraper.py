@@ -70,27 +70,34 @@ class RegulatoryWebScraper:
         self.playwright = await async_playwright().start()
 
         # Launch browser with anti-detection settings
-        launch_options = {
-            "headless": self.config.headless,
-            "args": [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-accelerated-2d-canvas",
-                "--no-first-run",
-                "--no-zygote",
-                "--disable-gpu",
-                "--disable-web-security",
-                "--disable-features=VizDisplayCompositor",
-            ],
-        }
+        # Pass parameters explicitly to avoid dict expansion typing issues
+        browser_args = [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-accelerated-2d-canvas",
+            "--no-first-run",
+            "--no-zygote",
+            "--disable-gpu",
+            "--disable-web-security",
+            "--disable-features=VizDisplayCompositor",
+        ]
 
         if self.config.browser_type == "chromium":
-            self.browser = await self.playwright.chromium.launch(**launch_options)
+            self.browser = await self.playwright.chromium.launch(
+                headless=self.config.headless,
+                args=browser_args,
+            )
         elif self.config.browser_type == "firefox":
-            self.browser = await self.playwright.firefox.launch(**launch_options)
+            self.browser = await self.playwright.firefox.launch(
+                headless=self.config.headless,
+                args=browser_args,
+            )
         elif self.config.browser_type == "webkit":
-            self.browser = await self.playwright.webkit.launch(**launch_options)
+            self.browser = await self.playwright.webkit.launch(
+                headless=self.config.headless,
+                args=browser_args,
+            )
 
         # Create context with realistic settings
         self.context = await self.browser.new_context(
@@ -166,7 +173,7 @@ class RegulatoryWebScraper:
             session_id=self.session_id,
         )
 
-        documents = []
+        documents: list[RegulatoryDocument] = []
 
         try:
             # Check robots.txt compliance

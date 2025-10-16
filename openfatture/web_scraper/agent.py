@@ -182,6 +182,7 @@ class RegulatoryUpdateAgent:
                     url=url,
                     content_type=ContentType.HTML,
                     selectors=selectors or {},
+                    category="temporary",
                 )
 
                 documents = await self.scraper.scrape_source(temp_source)
@@ -361,12 +362,18 @@ class RegulatoryUpdateAgent:
         """
         logger.info("validating_regulatory_changes", document_count=len(documents))
 
-        validation_results = {
+        # Explicit type annotations for mypy
+        approved: int = 0
+        rejected: int = 0
+        requires_review: int = 0
+        validations: list[dict[str, Any]] = []
+
+        validation_results: dict[str, Any] = {
             "total_documents": len(documents),
-            "approved": 0,
-            "rejected": 0,
-            "requires_review": 0,
-            "validations": [],
+            "approved": approved,
+            "rejected": rejected,
+            "requires_review": requires_review,
+            "validations": validations,
         }
 
         for doc in documents:
@@ -391,7 +398,7 @@ class RegulatoryUpdateAgent:
                 response = await self.orchestrator.execute(context)
                 validation = self._parse_validation_results(response)
 
-                validation_results["validations"].append(
+                validations.append(
                     {
                         "document_id": doc.id,
                         "decision": validation.get("decision", "review"),
@@ -403,15 +410,15 @@ class RegulatoryUpdateAgent:
                 # Update counters
                 decision = validation.get("decision", "review")
                 if decision == "approved":
-                    validation_results["approved"] += 1
+                    approved += 1
                 elif decision == "rejected":
-                    validation_results["rejected"] += 1
+                    rejected += 1
                 else:
-                    validation_results["requires_review"] += 1
+                    requires_review += 1
 
             except Exception as e:
                 logger.warning("validation_failed", document_id=doc.id, error=str(e))
-                validation_results["validations"].append(
+                validations.append(
                     {
                         "document_id": doc.id,
                         "decision": "review",
@@ -419,13 +426,18 @@ class RegulatoryUpdateAgent:
                         "reasoning": f"Validation error: {str(e)}",
                     }
                 )
-                validation_results["requires_review"] += 1
+                requires_review += 1
+
+        # Update final counts in results dict
+        validation_results["approved"] = approved
+        validation_results["rejected"] = rejected
+        validation_results["requires_review"] = requires_review
 
         logger.info(
             "validation_completed",
-            approved=validation_results["approved"],
-            rejected=validation_results["rejected"],
-            requires_review=validation_results["requires_review"],
+            approved=approved,
+            rejected=rejected,
+            requires_review=requires_review,
         )
 
         return validation_results

@@ -55,14 +55,13 @@ class AutoIndexingService:
         # Create or use provided vector store
         if vector_store is None:
             from openfatture.ai.rag.config import get_rag_config
-            from openfatture.ai.rag.embeddings import EmbeddingProvider
+            from openfatture.ai.rag.embeddings import create_embeddings
 
             rag_config = get_rag_config()
-            embedding_provider = EmbeddingProvider.create(rag_config)
+            embedding_strategy = create_embeddings(rag_config)
             vector_store = VectorStore(
-                collection_name=rag_config.collection_name,
-                embedding_provider=embedding_provider,
-                persist_directory=rag_config.persist_directory,
+                config=rag_config,
+                embedding_strategy=embedding_strategy,
             )
 
         self.vector_store = vector_store
@@ -162,6 +161,11 @@ class AutoIndexingService:
             logger.info("client_deleted", client_id=change.entity_id)
             return
 
+        # Check if database is initialized
+        if SessionLocal is None:
+            logger.warning("database_not_initialized_skipping_client_reindex")
+            return
+
         # For CREATE/UPDATE, reindex all client's invoices
         db = SessionLocal()
         try:
@@ -199,9 +203,14 @@ class AutoIndexingService:
         Returns:
             Dictionary with service status
         """
+        # Safe check for queue running status
+        queue_running = False
+        if self.queue and hasattr(self.queue, "_running"):
+            queue_running = bool(self.queue._running)
+
         return {
             "enabled": self.config.enabled,
-            "running": self.queue._running if self.queue else False,
+            "running": queue_running,
             "queue_stats": self.queue.get_stats() if self.queue else {},
             "tracker_stats": self.tracker.get_queue_stats(),
             "config": {
@@ -226,11 +235,15 @@ class AutoIndexingService:
         Returns:
             Dictionary with reindex results
         """
-        results = {
+        # Explicit type annotations for mypy
+        successful: list[int] = []
+        failed: list[dict[str, Any]] = []
+
+        results: dict[str, Any] = {
             "entity_type": entity_type,
             "requested_count": len(entity_ids),
-            "successful": [],
-            "failed": [],
+            "successful": successful,
+            "failed": failed,
         }
 
         for entity_id in entity_ids:
@@ -249,7 +262,7 @@ class AutoIndexingService:
                 else:
                     raise ValueError(f"Unsupported entity type: {entity_type}")
 
-                results["successful"].append(entity_id)
+                successful.append(entity_id)
 
             except Exception as e:
                 logger.error(
@@ -258,13 +271,17 @@ class AutoIndexingService:
                     entity_id=entity_id,
                     error=str(e),
                 )
-                results["failed"].append({"entity_id": entity_id, "error": str(e)})
+                failed.append({"entity_id": entity_id, "error": str(e)})
+
+        # Update final counts in results dict
+        results["successful"] = successful
+        results["failed"] = failed
 
         logger.info(
             "manual_reindex_completed",
             entity_type=entity_type,
-            successful=len(results["successful"]),
-            failed=len(results["failed"]),
+            successful=len(successful),
+            failed=len(failed),
         )
 
         return results

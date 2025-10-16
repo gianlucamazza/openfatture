@@ -8,7 +8,7 @@ import structlog
 from ..ai.domain.message import Message, Role
 from ..ai.providers import BaseLLMProvider
 from .config import WebScraperConfig
-from .models import RegulatoryDocument, RegulatorySource
+from .models import RegulatoryDocument, RegulatorySource, UpdateStatus
 
 logger = structlog.get_logger(__name__)
 
@@ -79,7 +79,7 @@ class ContentExtractor:
             document.extracted_entities = entities
             document.summary = summary
             document.impact_assessment = impact
-            document.status = "processed"  # Will be mapped to UpdateStatus later
+            document.status = UpdateStatus.EXTRACTING
 
             # Add classification to tags
             if classification and classification not in document.tags:

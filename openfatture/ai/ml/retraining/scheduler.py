@@ -25,8 +25,8 @@ import asyncio
 from datetime import datetime
 from typing import Any
 
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore[import-untyped]
+from apscheduler.triggers.interval import IntervalTrigger  # type: ignore[import-untyped]
 
 from openfatture.ai.ml.retraining.config import get_retraining_config
 from openfatture.ai.ml.retraining.triggers import RetrainingTrigger

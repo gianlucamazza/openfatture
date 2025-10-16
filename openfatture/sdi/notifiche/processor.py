@@ -116,17 +116,22 @@ class NotificationProcessor:
             # Publish SDINotificationReceivedEvent
             event_bus = get_global_event_bus()
             if event_bus:
+                # Convert SDI identifier to int (it's a string from XML)
+                notification_id: int | None = None
+                if notification.identificativo_sdi:
+                    try:
+                        notification_id = int(notification.identificativo_sdi)
+                    except (ValueError, TypeError):
+                        # If conversion fails, log warning but continue
+                        pass
+
                 event_bus.publish(
                     SDINotificationReceivedEvent(
                         notification_type=notification.tipo,
                         invoice_id=fattura.id,
                         invoice_number=f"{fattura.numero}/{fattura.anno}",
                         message=notification.messaggio or "",
-                        notification_id=(
-                            notification.identificativo_sdi
-                            if notification.identificativo_sdi
-                            else None
-                        ),
+                        notification_id=notification_id,
                     )
                 )
 

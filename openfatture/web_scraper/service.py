@@ -136,14 +136,17 @@ class RegulatoryUpdateService:
             # Create scraping session for tracking
             session = await self._create_scraping_session(sources)
 
-            results = {
+            # Explicit type annotations for mypy
+            source_results: list[dict[str, Any]] = []
+
+            results: dict[str, Any] = {
                 "session_id": session.session_id,
                 "status": "completed",
                 "sources_checked": len(sources),
                 "documents_processed": 0,
                 "changes_detected": 0,
                 "errors": 0,
-                "source_results": [],
+                "source_results": source_results,
             }
 
             # Process sources concurrently with controlled parallelism
@@ -155,15 +158,15 @@ class RegulatoryUpdateService:
 
             # Process all sources
             tasks = [process_source(source) for source in sources]
-            source_results = await asyncio.gather(*tasks, return_exceptions=True)
+            gather_results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Aggregate results
-            for result in source_results:
+            for result in gather_results:
                 if isinstance(result, Exception):
                     results["errors"] += 1
-                    results["source_results"].append({"error": str(result), "status": "failed"})
+                    source_results.append({"error": str(result), "status": "failed"})
                 elif isinstance(result, dict):
-                    results["source_results"].append(result)
+                    source_results.append(result)
                     results["documents_processed"] += result.get("documents_processed", 0)
                     results["changes_detected"] += result.get("changes_detected", 0)
                     if result.get("status") == "error":
@@ -171,7 +174,7 @@ class RegulatoryUpdateService:
                 else:
                     # Handle unexpected result types
                     results["errors"] += 1
-                    results["source_results"].append(
+                    source_results.append(
                         {"error": f"Unexpected result type: {type(result)}", "status": "failed"}
                     )
 
