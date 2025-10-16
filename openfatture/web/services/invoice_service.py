@@ -12,7 +12,7 @@ import streamlit as st
 from openfatture.core.fatture.service import InvoiceService as CoreInvoiceService
 from openfatture.storage.database.models import Cliente, Fattura, RigaFattura, StatoFattura
 from openfatture.utils.config import Settings, get_settings
-from openfatture.web.utils.cache import get_db_session
+from openfatture.web.utils.cache import db_session_scope, get_db_session
 
 
 class StreamlitInvoiceService:
@@ -95,6 +95,8 @@ class StreamlitInvoiceService:
         """
         Create a new invoice with line items.
 
+        Uses explicit session management with automatic commit/rollback.
+
         Args:
             cliente_id: Client ID
             numero: Invoice number
@@ -108,66 +110,71 @@ class StreamlitInvoiceService:
         Raises:
             ValueError: If validation fails
         """
-        db = get_db_session()
+        # Use context manager for write operations (Best Practice 2025)
+        with db_session_scope() as db:
+            # Validate cliente
+            cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+            if not cliente:
+                raise ValueError(f"Cliente {cliente_id} non trovato")
 
-        # Validate cliente
-        cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-        if not cliente:
-            raise ValueError(f"Cliente {cliente_id} non trovato")
-
-        # Create invoice
-        fattura = Fattura(
-            numero=numero,
-            anno=anno,
-            data_emissione=data_emissione,
-            cliente_id=cliente_id,
-            stato=StatoFattura.BOZZA,
-        )
-
-        db.add(fattura)
-        db.flush()  # Get ID
-
-        # Add line items
-        totale_imponibile = Decimal("0")
-        totale_iva = Decimal("0")
-
-        for i, riga_data in enumerate(righe_data, start=1):
-            quantita = Decimal(str(riga_data["quantita"]))
-            prezzo = Decimal(str(riga_data["prezzo_unitario"]))
-            aliquota_iva = Decimal(str(riga_data["aliquota_iva"]))
-
-            imponibile = quantita * prezzo
-            iva = imponibile * aliquota_iva / Decimal("100")
-            totale = imponibile + iva
-
-            riga = RigaFattura(
-                fattura_id=fattura.id,
-                numero_riga=i,
-                descrizione=riga_data["descrizione"],
-                quantita=quantita,
-                prezzo_unitario=prezzo,
-                aliquota_iva=aliquota_iva,
-                imponibile=imponibile,
-                iva=iva,
-                totale=totale,
+            # Create invoice
+            fattura = Fattura(
+                numero=numero,
+                anno=anno,
+                data_emissione=data_emissione,
+                cliente_id=cliente_id,
+                stato=StatoFattura.BOZZA,
             )
 
-            db.add(riga)
-            totale_imponibile += imponibile
-            totale_iva += iva
+            db.add(fattura)
+            db.flush()  # Get ID
 
-        # Update invoice totals
-        fattura.imponibile = totale_imponibile
-        fattura.iva = totale_iva
-        fattura.totale = totale_imponibile + totale_iva
+            # Add line items
+            totale_imponibile = Decimal("0")
+            totale_iva = Decimal("0")
 
-        db.commit()
-        db.refresh(fattura)
+            for i, riga_data in enumerate(righe_data, start=1):
+                quantita = Decimal(str(riga_data["quantita"]))
+                prezzo = Decimal(str(riga_data["prezzo_unitario"]))
+                aliquota_iva = Decimal(str(riga_data["aliquota_iva"]))
+
+                imponibile = quantita * prezzo
+                iva = imponibile * aliquota_iva / Decimal("100")
+                totale = imponibile + iva
+
+                riga = RigaFattura(
+                    fattura_id=fattura.id,
+                    numero_riga=i,
+                    descrizione=riga_data["descrizione"],
+                    quantita=quantita,
+                    prezzo_unitario=prezzo,
+                    aliquota_iva=aliquota_iva,
+                    imponibile=imponibile,
+                    iva=iva,
+                    totale=totale,
+                )
+
+                db.add(riga)
+                totale_imponibile += imponibile
+                totale_iva += iva
+
+            # Update invoice totals
+            fattura.imponibile = totale_imponibile
+            fattura.iva = totale_iva
+            fattura.totale = totale_imponibile + totale_iva
+
+            # Commit happens automatically via context manager
+            # Get fresh instance for return (detached from session)
+            fattura_id = fattura.id
+
+        # Re-fetch with read session to return detached object
+        db_read = get_db_session()
+        result = db_read.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         # Clear cache
         st.cache_data.clear()
 
-        return fattura
+        return result
 
     def generate_xml(self, fattura: Fattura, validate: bool = True) -> tuple[str, str | None]:
         """

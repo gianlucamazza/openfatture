@@ -274,6 +274,61 @@ uv run openfatture payment reconcile --account 1
 uv run openfatture payment queue --interactive
 ```
 
+### ⚡ Lightning
+
+**Funzionalità:**
+- **Status Connessione:** Verifica connessione LND e stato canali
+- **Configurazione Lightning:** Visualizza e modifica impostazioni Lightning
+- **Creazione Invoice:** Genera Lightning invoice da form web
+- **Lista Invoice:** Mostra tutte le invoice Lightning con filtri
+- **Dettaglio Invoice:** Visualizza QR code, payment request, stato
+- **Monitoraggio Pagamenti:** Lista pagamenti ricevuti con dettagli
+- **Statistiche Canali:** Capacità, bilanci, fee policy
+- **Liquidity Management:** Monitora e gestisci liquidità canali
+
+**Workflow Tipico:**
+1. Verifica connessione LND nella sezione Status
+2. Controlla configurazione e modifica se necessario
+3. Crea nuova invoice inserendo importo e descrizione
+4. Mostra dettaglio invoice per ottenere QR code/payment request
+5. Condividi con cliente per pagamento istantaneo
+6. Monitora ricevimento pagamento in tempo reale
+
+**Caratteristiche Principali:**
+- **QR Code Integrato:** Mostra QR code scannable per pagamenti mobili
+- **Payment Request Copiabile:** Click per copiare payment request
+- **Aggiornamenti Real-time:** Status invoice si aggiorna automaticamente
+- **Conversione BTC/EUR:** Mostra equivalenti in entrambe le valute
+- **Webhook Status:** Visualizza configurazione webhook se abilitata
+
+**Prerequisiti:**
+- Lightning abilitato in `.env` (`LIGHTNING_ENABLED=true`)
+- LND node attivo e connesso
+- Certificato TLS e macaroon configurati
+- Almeno un canale con capacità inbound
+
+**CLI Alternative:**
+```bash
+# Status e configurazione
+uv run openfatture lightning status
+uv run openfatture config set lightning_enabled true
+
+# Gestione invoice
+uv run openfatture lightning invoice create --amount 100.00 --description "Test"
+uv run openfatture lightning invoice list
+uv run openfatture lightning invoice status <id>
+
+# Monitoraggio canali
+uv run openfatture lightning channels
+uv run openfatture lightning liquidity status
+```
+
+**Troubleshooting dalla Web UI:**
+- **Connessione Fallita:** Verifica LND sia attivo e configurato correttamente
+- **Nessuna Capacità:** Apri canali o attendi rebalancing automatico
+- **Rate Conversione:** Controlla connessione internet e API provider
+- **Invoice Scaduta:** Crea nuova invoice con expiry più lungo
+
 ### ⚙️ Impostazioni
 
 **Funzionalità:**

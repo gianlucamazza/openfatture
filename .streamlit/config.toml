@@ -1,0 +1,75 @@
+# Streamlit Production Configuration - Best Practices 2025
+# https://docs.streamlit.io/library/advanced-features/configuration
+
+[server]
+# Production server settings
+port = 8501
+address = "0.0.0.0"
+headless = true
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 200
+fileWatcherType = "none"  # Disable file watching in production
+
+[browser]
+# Browser settings
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
+
+[theme]
+# OpenFatture theme
+primaryColor = "#3366FF"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+
+[logger]
+# Logging configuration
+level = "info"
+messageFormat = "%(asctime)s %(levelname)s: %(message)s"
+
+[client]
+# Client settings
+showErrorDetails = false  # Hide errors in production
+toolbarMode = "minimal"
+
+[runner]
+# App runner settings
+magicEnabled = true
+fastReruns = true
+
+# ============================================================================
+# DEPLOYMENT NOTES
+# ============================================================================
+#
+# For local development:
+#   - Set fileWatcherType = "auto"
+#   - Set showErrorDetails = true
+#   - Set logger.level = "debug"
+#
+# For production:
+#   - Keep settings as above
+#   - Set address based on deployment (0.0.0.0 for Docker, specific IP otherwise)
+#   - Configure reverse proxy (nginx) with:
+#     - SSL/TLS termination
+#     - Rate limiting
+#     - Session affinity (sticky sessions)
+#
+# Docker deployment:
+#   docker run -p 8501:8501 -v .env:/app/.env openfatture-web
+#
+# Nginx proxy example:
+#   location / {
+#       proxy_pass http://localhost:8501;
+#       proxy_http_version 1.1;
+#       proxy_set_header Upgrade $http_upgrade;
+#       proxy_set_header Connection "upgrade";
+#       proxy_set_header Host $host;
+#       proxy_set_header X-Real-IP $remote_addr;
+#       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#       proxy_set_header X-Forwarded-Proto $scheme;
+#   }
+#
+# ============================================================================

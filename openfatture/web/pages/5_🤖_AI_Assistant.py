@@ -3,13 +3,17 @@
 Provides interactive AI tools for invoice management and tax compliance.
 """
 
-import asyncio
+import time
 from collections.abc import Callable
 from typing import Any
 
 import streamlit as st
 
 from openfatture.web.services.ai_service import get_ai_service
+from openfatture.web.services.custom_commands_service import get_custom_commands_service
+from openfatture.web.services.feedback_service import get_feedback_service
+from openfatture.web.services.session_service import get_session_service
+from openfatture.web.utils.async_helpers import run_async
 from openfatture.web.utils.state import (
     clear_conversation_history,
     init_conversation_history,
@@ -62,7 +66,7 @@ async def retry_with_backoff(
             st.warning(retry_msg)
 
             # Wait before retry
-            await asyncio.sleep(delay)
+            time.sleep(delay)
 
     # This should never be reached, but just in case
     if last_exception:
@@ -105,14 +109,151 @@ def handle_chat_error(error: Exception, context: str = "chat") -> str:
         return f"❌ Errore imprevisto: {str(error)[:100]}..."
 
 
+def handle_slash_command(
+    user_input: str, custom_commands_service: Any
+) -> tuple[str | None, str | None]:
+    """
+    Handle slash commands in chat input.
+
+    Args:
+        user_input: User input that may contain a slash command
+        custom_commands_service: Custom commands service instance
+
+    Returns:
+        Tuple of (expanded_message, command_feedback)
+        - expanded_message: The expanded command or None if not a command
+        - command_feedback: User feedback message about command execution
+    """
+    if not user_input.startswith("/"):
+        return None, None
+
+    # Parse command
+    parts = user_input.split()
+    command = parts[0].lower()
+    args = parts[1:] if len(parts) > 1 else []
+
+    # Handle built-in commands
+    if command == "/help":
+        feedback = """
+**🤖 Comandi Disponibili:**
+
+**Built-in:**
+- `/help` - Mostra questo messaggio
+- `/tools` - Lista strumenti AI disponibili
+- `/stats` - Statistiche conversazione corrente
+- `/custom` - Lista comandi personalizzati
+- `/reload` - Ricarica comandi da disco
+- `/clear` - Cancella cronologia chat
+
+**Personalizzati:**
+Crea comandi in `~/.openfatture/commands/*.yaml`
+
+**Esempi:**
+- "Come creo una fattura?"
+- "Qual è l'aliquota IVA per il web design?"
+- "Mostra le fatture di questo mese"
+        """.strip()
+        return None, feedback
+
+    elif command == "/tools":
+        # Show available AI tools
+        tools_info = """
+**🔧 Strumenti AI Disponibili:**
+
+**Ricerca e Consultazione:**
+- Ricerca fatture per cliente, data, importo
+- Statistiche fatturato e pagamenti
+- Consultazione normativa fiscale
+
+**Azioni Disponibili:**
+- Creazione descrizioni fatture professionali
+- Suggerimento aliquote IVA corrette
+- Analisi compliance fatturazione
+
+**Integrazione Dati:**
+- Accesso database clienti e prodotti
+- Cronologia pagamenti e scadenze
+- Report e analytics business
+        """.strip()
+        return None, tools_info
+
+    elif command == "/stats":
+        # Show conversation statistics
+        total_messages = len(history)
+        user_messages = len([msg for msg in history if msg["role"] == "user"])
+        assistant_messages = len([msg for msg in history if msg["role"] == "assistant"])
+
+        # Calculate approximate token usage (rough estimate)
+        total_chars = sum(len(msg["content"]) for msg in history)
+        estimated_tokens = total_chars // 4  # Rough approximation
+
+        feedback = f"""
+**📊 Statistiche Conversazione:**
+
+- **Messaggi totali:** {total_messages}
+- **Tuo messaggi:** {user_messages}
+- **Risposte AI:** {assistant_messages}
+- **Caratteri totali:** {total_chars:,}
+- **Token stimati:** {estimated_tokens:,}
+
+**💡 Suggerimenti:**
+- Usa `/clear` per ricominciare da capo
+- Salva conversazioni importanti con 💾 Salva
+        """.strip()
+        return None, feedback
+
+    elif command == "/custom":
+        commands = custom_commands_service.list_commands()
+        if not commands:
+            feedback = "📝 **Nessun comando personalizzato trovato**\n\nCrea comandi in `~/.openfatture/commands/*.yaml`"
+        else:
+            feedback = f"📝 **Comandi Personalizzati ({len(commands)}):**\n\n"
+            for cmd in commands:
+                aliases = f" ({', '.join(cmd['aliases'])})" if cmd["aliases"] else ""
+                feedback += f"- `/{cmd['name']}`{aliases}: {cmd['description']}\n"
+            feedback += "\n💡 Usa `/help` per vedere tutti i comandi"
+        return None, feedback
+
+    elif command == "/reload":
+        try:
+            result = custom_commands_service.reload_commands()
+            feedback = f"🔄 **Comandi ricaricati:** {result['old_count']} → {result['new_count']} ({result['added']} aggiunti, {result['removed']} rimossi)"
+        except Exception as e:
+            feedback = f"❌ **Errore ricarica:** {str(e)}"
+        return None, feedback
+
+    elif command == "/clear":
+        # This will be handled by the clear button, just show feedback
+        return None, "🗑️ **Cronologia cancellata**\n\nLa conversazione è stata azzerata."
+
+    # Handle custom commands
+    elif custom_commands_service.has_command(command):
+        try:
+            expanded = custom_commands_service.execute_command(command, args)
+            feedback = f"🔧 **Comando espanso:** `/{command}` → {len(expanded)} caratteri"
+            return expanded, feedback
+        except ValueError as e:
+            return None, f"❌ **Errore comando:** {str(e)}"
+
+    # Unknown command
+    else:
+        return (
+            None,
+            f"❓ **Comando sconosciuto:** `{command}`\n\nUsa `/help` per vedere i comandi disponibili",
+        )
+
+
 st.set_page_config(page_title="AI Assistant - OpenFatture", page_icon="🤖", layout="wide")
 
 # Title
 st.title("🤖 AI Assistant")
 st.markdown("### Assistente Intelligente per Fatturazione e Fisco")
 
-# Initialize AI service
+# Initialize services
 ai_service = get_ai_service()
+custom_commands_service = get_custom_commands_service()
+session_service = get_session_service()
+feedback_service = get_feedback_service()
 
 # Check if AI is available
 if not ai_service.is_available():
@@ -152,9 +293,30 @@ with tab1:
     # Initialize conversation history
     history = init_conversation_history()
 
-    # Clear chat button
-    col1, col2 = st.columns([6, 1])
+    # Action buttons
+    col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
     with col2:
+        if st.button("💾 Salva", use_container_width=True, help="Salva conversazione"):
+            try:
+                session_id = session_service.save_session(
+                    {"title": f"Chat {len(history) // 2} messaggi", "messages": history}
+                )
+                if session_id:
+                    st.success(f"✅ Salvata: {session_id[:8]}...")
+                    st.rerun()
+                else:
+                    st.error("❌ Errore salvataggio")
+            except Exception as e:
+                st.error(f"❌ Errore: {str(e)}")
+    with col3:
+        if st.button("🔄 Reload", use_container_width=True, help="Ricarica comandi personalizzati"):
+            try:
+                result = custom_commands_service.reload_commands()
+                st.success(f"✅ Ricaricati: {result['new_count']} comandi")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Errore: {str(e)}")
+    with col4:
         if st.button("🗑️ Cancella", use_container_width=True):
             clear_conversation_history()
             st.rerun()
@@ -220,10 +382,108 @@ with tab1:
                 st.success("File cancellati!")
                 st.rerun()
 
+    # Custom commands info
+    with st.expander("📝 Comandi Personalizzati", expanded=False):
+        commands = custom_commands_service.list_commands()
+        if not commands:
+            st.info(
+                "Nessun comando personalizzato trovato. Crea comandi in `~/.openfatture/commands/*.yaml`"
+            )
+        else:
+            st.markdown(f"**{len(commands)} comandi disponibili:**")
+            for cmd in commands:
+                aliases = f" ({', '.join(cmd['aliases'])})" if cmd["aliases"] else ""
+                with st.expander(f"🤖 /{cmd['name']}{aliases} - {cmd['category']}"):
+                    st.markdown(f"**Descrizione:** {cmd['description']}")
+                    if cmd["examples"]:
+                        st.markdown("**Esempi:**")
+                        for example in cmd["examples"]:
+                            st.code(example)
+                    if cmd["author"]:
+                        st.markdown(f"**Autore:** {cmd['author']}")
+                    if cmd["version"]:
+                        st.markdown(f"**Versione:** {cmd['version']}")
+
+    # Session management
+    with st.expander("💾 Sessioni Salvate", expanded=False):
+        sessions = session_service.list_sessions()
+
+        if not sessions:
+            st.info(
+                "Nessuna sessione salvata. Usa il pulsante 💾 Salva per salvare la conversazione corrente."
+            )
+        else:
+            st.markdown(f"**{len(sessions)} sessioni disponibili:**")
+
+            # Session list with load/delete buttons
+            for session in sorted(sessions, key=lambda x: x["updated_at"], reverse=True):
+                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+
+                with col1:
+                    st.markdown(f"**{session['title']}**")
+                    st.caption(
+                        f"ID: {session['id'][:8]}... • {session['message_count']} msg • {session['updated_at'].strftime('%d/%m/%Y %H:%M')}"
+                    )
+
+                with col2:
+                    if st.button(
+                        "📂 Carica", key=f"load_{session['id']}", use_container_width=True
+                    ):
+                        try:
+                            session_data = session_service.load_session(session["id"])
+                            if session_data and session_data["messages"]:
+                                # Clear current history and load new one
+                                st.session_state.conversation_history = session_data["messages"]
+                                st.success(f"✅ Caricata sessione: {session['title']}")
+                                st.rerun()
+                            else:
+                                st.error("❌ Sessione vuota o corrotta")
+                        except Exception as e:
+                            st.error(f"❌ Errore caricamento: {str(e)}")
+
+                with col3:
+                    if st.button(
+                        "📝 Rinomina", key=f"rename_{session['id']}", use_container_width=True
+                    ):
+                        # This would need a text input - simplified for now
+                        st.info("Funzionalità rinomina da implementare")
+
+                with col4:
+                    if st.button(
+                        "🗑️ Elimina", key=f"delete_{session['id']}", use_container_width=True
+                    ):
+                        try:
+                            if session_service.delete_session(session["id"]):
+                                st.success("✅ Sessione eliminata")
+                                st.rerun()
+                            else:
+                                st.error("❌ Errore eliminazione")
+                        except Exception as e:
+                            st.error(f"❌ Errore: {str(e)}")
+
     # Chat input
-    user_input = st.chat_input("Scrivi il tuo messaggio...", key="chat_input")
+    user_input = st.chat_input("Scrivi il tuo messaggio o usa /comando...", key="chat_input")
 
     if user_input:
+        # Handle slash commands first
+        expanded_message, command_feedback = handle_slash_command(
+            user_input, custom_commands_service
+        )
+
+        if command_feedback:
+            # This is a command - show feedback and don't send to AI
+            with chat_container:
+                with st.chat_message("assistant", avatar="🤖"):
+                    st.markdown(command_feedback)
+            # Add to history
+            history.append({"role": "user", "content": user_input})
+            history.append({"role": "assistant", "content": command_feedback})
+            st.rerun()
+            st.stop()
+
+        # Use expanded message if command was processed, otherwise use original input
+        final_input = expanded_message if expanded_message else user_input
+
         # Process uploaded files if any
         attached_files = []
         if "uploaded_files" in st.session_state and st.session_state.uploaded_files:
@@ -232,12 +492,38 @@ with tab1:
             st.session_state.uploaded_files = []
 
         # Prepare message content with file information
-        message_content = user_input
+        message_content = final_input
         if attached_files:
-            file_info = "\n\n📎 File allegati:\n" + "\n".join(
-                [f"- {f['details']['name']} ({f['details']['type']})" for f in attached_files]
+            file_info_parts = ["\n\n📎 File allegati:"]
+
+            for file_data in attached_files:
+                file_name = file_data["details"]["name"]
+                file_type = file_data["details"]["type"]
+                file_size = file_data["details"]["size"]
+
+                # Basic file type detection and content hints
+                if file_type == "text/plain":
+                    try:
+                        content = str(file_data["file"].read(), "utf-8")
+                        preview = content[:200] + "..." if len(content) > 200 else content
+                        file_info_parts.append(f"- **{file_name}** (testo): {preview}")
+                    except Exception:
+                        file_info_parts.append(f"- **{file_name}** (testo, {file_size} bytes)")
+                elif file_type == "application/pdf":
+                    file_info_parts.append(
+                        f"- **{file_name}** (PDF, {file_size} bytes) - Contenuto da analizzare"
+                    )
+                elif file_type.startswith("image/"):
+                    file_info_parts.append(
+                        f"- **{file_name}** (immagine {file_type.split('/')[1]}, {file_size} bytes) - Testo da estrarre via OCR"
+                    )
+                else:
+                    file_info_parts.append(f"- **{file_name}** ({file_type}, {file_size} bytes)")
+
+            message_content += "\n".join(file_info_parts)
+            message_content += (
+                "\n\n💡 L'AI analizzerà questi file per fornire una risposta più precisa."
             )
-            message_content += file_info
 
         # Add user message to history
         history.append({"role": "user", "content": message_content})
@@ -273,17 +559,48 @@ with tab1:
 
                         async def stream_chat():
                             chunks = []
-                            # For now, pass the message with file info as text
-                            # Future enhancement: implement proper file processing
-                            async for chunk in ai_service.chat_stream(
+                            tool_events = []
+
+                            # Process streaming with tool calling visualization
+                            async for chunk_type, chunk_data in ai_service.chat_stream(
                                 message_content, history[:-1]
                             ):
-                                chunks.append(chunk)
-                                response_placeholder.markdown("".join(chunks) + "▌")
+                                if chunk_type == "text":
+                                    # Regular text chunk
+                                    chunks.append(chunk_data)
+                                    current_text = "".join(chunks)
+
+                                    # Add tool events to display
+                                    tool_display = ""
+                                    if tool_events:
+                                        tool_display = "\n\n" + "\n".join(
+                                            [
+                                                f"🔧 **{event.data.get('tool_name', 'Tool')}:** {event.data.get('result', event.data.get('error', ''))}"
+                                                for event in tool_events[-3:]  # Show last 3 events
+                                            ]
+                                        )
+
+                                    response_placeholder.markdown(current_text + tool_display + "▌")
+
+                                elif chunk_type == "tool_event":
+                                    # Tool calling event
+                                    tool_events.append(chunk_data)
+
+                                    # Update display with tool event
+                                    current_text = "".join(chunks)
+                                    tool_display = "\n\n" + "\n".join(
+                                        [
+                                            f"🔧 **{event.data.get('tool_name', 'Tool')}:** {event.data.get('result', event.data.get('error', ''))}"
+                                            for event in tool_events[-3:]  # Show last 3 events
+                                        ]
+                                    )
+
+                                    response_placeholder.markdown(current_text + tool_display + "▌")
+
                             return "".join(chunks)
 
-                        # Execute with retry logic
-                        full_response = asyncio.run(
+                        # Execute with retry logic (Best Practice 2025: use run_async)
+                        full_response = run_async(
                             retry_with_backoff(
                                 stream_chat,
                                 max_retries=2,  # Allow 2 retries for chat
@@ -292,6 +609,65 @@ with tab1:
                             )
                         )
                         response_placeholder.markdown(full_response)
+
+                        # Add feedback buttons after successful response
+                        if full_response and not full_response.startswith("❌"):
+                            st.markdown("---")
+                            feedback_col1, feedback_col2, feedback_col3 = st.columns([1, 1, 2])
+
+                            with feedback_col1:
+                                if st.button(
+                                    "👍 Buono", key=f"good_{len(history)}", use_container_width=True
+                                ):
+                                    success = feedback_service.submit_feedback(
+                                        agent_type="chat_agent",
+                                        rating=5,
+                                        user_comment="Buona risposta",
+                                        original_text=full_response,
+                                    )
+                                    if success:
+                                        st.success("✅ Grazie per il feedback!")
+                                    else:
+                                        st.error("❌ Errore nell'invio del feedback")
+
+                            with feedback_col2:
+                                if st.button(
+                                    "👎 Scarso", key=f"bad_{len(history)}", use_container_width=True
+                                ):
+                                    success = feedback_service.submit_feedback(
+                                        agent_type="chat_agent",
+                                        rating=2,
+                                        user_comment="Risposta insoddisfacente",
+                                        original_text=full_response,
+                                    )
+                                    if success:
+                                        st.success("✅ Grazie per il feedback!")
+                                    else:
+                                        st.error("❌ Errore nell'invio del feedback")
+
+                            with feedback_col3:
+                                with st.popover("💬 Commento"):
+                                    user_comment = st.text_area(
+                                        "Lascia un commento sulla risposta:",
+                                        height=100,
+                                        key=f"comment_{len(history)}",
+                                    )
+                                    if st.button(
+                                        "Invia Commento", key=f"submit_comment_{len(history)}"
+                                    ):
+                                        if user_comment.strip():
+                                            success = feedback_service.submit_feedback(
+                                                agent_type="chat_agent",
+                                                rating=3,  # Neutral rating for comments
+                                                user_comment=user_comment.strip(),
+                                                original_text=full_response,
+                                            )
+                                            if success:
+                                                st.success("✅ Commento inviato!")
+                                            else:
+                                                st.error("❌ Errore nell'invio del commento")
+                                        else:
+                                            st.warning("Inserisci un commento")
 
                     except Exception as e:
                         error_message = handle_chat_error(e, "chat_streaming")
@@ -386,8 +762,8 @@ with tab2:
                             tecnologie=tech_list,
                         )
 
-                    # Execute with retry logic
-                    response = asyncio.run(
+                    # Execute with retry logic (Best Practice 2025: use run_async)
+                    response = run_async(
                         retry_with_backoff(
                             generate_description,
                             max_retries=2,  # Allow 2 retries for description generation
