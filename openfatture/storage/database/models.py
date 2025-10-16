@@ -86,6 +86,36 @@ class StatoPagamento(PyEnum):
     SCADUTO = "scaduto"  # Overdue
 
 
+class StatoPreventivo(PyEnum):
+    """Quote/Estimate status."""
+
+    BOZZA = "bozza"  # Draft
+    INVIATO = "inviato"  # Sent to client
+    ACCETTATO = "accettato"  # Accepted by client
+    RIFIUTATO = "rifiutato"  # Rejected by client
+    SCADUTO = "scaduto"  # Expired
+    CONVERTITO = "convertito"  # Converted to invoice
+
+
+class FeedbackType(PyEnum):
+    """User feedback type."""
+
+    RATING = "rating"  # Star rating (1-5)
+    CORRECTION = "correction"  # User corrected AI output
+    COMMENT = "comment"  # Textual comment
+    THUMBS_UP = "thumbs_up"  # Quick positive feedback
+    THUMBS_DOWN = "thumbs_down"  # Quick negative feedback
+
+
+class PredictionType(PyEnum):
+    """ML prediction type for feedback tracking."""
+
+    INVOICE_DELAY = "invoice_delay"  # Cash flow prediction
+    TAX_SUGGESTION = "tax_suggestion"  # VAT/tax recommendation
+    DESCRIPTION_GENERATION = "description_generation"  # Invoice description AI
+    CLIENT_RECOMMENDATION = "client_recommendation"  # Client suggestions
+
+
 # Models
 class Cliente(IntPKMixin, Base):
     """Client/Customer model."""
@@ -122,9 +152,57 @@ class Cliente(IntPKMixin, Base):
 
     # Relationships
     fatture: Mapped[list[Fattura]] = relationship(back_populates="cliente")
+    preventivi: Mapped[list[Preventivo]] = relationship(back_populates="cliente")
 
     def __repr__(self) -> str:
         return f"<Cliente(id={self.id}, denominazione='{self.denominazione}')>"
+
+
+class Preventivo(IntPKMixin, Base):
+    """Quote/Estimate model."""
+
+    __tablename__ = "preventivi"
+
+    # Numero preventivo (progressivo annuale)
+    numero: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    anno: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+
+    # Date
+    data_emissione: Mapped[date] = mapped_column(Date, nullable=False, default=date.today)
+    data_scadenza: Mapped[date] = mapped_column(Date, nullable=False)
+
+    # Cliente
+    cliente_id: Mapped[int] = mapped_column(ForeignKey("clienti.id"), nullable=False)
+    cliente: Mapped[Cliente] = relationship(back_populates="preventivi")
+
+    # Importi (calcolati dalle righe)
+    imponibile: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    iva: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    totale: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+
+    # Stato
+    stato: Mapped[StatoPreventivo] = mapped_column(
+        Enum(StatoPreventivo), nullable=False, default=StatoPreventivo.BOZZA
+    )
+
+    # Note e condizioni
+    note: Mapped[str | None] = mapped_column(Text)
+    condizioni: Mapped[str | None] = mapped_column(Text)  # Terms and conditions
+
+    # Validità (giorni)
+    validita_giorni: Mapped[int] = mapped_column(Integer, default=30)
+
+    # File path (PDF)
+    pdf_path: Mapped[str | None] = mapped_column(String(500))
+
+    # Relationships
+    righe: Mapped[list[RigaPreventivo]] = relationship(
+        back_populates="preventivo", cascade="all, delete-orphan"
+    )
+    fattura: Mapped[Fattura | None] = relationship(back_populates="preventivo")
+
+    def __repr__(self) -> str:
+        return f"<Preventivo(id={self.id}, numero='{self.numero}/{self.anno}', stato='{self.stato.value}')>"
 
 
 class Prodotto(IntPKMixin, Base):
@@ -174,6 +252,9 @@ class Fattura(IntPKMixin, Base):
     cliente_id: Mapped[int] = mapped_column(ForeignKey("clienti.id"), nullable=False)
     cliente: Mapped[Cliente] = relationship(back_populates="fatture")
 
+    # Preventivo (optional - if invoice was generated from a quote)
+    preventivo_id: Mapped[int | None] = mapped_column(ForeignKey("preventivi.id"))
+
     # Importi (calcolati dalle righe)
     imponibile: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     iva: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
@@ -214,6 +295,7 @@ class Fattura(IntPKMixin, Base):
     log_sdi: Mapped[list[LogSDI]] = relationship(
         back_populates="fattura", cascade="all, delete-orphan"
     )
+    preventivo: Mapped[Preventivo | None] = relationship(back_populates="fattura")
 
     def __repr__(self) -> str:
         return f"<Fattura(id={self.id}, numero='{self.numero}/{self.anno}', stato='{self.stato.value}')>"
@@ -248,6 +330,37 @@ class RigaFattura(IntPKMixin, Base):
 
     def __repr__(self) -> str:
         return f"<RigaFattura(id={self.id}, fattura_id={self.fattura_id}, descrizione='{self.descrizione[:30]}...')>"
+
+
+class RigaPreventivo(IntPKMixin, Base):
+    """Quote/Estimate line item."""
+
+    __tablename__ = "righe_preventivo"
+
+    preventivo_id: Mapped[int] = mapped_column(ForeignKey("preventivi.id"), nullable=False)
+    preventivo: Mapped[Preventivo] = relationship(back_populates="righe")
+
+    # Riga
+    numero_riga: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Descrizione
+    descrizione: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Quantità e prezzo
+    quantita: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=1)
+    prezzo_unitario: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    unita_misura: Mapped[str] = mapped_column(String(10), default="ore")
+
+    # IVA
+    aliquota_iva: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=22.00)
+
+    # Totali
+    imponibile: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    iva: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    totale: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<RigaPreventivo(id={self.id}, preventivo_id={self.preventivo_id}, descrizione='{self.descrizione[:30]}...')>"
 
 
 class Pagamento(IntPKMixin, Base):
@@ -378,6 +491,144 @@ class LogSDI(IntPKMixin, Base):
 
     def __repr__(self) -> str:
         return f"<LogSDI(id={self.id}, fattura_id={self.fattura_id}, tipo='{self.tipo_notifica}')>"
+
+
+class UserFeedback(IntPKMixin, Base):
+    """User feedback on AI responses and chat interactions.
+
+    Tracks user satisfaction, corrections, and comments to enable
+    continuous improvement of AI models through feedback loops.
+    """
+
+    __tablename__ = "user_feedback"
+
+    # Session reference (optional - for chat feedback)
+    session_id: Mapped[str | None] = mapped_column(String(100), index=True)
+
+    # Message reference (optional - specific message in session)
+    message_id: Mapped[str | None] = mapped_column(String(100))
+
+    # Feedback type
+    feedback_type: Mapped[FeedbackType] = mapped_column(
+        Enum(FeedbackType), nullable=False, index=True
+    )
+
+    # Rating (1-5 stars, only for RATING type)
+    rating: Mapped[int | None] = mapped_column(Integer)
+
+    # Original AI output (for corrections)
+    original_text: Mapped[str | None] = mapped_column(Text)
+
+    # User's corrected version (for CORRECTION type)
+    corrected_text: Mapped[str | None] = mapped_column(Text)
+
+    # User comment/explanation
+    user_comment: Mapped[str | None] = mapped_column(Text)
+
+    # Agent/feature context
+    agent_type: Mapped[str | None] = mapped_column(String(100), index=True)
+    feature_name: Mapped[str | None] = mapped_column(String(100))
+
+    # Metadata (JSON-like text field for extensibility)
+    metadata_json: Mapped[str | None] = mapped_column(Text)
+
+    # Timestamp
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, index=True
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserFeedback(id={self.id}, type='{self.feedback_type.value}', session='{self.session_id}')>"
+
+
+class ModelPredictionFeedback(IntPKMixin, Base):
+    """Feedback on ML model predictions.
+
+    Specifically tracks feedback on ML predictions (cash flow, tax suggestions, etc.)
+    to enable model retraining with human-validated corrections.
+    """
+
+    __tablename__ = "model_prediction_feedback"
+
+    # Prediction context
+    prediction_type: Mapped[PredictionType] = mapped_column(
+        Enum(PredictionType), nullable=False, index=True
+    )
+
+    # Reference to entity (invoice ID, client ID, etc.)
+    entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    entity_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+
+    # Original prediction (JSON format)
+    prediction_data: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Model confidence score (0-1)
+    confidence_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
+
+    # User acceptance
+    user_accepted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # User correction (JSON format if applicable)
+    user_correction: Mapped[str | None] = mapped_column(Text)
+
+    # User comment/explanation
+    user_comment: Mapped[str | None] = mapped_column(Text)
+
+    # Model version (for A/B testing and rollback)
+    model_version: Mapped[str | None] = mapped_column(String(50))
+
+    # Timestamp
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, index=True
+    )
+
+    # Processing flag (for retraining pipeline)
+    processed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    def __repr__(self) -> str:
+        return f"<ModelPredictionFeedback(id={self.id}, type='{self.prediction_type.value}', entity={self.entity_type}:{self.entity_id}, accepted={self.user_accepted})>"
+
+
+class EventLog(IntPKMixin, Base):
+    """Event audit log - stores all domain events for compliance and analytics.
+
+    Captures every domain event published through the event bus for:
+    - Audit trail and compliance
+    - Historical analysis and reporting
+    - Debugging and troubleshooting
+    - Analytics and metrics
+    """
+
+    __tablename__ = "event_log"
+
+    # Event identification
+    event_id: Mapped[str] = mapped_column(
+        String(36), unique=True, nullable=False, index=True
+    )  # UUID as string
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+
+    # Event payload (JSON serialized)
+    event_data: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Timestamps
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    published_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now
+    )
+
+    # Entity tracking (for filtering by entity)
+    entity_type: Mapped[str | None] = mapped_column(String(50), index=True)
+    entity_id: Mapped[int | None] = mapped_column(Integer, index=True)
+
+    # Additional metadata
+    user_id: Mapped[int | None] = mapped_column(Integer)  # For future user tracking
+    metadata_json: Mapped[str | None] = mapped_column(Text)  # JSON for additional context
+
+    def __repr__(self) -> str:
+        return f"<EventLog(id={self.id}, event_type='{self.event_type}', entity={self.entity_type}:{self.entity_id}, occurred_at='{self.occurred_at}')>"
 
 
 # Ensure payment allocation model is registered for relationship resolution
