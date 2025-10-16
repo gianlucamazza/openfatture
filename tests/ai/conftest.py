@@ -1,12 +1,37 @@
 """AI-specific test fixtures and configuration."""
 
 import asyncio
+from collections.abc import Generator
 from typing import Any
 
 import pytest
 import pytest_asyncio
 
 from openfatture.ai.providers.base import BaseLLMProvider
+from openfatture.storage.database.base import Base
+
+
+@pytest.fixture(scope="function", autouse=True)
+def init_test_database() -> Generator[None, None, None]:
+    """Initialize test database for AI tests.
+
+    This fixture automatically initializes an in-memory SQLite database
+    for all AI tests that need database access (like feedback tests).
+    """
+    import openfatture.storage.database.base as db_base
+    from openfatture.storage.database.base import init_db
+
+    # Initialize database with in-memory SQLite
+    init_db("sqlite:///:memory:")
+
+    yield
+
+    # Cleanup
+    if db_base.engine:
+        Base.metadata.drop_all(db_base.engine)
+        db_base.engine.dispose()
+        db_base.engine = None
+        db_base.SessionLocal = None
 
 
 @pytest.fixture(scope="session")

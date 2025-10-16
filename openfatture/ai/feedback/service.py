@@ -3,15 +3,13 @@
 import json
 from datetime import datetime
 
-from sqlalchemy.orm import Session
-
 from openfatture.ai.feedback.models import (
     FeedbackCreate,
     FeedbackResponse,
     ModelPredictionFeedbackCreate,
     ModelPredictionFeedbackResponse,
 )
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.database.base import get_session as _get_session
 from openfatture.storage.database.models import (
     ModelPredictionFeedback,
     PredictionType,
@@ -20,13 +18,6 @@ from openfatture.storage.database.models import (
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    """Get database session."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
-    return SessionLocal()
 
 
 class FeedbackService:
