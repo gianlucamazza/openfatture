@@ -14,8 +14,14 @@ from typing import Any
 
 import httpx
 
-from openfatture.ai.ml.retraining import get_scheduler as get_retraining_scheduler
+from openfatture.ai.ml.retraining import (
+    RetrainingScheduler,
+)
+from openfatture.ai.ml.retraining import (
+    get_scheduler as get_retraining_scheduler,
+)
 from openfatture.ai.rag.auto_update import (
+    AutoIndexingService,
     get_auto_indexing_service,
     get_auto_update_config,
     setup_event_listeners,
@@ -49,8 +55,8 @@ class LifespanManager:
         self._shutdown_handlers: list[asyncio.Task[Any]] = []
 
         # Self-learning components
-        self.auto_indexing_service = None
-        self.retraining_scheduler = None
+        self.auto_indexing_service: AutoIndexingService | None = None
+        self.retraining_scheduler: RetrainingScheduler | None = None
 
     @asynccontextmanager
     async def lifespan(self) -> AsyncGenerator[dict[str, Any], None]:

@@ -199,9 +199,7 @@ class RegulatoryWebScraper:
 
         return documents
 
-    async def _scrape_page(
-        self, source: RegulatorySource, url: str
-    ) -> RegulatoryDocument | None:
+    async def _scrape_page(self, source: RegulatorySource, url: str) -> RegulatoryDocument | None:
         """Scrape a single page.
 
         Args:

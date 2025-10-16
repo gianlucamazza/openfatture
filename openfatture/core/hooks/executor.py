@@ -168,7 +168,7 @@ class HookExecutor:
                 duration_ms=duration_ms,
             )
 
-            result = HookResult(
+            timeout_result = HookResult(
                 hook_name=config.name,
                 success=False,
                 exit_code=-1,
@@ -182,10 +182,10 @@ class HookExecutor:
             if config.fail_on_error:
                 raise HookExecutionError(
                     f"Hook '{config.name}' timed out after {config.timeout_seconds}s",
-                    result,
+                    timeout_result,
                 )
 
-            return result
+            return timeout_result
 
         except Exception as e:
             duration_ms = (time.perf_counter() - start_time) * 1000
@@ -199,7 +199,7 @@ class HookExecutor:
                 exc_info=True,
             )
 
-            result = HookResult(
+            error_result = HookResult(
                 hook_name=config.name,
                 success=False,
                 exit_code=-1,
@@ -212,10 +212,10 @@ class HookExecutor:
             if config.fail_on_error:
                 raise HookExecutionError(
                     f"Hook '{config.name}' failed: {e}",
-                    result,
+                    error_result,
                 )
 
-            return result
+            return error_result
 
     def _build_env_vars(
         self,

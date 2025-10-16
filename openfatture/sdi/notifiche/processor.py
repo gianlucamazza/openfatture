@@ -122,7 +122,11 @@ class NotificationProcessor:
                         invoice_id=fattura.id,
                         invoice_number=f"{fattura.numero}/{fattura.anno}",
                         message=notification.messaggio or "",
-                        sdi_identifier=notification.identificativo_sdi,
+                        notification_id=(
+                            notification.identificativo_sdi
+                            if notification.identificativo_sdi
+                            else None
+                        ),
                     )
                 )
 

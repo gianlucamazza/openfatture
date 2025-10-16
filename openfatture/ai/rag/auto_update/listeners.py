@@ -9,6 +9,8 @@ Example:
     >>> # Now all invoice/client changes are automatically tracked
 """
 
+from typing import Any
+
 from sqlalchemy import event
 from sqlalchemy.orm import Mapper
 
@@ -20,7 +22,7 @@ from openfatture.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-def _on_invoice_insert(mapper: Mapper, connection: any, target: Fattura) -> None:
+def _on_invoice_insert(mapper: Mapper, connection: Any, target: Fattura) -> None:
     """Handle invoice insert events.
 
     Args:
@@ -43,7 +45,7 @@ def _on_invoice_insert(mapper: Mapper, connection: any, target: Fattura) -> None
     logger.debug("invoice_insert_tracked", invoice_id=target.id)
 
 
-def _on_invoice_update(mapper: Mapper, connection: any, target: Fattura) -> None:
+def _on_invoice_update(mapper: Mapper, connection: Any, target: Fattura) -> None:
     """Handle invoice update events.
 
     Args:
@@ -66,7 +68,7 @@ def _on_invoice_update(mapper: Mapper, connection: any, target: Fattura) -> None
     logger.debug("invoice_update_tracked", invoice_id=target.id)
 
 
-def _on_invoice_delete(mapper: Mapper, connection: any, target: Fattura) -> None:
+def _on_invoice_delete(mapper: Mapper, connection: Any, target: Fattura) -> None:
     """Handle invoice delete events.
 
     Args:
@@ -88,7 +90,7 @@ def _on_invoice_delete(mapper: Mapper, connection: any, target: Fattura) -> None
     logger.debug("invoice_delete_tracked", invoice_id=target.id)
 
 
-def _on_client_insert(mapper: Mapper, connection: any, target: Cliente) -> None:
+def _on_client_insert(mapper: Mapper, connection: Any, target: Cliente) -> None:
     """Handle client insert events.
 
     Args:
@@ -109,7 +111,7 @@ def _on_client_insert(mapper: Mapper, connection: any, target: Cliente) -> None:
     logger.debug("client_insert_tracked", client_id=target.id)
 
 
-def _on_client_update(mapper: Mapper, connection: any, target: Cliente) -> None:
+def _on_client_update(mapper: Mapper, connection: Any, target: Cliente) -> None:
     """Handle client update events.
 
     Args:
@@ -130,7 +132,7 @@ def _on_client_update(mapper: Mapper, connection: any, target: Cliente) -> None:
     logger.debug("client_update_tracked", client_id=target.id)
 
 
-def _on_client_delete(mapper: Mapper, connection: any, target: Cliente) -> None:
+def _on_client_delete(mapper: Mapper, connection: Any, target: Cliente) -> None:
     """Handle client delete events.
 
     Args:

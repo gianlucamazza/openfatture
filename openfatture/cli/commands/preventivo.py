@@ -65,6 +65,9 @@ def crea_preventivo(
             console.print(f"[red]Client {cliente_id} not found[/red]")
             raise typer.Exit(1)
 
+        # At this point cliente_id is guaranteed to be int (not None)
+        assert cliente_id is not None  # Type narrowing for mypy
+
         console.print(f"[green]✓ Client: {cliente.denominazione}[/green]\n")
 
         # Preventivo details
@@ -142,8 +145,8 @@ def crea_preventivo(
             condizioni=condizioni,
         )
 
-        if error:
-            console.print(f"\n[red]❌ Error: {error}[/red]")
+        if error or not preventivo:
+            console.print(f"\n[red]❌ Error: {error or 'Unknown error'}[/red]")
             raise typer.Exit(1)
 
         # Summary
@@ -429,8 +432,8 @@ def converti_preventivo(
         # Convert
         fattura, error = service.converti_a_fattura(db, preventivo_id, tipo_doc_enum)
 
-        if error:
-            console.print(f"\n[red]❌ Error: {error}[/red]")
+        if error or not fattura:
+            console.print(f"\n[red]❌ Error: {error or 'Unknown error'}[/red]")
             raise typer.Exit(1)
 
         # Success

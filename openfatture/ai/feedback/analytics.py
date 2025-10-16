@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import func
+from sqlalchemy import Integer, func
 from sqlalchemy.orm import Session
 
 from openfatture.ai.feedback.models import FeedbackStats, PredictionFeedbackStats
@@ -188,7 +188,7 @@ class FeedbackAnalytics:
                     func.count(ModelPredictionFeedback.id),
                     func.avg(ModelPredictionFeedback.confidence_score),
                     func.sum(
-                        func.cast(ModelPredictionFeedback.user_accepted, type_=db.Integer)
+                        func.cast(ModelPredictionFeedback.user_accepted, type_=Integer)
                     ),  # Count accepted
                 )
                 .filter(
