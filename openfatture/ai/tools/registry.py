@@ -221,6 +221,30 @@ class ToolRegistry:
             "get_client_details",
             "get_client_stats",
             "search_knowledge_base",
+            "generate_vat_report",
+            "generate_client_report",
+            "get_due_dates",
+            "export_invoices_to_csv",
+            "export_clients_to_csv",
+            "search_preventivi",
+            "get_preventivo_details",
+            # Payment tools (Phase 5)
+            "get_payment_status",
+            "search_payments",
+            "search_bank_transactions",
+            "get_payment_stats",
+            # Product tools (Phase 6 - TIER 1)
+            "search_prodotti",
+            "get_prodotto_details",
+            # PDF tools (Phase 6 - TIER 1)
+            "get_pdf_configuration",
+            # SDI tools (Phase 6 - TIER 1)
+            "list_sdi_notifications",
+            "get_sdi_notification_details",
+            "check_invoice_sdi_status",
+            # Signature tools (Phase 6 - TIER 1)
+            "verify_signature",
+            "check_certificate_status",
         }
 
         if tool_name in read_tools:
@@ -230,7 +254,45 @@ class ToolRegistry:
             )
 
         # Write operations - lower concurrency for safety
-        write_tools = {"create_invoice", "update_client", "delete_invoice"}
+        write_tools = {
+            "create_invoice",
+            "create_riga",
+            "send_invoice_to_sdi",
+            "create_client",
+            "update_client",
+            "delete_invoice",
+            "reconcile_payment",
+            "import_invoices_from_csv",
+            "import_clients_from_csv",
+            "bulk_update_invoices_status",
+            "create_preventivo",
+            "update_preventivo_status",
+            "convert_preventivo_to_invoice",
+            # Product tools (Phase 6 - TIER 1)
+            "create_prodotto",
+            "update_prodotto",
+            "delete_prodotto",
+            # PDF tools (Phase 6 - TIER 1)
+            "generate_invoice_pdf",
+            "generate_preventivo_pdf",
+            # SDI tools (Phase 6 - TIER 1)
+            "process_sdi_notification_file",
+            # Signature tools (Phase 6 - TIER 1)
+            "sign_invoice_xml",
+            # Invoice management tools (Phase 6 - TIER 2)
+            "update_invoice",
+            "update_invoice_status",
+            # CRUD completion tools (Phase 6 - TIER 3)
+            "delete_client",
+            "update_preventivo",
+            "delete_preventivo",
+            "update_riga",
+            "delete_riga",
+            "create_manual_payment",
+            "update_payment",
+            "delete_payment",
+            "import_bank_transactions",
+        }
 
         if tool_name in write_tools:
             return BulkheadConfig(
@@ -260,10 +322,34 @@ class ToolRegistry:
             "search_invoices",
             "get_invoice_details",
             "get_invoice_stats",
+            "validate_invoice_xml",  # Validation is a read operation
             "search_clients",
             "get_client_details",
             "get_client_stats",
             "search_knowledge_base",
+            "get_payment_status",
+            "search_payments",
+            "search_bank_transactions",
+            "get_payment_stats",
+            "generate_vat_report",
+            "generate_client_report",
+            "get_due_dates",
+            "export_invoices_to_csv",
+            "export_clients_to_csv",
+            "search_preventivi",
+            "get_preventivo_details",
+            # Product tools (Phase 6 - TIER 1)
+            "search_prodotti",
+            "get_prodotto_details",
+            # PDF tools (Phase 6 - TIER 1)
+            "get_pdf_configuration",
+            # SDI tools (Phase 6 - TIER 1)
+            "list_sdi_notifications",
+            "get_sdi_notification_details",
+            "check_invoice_sdi_status",
+            # Signature tools (Phase 6 - TIER 1)
+            "verify_signature",
+            "check_certificate_status",
         }
 
         if tool_name in read_tools:
@@ -275,7 +361,45 @@ class ToolRegistry:
             )
 
         # Write operations - stricter
-        write_tools = {"create_invoice", "update_client", "delete_invoice"}
+        write_tools = {
+            "create_invoice",
+            "create_riga",
+            "send_invoice_to_sdi",
+            "create_client",
+            "update_client",
+            "delete_invoice",
+            "reconcile_payment",
+            "import_invoices_from_csv",
+            "import_clients_from_csv",
+            "bulk_update_invoices_status",
+            "create_preventivo",
+            "update_preventivo_status",
+            "convert_preventivo_to_invoice",
+            # Product tools (Phase 6 - TIER 1)
+            "create_prodotto",
+            "update_prodotto",
+            "delete_prodotto",
+            # PDF tools (Phase 6 - TIER 1)
+            "generate_invoice_pdf",
+            "generate_preventivo_pdf",
+            # SDI tools (Phase 6 - TIER 1)
+            "process_sdi_notification_file",
+            # Signature tools (Phase 6 - TIER 1)
+            "sign_invoice_xml",
+            # Invoice management tools (Phase 6 - TIER 2)
+            "update_invoice",
+            "update_invoice_status",
+            # CRUD completion tools (Phase 6 - TIER 3)
+            "delete_client",
+            "update_preventivo",
+            "delete_preventivo",
+            "update_riga",
+            "delete_riga",
+            "create_manual_payment",
+            "update_payment",
+            "delete_payment",
+            "import_bank_transactions",
+        }
 
         if tool_name in write_tools:
             return CircuitBreakerConfig(
@@ -615,7 +739,19 @@ def _register_default_tools(registry: ToolRegistry) -> None:
     """
     # Import and register tools
     try:
-        from openfatture.ai.tools import client_tools, invoice_tools, knowledge_tools
+        from openfatture.ai.tools import (
+            batch_tools,
+            client_tools,
+            invoice_tools,
+            knowledge_tools,
+            payment_tools,
+            pdf_tools,
+            preventivo_tools,
+            prodotto_tools,
+            report_tools,
+            sdi_tools,
+            signature_tools,
+        )
 
         # Register invoice tools
         for tool in invoice_tools.get_invoice_tools():
@@ -627,6 +763,38 @@ def _register_default_tools(registry: ToolRegistry) -> None:
 
         # Register knowledge tools
         for tool in knowledge_tools.get_knowledge_tools():
+            registry.register(tool)
+
+        # Register payment tools
+        for tool in payment_tools.get_payment_tools():
+            registry.register(tool)
+
+        # Register report tools
+        for tool in report_tools.get_report_tools():
+            registry.register(tool)
+
+        # Register batch tools
+        for tool in batch_tools.get_batch_tools():
+            registry.register(tool)
+
+        # Register preventivo tools
+        for tool in preventivo_tools.get_preventivo_tools():
+            registry.register(tool)
+
+        # Register prodotto tools (Phase 6 - TIER 1)
+        for tool in prodotto_tools.get_prodotto_tools():
+            registry.register(tool)
+
+        # Register PDF tools (Phase 6 - TIER 1)
+        for tool in pdf_tools.get_pdf_tools():
+            registry.register(tool)
+
+        # Register SDI tools (Phase 6 - TIER 1)
+        for tool in sdi_tools.get_sdi_tools():
+            registry.register(tool)
+
+        # Register signature tools (Phase 6 - TIER 1)
+        for tool in signature_tools.get_signature_tools():
             registry.register(tool)
 
         logger.info("default_tools_registered")

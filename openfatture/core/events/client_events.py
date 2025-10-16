@@ -28,6 +28,20 @@ class ClientCreatedEvent(BaseEvent):
 
 
 @dataclass(frozen=True)
+class ClientUpdatedEvent(BaseEvent):
+    """Event emitted when a client is updated.
+
+    Triggered after client fields are modified.
+
+    Hook point: post-client-update
+    """
+
+    client_id: int
+    client_name: str
+    updated_fields: list[str]
+
+
+@dataclass(frozen=True)
 class ClientDeletedEvent(BaseEvent):
     """Event emitted when a client is deleted.
 

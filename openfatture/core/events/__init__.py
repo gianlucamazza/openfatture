@@ -37,6 +37,7 @@ __all__ = [
     "InvoiceDeletedEvent",
     # Client events
     "ClientCreatedEvent",
+    "ClientUpdatedEvent",
     "ClientDeletedEvent",
     # AI events
     "AICommandStartedEvent",
@@ -58,7 +59,7 @@ from .ai_events import AICommandCompletedEvent, AICommandStartedEvent
 from .analytics import EventAnalytics
 from .base import BaseEvent, EventBus, GlobalEventBus, get_global_event_bus
 from .batch_events import BatchImportCompletedEvent, BatchImportStartedEvent
-from .client_events import ClientCreatedEvent, ClientDeletedEvent
+from .client_events import ClientCreatedEvent, ClientDeletedEvent, ClientUpdatedEvent
 from .invoice_events import (
     InvoiceCreatedEvent,
     InvoiceDeletedEvent,
