@@ -186,7 +186,11 @@ class TestInvoiceCreationWorkflow:
             result_state = await workflow._enrich_context_node(sample_workflow_state)
 
             # Verify state enrichment - just check that it ran
-            assert result_state.status == "in_progress"
+            assert (
+                result_state.status.value == "in_progress"
+                if hasattr(result_state.status, "value")
+                else result_state.status == "in_progress"
+            )
             assert result_state.workflow_id == sample_workflow_state.workflow_id
 
     @pytest.mark.asyncio
@@ -548,7 +552,11 @@ class TestInvoiceCreationWorkflow:
         result_state = await workflow._handle_error_node(sample_workflow_state)
 
         # Verify error handling
-        assert result_state.status == "failed"
+        assert (
+            result_state.status.value == "failed"
+            if hasattr(result_state.status, "value")
+            else result_state.status == "failed"
+        )
         assert "Test error" in result_state.errors
 
     def test_build_graph_structure(self, mock_provider):

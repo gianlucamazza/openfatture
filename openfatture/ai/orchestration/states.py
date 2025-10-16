@@ -181,12 +181,10 @@ class BaseWorkflowState(BaseModel):
     # Metadata for extensibility
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    model_config = ConfigDict(use_enum_values=True)
-
     def add_error(self, error: str) -> None:
         """Add error and update status."""
         self.errors.append(error)
-        self.status = WorkflowStatus.FAILED
+        self.status = WorkflowStatus.FAILED.value  # type: ignore[assignment]
         self.updated_at = utc_now()
 
     def add_warning(self, warning: str) -> None:
@@ -196,7 +194,7 @@ class BaseWorkflowState(BaseModel):
 
     def mark_completed(self) -> None:
         """Mark workflow as completed."""
-        self.status = WorkflowStatus.COMPLETED
+        self.status = WorkflowStatus.COMPLETED.value  # type: ignore[assignment]
         now = utc_now()
         self.completed_at = now
         self.updated_at = now
