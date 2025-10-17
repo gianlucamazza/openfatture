@@ -163,7 +163,7 @@ lint-ai: ## Lint AI module only
 	@echo "$(BLUE)Linting AI module...$(NC)"
 	$(UV) run black --check $(PROJECT_ROOT)/ai/
 	$(UV) run ruff check $(PROJECT_ROOT)/ai/
-	$(UV) run mypy $(PROJECT_ROOT)/ai/
+	@MYPYPATH=stubs $(UV) run mypy $(PROJECT_ROOT)/ai/
 	@echo "$(GREEN)✓ AI module lint passed$(NC)"
 
 test-ai-full: ## Run complete AI test suite

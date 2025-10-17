@@ -76,7 +76,7 @@ lint-check: ## Check code formatting and style
 
 type-check: ## Run type checking with mypy
 	@echo "$(BLUE)Running type checking...$(NC)"
-	@$(UV) run mypy $(PROJECT_ROOT)/
+	@MYPYPATH=stubs $(UV) run mypy $(PROJECT_ROOT)/
 	@echo "$(GREEN)✓ Type checking passed$(NC)"
 
 # Pre-commit

@@ -32,7 +32,7 @@ ci-lint: ## Run linters for CI
 
 ci-type-check: ## Run type checking for CI
 	@echo "$(BLUE)Running type checking (CI mode)...$(NC)"
-	$(UV) run mypy $(PROJECT_ROOT)/ || echo "$(YELLOW)⚠️  Type checking warnings (non-blocking)$(NC)"
+	@MYPYPATH=stubs $(UV) run mypy $(PROJECT_ROOT)/ || echo "$(YELLOW)⚠️  Type checking warnings (non-blocking)$(NC)"
 
 ci-coverage: ## Generate coverage report for CI
 	@echo "$(BLUE)Generating coverage report (CI mode)...$(NC)"

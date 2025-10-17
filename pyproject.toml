@@ -191,11 +191,6 @@ module = ["xgboost.*", "xgboost"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["plotly.*", "plotly.express", "plotly"]
-ignore_missing_imports = true
-follow_imports = "skip"
-
-[[tool.mypy.overrides]]
 module = ["streamlit.*", "streamlit"]
 ignore_missing_imports = true
 
