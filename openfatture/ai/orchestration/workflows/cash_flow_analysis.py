@@ -31,7 +31,6 @@ from openfatture.ai.agents.cash_flow_predictor import CashFlowPredictorAgent
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.orchestration.states import (
     CashFlowAnalysisState,
-    WorkflowStatus,
 )
 from openfatture.ai.providers import create_provider
 from openfatture.storage.database.base import SessionLocal
@@ -179,7 +178,7 @@ class CashFlowAnalysisWorkflow:
             # Initialize (load or train models)
             await self.cash_flow_agent.initialize(force_retrain=False)
 
-            state.status = WorkflowStatus.IN_PROGRESS
+            state.status = "in_progress"
             state.updated_at = utc_now()
 
             logger.info(
@@ -525,7 +524,7 @@ Rispondi in italiano, conciso e professionale."""
             errors=state.errors,
         )
 
-        state.status = WorkflowStatus.FAILED
+        state.status = "failed"
         state.updated_at = utc_now()
 
         return state

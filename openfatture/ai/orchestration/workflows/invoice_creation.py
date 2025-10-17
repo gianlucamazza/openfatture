@@ -44,7 +44,6 @@ from openfatture.ai.orchestration.states import (
     AgentType,
     ApprovalDecision,
     InvoiceCreationState,
-    WorkflowStatus,
 )
 from openfatture.ai.providers import BaseLLMProvider, create_provider
 from openfatture.core.fatture.service import InvoiceService
@@ -286,7 +285,7 @@ class InvoiceCreationWorkflow:
             )
             state.context["default_payment_terms"] = state.payment_terms_days
 
-            state.status = WorkflowStatus.IN_PROGRESS
+            state.status = "in_progress"
             state.updated_at = utc_now()
 
             logger.info(
@@ -382,7 +381,7 @@ class InvoiceCreationWorkflow:
         """Human approval checkpoint for description."""
         logger.info("awaiting_description_approval", workflow_id=state.workflow_id)
 
-        state.status = WorkflowStatus.AWAITING_APPROVAL
+        state.status = "awaiting_approval"
 
         # In real implementation, this would trigger UI or CLI prompt
         # For now, we simulate approval based on confidence
@@ -397,10 +396,10 @@ class InvoiceCreationWorkflow:
                 feedback="Auto-approved (high confidence)",
                 reviewer="system",
             )
-            state.status = WorkflowStatus.APPROVED
+            state.status = "approved"
         else:
             # Would pause here for human input
-            state.status = WorkflowStatus.AWAITING_APPROVAL
+            state.status = "awaiting_approval"
 
         state.updated_at = utc_now()
         return state
@@ -482,9 +481,9 @@ class InvoiceCreationWorkflow:
                 feedback="Auto-approved (high confidence)",
                 reviewer="system",
             )
-            state.status = WorkflowStatus.APPROVED
+            state.status = "approved"
         else:
-            state.status = WorkflowStatus.AWAITING_APPROVAL
+            state.status = "awaiting_approval"
 
         state.updated_at = utc_now()
         return state
@@ -665,7 +664,7 @@ class InvoiceCreationWorkflow:
 
         # Always require approval if compliance failed
         if not state.is_compliant:
-            state.status = WorkflowStatus.AWAITING_APPROVAL
+            state.status = "awaiting_approval"
         else:
             from openfatture.ai.orchestration.states import HumanReview
 
@@ -674,7 +673,7 @@ class InvoiceCreationWorkflow:
                 feedback="Compliance check passed",
                 reviewer="system",
             )
-            state.status = WorkflowStatus.APPROVED
+            state.status = "approved"
 
         state.updated_at = utc_now()
         return state
@@ -750,7 +749,7 @@ class InvoiceCreationWorkflow:
             errors=state.errors,
         )
 
-        state.status = WorkflowStatus.FAILED
+        state.status = "failed"
         state.updated_at = utc_now()
 
         return state
@@ -866,7 +865,7 @@ class InvoiceCreationWorkflow:
             ...     hours=16,
             ...     hourly_rate=75,
             ... )
-            >>> if result.status == WorkflowStatus.COMPLETED:
+            >>> if result.status == "completed":
             ...     print(f"Invoice created: {result.invoice_id}")
         """
         from openfatture.ai.orchestration.states import create_invoice_workflow

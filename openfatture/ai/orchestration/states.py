@@ -143,12 +143,17 @@ class BaseWorkflowState(BaseModel):
     Contains common fields required by all workflow types.
     """
 
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(
+        use_enum_values=True,
+        # Allow arbitrary types for LangGraph compatibility
+        arbitrary_types_allowed=True,
+    )
 
     # Workflow tracking
     workflow_id: str = Field(default_factory=lambda: str(uuid4()))
     correlation_id: str | None = None
-    status: WorkflowStatus = WorkflowStatus.PENDING
+    # Use string type directly for LangGraph compatibility
+    status: str = "pending"
 
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
@@ -170,21 +175,13 @@ class BaseWorkflowState(BaseModel):
     errors: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
-    @field_validator("status", mode="before")
-    @classmethod
-    def validate_status(cls, v: WorkflowStatus | str) -> str:
-        """Convert enum status to string if needed."""
-        if isinstance(v, WorkflowStatus):
-            return v.value
-        return v
-
     # Metadata for extensibility
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     def add_error(self, error: str) -> None:
         """Add error and update status."""
         self.errors.append(error)
-        self.status = WorkflowStatus.FAILED.value  # type: ignore[assignment]
+        self.status = "failed"
         self.updated_at = utc_now()
 
     def add_warning(self, warning: str) -> None:
@@ -194,7 +191,7 @@ class BaseWorkflowState(BaseModel):
 
     def mark_completed(self) -> None:
         """Mark workflow as completed."""
-        self.status = WorkflowStatus.COMPLETED.value  # type: ignore[assignment]
+        self.status = "completed"
         now = utc_now()
         self.completed_at = now
         self.updated_at = now
@@ -266,7 +263,7 @@ class InvoiceCreationState(BaseWorkflowState):
             return True
         if not self.description_review:
             return False
-        return self.description_review.decision == ApprovalDecision.APPROVE.value
+        return self.description_review.decision == "approve"
 
     @property
     def is_tax_approved(self) -> bool:
@@ -275,7 +272,7 @@ class InvoiceCreationState(BaseWorkflowState):
             return True
         if not self.tax_review:
             return False
-        return self.tax_review.decision == ApprovalDecision.APPROVE.value
+        return self.tax_review.decision == "approve"
 
     @property
     def is_compliant(self) -> bool:

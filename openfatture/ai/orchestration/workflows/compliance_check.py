@@ -36,7 +36,6 @@ from openfatture.ai.agents.compliance import (
 )
 from openfatture.ai.orchestration.states import (
     ComplianceCheckState,
-    WorkflowStatus,
 )
 from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura
@@ -226,7 +225,7 @@ class ComplianceCheckWorkflow:
                 "totale": float(fattura.totale),
             }
 
-            state.status = WorkflowStatus.IN_PROGRESS
+            state.status = "in_progress"
             state.updated_at = utc_now()
 
             logger.info(
@@ -449,7 +448,7 @@ class ComplianceCheckWorkflow:
         """Human review for borderline cases."""
         logger.info("awaiting_human_review", workflow_id=state.workflow_id)
 
-        state.status = WorkflowStatus.AWAITING_APPROVAL
+        state.status = "awaiting_approval"
 
         # In real implementation, would pause for human input
         # For now, just mark as reviewed
@@ -465,7 +464,7 @@ class ComplianceCheckWorkflow:
             errors=state.errors,
         )
 
-        state.status = WorkflowStatus.FAILED
+        state.status = "failed"
         state.updated_at = utc_now()
 
         self._reports.pop(state.workflow_id, None)
