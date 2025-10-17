@@ -1,0 +1,100 @@
+# Minimal Dockerfile for Payment Module Testing
+# Excludes heavy AI/ML dependencies (torch, transformers, chromadb, etc.)
+# Build: docker build -f Dockerfile.payment -t openfatture:payment .
+# Run: docker run -it --rm openfatture:payment payment --help
+
+# Stage 1: Builder
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install only core dependencies (exclude AI/ML heavy deps)
+# This excludes: torch, transformers, langchain, chromadb, prophet, xgboost, playwright
+RUN /root/.local/bin/uv pip install --system \
+    # CLI Framework
+    'typer[all]>=0.12.0' \
+    'rich>=13.7.0' \
+    'questionary>=2.0.0' \
+    # Database & ORM
+    'sqlalchemy>=2.0.25' \
+    'alembic>=1.13.1' \
+    # Data Validation
+    'pydantic>=2.6.0' \
+    'pydantic-settings>=2.1.0' \
+    # XML Processing & Financial Formats
+    'lxml>=5.1.0' \
+    'xmlschema>=3.0.1' \
+    'ofxparse>=0.21' \
+    # Cryptography & Digital Signatures
+    'cryptography>=42.0.2' \
+    'asn1crypto>=1.5.1' \
+    'pyasn1>=0.5.0' \
+    'pyasn1-modules>=0.3.0' \
+    # HTTP & Email
+    'requests>=2.31.0' \
+    'httpx>=0.26.0' \
+    # Email Templates
+    'jinja2>=3.1.0' \
+    # Date & Time
+    'python-dateutil>=2.8.2' \
+    # Fuzzy String Matching (payment reconciliation)
+    'rapidfuzz>=3.0.0' \
+    # Configuration
+    'python-dotenv>=1.0.0' \
+    # Logging
+    'structlog>=24.1.0' \
+    # PDF Generation
+    'reportlab>=4.0.9' \
+    # Rate Limiting
+    'aiolimiter>=1.1.0' \
+    # Utilities
+    'click>=8.1.7' \
+    'pandas>=2.3.3' \
+    'plotly>=6.3.1'
+
+# Stage 2: Runtime
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application code
+COPY openfatture/ /app/openfatture/
+COPY README.md LICENSE /app/
+
+# Create directories for data
+RUN mkdir -p /root/.openfatture/data /root/.openfatture/archivio /root/.openfatture/certificates
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Health check for payment module
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD python -c "from openfatture.payment.domain.models import BankTransaction; print('healthy')" || exit 1
+
+# Default command
+ENTRYPOINT ["python", "-m", "openfatture.cli.main"]
+CMD ["payment", "--help"]

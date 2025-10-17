@@ -19,6 +19,11 @@ ENV/
 .coverage
 htmlcov/
 .tox/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+nosetests.xml
 
 # IDE
 .vscode/
@@ -30,6 +35,7 @@ htmlcov/
 # Git
 .git/
 .gitignore
+.gitattributes
 
 # Documentation
 docs/
@@ -50,9 +56,38 @@ archivio/
 # Environment
 .env
 .env.local
+.env.*.local
 
 # Development
 Makefile
+makefiles/
 docker-compose.yml
 Dockerfile
 .dockerignore
+.pre-commit-config.yaml
+
+# ML Models (can be large)
+.models/
+
+# Type stubs (not needed at runtime)
+stubs/
+
+# Media files (not needed in container)
+media/
+assets/
+*.mp4
+*.webm
+*.gif
+*.png
+*.jpg
+*.jpeg
+
+# Archives
+*.tar.gz
+*.zip
+*.tar
+
+# Temporary files
+tmp/
+temp/
+.tmp/

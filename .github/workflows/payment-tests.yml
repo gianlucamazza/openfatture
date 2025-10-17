@@ -8,6 +8,7 @@ on:
       - 'tests/payment/**'
       - 'pyproject.toml'
       - 'uv.lock'
+      - 'Dockerfile.payment'
       - '.github/workflows/payment-tests.yml'
   pull_request:
     branches: [main, develop]
@@ -16,6 +17,7 @@ on:
       - 'tests/payment/**'
       - 'pyproject.toml'
       - 'uv.lock'
+      - 'Dockerfile.payment'
       - '.github/workflows/payment-tests.yml'
   workflow_dispatch:
 
@@ -221,28 +223,44 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Free disk space for Docker build
-        run: docker builder prune -af || true
+      - name: Free disk space (aggressive)
+        run: |
+          echo "=== Disk space before cleanup ==="
+          df -h
 
-      - name: Build Docker image
+          # Remove heavy preinstalled software (~10 GB)
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+          # Clean Docker
+          docker builder prune -af || true
+          docker system prune -af --volumes || true
+
+          echo "=== Disk space after cleanup ==="
+          df -h
+
+      - name: Build minimal Docker image (payment module only)
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile.payment
           push: false
           load: true
-          tags: openfatture:test
+          tags: openfatture:payment
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Test payment CLI in Docker
         run: |
-          docker run --rm openfatture:test payment --help
-          docker run --rm openfatture:test payment stats --help
+          docker run --rm openfatture:payment payment --help
+          docker run --rm openfatture:payment payment stats --help
 
       - name: Test metrics endpoint health
         run: |
           docker run -d --name test-container -p 8000:8000 \
-            -e PROMETHEUS_ENABLED=true openfatture:test payment stats
+            -e PROMETHEUS_ENABLED=true openfatture:payment payment stats
           sleep 5
           curl -f http://localhost:8000/metrics || echo "Metrics endpoint not yet ready"
           docker rm -f test-container || true
