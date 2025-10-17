@@ -159,8 +159,10 @@ class DataGenerator:
                 fattura.righe = self._generate_invoice_lines(fattura, num_lines)
 
                 # Calculate totals
-                fattura.imponibile = sum(riga.imponibile for riga in fattura.righe)
-                fattura.iva = sum(riga.iva for riga in fattura.righe)
+                fattura.imponibile = sum(
+                    (riga.imponibile for riga in fattura.righe), Decimal("0.00")
+                )
+                fattura.iva = sum((riga.iva for riga in fattura.righe), Decimal("0.00"))
                 fattura.totale = fattura.imponibile + fattura.iva
 
             fatture.append(fattura)
