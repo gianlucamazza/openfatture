@@ -134,8 +134,12 @@ def mock_openai_provider():
 
     # Create a real provider instance with a mock client
     provider = OpenAIProvider(api_key="test-key", model="gpt-4")
-    provider.client = MagicMock()
-    provider.client.responses = MagicMock()
+
+    # Use AsyncMock for async methods
+    provider.client = AsyncMock()
+    provider.client.responses = AsyncMock()
+    provider.client.chat = AsyncMock()
+    provider.client.chat.completions = AsyncMock()
 
     # Mock basic helpers to keep deterministic behaviour
     provider._get_max_output_tokens = MagicMock(return_value=2000)
