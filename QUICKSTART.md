@@ -197,11 +197,34 @@ wget https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.2.2/Schema_del_f
 
 ### 5. Test Mode
 
-Use a different database for testing:
-
 ```bash
 DATABASE_URL=sqlite:///./test.db openfatture init
 ```
+
+### 6. Web UI Alternative
+
+Preferisci un'interfaccia grafica? OpenFatture include una moderna Web UI basata su Streamlit:
+
+```bash
+# Installa dipendenze web
+uv sync --extra web
+
+# Avvia la Web UI
+uv run streamlit run openfatture/web/app.py
+
+# Si aprirà automaticamente nel browser su http://localhost:8501
+```
+
+La Web UI offre:
+- 📊 Dashboard real-time con KPI e grafici
+- 🧾 Gestione fatture visuale
+- 🤖 AI Assistant integrato
+- 💰 Monitoraggio pagamenti
+- ⚙️ Configurazione sistema
+
+**Nota:** CLI e Web UI condividono lo stesso database. Puoi usarle insieme!
+
+Per la guida completa: `docs/WEB_UI_GUIDE.md`
 
 ## Troubleshooting
 

@@ -1,0 +1,18 @@
+# VHS Footer Component
+# Scenario completion and next steps
+#
+# Usage in template:
+# {{ components.footer }}
+
+# Show completion message
+Type "printf '\\n{{ global_vars.colors.green }}✓ Scenario {{ scenario.id }} completato!{{ global_vars.colors.reset }}\\n'"
+Enter
+Sleep {{ global_vars.timing.text_reading }}ms
+
+# Show next steps hint
+Type "printf '{{ global_vars.colors.blue }}Prossimo: Esegui \\'make media-scenario{{ scenario.id }}\\' per continuare{{ global_vars.colors.reset }}\\n'"
+Enter
+Sleep {{ global_vars.timing.text_reading }}ms
+
+# Final pause
+Sleep {{ global_vars.timing.screen_transition }}ms

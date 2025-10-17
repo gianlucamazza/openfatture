@@ -259,6 +259,116 @@ class Settings(BaseSettings):
         description="Comma-separated dotted paths to custom payment event listeners",
     )
 
+    # Lightning Network Configuration
+    lightning_enabled: bool = Field(
+        default=False,
+        description="Enable Lightning Network integration",
+    )
+    lightning_host: str = Field(
+        default="localhost:10009",
+        description="LND gRPC host and port",
+    )
+    lightning_cert_path: Path | None = Field(
+        default=None,
+        description="Path to LND TLS certificate file",
+    )
+    lightning_macaroon_path: Path | None = Field(
+        default=None,
+        description="Path to LND macaroon file for authentication",
+    )
+    lightning_timeout_seconds: int = Field(
+        default=30,
+        description="gRPC timeout in seconds",
+    )
+    lightning_max_retries: int = Field(
+        default=3,
+        description="Maximum retry attempts for failed requests",
+    )
+    lightning_circuit_breaker_failures: int = Field(
+        default=5,
+        description="Number of failures before circuit breaker opens",
+    )
+    lightning_circuit_breaker_timeout: int = Field(
+        default=300,
+        description="Circuit breaker timeout in seconds",
+    )
+
+    # Lightning Invoice Settings
+    lightning_default_expiry_hours: int = Field(
+        default=24,
+        description="Default invoice expiry time in hours",
+    )
+    lightning_min_expiry_hours: int = Field(
+        default=1,
+        description="Minimum allowed invoice expiry time in hours",
+    )
+    lightning_max_expiry_hours: int = Field(
+        default=168,  # 1 week
+        description="Maximum allowed invoice expiry time in hours",
+    )
+
+    # Lightning BTC Conversion
+    lightning_coingecko_enabled: bool = Field(
+        default=True,
+        description="Enable CoinGecko for BTC/EUR conversion",
+    )
+    lightning_coingecko_api_key: str | None = Field(
+        default=None,
+        description="CoinGecko API key (optional, for higher rate limits)",
+    )
+    lightning_cmc_enabled: bool = Field(
+        default=False,
+        description="Enable CoinMarketCap for BTC/EUR conversion",
+    )
+    lightning_cmc_api_key: str | None = Field(
+        default=None,
+        description="CoinMarketCap API key (required if enabled)",
+    )
+    lightning_fallback_rate: str = Field(
+        default="45000.00",
+        description="Fallback BTC/EUR rate when all providers fail",
+    )
+    lightning_rate_cache_ttl: int = Field(
+        default=300,  # 5 minutes
+        description="BTC rate cache TTL in seconds",
+    )
+
+    # Lightning Liquidity Management
+    lightning_liquidity_enabled: bool = Field(
+        default=False,
+        description="Enable automatic liquidity management",
+    )
+    lightning_liquidity_min_ratio: float = Field(
+        default=0.1,
+        description="Minimum inbound liquidity ratio (0.0-1.0)",
+    )
+    lightning_liquidity_target_ratio: float = Field(
+        default=0.5,
+        description="Target inbound liquidity ratio (0.0-1.0)",
+    )
+    lightning_liquidity_max_ratio: float = Field(
+        default=0.8,
+        description="Maximum outbound liquidity ratio (0.0-1.0)",
+    )
+    lightning_liquidity_check_interval: int = Field(
+        default=3600,  # 1 hour
+        description="Interval between liquidity checks in seconds",
+    )
+
+    # Lightning Webhook Settings
+    lightning_webhook_enabled: bool = Field(
+        default=False,
+        description="Enable Lightning webhook notifications",
+    )
+    lightning_webhook_url: str | None = Field(
+        default=None,
+        description="Webhook URL for Lightning payment notifications",
+    )
+    lightning_webhook_secret: str | None = Field(
+        default=None,
+        description="Webhook secret for authentication",
+    )
+
     # Global event system
     event_listeners: str | None = Field(
         default=None,

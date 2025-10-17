@@ -82,6 +82,9 @@ class LifespanManager:
         self.hook_bridge = initialize_hook_system(self.event_bus)
         logger.info("Hook system initialized and registered with event bus")
 
+        # Initialize Lightning integration (if enabled)
+        await self._initialize_lightning()
+
         # Initialize self-learning systems
         await self._initialize_self_learning()
 
@@ -120,20 +123,48 @@ class LifespanManager:
 
             # Initialize and start retraining scheduler if enabled
             self.retraining_scheduler = get_retraining_scheduler()
-            retraining_status = self.retraining_scheduler.get_status()
 
-            if retraining_status["enabled"]:
-                logger.info("ML retraining enabled, starting scheduler")
-                self.retraining_scheduler.start()
-                logger.info(
-                    "Retraining scheduler started",
-                    interval_hours=retraining_status["interval_hours"],
-                    dry_run=retraining_status["dry_run"],
-                )
-            else:
-                logger.debug("ML retraining disabled")
+        except Exception as e:
+            logger.error(f"Error initializing self-learning systems: {e}")
 
-            logger.info("Self-learning systems initialized successfully")
+    async def _initialize_lightning(self) -> None:
+        """Initialize Lightning Network integration if enabled."""
+        from openfatture.utils.config import get_settings
+
+        settings = get_settings()
+        if not settings.lightning_enabled:
+            logger.debug("Lightning Network integration disabled")
+            return
+
+        logger.debug("Initializing Lightning Network integration")
+
+        # Import and initialize Lightning event handlers
+        try:
+            from openfatture.lightning.application.events.handlers import (
+                initialize_lightning_integration,
+            )
+
+            initialize_lightning_integration()
+            logger.info("Lightning Network integration initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Lightning integration: {e}")
+
+            # Only start retraining if scheduler is initialized
+            if self.retraining_scheduler:
+                retraining_status = self.retraining_scheduler.get_status()
+
+                if retraining_status["enabled"]:
+                    logger.info("ML retraining enabled, starting scheduler")
+                    self.retraining_scheduler.start()
+                    logger.info(
+                        "Retraining scheduler started",
+                        interval_hours=retraining_status["interval_hours"],
+                        dry_run=retraining_status["dry_run"],
+                    )
+                else:
+                    logger.debug("ML retraining disabled")
+
+                logger.info("Self-learning systems initialized successfully")
 
         except Exception as e:
             logger.error(f"Failed to initialize self-learning systems: {e}", exc_info=True)

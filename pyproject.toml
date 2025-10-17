@@ -94,6 +94,7 @@ dev = [
     "pytest-mock>=3.12.0",
     "pytest-benchmark>=4.0.0",
     "hypothesis>=6.98.0",
+    "numpy>=1.26.0",  # For performance testing utilities
 
     # Code Quality
     "black>=25.9.0",
@@ -112,6 +113,7 @@ dev = [
     "types-reportlab>=4.0.0",
     "types-PyYAML>=6.0.0",
     "types-pyasn1>=0.5.0",
+    "types-grpcio>=1.0.0",
     "pandas-stubs>=2.0.0",
 ]
 
@@ -188,6 +190,33 @@ ignore_missing_imports = true
 module = ["xgboost.*", "xgboost"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["plotly.*", "plotly.express", "plotly"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["streamlit.*", "streamlit"]
+ignore_missing_imports = true
+
+# Scripts imported dynamically
+[[tool.mypy.overrides]]
+module = ["collect_media_metrics"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["fastapi.*", "fastapi", "fastapi.responses"]
+ignore_missing_imports = true
+
+# Moduli pianificati/non implementati (payment import refactoring)
+# Attualmente si usa: openfatture.payment.infrastructure.importers.ofx_importer
+[[tool.mypy.overrides]]
+module = [
+    "openfatture.payment.application.services.bank_import_service",
+    "openfatture.payment.infrastructure.ofx_parser"
+]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = "-ra -q --cov=openfatture --cov-report=term-missing --cov-report=html"
@@ -197,6 +226,9 @@ markers = [
     "streaming: tests that exercise streaming-capable components",
     "e2e: end-to-end tests that require external services",
     "ollama: tests that require Ollama LLM service to be running",
+    "performance: performance benchmarks and load tests",
+    "slow: slow tests that may take >5 seconds",
+    "benchmark: pytest-benchmark tests (legacy marker)",
 ]
 
 [tool.coverage.run]

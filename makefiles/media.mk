@@ -6,6 +6,8 @@
 .PHONY: media-scenarioA media-scenarioB media-scenarioC media-scenarioD media-scenarioE
 .PHONY: media-all media-screenshots media-optimize
 .PHONY: media-test media-ci media-ci-scenario media-list
+.PHONY: media-template media-template-A media-template-B media-template-C media-template-D media-template-E
+.PHONY: media-templates media-template-check
 
 # Media directories
 MEDIA_DIR := media
@@ -279,7 +281,11 @@ media-list: ## List all media files
 	@ls -1 $(MEDIA_SCREENSHOTS)/*.png 2>/dev/null | wc -l | xargs echo "  Total:"
 	@echo ""
 	@echo "$(CYAN)VHS Tapes ($(MEDIA_AUTOMATION)):$(NC)"
-	@ls -1 $(MEDIA_AUTOMATION)/*.tape 2>/dev/null || echo "  No tapes"
+	@ls -1 $(MEDIA_AUTOMATION)/*.tape 2>/dev/null | wc -l | xargs echo "  Total:"
+	@echo ""
+	@echo "$(CYAN)Template Info:$(NC)"
+	@echo "  Templates: $$(ls -1 $(MEDIA_AUTOMATION)/templates/scenarios/*.tape.j2 2>/dev/null | wc -l) scenarios"
+	@echo "  Components: $$(ls -1 $(MEDIA_AUTOMATION)/templates/components/*.tapeinc 2>/dev/null | wc -l) reusable"
 
 media-info: ## Show media file information
 	@echo "$(BLUE)Media Information:$(NC)"
@@ -295,6 +301,103 @@ media-info: ## Show media file information
 
 # Cleanup
 # ============================================================================
+
+# Template-based generation
+# ============================================================================
+
+media-template: ## Generate VHS tape from template (usage: make media-template SCENARIO=A)
+	@if [ -z "$(SCENARIO)" ]; then \
+		echo "$(RED)✗ Please specify SCENARIO: make media-template SCENARIO=A$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Generating template for scenario $(SCENARIO)...$(NC)"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run openfatture media template generate --scenario $(SCENARIO); \
+		echo "$(GREEN)✓ Template generated for scenario $(SCENARIO)$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠️  uv not found, using direct python$(NC)"; \
+		python media/automation/templates/base_template.py generate --scenario $(SCENARIO); \
+		echo "$(GREEN)✓ Template generated for scenario $(SCENARIO)$(NC)"; \
+	fi
+
+media-template-A: ## Generate VHS tape for Scenario A using template
+	@echo "$(BLUE)Generating Scenario A template...$(NC)"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run openfatture media template generate --scenario A; \
+	else \
+		python media/automation/templates/base_template.py generate --scenario A; \
+	fi
+	@echo "$(GREEN)✓ Scenario A template generated$(NC)"
+
+media-template-B: ## Generate VHS tape for Scenario B using template
+	@echo "$(BLUE)Generating Scenario B template...$(NC)"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run openfatture media template generate --scenario B; \
+	else \
+		python media/automation/templates/base_template.py generate --scenario B; \
+	fi
+	@echo "$(GREEN)✓ Scenario B template generated$(NC)"
+
+media-template-C: ## Generate VHS tape for Scenario C using template
+	@echo "$(BLUE)Generating Scenario C template...$(NC)"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run openfatture media template generate --scenario C; \
+	else \
+		python media/automation/templates/base_template.py generate --scenario C; \
+	fi
+	@echo "$(GREEN)✓ Scenario C template generated$(NC)"
+
+media-template-D: ## Generate VHS tape for Scenario D using template
+	@echo "$(BLUE)Generating Scenario D template...$(NC)"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run openfatture media template generate --scenario D; \
+	else \
+		python media/automation/templates/base_template.py generate --scenario D; \
+	fi
+	@echo "$(GREEN)✓ Scenario D template generated$(NC)"
+
+media-template-E: ## Generate VHS tape for Scenario E using template
+	@echo "$(BLUE)Generating Scenario E template...$(NC)"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run openfatture media template generate --scenario E; \
+	else \
+		python media/automation/templates/base_template.py generate --scenario E; \
+	fi
+	@echo "$(GREEN)✓ Scenario E template generated$(NC)"
+
+media-templates: ## Generate all VHS tapes from templates
+	@echo "$(BLUE)Generating all scenario templates...$(NC)"
+	@for s in A B C D E; do \
+		echo "$(BLUE)  → Generating scenario $$s...$(NC)"; \
+		if command -v uv >/dev/null 2>&1; then \
+			uv run openfatture media template generate --scenario $$s; \
+		else \
+			python media/automation/templates/base_template.py generate --scenario $$s; \
+		fi; \
+	done
+	@echo "$(GREEN)✓ All scenario templates generated$(NC)"
+
+media-template-check: ## Validate all VHS templates
+	@echo "$(BLUE)Validating all VHS templates...$(NC)"
+	@for s in A B C D E; do \
+		echo "$(BLUE)  → Validating scenario $$s...$(NC)"; \
+		if command -v uv >/dev/null 2>&1; then \
+			if uv run openfatture media template validate --scenario $$s; then \
+				echo "$(GREEN)    ✓ Scenario $$s valid$(NC)"; \
+			else \
+				echo "$(RED)    ✗ Scenario $$s invalid$(NC)"; \
+				exit 1; \
+			fi; \
+		else \
+			if python media/automation/templates/base_template.py validate --scenario $$s; then \
+				echo "$(GREEN)    ✓ Scenario $$s valid$(NC)"; \
+			else \
+				echo "$(RED)    ✗ Scenario $$s invalid$(NC)"; \
+				exit 1; \
+			fi; \
+		fi; \
+	done
+	@echo "$(GREEN)✓ All templates validated$(NC)"
 
 media-clean: ## Clean media output files
 	@echo "$(YELLOW)⚠️  This will delete all generated media files!$(NC)"

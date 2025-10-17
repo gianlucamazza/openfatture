@@ -78,6 +78,7 @@ Please include the following information:
 - ✅ **HTTPS** - Required for PEC communications
 - ✅ **Dependency Scanning** - GitHub Dependabot + Safety
 - ✅ **Code Scanning** - Trivy security scanner in CI
+- ✅ **Web UI Security** - File upload validation, input sanitization, rate limiting, CSRF protection
 
 ### Planned
 
@@ -86,6 +87,121 @@ Please include the following information:
 - 🔄 **2FA Support** - Two-factor authentication
 - 🔄 **Secrets Rotation** - Automatic credential rotation
 - 🔄 **Intrusion Detection** - Monitor for attacks
+
+## Web UI Security
+
+The Streamlit-based web interface implements multiple security layers following OWASP guidelines.
+
+### File Upload Security
+
+- **Extension Validation**: Only allowed file types (PDF, PNG, JPG, etc.)
+- **MIME Type Checking**: Server-side validation of file content
+- **Size Limits**: Configurable maximum upload size (default: 10MB)
+- **Path Traversal Protection**: Filename sanitization
+
+```python
+from openfatture.web.utils.security import validate_file_upload
+
+is_valid, error = validate_file_upload(
+    uploaded_file,
+    allowed_extensions=["pdf", "png", "jpg"],
+    max_size_mb=10,
+    allowed_mimetypes=["application/pdf", "image/png"]
+)
+```
+
+### Input Sanitization
+
+- **HTML Sanitization**: XSS prevention with tag whitelisting
+- **SQL Injection Protection**: Parameterized queries via SQLAlchemy
+- **Path Traversal**: Safe path handling for file operations
+
+```python
+from openfatture.web.utils.security import sanitize_html, sanitize_filename
+
+# XSS prevention
+safe_html = sanitize_html(user_input)
+
+# Path traversal prevention
+safe_filename = sanitize_filename(uploaded_file.name)
+```
+
+### Rate Limiting
+
+- **Session-based Rate Limiting**: Per-user request limits
+- **Configurable Thresholds**: Adjustable limits per minute/hour
+- **Graceful Degradation**: Clear error messages for exceeded limits
+
+```python
+from openfatture.web.utils.security import check_rate_limit
+
+if not check_rate_limit("ai_chat", max_calls=10, window_seconds=60):
+    st.error("Rate limit exceeded. Please wait before trying again.")
+```
+
+### Authentication & Authorization
+
+- **No Built-in Auth**: Designed for single-user or trusted environments
+- **Reverse Proxy Support**: Compatible with nginx basic auth, OAuth, etc.
+- **Session Management**: Secure session state handling
+
+### Network Security
+
+- **CSRF Protection**: Enabled by default in production config
+- **HTTPS Enforcement**: Recommended for production deployments
+- **Secure Headers**: Configurable via reverse proxy
+
+### Production Configuration
+
+```toml
+# .streamlit/config.toml
+[server]
+enableXsrfProtection = true
+maxUploadSize = 200  # MB
+fileWatcherType = "none"
+
+[client]
+showErrorDetails = false
+```
+
+### Security Monitoring
+
+- **Structured Logging**: Security events logged with context
+- **Health Checks**: Component status monitoring
+- **Error Handling**: No sensitive data in error messages
+
+### Best Practices for Web UI Security
+
+1. **Deploy Behind Reverse Proxy**
+   ```nginx
+   server {
+       listen 443 ssl;
+       server_name your-domain.com;
+
+       location / {
+           proxy_pass http://localhost:8501;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           # Add security headers
+       }
+   }
+   ```
+
+2. **Enable HTTPS**
+   - Use Let's Encrypt for free certificates
+   - Redirect HTTP to HTTPS
+
+3. **Regular Updates**
+   - Keep Streamlit and dependencies updated
+   - Monitor security advisories
+
+4. **Access Control**
+   - Use VPN for internal access
+   - Implement IP whitelisting if needed
+
+5. **Monitoring & Alerting**
+   - Log analysis for suspicious activity
+   - Set up alerts for rate limit violations
 
 ## Secure Configuration
 

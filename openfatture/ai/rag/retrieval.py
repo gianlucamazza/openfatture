@@ -86,20 +86,33 @@ class SemanticRetriever:
         Returns:
             List of RetrievalResult objects
         """
-        # Build filters
-        search_filters = filters or {}
+        # Build filters using ChromaDB $and operator for multiple conditions
+        filter_conditions = []
 
+        # Always filter for invoices
+        filter_conditions.append({"type": "invoice"})
+
+        # Add client filter if provided
         if client_id:
-            search_filters["client_id"] = client_id
+            filter_conditions.append({"client_id": str(client_id)})
 
-        # Ensure we only search invoices
-        search_filters["type"] = "invoice"
+        # Add custom filters
+        if filters:
+            for key, value in filters.items():
+                filter_conditions.append({key: value})
+
+        # Combine filters with $and if multiple, or use single filter
+        search_filters: dict[str, Any]
+        if len(filter_conditions) > 1:
+            search_filters = {"$and": filter_conditions}
+        else:
+            search_filters = filter_conditions[0]
 
         # Search vector store
         raw_results = await self.vector_store.search(
             query=query,
             top_k=top_k,
-            filters=search_filters if search_filters else None,
+            filters=search_filters,
             min_similarity=min_similarity,
         )
 

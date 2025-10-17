@@ -734,6 +734,9 @@ def import_bank_transactions(
     import asyncio
     from pathlib import Path
 
+    # NOTE: These imports are for planned/future modules (bank import refactoring)
+    # Current implementation uses: openfatture.payment.infrastructure.importers.ofx_importer.OFXImporter
+    # See pyproject.toml [[tool.mypy.overrides]] for type checking configuration
     from openfatture.payment.application.services.bank_import_service import BankImportService
     from openfatture.payment.domain.models import BankAccount
     from openfatture.payment.infrastructure.ofx_parser import OFXParser

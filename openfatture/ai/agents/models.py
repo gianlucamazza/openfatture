@@ -1,5 +1,7 @@
 """Structured output models for AI agents."""
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -188,6 +190,337 @@ class PaymentInsightOutput(BaseModel):
                 "keywords": ["acconto", "INV-2024-001"],
                 "confidence": 0.82,
                 "summary": "Pagamento parziale del 40% riferito alla fattura INV-2024-001",
+            }
+        }
+    )
+
+
+class InvoiceAnalysisOutput(BaseModel):
+    """
+    Structured output for invoice analysis agent.
+
+    Provides insights on invoice patterns, anomalies, and pricing optimization.
+    """
+
+    total_invoices_analyzed: int = Field(
+        ...,
+        ge=0,
+        description="Numero totale di fatture analizzate",
+    )
+
+    avg_invoice_value: float = Field(
+        ...,
+        ge=0.0,
+        description="Valore medio delle fatture",
+    )
+
+    revenue_trends: dict[str, float] = Field(
+        default_factory=dict,
+        description="Trend del fatturato per periodo (es. mensile)",
+    )
+
+    top_services: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Servizi più fatturati con volumi e valori",
+    )
+
+    anomalies: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Anomalie rilevate (outliers, pattern strani)",
+    )
+
+    pricing_insights: list[str] = Field(
+        default_factory=list,
+        description="Suggerimenti per ottimizzazione prezzi",
+    )
+
+    client_concentration_risk: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Rischio concentrazione (% fatturato top 3 clienti)",
+    )
+
+    recommendations: list[str] = Field(
+        default_factory=list,
+        description="Raccomandazioni strategiche basate sull'analisi",
+    )
+
+    confidence: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Livello di confidenza dell'analisi (0.0-1.0)",
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total_invoices_analyzed": 120,
+                "avg_invoice_value": 1250.50,
+                "revenue_trends": {"2025-01": 15000.0, "2025-02": 18500.0},
+                "top_services": [{"service": "Consulenza web", "count": 45, "revenue": 22500.0}],
+                "anomalies": [
+                    {
+                        "type": "outlier_amount",
+                        "invoice_id": 123,
+                        "description": "Fattura con importo 10x superiore alla media",
+                    }
+                ],
+                "pricing_insights": ["Considera aumentare tariffa per consulenza web (+15%)"],
+                "client_concentration_risk": 0.65,
+                "recommendations": [
+                    "Diversificare il portafoglio clienti",
+                    "Esplorare nuovi mercati",
+                ],
+                "confidence": 0.88,
+            }
+        }
+    )
+
+
+class ClientIntelligenceOutput(BaseModel):
+    """
+    Structured output for client intelligence agent.
+
+    Provides insights on client behavior, payment patterns, and relationship health.
+    """
+
+    client_id: int = Field(
+        ...,
+        ge=1,
+        description="ID del cliente analizzato",
+    )
+
+    client_name: str = Field(
+        ...,
+        description="Nome/denominazione del cliente",
+    )
+
+    relationship_score: float = Field(
+        ...,
+        ge=0.0,
+        le=10.0,
+        description="Punteggio salute relazione (0-10)",
+    )
+
+    total_revenue: float = Field(
+        ...,
+        ge=0.0,
+        description="Fatturato totale generato dal cliente",
+    )
+
+    invoice_count: int = Field(
+        ...,
+        ge=0,
+        description="Numero totale di fatture emesse",
+    )
+
+    avg_payment_days: float = Field(
+        ...,
+        description="Giorni medi di pagamento",
+    )
+
+    payment_behavior: str = Field(
+        ...,
+        description="Comportamento pagamento (excellent, good, average, poor, critical)",
+        pattern="^(excellent|good|average|poor|critical)$",
+    )
+
+    late_payments_count: int = Field(
+        default=0,
+        ge=0,
+        description="Numero di pagamenti in ritardo",
+    )
+
+    predicted_next_payment_days: int | None = Field(
+        default=None,
+        description="Previsione giorni per prossimo pagamento",
+    )
+
+    churn_risk: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Rischio abbandono/churn (0.0-1.0)",
+    )
+
+    growth_potential: str = Field(
+        default="medium",
+        description="Potenziale di crescita (low, medium, high)",
+        pattern="^(low|medium|high)$",
+    )
+
+    recommendations: list[str] = Field(
+        default_factory=list,
+        description="Raccomandazioni per migliorare la relazione",
+    )
+
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Alert e warning da considerare",
+    )
+
+    confidence: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Livello di confidenza dell'analisi (0.0-1.0)",
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "client_id": 42,
+                "client_name": "Acme Corp S.r.l.",
+                "relationship_score": 7.5,
+                "total_revenue": 45000.0,
+                "invoice_count": 15,
+                "avg_payment_days": 35.2,
+                "payment_behavior": "good",
+                "late_payments_count": 2,
+                "predicted_next_payment_days": 30,
+                "churn_risk": 0.15,
+                "growth_potential": "high",
+                "recommendations": [
+                    "Proporre piano annuale con sconto",
+                    "Organizzare meeting trimestrale",
+                ],
+                "warnings": ["Ritardo medio in aumento negli ultimi 3 mesi"],
+                "confidence": 0.85,
+            }
+        }
+    )
+
+
+class PerformanceAnalyticsOutput(BaseModel):
+    """
+    Structured output for performance analytics agent.
+
+    Provides business performance insights, forecasts, and strategic recommendations.
+    """
+
+    period: str = Field(
+        ...,
+        description="Periodo analizzato (es. Q1 2025, 2024, Jan-Mar 2025)",
+    )
+
+    total_revenue: float = Field(
+        ...,
+        ge=0.0,
+        description="Fatturato totale del periodo",
+    )
+
+    revenue_growth: float = Field(
+        ...,
+        description="Crescita fatturato % rispetto periodo precedente",
+    )
+
+    invoices_count: int = Field(
+        ...,
+        ge=0,
+        description="Numero fatture emesse nel periodo",
+    )
+
+    avg_invoice_value: float = Field(
+        ...,
+        ge=0.0,
+        description="Valore medio fattura",
+    )
+
+    revenue_by_client: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Breakdown fatturato per cliente (top N)",
+    )
+
+    revenue_by_service: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Breakdown fatturato per tipologia servizio",
+    )
+
+    cash_collection_rate: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Tasso di incasso (importo incassato / fatturato)",
+    )
+
+    avg_collection_days: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Giorni medi di incasso",
+    )
+
+    revenue_forecast_next_period: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Previsione fatturato periodo successivo",
+    )
+
+    forecast_confidence_interval: tuple[float, float] | None = Field(
+        default=None,
+        description="Intervallo di confidenza previsione (min, max)",
+    )
+
+    key_insights: list[str] = Field(
+        default_factory=list,
+        description="Insight chiave dalle analisi",
+    )
+
+    performance_trends: dict[str, str] = Field(
+        default_factory=dict,
+        description="Trend per metrica (improving, stable, declining)",
+    )
+
+    strategic_recommendations: list[str] = Field(
+        default_factory=list,
+        description="Raccomandazioni strategiche",
+    )
+
+    risk_factors: list[str] = Field(
+        default_factory=list,
+        description="Fattori di rischio identificati",
+    )
+
+    confidence: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Livello di confidenza dell'analisi (0.0-1.0)",
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "period": "Q1 2025",
+                "total_revenue": 65000.0,
+                "revenue_growth": 15.5,
+                "invoices_count": 45,
+                "avg_invoice_value": 1444.44,
+                "revenue_by_client": [
+                    {"client": "Acme Corp", "revenue": 15000.0, "percentage": 23.1}
+                ],
+                "revenue_by_service": [
+                    {"service": "Consulenza", "revenue": 40000.0, "percentage": 61.5}
+                ],
+                "cash_collection_rate": 0.92,
+                "avg_collection_days": 38.5,
+                "revenue_forecast_next_period": 72000.0,
+                "forecast_confidence_interval": [65000.0, 79000.0],
+                "key_insights": [
+                    "Crescita costante negli ultimi 3 mesi",
+                    "Servizi di consulenza in forte espansione",
+                ],
+                "performance_trends": {
+                    "revenue": "improving",
+                    "collection_rate": "stable",
+                },
+                "strategic_recommendations": [
+                    "Aumentare capacità per sostenere crescita",
+                    "Esplorare servizi complementari",
+                ],
+                "risk_factors": ["Alta concentrazione su top 3 clienti"],
+                "confidence": 0.82,
             }
         }
     )

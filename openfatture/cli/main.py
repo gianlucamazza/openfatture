@@ -22,6 +22,8 @@ from .commands import (
     hooks,
     init,
     interactive,
+    lightning,
+    media,
     notifiche,
     pec,
     preventivo,
@@ -105,6 +107,8 @@ app.add_typer(email.app, name="email", help="📧 Email templates & testing")
 app.add_typer(notifiche.app, name="notifiche", help="📬 SDI notifications")
 app.add_typer(batch.app, name="batch", help="📦 Batch operations")
 app.add_typer(ai.app, name="ai", help="🤖 AI-powered assistance")
+app.add_typer(lightning.app, name="lightning", help="⚡ Lightning Network payments")
+app.add_typer(media.app, name="media", help="🎬 Media automation & VHS generation")
 app.add_typer(hooks.app, name="hooks", help="🪝 Manage lifecycle hooks")
 app.add_typer(events.app, name="events", help="📜 View event history & audit log")
 app.add_typer(report.app, name="report", help="📊 Generate reports")

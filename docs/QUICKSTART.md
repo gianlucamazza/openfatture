@@ -123,6 +123,75 @@ If the test email lands in your inbox you are ready to go! 🎉
 
 ---
 
+## ⚡ Enable Lightning Network Payments (Optional)
+
+OpenFatture supports instant Bitcoin payments via the Lightning Network. This is completely optional and requires a Lightning node.
+
+### Prerequisites
+
+1. **LND Node**: Install Lightning Network Daemon
+   ```bash
+   # Ubuntu/Debian
+   sudo apt update && sudo apt install lnd
+
+   # Or download from https://github.com/lightningnetwork/lnd/releases
+   ```
+
+2. **Channel Funding**: Open channels with inbound capacity
+   ```bash
+   # Start LND and create wallet
+   lnd
+
+   # Open a channel (replace with real peer)
+   lncli openchannel --node_key=<peer_pubkey> --local_amt=500000 --push_amt=250000
+   ```
+
+### Quick Lightning Setup
+
+```bash
+# 1. Enable Lightning in configuration
+openfatture config set lightning_enabled true
+
+# 2. Configure LND connection
+openfatture config set lightning_host localhost:10009
+openfatture config set lightning_cert_path ~/.lnd/tls.cert
+openfatture config set lightning_macaroon_path ~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon
+
+# 3. Test connection
+openfatture lightning status
+
+# Expected output:
+# ✅ LND Connection: OK
+# 📊 Channels: 1 active, 500k sats capacity
+# 💰 Balance: 250k sats local, 250k sats remote
+```
+
+### Create Your First Lightning Invoice
+
+```bash
+# Create Lightning invoice for €100
+openfatture lightning invoice create --amount 100.00 --description "Quick test payment"
+
+# Output:
+# ⚡ Lightning Invoice Created
+# 💰 Amount: 100.00 EUR (2,222 sats @ 45,000 EUR/BTC)
+# ⏰ Expires: 2025-01-16 10:30:00
+# 🔗 Payment Request: lnbc22220n1...
+
+# Share the payment request with your customer
+# They can pay instantly using any Lightning wallet!
+```
+
+**Why Lightning?**
+- ⚡ **Instant settlement** (seconds vs hours for traditional payments)
+- 💰 **Low fees** (0.1-1 EUR vs 2-3% for card payments)
+- 🌍 **Global** (works worldwide, no currency conversion needed)
+- 🔒 **Secure** (built on Bitcoin's cryptography)
+
+See [Lightning Network Guide](../docs/LIGHTNING_NETWORK.md) for complete setup instructions.
+
+---
+
 ## 📄 Create Your First Invoice
 
 ### 1. Add the First Customer

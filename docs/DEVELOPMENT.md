@@ -446,6 +446,183 @@ uv run pre-commit run --all-files
 
 ---
 
+## Web UI Development
+
+### Setup Web UI Development Environment
+
+```bash
+# Install web dependencies
+uv sync --extra web
+
+# Run in development mode
+uv run streamlit run openfatture/web/app.py --server.headless false
+
+# Or with hot reload
+STREAMLIT_SERVER_HEADLESS=false uv run streamlit run openfatture/web/app.py
+```
+
+### Web UI Architecture
+
+The Web UI follows a **service layer pattern**:
+
+```
+openfatture/web/
+├── app.py                 # Main entry point
+├── pages/                 # Streamlit pages (12 pages)
+├── services/              # Business logic adapters
+├── components/            # Reusable UI components
+├── utils/                 # Utilities (cache, async, security)
+└── README.md             # Module documentation
+```
+
+### Adding New Pages
+
+1. **Create page file** in `openfatture/web/pages/`
+   ```python
+   # 13_New_Feature.py
+   import streamlit as st
+   from openfatture.web.services import get_service
+
+   def main():
+       st.title("New Feature")
+       # Your page logic here
+   ```
+
+2. **Add navigation** in `openfatture/web/navigation.py`
+   ```python
+   pages = {
+       "📊 Business": [dashboard, invoices, clients, new_feature],
+       # ...
+   }
+   ```
+
+3. **Add service layer** if needed
+   ```python
+   # openfatture/web/services/new_feature_service.py
+   from openfatture.core import business_logic
+
+   def get_new_feature_data():
+       # Adapter to core business logic
+       pass
+   ```
+
+### Component Development
+
+Use the **reusable component library**:
+
+```python
+from openfatture.web.components import metric_card, data_table, success_alert
+
+# Metric card with delta
+metric_card("Revenue", "€10,000", delta="+15%", icon="💰")
+
+# Data table with actions
+data_table(data, columns=["name", "value"],
+          actions=[{"icon": "✏️", "callback": edit_item}])
+
+# Success notification
+success_alert("Operation completed successfully!")
+```
+
+### Caching Strategy
+
+```python
+import streamlit as st
+from openfatture.web.utils.cache import cache_with_ttl, invalidate_cache_by_category
+
+# TTL-based caching
+@cache_with_ttl(ttl_seconds=300)  # 5 minutes
+def get_dashboard_data():
+    return expensive_query()
+
+# Selective invalidation
+invalidate_cache_by_category("invoices")  # Only clear invoice caches
+```
+
+### Testing Web UI
+
+```bash
+# Run all web tests
+uv run python -m pytest tests/web/ -v
+
+# Run specific component tests
+uv run python -m pytest tests/web/utils/test_cache.py -v
+
+# Coverage report
+uv run python -m pytest tests/web/ --cov=openfatture.web --cov-report=html
+```
+
+### Debugging Web UI
+
+```python
+# Enable debug logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Check session state
+st.write(st.session_state)
+
+# Clear all caches
+st.cache_data.clear()
+st.cache_resource.clear()
+```
+
+### Performance Optimization
+
+1. **Use appropriate cache TTLs**
+   - Real-time data: 30-60 seconds
+   - User data: 5-10 minutes
+   - Static config: 1 hour+
+
+2. **Lazy loading for large datasets**
+   ```python
+   if st.button("Load Details"):
+       data = load_large_dataset()  # Only load when requested
+   ```
+
+3. **Pagination for tables**
+   ```python
+   page_size = 50
+   page = st.number_input("Page", min_value=1, value=1)
+   offset = (page - 1) * page_size
+   data = get_data(limit=page_size, offset=offset)
+   ```
+
+### Security Best Practices
+
+```python
+from openfatture.web.utils.security import validate_file_upload, sanitize_html
+
+# File upload validation
+is_valid, error = validate_file_upload(
+    uploaded_file,
+    allowed_extensions=["pdf", "png"],
+    max_size_mb=10
+)
+if not is_valid:
+    st.error(error)
+
+# HTML sanitization
+safe_html = sanitize_html(user_input)
+st.markdown(safe_html, unsafe_allow_html=True)
+```
+
+### Deployment
+
+```bash
+# Production build
+uv run streamlit run openfatture/web/app.py \
+  --server.address 0.0.0.0 \
+  --server.port 8501 \
+  --server.fileWatcherType none
+
+# Docker deployment
+docker build -t openfatture-web .
+docker run -p 8501:8501 openfatture-web
+```
+
+---
+
 ## Git Workflow
 
 ### Branch Strategy

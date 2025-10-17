@@ -421,6 +421,77 @@ Compliance analysis (`ai check`) remains in beta; when it fails, use `--format j
 
 ---
 
+## 10. Lightning Network Payments
+
+⚡ **Lightning Network integration for instant Bitcoin payments.**
+
+### Prerequisites
+- LND (Lightning Network Daemon) running and accessible
+- TLS certificate and macaroon authentication configured
+- `lightning_enabled=true` in `.env`
+
+### Configuration
+```bash
+# Enable Lightning
+openfatture config set lightning_enabled true
+
+# Configure LND connection
+openfatture config set lightning_host "localhost:10009"
+openfatture config set lightning_cert_path "/path/to/tls.cert"
+openfatture config set lightning_macaroon_path "/path/to/admin.macaroon"
+
+# BTC/EUR conversion (choose one)
+openfatture config set lightning_coingecko_enabled true
+openfatture config set lightning_cmc_enabled false
+```
+
+### Commands
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `openfatture lightning status` | Show Lightning status and configuration | `openfatture lightning status` |
+| `openfatture lightning invoice create --fattura-id ID` | Create Lightning invoice from existing invoice | `openfatture lightning invoice create --fattura-id 123` |
+| `openfatture lightning channels status` | List Lightning channels and capacity | `openfatture lightning channels status` |
+| `openfatture lightning liquidity report` | Generate liquidity analysis report | `openfatture lightning liquidity report` |
+
+### Invoice Creation
+```bash
+# Create invoice from existing fattura
+openfatture lightning invoice create --fattura-id 123
+
+# Create zero-amount invoice (donation)
+openfatture lightning invoice create --amount 0 --description "Donazione libera"
+
+# Create with custom expiry (hours)
+openfatture lightning invoice create --fattura-id 123 --expiry-hours 48
+```
+
+### Channel Management
+```bash
+# View channel status
+openfatture lightning channels status
+
+# Monitor liquidity automatically
+openfatture lightning liquidity monitor --start
+
+# Generate detailed liquidity report
+openfatture lightning liquidity report
+```
+
+### Webhook Integration
+Lightning supports real-time webhook notifications for payment events. Configure in your LND node to point to:
+```
+POST https://your-domain.com/webhook/lightning
+```
+
+### Troubleshooting
+- **Connection failed**: Check LND host/port and TLS certificate path
+- **Authentication error**: Verify macaroon file and permissions
+- **No channels**: Ensure LND has active channels with sufficient capacity
+- **Rate conversion failed**: Check CoinGecko/CoinMarketCap API keys
+
+---
+
 ## Final Tips
 
 - Run `uv run openfatture ...` if you rely on `uv` (recommended). With classic virtual environments, activate the venv and call `openfatture` directly.

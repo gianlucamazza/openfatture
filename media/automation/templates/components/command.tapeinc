@@ -1,0 +1,12 @@
+# VHS Command Component
+# Standardized command execution with timing
+#
+# Usage in template:
+# {% for cmd in scenario.commands %}
+# {{ components.command | replace('__COMMAND__', cmd.command) | replace('__SLEEP__', cmd.sleep_ms | string) }}
+# {% endfor %}
+
+# Execute command
+Type "__COMMAND__"
+Enter
+Sleep __SLEEP__ms

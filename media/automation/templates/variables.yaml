@@ -1,0 +1,140 @@
+# VHS Template Variables for OpenFatture Media Automation
+# This file contains configuration for all scenarios and global variables
+
+global:
+  # VHS Settings
+  vhs_settings:
+    shell: "zsh"
+    font_family: "JetBrains Mono"
+    font_size: 22
+    width: 1920
+    height: 1080
+    theme: "Dracula"
+    cursor_blink: true
+    typing_speed: "100ms"
+
+  # Timing defaults (in milliseconds)
+  timing:
+    short_command: 800
+    medium_command: 1500
+    long_command: 3000
+    reset_demo: 8000
+    screen_transition: 500
+    text_reading: 1200
+
+  # Color codes for printf
+  colors:
+    cyan: "\\e[1;36m"
+    green: "\\e[1;32m"
+    yellow: "\\e[1;33m"
+    red: "\\e[1;31m"
+    blue: "\\e[1;34m"
+    reset: "\\e[0m"
+
+scenarios:
+  a:
+    title: "OpenFatture Setup Demo (Scenario A)"
+    duration: "2'30\""
+    description: "Onboarding and initial setup workflow"
+    variables:
+      show_git_status: true
+      copy_demo_env: true
+      show_config: true
+    commands:
+      - command: "git rev-parse --abbrev-ref HEAD"
+        sleep_ms: 800
+        description: "Show current git branch"
+      - command: "./scripts/reset_demo.sh"
+        sleep_ms: 8000
+        description: "Reset demo environment"
+      - command: "cp .env.demo .env"
+        sleep_ms: 600
+        description: "Copy demo configuration"
+      - command: "sed -n '1,18p' .env"
+        sleep_ms: 2000
+        description: "Show configuration file"
+      - command: "uv run openfatture config show"
+        sleep_ms: 2500
+        description: "Verify OpenFatture configuration"
+
+  b:
+    title: "Invoice Creation Workflow (Scenario B)"
+    duration: "3'30\""
+    description: "Complete invoice creation and management"
+    variables:
+      show_clients: true
+      create_invoice: true
+      show_invoice: true
+    commands:
+      - command: "uv run openfatture cliente list"
+        sleep_ms: 1500
+        description: "List available clients"
+      - command: "uv run openfatture fattura crea --interattivo"
+        sleep_ms: 8000
+        description: "Create new invoice interactively"
+      - command: "uv run openfatture fattura list"
+        sleep_ms: 1500
+        description: "List all invoices"
+      - command: "uv run openfatture fattura show 1"
+        sleep_ms: 2000
+        description: "Show invoice details"
+
+  c:
+    title: "AI Assistant Integration (Scenario C)"
+    duration: "2'45\""
+    description: "AI-powered invoice assistance with Ollama"
+    variables:
+      use_ollama: true
+      show_ai_chat: true
+      test_ai_commands: true
+    commands:
+      - command: "uv run openfatture ai describe '3 hours consulting work'"
+        sleep_ms: 3000
+        description: "Generate invoice description"
+      - command: "uv run openfatture ai suggest-vat 'software development'"
+        sleep_ms: 2500
+        description: "Get VAT suggestions"
+      - command: "uv run openfatture ai chat --prompt 'Show me invoice statistics'"
+        sleep_ms: 4000
+        description: "Interactive AI chat"
+
+  d:
+    title: "Batch Operations (Scenario D)"
+    duration: "2'15\""
+    description: "CSV import/export and batch processing"
+    variables:
+      import_csv: true
+      export_data: true
+      show_batch_status: true
+    commands:
+      - command: "uv run openfatture batch import examples/demo/invoices.csv --dry-run"
+        sleep_ms: 3000
+        description: "Import invoices from CSV (dry run)"
+      - command: "uv run openfatture batch export fatture --format csv"
+        sleep_ms: 2500
+        description: "Export invoices to CSV"
+      - command: "uv run openfatture batch status"
+        sleep_ms: 1500
+        description: "Show batch operation status"
+
+  e:
+    title: "PEC & SDI Integration (Scenario E)"
+    duration: "3'00\""
+    description: "Electronic invoicing with PEC and SDI"
+    variables:
+      test_pec: true
+      send_invoice: true
+      check_notifications: true
+    commands:
+      - command: "uv run openfatture pec test"
+        sleep_ms: 2000
+        description: "Test PEC connectivity"
+      - command: "uv run openfatture fattura valida 1"
+        sleep_ms: 1500
+        description: "Validate invoice XML"
+      - command: "uv run openfatture pec invia 1"
+        sleep_ms: 5000
+        description: "Send invoice via PEC to SDI"
+      - command: "uv run openfatture sdi notifiche"
+        sleep_ms: 2000
+        description: "Check SDI notifications"

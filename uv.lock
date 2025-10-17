@@ -2619,6 +2619,7 @@ dev = [
     { name = "hypothesis" },
     { name = "isort" },
     { name = "mypy" },
+    { name = "numpy" },
     { name = "pandas-stubs" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -2627,6 +2628,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "ruff" },
+    { name = "types-grpcio" },
     { name = "types-pyasn1" },
     { name = "types-pyyaml" },
     { name = "types-reportlab" },
@@ -2663,6 +2665,7 @@ requires-dist = [
     { name = "langgraph", specifier = ">=0.0.20" },
     { name = "lxml", specifier = ">=5.1.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
+    { name = "numpy", marker = "extra == 'dev'", specifier = ">=1.26.0" },
     { name = "ofxparse", specifier = ">=0.21" },
     { name = "openai", specifier = ">=2.2.0" },
     { name = "pandas", specifier = ">=2.3.3" },
@@ -2697,6 +2700,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=24.1.0" },
     { name = "tiktoken", specifier = ">=0.8.0" },
     { name = "typer", extras = ["all"], specifier = ">=0.12.0" },
+    { name = "types-grpcio", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "types-pyasn1", marker = "extra == 'dev'", specifier = ">=0.5.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "types-reportlab", marker = "extra == 'dev'", specifier = ">=4.0.0" },
@@ -4853,6 +4857,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/21/ca/950278884e2ca20547ff3eb109478c6baf6b8cf219318e6bc4f666fad8e8/typer-0.19.2.tar.gz", hash = "sha256:9ad824308ded0ad06cc716434705f691d4ee0bfd0fb081839d2e426860e7fdca", size = 104755, upload-time = "2025-09-23T09:47:48.256Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/22/35617eee79080a5d071d0f14ad698d325ee6b3bf824fc0467c03b30e7fa8/typer-0.19.2-py3-none-any.whl", hash = "sha256:755e7e19670ffad8283db353267cb81ef252f595aa6834a0d1ca9312d9326cb9", size = 46748, upload-time = "2025-09-23T09:47:46.777Z" },
+]
+
+[[package]]
+name = "types-grpcio"
+version = "1.0.0.20251009"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/93/78aa083216853c667c9412df4ef8284b2a68c6bcd2aef833f970b311f3c1/types_grpcio-1.0.0.20251009.tar.gz", hash = "sha256:a8f615ea7a47b31f10da028ab5258d4f1611fbd70719ca450fc0ab3fb9c62b63", size = 14479, upload-time = "2025-10-09T02:54:14.539Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d4/93/66d28f41b16bb4e6b611bd608ef28dffc740facec93250b30cf83138da21/types_grpcio-1.0.0.20251009-py3-none-any.whl", hash = "sha256:112ac4312a5b0a273a4c414f7f2c7668f342990d9c6ab0f647391c36331f95ed", size = 15208, upload-time = "2025-10-09T02:54:13.588Z" },
 ]
 
 [[package]]

@@ -1,0 +1,22 @@
+{
+  "2025-10-16": {
+    "total_usd": 0.07300000000000001,
+    "runs": 2,
+    "scenarios": {
+      "A": {
+        "cost_usd": 0.07300000000000001,
+        "runs": 2
+      }
+    },
+    "providers": {
+      "anthropic": {
+        "cost_usd": 0.023,
+        "runs": 1
+      },
+      "ollama": {
+        "cost_usd": 0.05,
+        "runs": 1
+      }
+    }
+  }
+}

@@ -6,8 +6,11 @@ Run with: streamlit run openfatture/web/app.py
 
 import streamlit as st
 
+from openfatture.core.events import initialize_event_system
+from openfatture.core.hooks import initialize_hook_system
 from openfatture.utils.config import get_settings
 from openfatture.utils.logging import configure_dynamic_logging
+from openfatture.web.utils.lifespan import set_event_bus, set_hook_bridge
 from openfatture.web.utils.state import init_state
 
 # Page configuration MUST be first Streamlit command
@@ -34,6 +37,14 @@ st.set_page_config(
 # Initialize dynamic logging configuration
 settings = get_settings()
 configure_dynamic_logging(settings.debug_config)
+
+# Initialize event system and hook system (same as CLI)
+event_bus = initialize_event_system(settings)
+hook_bridge = initialize_hook_system(event_bus)
+
+# Store in context for access from services
+set_event_bus(event_bus)
+set_hook_bridge(hook_bridge)
 
 
 def render_sidebar() -> None:
@@ -80,6 +91,19 @@ def render_sidebar() -> None:
             st.text(f"Provider: {settings.ai_provider}")
         else:
             st.warning("AI Non Configurato")
+
+        st.markdown("---")
+
+        # Advanced operations
+        st.subheader("🔧 Operazioni Avanzate")
+        if st.button("📦 Batch Operations", use_container_width=True):
+            st.switch_page("pages/8_📦_Batch.py")
+        if st.button("📊 Reports", use_container_width=True):
+            st.switch_page("pages/9_📊_Reports.py")
+        if st.button("🪝 Hooks", use_container_width=True):
+            st.switch_page("pages/10_🪝_Hooks.py")
+        if st.button("📋 Events", use_container_width=True):
+            st.switch_page("pages/11_📋_Events.py")
 
 
 def render_home() -> None:
@@ -165,8 +189,26 @@ def render_home() -> None:
             st.switch_page("pages/1_📊_Dashboard.py")
 
     with col_d:
-        if st.button("📥 Import Pagamenti", use_container_width=True):
-            st.switch_page("pages/4_💰_Pagamenti.py")
+        if st.button("📦 Batch Operations", use_container_width=True):
+            st.switch_page("pages/8_📦_Batch.py")
+
+    # Additional quick actions row
+    st.markdown("---")
+    st.subheader("🔧 Strumenti Avanzati")
+
+    col_e, col_f, col_g = st.columns(3)
+
+    with col_e:
+        if st.button("📊 Reports", use_container_width=True):
+            st.switch_page("pages/9_📊_Reports.py")
+
+    with col_f:
+        if st.button("🪝 Hooks", use_container_width=True):
+            st.switch_page("pages/10_🪝_Hooks.py")
+
+    with col_g:
+        if st.button("📋 Events", use_container_width=True):
+            st.switch_page("pages/11_📋_Events.py")
 
     st.markdown("---")
 
@@ -213,7 +255,7 @@ def render_home() -> None:
         <p>OpenFatture v1.1.0 | MIT License | Made with ❤️ by freelancers, for freelancers</p>
         <p>
             <a href='https://github.com/gianlucamazza/openfatture' target='_blank'>GitHub</a> •
-            <a href='https://github.com/gianlucamazza/openfatture/issues' target='_blank'>Issues</a> •
+            <a href='https://github.com/gianlucamazza/openfatture/issues' target='_blank'>Issues</a> •<br>
             <a href='https://github.com/gianlucamazza/openfatture/blob/main/docs/README.md' target='_blank'>Documentation</a>
         </p>
         </div>
@@ -224,12 +266,38 @@ def render_home() -> None:
 
 def main() -> None:
     """Main application entry point."""
-    # Initialize app state
-    init_state("initialized", True)
+    try:
+        # Initialize app state
+        init_state("initialized", True)
 
-    # Render components
-    render_sidebar()
-    render_home()
+        # Render components
+        render_sidebar()
+        render_home()
+
+    except Exception as e:
+        # Global error handling - Best Practices 2025
+        from openfatture.web.utils.logging_config import log_error
+
+        # Log the error
+        log_error(e, "main_app", {"page": "home"})
+
+        # Show user-friendly error message
+        st.error("🚨 Si è verificato un errore imprevisto. Riprova più tardi.")
+
+        # Show error details in development/debug mode
+        from openfatture.utils.config import get_settings
+
+        if get_settings().debug_config.enable_debug_logging:
+            st.exception(e)
+
+        # Provide recovery options
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Ricarica Pagina"):
+                st.rerun()
+        with col2:
+            if st.button("🏥 Vai alla Dashboard Salute"):
+                st.switch_page("pages/12_🏥_Health.py")
 
 
 if __name__ == "__main__":

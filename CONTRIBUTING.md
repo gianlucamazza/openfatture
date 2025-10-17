@@ -134,6 +134,90 @@ openfatture/
 └── utils/         # Shared utilities
 ```
 
+## Web UI Development
+
+### Web UI Architecture
+
+The Web UI follows a **service layer pattern** with modern Streamlit practices:
+
+```
+openfatture/web/
+├── app.py                 # Main entry point
+├── app_modern.py          # Modern navigation example
+├── pages/                 # Streamlit pages (12 pages)
+├── services/              # Business logic adapters
+├── components/            # Reusable UI components
+├── utils/                 # Utilities (cache, async, security)
+└── README.md             # Module documentation
+```
+
+### Contributing to Web UI
+
+1. **Setup Development Environment**
+   ```bash
+   # Install web dependencies
+   uv sync --extra web
+
+   # Run in development mode
+   uv run streamlit run openfatture/web/app.py
+   ```
+
+2. **Adding New Pages**
+   - Create page file in `openfatture/web/pages/`
+   - Follow naming convention: `N_Descriptive_Name.py`
+   - Add to navigation in `openfatture/web/navigation.py`
+
+3. **Using Components**
+   ```python
+   from openfatture.web.components import metric_card, data_table
+
+   # Use reusable components
+   metric_card("Revenue", "€10,000", delta="+15%")
+   data_table(data, columns=["name", "value"])
+   ```
+
+4. **Security Best Practices**
+   ```python
+   from openfatture.web.utils.security import validate_file_upload
+
+   # Always validate file uploads
+   is_valid, error = validate_file_upload(file, max_size_mb=10)
+   ```
+
+5. **Testing Web UI**
+   ```bash
+   # Run web tests
+   uv run python -m pytest tests/web/ -v
+
+   # Check coverage
+   uv run python -m pytest tests/web/ --cov=openfatture.web
+   ```
+
+### Web UI Guidelines
+
+- **Use Type Hints**: All functions should have proper type annotations
+- **Follow Component Pattern**: Create reusable components for common UI elements
+- **Handle Errors Gracefully**: Use try/catch with user-friendly error messages
+- **Cache Appropriately**: Use TTL-based caching for expensive operations
+- **Security First**: Validate all inputs and file uploads
+- **Responsive Design**: Ensure UI works on different screen sizes
+- **Accessibility**: Use proper ARIA labels and keyboard navigation
+
+### Web UI Testing Strategy
+
+- **Unit Tests**: Test individual components and utilities
+- **Integration Tests**: Test page interactions and service calls
+- **Mock Streamlit**: Use fixtures to isolate from Streamlit dependencies
+- **Coverage Target**: Maintain 75%+ coverage for web module
+
+### Common Web UI Tasks
+
+- **Add New Dashboard Metric**: Update `pages/1_📊_Dashboard.py`
+- **Extend AI Assistant**: Modify `pages/5_🤖_AI_Assistant.py`
+- **Add Security Feature**: Update `utils/security.py`
+- **Create New Component**: Add to `components/` directory
+- **Improve Navigation**: Update `navigation.py`
+
 ## Versioning Policy
 
 OpenFatture follows **[Semantic Versioning 2.0.0](https://semver.org/)**.
@@ -221,7 +305,7 @@ We especially welcome contributions in:
 - 🔐 **Digital Signature**: Integrate signing libraries
 
 ### Medium Priority
-- 🎨 **Web UI**: Optional web interface
+- 🎨 **Web UI**: Modern Streamlit interface with dashboard, AI assistant, and invoice management
 - 📊 **Advanced Reports**: More analytics
 - 🔌 **Integrations**: Banking, accounting software
 - 🤖 **AI Enhancements**: Better models

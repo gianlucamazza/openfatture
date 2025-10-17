@@ -877,6 +877,380 @@ AI_TOOLS_REQUIRE_CONFIRMATION=false  # Execute immediately
 
 ---
 
+## Lightning Network Configuration
+
+Enable Lightning Network payments for instant, low-fee Bitcoin transactions.
+
+### `LIGHTNING_ENABLED`
+
+**Description:** Enable Lightning Network integration
+**Type:** Boolean
+**Default:** `false`
+
+```env
+LIGHTNING_ENABLED=true   # Enable Lightning payments
+LIGHTNING_ENABLED=false  # Disable (default)
+```
+
+**Notes**
+- Requires a running LND node
+- Enables CLI commands and web UI features
+- Safe to enable/disable without restarting
+
+---
+
+### `LIGHTNING_HOST`
+
+**Description:** LND gRPC host and port
+**Type:** String
+**Default:** `localhost:10009`
+
+```env
+LIGHTNING_HOST=localhost:10009        # Local LND
+LIGHTNING_HOST=192.168.1.100:10009    # Remote LND
+LIGHTNING_HOST=lnd.example.com:10009  # Domain
+```
+
+**Notes**
+- Standard LND gRPC port is 10009
+- Use IP or hostname of your LND node
+- Ensure firewall allows connections
+
+---
+
+### `LIGHTNING_CERT_PATH`
+
+**Description:** Path to LND TLS certificate file
+**Type:** Path (optional)
+**Default:** None
+
+```env
+LIGHTNING_CERT_PATH=~/.lnd/tls.cert
+LIGHTNING_CERT_PATH=/etc/lnd/tls.cert
+LIGHTNING_CERT_PATH=/path/to/lnd/tls.cert
+```
+
+**Notes**
+- Required for secure gRPC connections
+- Generated automatically by LND
+- File permissions should be restrictive (600)
+
+---
+
+### `LIGHTNING_MACAROON_PATH`
+
+**Description:** Path to LND macaroon file for authentication
+**Type:** Path (optional)
+**Default:** None
+
+```env
+LIGHTNING_MACAROON_PATH=~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon
+LIGHTNING_MACAROON_PATH=/etc/lnd/admin.macaroon
+```
+
+**Notes**
+- Required for authenticated API access
+- Use admin.macaroon for full permissions
+- Never share or commit macaroon files
+
+---
+
+### `LIGHTNING_TIMEOUT_SECONDS`
+
+**Description:** gRPC timeout in seconds
+**Type:** Integer
+**Default:** `30`
+
+```env
+LIGHTNING_TIMEOUT_SECONDS=30   # Standard timeout
+LIGHTNING_TIMEOUT_SECONDS=60   # Slower networks
+LIGHTNING_TIMEOUT_SECONDS=10   # Fast local connections
+```
+
+---
+
+### `LIGHTNING_MAX_RETRIES`
+
+**Description:** Maximum retry attempts for failed requests
+**Type:** Integer
+**Default:** `3`
+
+```env
+LIGHTNING_MAX_RETRIES=3   # Standard retry count
+LIGHTNING_MAX_RETRIES=5   # More resilient
+LIGHTNING_MAX_RETRIES=1   # Minimal retries
+```
+
+---
+
+### `LIGHTNING_CIRCUIT_BREAKER_FAILURES`
+
+**Description:** Number of failures before circuit breaker opens
+**Type:** Integer
+**Default:** `5`
+
+```env
+LIGHTNING_CIRCUIT_BREAKER_FAILURES=5   # Standard threshold
+LIGHTNING_CIRCUIT_BREAKER_FAILURES=3   # More sensitive
+```
+
+---
+
+### `LIGHTNING_CIRCUIT_BREAKER_TIMEOUT`
+
+**Description:** Circuit breaker timeout in seconds
+**Type:** Integer
+**Default:** `300` (5 minutes)
+
+```env
+LIGHTNING_CIRCUIT_BREAKER_TIMEOUT=300   # 5 minutes
+LIGHTNING_CIRCUIT_BREAKER_TIMEOUT=600   # 10 minutes
+```
+
+---
+
+### `LIGHTNING_DEFAULT_EXPIRY_HOURS`
+
+**Description:** Default invoice expiry time in hours
+**Type:** Integer
+**Default:** `24`
+
+```env
+LIGHTNING_DEFAULT_EXPIRY_HOURS=24   # 1 day
+LIGHTNING_DEFAULT_EXPIRY_HOURS=168  # 1 week
+LIGHTNING_DEFAULT_EXPIRY_HOURS=720  # 30 days
+```
+
+---
+
+### `LIGHTNING_MIN_EXPIRY_HOURS`
+
+**Description:** Minimum allowed invoice expiry time in hours
+**Type:** Integer
+**Default:** `1`
+
+```env
+LIGHTNING_MIN_EXPIRY_HOURS=1   # 1 hour minimum
+LIGHTNING_MIN_EXPIRY_HOURS=6   # 6 hours minimum
+```
+
+---
+
+### `LIGHTNING_MAX_EXPIRY_HOURS`
+
+**Description:** Maximum allowed invoice expiry time in hours
+**Type:** Integer
+**Default:** `168` (1 week)
+
+```env
+LIGHTNING_MAX_EXPIRY_HOURS=168   # 1 week
+LIGHTNING_MAX_EXPIRY_HOURS=720   # 30 days
+LIGHTNING_MAX_EXPIRY_HOURS=8760  # 1 year
+```
+
+---
+
+### `LIGHTNING_COINGECKO_ENABLED`
+
+**Description:** Enable CoinGecko for BTC/EUR conversion
+**Type:** Boolean
+**Default:** `true`
+
+```env
+LIGHTNING_COINGECKO_ENABLED=true   # Use CoinGecko (default)
+LIGHTNING_COINGECKO_ENABLED=false  # Disable CoinGecko
+```
+
+---
+
+### `LIGHTNING_COINGECKO_API_KEY`
+
+**Description:** CoinGecko API key (optional, for higher rate limits)
+**Type:** String (optional)
+**Default:** None
+
+```env
+LIGHTNING_COINGECKO_API_KEY=your_coingecko_api_key
+```
+
+**Notes**
+- Optional but recommended for production
+- Increases rate limits from 10 to 1000 requests/minute
+
+---
+
+### `LIGHTNING_CMC_ENABLED`
+
+**Description:** Enable CoinMarketCap for BTC/EUR conversion
+**Type:** Boolean
+**Default:** `false`
+
+```env
+LIGHTNING_CMC_ENABLED=true   # Enable as backup
+LIGHTNING_CMC_ENABLED=false  # Disable (default)
+```
+
+---
+
+### `LIGHTNING_CMC_API_KEY`
+
+**Description:** CoinMarketCap API key (required if enabled)
+**Type:** String (optional)
+**Default:** None
+
+```env
+LIGHTNING_CMC_API_KEY=your_cmc_api_key
+```
+
+**Notes**
+- Required when `LIGHTNING_CMC_ENABLED=true`
+- Used as fallback when CoinGecko fails
+
+---
+
+### `LIGHTNING_FALLBACK_RATE`
+
+**Description:** Fallback BTC/EUR rate when all providers fail
+**Type:** String
+**Default:** `45000.00`
+
+```env
+LIGHTNING_FALLBACK_RATE=45000.00  # Current market rate
+LIGHTNING_FALLBACK_RATE=50000.00  # Conservative rate
+```
+
+**Notes**
+- Used when all price providers are unavailable
+- Update periodically to reflect market conditions
+
+---
+
+### `LIGHTNING_RATE_CACHE_TTL`
+
+**Description:** BTC rate cache TTL in seconds
+**Type:** Integer
+**Default:** `300` (5 minutes)
+
+```env
+LIGHTNING_RATE_CACHE_TTL=300   # 5 minutes
+LIGHTNING_RATE_CACHE_TTL=600   # 10 minutes
+LIGHTNING_RATE_CACHE_TTL=60    # 1 minute (more frequent updates)
+```
+
+---
+
+### `LIGHTNING_LIQUIDITY_ENABLED`
+
+**Description:** Enable automatic liquidity management
+**Type:** Boolean
+**Default:** `false`
+
+```env
+LIGHTNING_LIQUIDITY_ENABLED=true   # Enable auto-liquidity
+LIGHTNING_LIQUIDITY_ENABLED=false  # Manual management (default)
+```
+
+**Notes**
+- Automatically manages channel liquidity
+- Requires careful configuration to avoid issues
+
+---
+
+### `LIGHTNING_LIQUIDITY_MIN_RATIO`
+
+**Description:** Minimum inbound liquidity ratio (0.0-1.0)
+**Type:** Float
+**Default:** `0.1`
+
+```env
+LIGHTNING_LIQUIDITY_MIN_RATIO=0.1   # 10% minimum inbound
+LIGHTNING_LIQUIDITY_MIN_RATIO=0.2   # 20% minimum inbound
+```
+
+---
+
+### `LIGHTNING_LIQUIDITY_TARGET_RATIO`
+
+**Description:** Target inbound liquidity ratio (0.0-1.0)
+**Type:** Float
+**Default:** `0.5`
+
+```env
+LIGHTNING_LIQUIDITY_TARGET_RATIO=0.5   # 50% target inbound
+LIGHTNING_LIQUIDITY_TARGET_RATIO=0.6   # 60% target inbound
+```
+
+---
+
+### `LIGHTNING_LIQUIDITY_MAX_RATIO`
+
+**Description:** Maximum outbound liquidity ratio (0.0-1.0)
+**Type:** Float
+**Default:** `0.8`
+
+```env
+LIGHTNING_LIQUIDITY_MAX_RATIO=0.8   # 80% max outbound
+LIGHTNING_LIQUIDITY_MAX_RATIO=0.9   # 90% max outbound
+```
+
+---
+
+### `LIGHTNING_LIQUIDITY_CHECK_INTERVAL`
+
+**Description:** Interval between liquidity checks in seconds
+**Type:** Integer
+**Default:** `3600` (1 hour)
+
+```env
+LIGHTNING_LIQUIDITY_CHECK_INTERVAL=3600   # 1 hour
+LIGHTNING_LIQUIDITY_CHECK_INTERVAL=1800   # 30 minutes
+LIGHTNING_LIQUIDITY_CHECK_INTERVAL=7200   # 2 hours
+```
+
+---
+
+### `LIGHTNING_WEBHOOK_ENABLED`
+
+**Description:** Enable Lightning webhook notifications
+**Type:** Boolean
+**Default:** `false`
+
+```env
+LIGHTNING_WEBHOOK_ENABLED=true   # Enable webhooks
+LIGHTNING_WEBHOOK_ENABLED=false  # Disable (default)
+```
+
+---
+
+### `LIGHTNING_WEBHOOK_URL`
+
+**Description:** Webhook URL for Lightning payment notifications
+**Type:** String (optional)
+**Default:** None
+
+```env
+LIGHTNING_WEBHOOK_URL=https://your-app.com/webhooks/lightning
+LIGHTNING_WEBHOOK_URL=https://api.example.com/lightning/payments
+```
+
+---
+
+### `LIGHTNING_WEBHOOK_SECRET`
+
+**Description:** Webhook secret for authentication
+**Type:** String (optional)
+**Default:** None
+
+```env
+LIGHTNING_WEBHOOK_SECRET=your_webhook_secret_key
+```
+
+**Notes**
+- Used to verify webhook authenticity
+- Keep secret and rotate regularly
+
+---
+
 ## Paths & Directories
 
 Override default storage locations when required.
@@ -918,6 +1292,156 @@ ARCHIVIO_DIR=/mnt/storage/invoices
 ```env
 CERTIFICATES_DIR=/etc/openfatture/certs
 ```
+
+---
+
+## Web UI Configuration
+
+Configure the Streamlit-based web interface for OpenFatture.
+
+### `WEB_UI_ENABLED`
+
+**Description:** Enable/disable the web UI
+**Type:** Boolean
+**Default:** `true`
+
+```env
+WEB_UI_ENABLED=true
+```
+
+**Notes**
+- Set to `false` to disable web UI completely
+- Useful for CLI-only deployments
+
+---
+
+### `WEB_UI_HOST`
+
+**Description:** Host address for web UI server
+**Type:** String
+**Default:** `localhost`
+
+```env
+# Development
+WEB_UI_HOST=localhost
+
+# Production (bind to all interfaces)
+WEB_UI_HOST=0.0.0.0
+```
+
+---
+
+### `WEB_UI_PORT`
+
+**Description:** Port for web UI server
+**Type:** Integer
+**Default:** `8501`
+
+```env
+WEB_UI_PORT=8501
+```
+
+**Notes**
+- Standard Streamlit port is 8501
+- Change for multiple instances or custom deployments
+
+---
+
+### `WEB_UI_THEME`
+
+**Description:** UI theme (light/dark)
+**Type:** String
+**Default:** `light`
+
+```env
+WEB_UI_THEME=dark
+```
+
+---
+
+### `WEB_UI_TITLE`
+
+**Description:** Browser tab title
+**Type:** String
+**Default:** `OpenFatture`
+
+```env
+WEB_UI_TITLE="Mia Azienda - OpenFatture"
+```
+
+---
+
+### `WEB_UI_CACHE_TTL`
+
+**Description:** Default cache TTL for UI data (seconds)
+**Type:** Integer
+**Default:** `300` (5 minutes)
+
+```env
+WEB_UI_CACHE_TTL=600  # 10 minutes
+```
+
+**Notes**
+- Affects dashboard refresh rate
+- Lower values = more real-time but higher load
+
+---
+
+### `WEB_UI_MAX_UPLOAD_SIZE`
+
+**Description:** Maximum file upload size (MB)
+**Type:** Integer
+**Default:** `10`
+
+```env
+WEB_UI_MAX_UPLOAD_SIZE=50
+```
+
+**Notes**
+- Affects file uploads in AI assistant
+- Balance between usability and security
+
+---
+
+### `WEB_UI_RATE_LIMIT_REQUESTS`
+
+**Description:** Rate limit for requests per minute
+**Type:** Integer
+**Default:** `60`
+
+```env
+WEB_UI_RATE_LIMIT_REQUESTS=30
+```
+
+**Notes**
+- Protects against abuse
+- Adjust based on expected usage
+
+---
+
+### `WEB_UI_HEALTH_CHECK_ENABLED`
+
+**Description:** Enable health check endpoint
+**Type:** Boolean
+**Default:** `true`
+
+```env
+WEB_UI_HEALTH_CHECK_ENABLED=true
+```
+
+---
+
+### `WEB_UI_LOG_LEVEL`
+
+**Description:** Logging level for web UI
+**Type:** String
+**Default:** `INFO`
+
+```env
+WEB_UI_LOG_LEVEL=DEBUG
+```
+
+**Options:** `DEBUG`, `INFO`, `WARNING`, `ERROR`
 
 ---
 

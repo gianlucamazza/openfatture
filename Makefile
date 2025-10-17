@@ -41,5 +41,32 @@ include $(MAKEFILES_DIR)/ci.mk
 include $(MAKEFILES_DIR)/ai.mk
 include $(MAKEFILES_DIR)/media.mk
 
+.PHONY: web-install
+web-install: ## Install web UI dependencies
+	@echo "$(CYAN)Installing web UI dependencies...$(NC)"
+	uv sync --extra web
+
+.PHONY: web-run
+web-run: ## Run web UI in development mode
+	@echo "$(CYAN)Starting web UI...$(NC)"
+	uv run streamlit run $(PROJECT_ROOT)/web/app.py
+
+.PHONY: web-run-prod
+web-run-prod: ## Run web UI in production mode
+	@echo "$(CYAN)Starting web UI in production mode...$(NC)"
+	uv run streamlit run $(PROJECT_ROOT)/web/app.py \
+		--server.address 0.0.0.0 \
+		--server.port 8501 \
+		--server.fileWatcherType none \
+		--browser.gatherUsageStats false
+
+.PHONY: web-test
+web-test: ## Run web UI tests
+	@echo "$(CYAN)Running web UI tests...$(NC)"
+	uv run python -m pytest tests/web/ -v
+
+.PHONY: web
+web: web-install web-run ## Install and run web UI
+
 .PHONY: docker
 docker: docker-build docker-run ## Build and run Docker container

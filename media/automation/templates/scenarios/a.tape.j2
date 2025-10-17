@@ -1,0 +1,72 @@
+# Scenario A: Onboarding & Setup
+# Generated from template - DO NOT EDIT MANUALLY
+# Use: python media/automation/templates/base_template.py generate --scenario A
+
+# VHS Settings
+Set Shell "{{ global_vars.vhs_settings.shell }}"
+Set FontFamily "{{ global_vars.vhs_settings.font_family }}"
+Set FontSize {{ global_vars.vhs_settings.font_size }}
+Set Width {{ global_vars.vhs_settings.width }}
+Set Height {{ global_vars.vhs_settings.height }}
+Set Theme "{{ global_vars.vhs_settings.theme }}"
+Set CursorBlink {{ global_vars.vhs_settings.cursor_blink | lower }}
+Set TypingSpeed {{ global_vars.vhs_settings.typing_speed }}"
+
+Output media/output/scenario_{{ scenario.id.lower() }}_{{ scenario.title | lower | replace(' ', '_') | replace('(', '') | replace(')', '') | replace('scenario_', '') }}.mp4
+
+Sleep 1s
+
+# Setup commands
+Type "clear"
+Enter
+Sleep {{ global_vars.timing.screen_transition }}ms
+
+Type "printf '{{ global_vars.colors.cyan }}{{ scenario.title }}{{ global_vars.colors.reset }}\\n'"
+Enter
+Sleep {{ global_vars.timing.text_reading }}ms
+
+{% if scenario.variables.show_git_status %}
+Type "git rev-parse --abbrev-ref HEAD"
+Enter
+Sleep {{ global_vars.timing.short_command }}ms
+{% endif %}
+
+Type "./scripts/reset_demo.sh"
+Enter
+Sleep {{ global_vars.timing.reset_demo }}ms
+
+{% if scenario.variables.copy_demo_env %}
+Type "cp .env.demo .env"
+Enter
+Sleep {{ global_vars.timing.short_command }}ms
+{% endif %}
+
+# Show configuration file
+{% if scenario.variables.show_config %}
+Type "sed -n '1,18p' .env"
+Enter
+Sleep {{ global_vars.timing.medium_command }}ms
+{% endif %}
+
+# Verify OpenFatture configuration
+{% if scenario.variables.show_config %}
+Type "uv run openfatture config show"
+Enter
+Sleep {{ global_vars.timing.long_command }}ms
+{% endif %}
+
+# Show version info
+Type "uv run openfatture --version"
+Enter
+Sleep {{ global_vars.timing.short_command }}ms
+
+# Completion message
+Type "printf '\\n{{ global_vars.colors.green }}✓ Scenario {{ scenario.id }} completato!{{ global_vars.colors.reset }}\\n'"
+Enter
+Sleep {{ global_vars.timing.text_reading }}ms
+
+Type "printf '{{ global_vars.colors.blue }}Prossimo: Esegui \\'make media-scenario{{ scenario.id }}\\' per continuare{{ global_vars.colors.reset }}\\n'"
+Enter
+Sleep {{ global_vars.timing.text_reading }}ms
+
+Sleep {{ global_vars.timing.screen_transition }}ms

@@ -1,0 +1,284 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run weekly on Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  performance-tests:
+    name: Run Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for baseline comparison
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+
+      - name: Run performance tests
+        run: |
+          uv run pytest -v -m performance \
+            --tb=short \
+            --no-cov \
+            --benchmark-only \
+            --benchmark-autosave \
+            --benchmark-storage=file://${{ github.workspace }}/.benchmarks \
+            --benchmark-name=short \
+            --benchmark-json=benchmark-results.json
+        continue-on-error: true
+
+      - name: Store benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-${{ github.run_number }}
+          path: |
+            benchmark-results.json
+            .benchmarks/
+          retention-days: 30
+
+      - name: Compare with baseline
+        if: github.event_name == 'pull_request'
+        run: |
+          # Download baseline from main branch
+          git fetch origin main:main
+
+          # Compare with baseline (if exists)
+          if [ -f ".benchmarks/baseline.json" ]; then
+            uv run pytest -v -m performance \
+              --benchmark-only \
+              --benchmark-compare=baseline \
+              --benchmark-compare-fail=mean:20% || echo "⚠️  Performance regression detected"
+          else
+            echo "ℹ️  No baseline found, skipping comparison"
+          fi
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## 📊 Performance Test Results\n\n';
+
+            if (fs.existsSync('benchmark-results.json')) {
+              const results = JSON.parse(fs.readFileSync('benchmark-results.json'));
+
+              comment += '### Summary\n\n';
+              comment += '| Metric | Value |\n';
+              comment += '|--------|-------|\n';
+              comment += `| Total Tests | ${results.benchmarks?.length || 0} |\n`;
+
+              if (results.benchmarks && results.benchmarks.length > 0) {
+                comment += '\n### Top 5 Slowest Tests\n\n';
+                comment += '| Test | Mean | p95 |\n';
+                comment += '|------|------|-----|\n';
+
+                const sorted = results.benchmarks
+                  .sort((a, b) => (b.stats?.mean || 0) - (a.stats?.mean || 0))
+                  .slice(0, 5);
+
+                sorted.forEach(bench => {
+                  const mean = (bench.stats?.mean * 1000 || 0).toFixed(2);
+                  const p95 = (bench.stats?.['95th_percentile'] * 1000 || 0).toFixed(2);
+                  comment += `| ${bench.name} | ${mean}ms | ${p95}ms |\n`;
+                });
+              }
+            } else {
+              comment += '⚠️ No benchmark results file found\n';
+            }
+
+            comment += '\n---\n';
+            comment += '💡 View detailed results in the workflow artifacts\n';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  performance-report:
+    name: Generate Performance Report
+    runs-on: ubuntu-latest
+    needs: performance-tests
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_number }}
+          path: ./benchmark-results/
+
+      - name: Generate HTML report
+        run: |
+          # Create simple report generation script
+          cat > generate_report.py << 'EOF'
+          import json
+          from pathlib import Path
+          from tests.performance.report_generator import HTMLBenchmarkReporter
+          from tests.performance.utils import PerformanceMetrics
+
+          # Load benchmark results
+          results_file = Path("benchmark-results/benchmark-results.json")
+          if not results_file.exists():
+              print("No results file found")
+              exit(0)
+
+          with open(results_file) as f:
+              data = json.load(f)
+
+          # Convert to PerformanceMetrics
+          reporter = HTMLBenchmarkReporter()
+
+          for bench in data.get("benchmarks", []):
+              stats = bench.get("stats", {})
+              metrics = PerformanceMetrics(
+                  name=bench.get("name", "unknown"),
+                  iterations=bench.get("params", {}).get("iterations", 1),
+              )
+
+              # Add latency data
+              if "mean" in stats:
+                  metrics.latencies_ms = [stats["mean"] * 1000]
+                  metrics.throughput = 1000 / (stats["mean"] * 1000) if stats["mean"] > 0 else 0
+
+              reporter.add_metrics(metrics)
+
+          # Save report
+          reporter.save("performance-report.html")
+          print("Report generated: performance-report.html")
+          EOF
+
+          uv run python generate_report.py
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-report-${{ github.run_number }}
+          path: performance-report.html
+          retention-days: 90
+
+      - name: Deploy to GitHub Pages (main only)
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          destination_dir: performance-reports/${{ github.run_number }}
+          keep_files: true
+          publish_branch: gh-pages
+
+  performance-regression-check:
+    name: Check for Performance Regressions
+    runs-on: ubuntu-latest
+    needs: performance-tests
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_number }}
+          path: ./benchmark-results/
+
+      - name: Check for regressions
+        id: regression-check
+        run: |
+          # Simple regression detection script
+          cat > check_regression.py << 'EOF'
+          import json
+          import sys
+          from pathlib import Path
+
+          results_file = Path("benchmark-results/benchmark-results.json")
+          if not results_file.exists():
+              print("No results file")
+              sys.exit(0)
+
+          with open(results_file) as f:
+              data = json.load(f)
+
+          # Define thresholds
+          LATENCY_THRESHOLD = 1.20  # 20% increase
+          MEMORY_THRESHOLD = 1.50   # 50% increase
+
+          regressions = []
+          warnings = []
+
+          for bench in data.get("benchmarks", []):
+              name = bench.get("name", "unknown")
+              stats = bench.get("stats", {})
+
+              # Check if we have baseline comparison
+              if "baseline_mean" in stats and "mean" in stats:
+                  ratio = stats["mean"] / stats["baseline_mean"]
+
+                  if ratio > LATENCY_THRESHOLD:
+                      regressions.append(f"❌ {name}: {ratio:.2%} slower")
+                  elif ratio > 1.10:
+                      warnings.append(f"⚠️  {name}: {ratio:.2%} slower")
+
+          if regressions:
+              print("🚨 PERFORMANCE REGRESSIONS DETECTED:")
+              for reg in regressions:
+                  print(f"  {reg}")
+              print(f"\nTotal: {len(regressions)} regressions")
+              sys.exit(1)
+          elif warnings:
+              print("⚠️  Performance warnings:")
+              for warn in warnings:
+                  print(f"  {warn}")
+              print("\n✅ No critical regressions")
+          else:
+              print("✅ No performance regressions detected")
+          EOF
+
+          uv run python check_regression.py || echo "regression_detected=true" >> $GITHUB_OUTPUT
+
+      - name: Fail on regression
+        if: steps.regression-check.outputs.regression_detected == 'true'
+        run: |
+          echo "::error::Performance regression detected! Review the benchmark results."
+          exit 1

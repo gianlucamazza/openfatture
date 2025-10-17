@@ -269,9 +269,9 @@ class InvoiceIndexer:
         Returns:
             Number of invoices reindexed
         """
-        # Delete existing invoices for this year
+        # Delete existing invoices for this year using ChromaDB $and operator
         deleted = await self.vector_store.delete_by_filter(
-            {"type": "invoice", "invoice_year": year}
+            {"$and": [{"type": "invoice"}, {"invoice_year": year}]}
         )
 
         logger.info("year_invoices_deleted", year=year, count=deleted)

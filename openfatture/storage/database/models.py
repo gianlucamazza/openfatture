@@ -130,6 +130,7 @@ class Cliente(IntPKMixin, Base):
     # Dati fiscali
     codice_fiscale: Mapped[str | None] = mapped_column(String(16), index=True)
     partita_iva: Mapped[str | None] = mapped_column(String(11), index=True)
+    regime_fiscale: Mapped[str] = mapped_column(String(4), default="RF01", nullable=False)
 
     # Indirizzo
     indirizzo: Mapped[str | None] = mapped_column(String(200))

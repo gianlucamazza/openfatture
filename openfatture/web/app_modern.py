@@ -19,6 +19,8 @@ valid and works well. This example shows the 2025 recommended approach.
 
 import streamlit as st
 
+from openfatture.core.events import initialize_event_system
+from openfatture.core.hooks import initialize_hook_system
 from openfatture.utils.config import get_settings
 from openfatture.utils.logging import configure_dynamic_logging
 from openfatture.web.navigation import (
@@ -26,6 +28,7 @@ from openfatture.web.navigation import (
     render_shared_sidebar,
     setup_navigation_with_conditions,
 )
+from openfatture.web.utils.lifespan import set_event_bus, set_hook_bridge
 from openfatture.web.utils.state import init_state
 
 # Page configuration MUST be first Streamlit command
@@ -52,6 +55,14 @@ st.set_page_config(
 # Initialize logging
 settings = get_settings()
 configure_dynamic_logging(settings.debug_config)
+
+# Initialize event system and hook system (same as CLI)
+event_bus = initialize_event_system(settings)
+hook_bridge = initialize_hook_system(event_bus)
+
+# Store in context for access from services
+set_event_bus(event_bus)
+set_hook_bridge(hook_bridge)
 
 
 def main() -> None:

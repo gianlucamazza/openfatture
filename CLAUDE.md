@@ -23,19 +23,22 @@ OpenFatture follows a layered architecture:
 openfatture/
 ├── ai/              # AI agents, LLM providers, tools, sessions, RAG
 ├── cli/             # Typer CLI commands and Rich UI
-├── core/            # Business logic (fatture, clienti, prodotti, batch)
+├── core/            # Business logic (fatture, clienti, prodotti, batch, events, hooks)
 ├── payment/         # Payment reconciliation (DDD structure)
 ├── sdi/             # FatturaPA XML, PEC sender, digital signatures, SDI notifications
 ├── services/        # PDF generation and other services
 ├── storage/         # SQLAlchemy models, database session, archivio
-└── utils/           # Email templates, config, logging
+├── utils/           # Email templates, config, logging
+├── web_scraper/     # Automated data extraction and business intelligence
+└── tests/           # Comprehensive test suite with 170+ tests
 ```
 
 **Key Architectural Patterns:**
 - **AI Module**: Provider abstraction (OpenAI/Anthropic/Ollama), agent protocol, tool registry, session management
 - **Payment Module**: Domain-Driven Design with matchers (exact, fuzzy, date window)
+- **Event System**: Observer pattern for audit trail, repository pattern for queries, analytics service for insights
 - **SDI Integration**: XML generation → validation → PEC sending → notification processing
-- **Database**: SQLAlchemy ORM with models: Fattura, Riga, Cliente, Prodotto, NotificaSDI, PaymentAllocation
+- **Database**: SQLAlchemy ORM with models: Fattura, Riga, Cliente, Prodotto, NotificaSDI, PaymentAllocation, EventLog
 
 ## Development Commands
 
@@ -271,6 +274,172 @@ uv run pytest tests/ai/test_react_e2e_ollama.py::TestReActOllamaSuccessRate -v
 - `docs/AI_ARCHITECTURE.md` - Complete ReAct architecture documentation
 - `docs/guidelines/REACT_BEST_PRACTICES.md` - Detailed best practices guide
 
+## Event System & Audit Trail
+
+The event system (`openfatture/core/events/`) provides comprehensive audit trails and analytics:
+
+**Structure:**
+- `event_bus.py`: Observer pattern implementation with async event publishing
+- `event_log.py`: EventLog model with UUID, timestamps, entity tracking, metadata
+- `event_repository.py`: Advanced queries with filtering, search, pagination, statistics
+- `event_analytics.py`: Time-based aggregations, trends, velocity metrics
+- `event_persistence.py`: Automatic event logging with error isolation
+
+**Key Features:**
+- **Event Types**: Invoice creation/deletion, client updates, payment reconciliation, SDI notifications
+- **Entity Tracking**: Link events to specific business entities (fattura, cliente, etc.)
+- **Metadata Support**: JSON storage for additional context and structured data
+- **Timeline Generation**: Human-readable event summaries with chronological ordering
+- **Full-text Search**: SQLite LIKE queries across event data and metadata
+
+**CLI Commands (`openfatture events`):**
+```bash
+uv run openfatture events list --type invoice_created --limit 10    # List events
+uv run openfatture events show <event-id>                           # Detailed view
+uv run openfatture events stats --last-days 7                      # Statistics
+uv run openfatture events timeline fattura INV-001                 # Entity timeline
+uv run openfatture events search "payment received"                # Full-text search
+uv run openfatture events dashboard --days 30                      # Analytics dashboard
+uv run openfatture events trends --type payment_reconciled         # Trend analysis
+```
+
+**Analytics Features:**
+- **Time Aggregations**: Daily, weekly, monthly activity patterns
+- **Event Distribution**: Type percentages and entity activity rankings
+- **Trend Analysis**: Recent vs previous period comparisons with indicators
+- **Velocity Metrics**: Events per hour with peak activity detection
+- **Hourly Patterns**: 24-hour distribution analysis
+
+**Visualizations:**
+- ASCII bar charts with Rich library (█ blocks scaled to data)
+- Tree-style timeline views with connectors (┌ ├ └)
+- Color-coded trend indicators (📈 📉 ➡️)
+- Formatted tables with proper alignment
+
+**Testing Coverage:**
+- **Event Persistence**: 100% coverage (13 tests)
+- **Event Repository**: 91% coverage (27 tests for queries, search, stats, pagination)
+- **Event Base**: 88% coverage (event bus, serialization)
+- **Event Analytics**: 15% coverage (new module, expanding)
+- **Integration Tests**: 5 tests for fattura events (creation, validation, sending, timeline)
+
+## Hooks & Automation
+
+The hooks system (`openfatture/core/hooks/`) enables custom automation workflows:
+
+**Structure:**
+- `hook_registry.py`: Centralized hook management and execution
+- `hook_types.py`: Pre/post operation hook definitions
+- `built_in_hooks/`: Standard hooks for common operations
+- `custom_hooks/`: User-defined YAML-based hooks
+
+**Built-in Hooks:**
+- **Post-Invoice-Send**: Send notifications, update external systems, trigger backups
+- **Post-Payment-Reconcile**: Update accounting software, generate reports
+- **Post-Client-Create**: Setup default configurations, send welcome emails
+
+**Custom Hook Development:**
+```yaml
+# ~/.openfatture/hooks/post_invoice_send.yaml
+name: sync-to-accounting
+description: Sync invoice to external accounting system
+trigger: post_invoice_send
+script: |
+  #!/bin/bash
+  curl -X POST https://api.accounting.com/invoices \
+    -H "Authorization: Bearer $API_KEY" \
+    -d "{\"invoice_id\": \"$INVOICE_ID\", \"amount\": \"$AMOUNT\"}"
+```
+
+**Error Handling:**
+- Hook failures don't block main operations
+- Isolated execution with timeout controls
+- Comprehensive logging and retry mechanisms
+
+## Preventivi System
+
+The preventivi (quotations) system (`openfatture/core/preventivi/`) manages estimates and proposals:
+
+**Structure:**
+- `preventivo.py`: Preventivo model with line items and status tracking
+- `preventivo_service.py`: Business logic for creation, updates, conversion
+- `preventivo_cli.py`: CLI commands for preventivo management
+
+**Status Workflow:**
+- `BOZZA`: Draft, editable
+- `INVIATA`: Sent to client, awaiting response
+- `ACCETTATA`: Approved, ready for conversion
+- `RIFIUTATA`: Rejected by client
+- `SCADUTA`: Expired without response
+
+**Conversion to Invoice:**
+```bash
+uv run openfatture preventivo convert PREV-001 --numero-fattura INV-2024-042
+```
+
+**Business Logic:**
+- Validity periods with automatic expiration
+- Version control for revisions
+- Client approval workflow
+- Tax calculation and validation
+
+## Web UI Module
+
+Modern Streamlit-based interface following 2025 Best Practices. Provides dashboard, invoice management, AI assistant, and Lightning payments with 77% test coverage.
+
+**Quick Start:**
+```bash
+uv sync --extra web
+uv run streamlit run openfatture/web/app.py
+```
+
+**Key Features:**
+- Real-time dashboard with KPI and interactive charts
+- AI assistant with chat, VAT suggestions, and description generation
+- Invoice management with XML generation and SDI integration
+- Lightning payments with QR codes and monitoring
+- Security: File validation, input sanitization, rate limiting
+- Health monitoring and structured logging
+
+**Architecture Highlights:**
+- Service layer with async/sync bridging
+- React-style component library (cards, tables, alerts)
+- Intelligent caching with TTL and category invalidation
+- Production-ready configuration (.streamlit/config.toml)
+
+**See also:**
+- `docs/WEB_UI_GUIDE.md` - Complete user guide
+- `docs/WEB_UI_MODERNIZATION_COMPLETE.md` - Technical implementation
+- `docs/WEB_UI_BEST_PRACTICES_2025.md` - Best practices compliance
+- `openfatture/web/README.md` - Module documentation
+
+## Web Scraper Module
+
+The web scraper (`openfatture/web_scraper/`) enables automated business intelligence:
+
+**Structure:**
+- `agent.py`: Agent-based scraping with configurable strategies
+- `scrapers/`: Specialized scrapers for different data sources
+- `data_processor.py`: Extraction and normalization logic
+- `rate_limiter.py`: Politeness controls and throttling
+
+**Key Features:**
+- **Company Data Enrichment**: VAT validation, address verification, contact information
+- **Market Research**: Competitor analysis, industry benchmarks
+- **Data Validation**: Automated verification of business information
+
+**Usage:**
+```bash
+uv run openfatture scrape company "Tech Solutions SRL" --vat IT12345678901
+uv run openfatture scrape market-research "software development" --region lombardy
+```
+
+**Architecture:**
+- Agent-based design with pluggable strategies
+- Rate limiting and politeness controls
+- Structured data extraction with validation
+- Results storage and reporting
+
 ## Payment Reconciliation
 
 The payment module (`openfatture/payment/`) uses Domain-Driven Design:
@@ -478,7 +647,7 @@ act push -W .github/workflows/test.yml  # Run full test workflow
 ## Project Status
 
 - **Version**: 1.1.0 (see `docs/releases/v1.1.0.md`)
-- **Current Phase**: AI orchestration (Phase 4) and production hardening (Phase 6)
-- **Test Coverage**: 50%+ (targeting 60%)
+- **Current Phase**: Event System & Automation (Phase 5), production hardening (Phase 6)
+- **Test Coverage**: 55%+ (targeting 60-85% with event system completion)
 - **Python**: 3.12+
 - **License**: MIT

@@ -269,3 +269,86 @@ class ChatContext(AgentContext):
     similar_conversations: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class InvoiceAnalysisContext(AgentContext):
+    """
+    Specialized context for invoice analysis agent.
+
+    Used to analyze invoice patterns, detect anomalies, and provide pricing insights.
+    """
+
+    # Analysis period
+    anno: int | None = None
+    mese: int | None = None
+    trimestre: str | None = None  # Q1, Q2, Q3, Q4
+
+    # Filters
+    cliente_id: int | None = None
+    min_importo: float | None = None
+    max_importo: float | None = None
+
+    # Analysis options
+    include_anomaly_detection: bool = True
+    include_pricing_analysis: bool = True
+    include_trends: bool = True
+
+    # Historical data for comparison
+    fatture_anno_precedente: list[Fattura] = Field(default_factory=list)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class ClientIntelligenceContext(AgentContext):
+    """
+    Specialized context for client intelligence agent.
+
+    Used to analyze client behavior, payment patterns, and relationship health.
+    """
+
+    # Client to analyze (required)
+    cliente_id: int
+
+    # Analysis period
+    mesi_analisi: int = 12  # Last N months to analyze
+
+    # Analysis options
+    include_payment_prediction: bool = True
+    include_churn_risk: bool = True
+    include_growth_potential: bool = True
+
+    # Comparative data
+    avg_payment_days_all_clients: float | None = None
+    avg_revenue_per_client: float | None = None
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class PerformanceAnalyticsContext(AgentContext):
+    """
+    Specialized context for performance analytics agent.
+
+    Used for business performance analysis, forecasting, and strategic recommendations.
+    """
+
+    # Analysis period
+    anno: int | None = None
+    trimestre: str | None = None  # Q1, Q2, Q3, Q4
+    mese: int | None = None
+
+    # Comparison period
+    compare_to_previous_period: bool = True
+
+    # Analysis options
+    include_forecast: bool = True
+    include_client_breakdown: bool = True
+    include_service_breakdown: bool = True
+    include_cash_analysis: bool = True
+
+    # Forecast parameters
+    forecast_periods: int = 1  # Number of periods to forecast
+
+    # Historical data for trends
+    historical_revenue_data: list[dict[str, Any]] = Field(default_factory=list)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)

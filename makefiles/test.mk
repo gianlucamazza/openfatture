@@ -191,6 +191,47 @@ coverage-threshold: ## Check coverage meets threshold (80%)
 		--cov-report=term-missing
 	@echo "$(GREEN)✓ Coverage threshold met$(NC)"
 
+# Performance tests
+# ============================================================================
+
+test-performance: ## Run all performance benchmarks
+	@echo "$(BLUE)Running performance benchmarks...$(NC)"
+	$(PYTEST) -v -m performance \
+		--tb=short \
+		--no-cov
+	@echo "$(GREEN)✓ Performance benchmarks complete$(NC)"
+
+test-performance-rag: ## Run RAG performance tests (embeddings, vector store, retrieval)
+	@echo "$(BLUE)Running RAG performance tests...$(NC)"
+	$(PYTEST) tests/ai/rag/performance/ -v \
+		--tb=short \
+		--no-cov
+	@echo "$(GREEN)✓ RAG performance tests complete$(NC)"
+
+test-performance-db: ## Run database performance tests
+	@echo "$(BLUE)Running database performance tests...$(NC)"
+	$(PYTEST) tests/storage/performance/ -v \
+		--tb=short \
+		--no-cov
+	@echo "$(GREEN)✓ Database performance tests complete$(NC)"
+
+test-performance-report: ## Run performance tests and generate HTML report
+	@echo "$(BLUE)Running performance tests with report generation...$(NC)"
+	$(PYTEST) -v -m performance \
+		--tb=short \
+		--no-cov \
+		--benchmark-only \
+		--benchmark-autosave \
+		--benchmark-storage=file://$(PWD)/.benchmarks
+	@echo "$(GREEN)✓ Performance report saved to .benchmarks/$(NC)"
+
+test-performance-compare: ## Compare performance with previous run
+	@echo "$(BLUE)Comparing performance with previous run...$(NC)"
+	$(PYTEST) -v -m performance \
+		--benchmark-compare \
+		--benchmark-storage=file://$(PWD)/.benchmarks
+	@echo "$(GREEN)✓ Performance comparison complete$(NC)"
+
 # Test shortcuts
 # ============================================================================
 
@@ -200,3 +241,4 @@ tu: test-unit ## Shortcut for test-unit
 ti: test-integration ## Shortcut for test-integration
 ta: test-ai ## Shortcut for test-ai
 tp: test-payment ## Shortcut for test-payment
+tperf: test-performance ## Shortcut for test-performance

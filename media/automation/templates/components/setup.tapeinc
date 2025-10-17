@@ -1,0 +1,34 @@
+# VHS Setup Component
+# Common setup commands for scenarios
+#
+# Usage in template:
+# {{ components.setup }}
+
+# Clear screen and show header
+Type "clear"
+Enter
+Sleep {{ global_vars.timing.screen_transition }}ms
+
+# Show scenario title
+Type "printf '{{ global_vars.colors.cyan }}{{ scenario.title }}{{ global_vars.colors.reset }}\\n'"
+Enter
+Sleep {{ global_vars.timing.text_reading }}ms
+
+# Show git status if enabled
+{% raw %}{% if scenario.variables.show_git_status %}{% endraw %}
+Type "git rev-parse --abbrev-ref HEAD"
+Enter
+Sleep {{ global_vars.timing.short_command }}ms
+{% raw %}{% endif %}{% endraw %}
+
+# Reset demo environment
+Type "./scripts/reset_demo.sh"
+Enter
+Sleep {{ global_vars.timing.reset_demo }}ms
+
+# Copy demo config if enabled
+{% raw %}{% if scenario.variables.copy_demo_env %}{% endraw %}
+Type "cp .env.demo .env"
+Enter
+Sleep {{ global_vars.timing.short_command }}ms
+{% raw %}{% endif %}{% endraw %}

@@ -4,6 +4,7 @@ Consistent alert/notification components for user feedback.
 """
 
 from collections.abc import Callable
+from typing import Literal, cast
 
 import streamlit as st
 
@@ -59,7 +60,7 @@ def error_alert(
     if show_exception:
         import traceback
 
-        st.exception(traceback.format_exc())
+        st.code(traceback.format_exc(), language="python")
 
 
 def warning_alert(
@@ -151,7 +152,6 @@ def confirmation_dialog(
         col1, col2 = st.columns(2)
 
         with col1:
-            button_type = "primary" if not danger else "secondary"
             if st.button(
                 cancel_text,
                 key=f"cancel_{hash(title)}",
@@ -162,6 +162,9 @@ def confirmation_dialog(
                     on_cancel()
 
         with col2:
+            button_type: Literal["primary", "secondary", "tertiary"] = (
+                "primary" if not danger else "secondary"
+            )
             if st.button(
                 confirm_text,
                 key=f"confirm_{hash(title)}",

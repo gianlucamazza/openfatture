@@ -360,3 +360,143 @@ def ollama_available():
         return response.status_code == 200
     except Exception:
         return False
+
+
+# ============================================================================
+# Performance Testing Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def perf_db_engine():
+    """Create temporary SQLite database for performance testing."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "perf_test.db"
+        engine = create_engine(
+            f"sqlite:///{db_path}",
+            echo=False,  # Disable SQL logging for performance
+            pool_pre_ping=True,
+        )
+
+        # Create tables
+        Base.metadata.create_all(engine)
+
+        yield engine
+
+        # Cleanup
+        engine.dispose()
+
+
+@pytest.fixture
+def perf_db_session(perf_db_engine):
+    """Create database session for performance testing."""
+    SessionLocal = sessionmaker(bind=perf_db_engine)
+    session = SessionLocal()
+
+    yield session
+
+    session.close()
+
+
+@pytest.fixture
+def perf_db_with_clients_small(perf_db_session):
+    """Database with 10 clients for performance testing."""
+    from tests.performance.fixtures import generate_clients
+
+    clienti = generate_clients(count=10, seed=42)
+
+    # Add to database
+    for cliente in clienti:
+        perf_db_session.add(cliente)
+    perf_db_session.commit()
+
+    # Refresh to get IDs
+    for cliente in clienti:
+        perf_db_session.refresh(cliente)
+
+    yield perf_db_session, clienti
+
+
+@pytest.fixture
+def perf_db_with_clients_medium(perf_db_session):
+    """Database with 100 clients for performance testing."""
+    from tests.performance.fixtures import generate_clients
+
+    clienti = generate_clients(count=100, seed=42)
+
+    # Bulk insert for better performance
+    perf_db_session.bulk_save_objects(clienti)
+    perf_db_session.commit()
+
+    # Query back to get IDs
+    clienti = perf_db_session.query(Cliente).all()
+
+    yield perf_db_session, clienti
+
+
+@pytest.fixture
+def perf_db_with_invoices_small(perf_db_with_clients_small):
+    """Database with 10 clients and 50 invoices for performance testing."""
+    from tests.performance.fixtures import generate_invoices
+
+    session, clienti = perf_db_with_clients_small
+
+    fatture = generate_invoices(clienti, count=50, year=2025, seed=42)
+
+    # Add invoices
+    for fattura in fatture:
+        session.add(fattura)
+    session.commit()
+
+    # Refresh to get IDs
+    for fattura in fatture:
+        session.refresh(fattura)
+
+    yield session, clienti, fatture
+
+
+@pytest.fixture
+def perf_db_with_invoices_medium(perf_db_with_clients_medium):
+    """Database with 100 clients and 500 invoices for performance testing."""
+    from tests.performance.fixtures import generate_invoices
+
+    session, clienti = perf_db_with_clients_medium
+
+    fatture = generate_invoices(clienti, count=500, year=2025, seed=42)
+
+    # Bulk insert
+    for fattura in fatture:
+        session.add(fattura)
+    session.commit()
+
+    # Query back to get full objects
+    fatture = session.query(Fattura).all()
+
+    yield session, clienti, fatture
+
+
+@pytest.fixture
+def perf_db_with_invoices_large(perf_db_with_clients_medium):
+    """Database with 100 clients and 1000 invoices for performance testing.
+
+    Warning: This fixture is slow (~10-20s) due to relationship setup.
+    Use only for scalability tests.
+    """
+    from tests.performance.fixtures import generate_invoices
+
+    session, clienti = perf_db_with_clients_medium
+
+    fatture = generate_invoices(clienti, count=1000, year=2025, seed=42)
+
+    # Bulk insert in batches
+    batch_size = 100
+    for i in range(0, len(fatture), batch_size):
+        batch = fatture[i : i + batch_size]
+        for fattura in batch:
+            session.add(fattura)
+        session.commit()
+
+    # Query back
+    fatture = session.query(Fattura).all()
+
+    yield session, clienti, fatture

@@ -9,10 +9,12 @@ from typing import Any
 
 import streamlit as st
 
+from openfatture.core.events.invoice_events import InvoiceCreatedEvent
 from openfatture.core.fatture.service import InvoiceService as CoreInvoiceService
 from openfatture.storage.database.models import Cliente, Fattura, RigaFattura, StatoFattura
 from openfatture.utils.config import Settings, get_settings
 from openfatture.web.utils.cache import db_session_scope, get_db_session
+from openfatture.web.utils.lifespan import get_event_bus
 
 
 class StreamlitInvoiceService:
@@ -39,37 +41,50 @@ class StreamlitInvoiceService:
         Returns:
             List of invoice dictionaries with basic info
         """
-        db = get_db_session()
-        query = db.query(Fattura).order_by(Fattura.anno.desc(), Fattura.numero.desc())
+        try:
+            db = get_db_session()
+            query = db.query(Fattura).order_by(Fattura.anno.desc(), Fattura.numero.desc())
 
-        # Apply filters
-        if filters:
-            if "stato" in filters:
-                query = query.filter(Fattura.stato == StatoFattura(filters["stato"]))
-            if "anno" in filters:
-                query = query.filter(Fattura.anno == filters["anno"])
-            if "cliente_id" in filters:
-                query = query.filter(Fattura.cliente_id == filters["cliente_id"])
+            # Apply filters
+            if filters:
+                if "stato" in filters:
+                    try:
+                        query = query.filter(Fattura.stato == StatoFattura(filters["stato"]))
+                    except ValueError as e:
+                        from openfatture.web.utils.logging_config import log_error
 
-        if limit:
-            query = query.limit(limit)
+                        log_error(e, "get_invoices", {"invalid_stato": filters["stato"]})
+                        # Continue without filter
+                if "anno" in filters:
+                    query = query.filter(Fattura.anno == filters["anno"])
+                if "cliente_id" in filters:
+                    query = query.filter(Fattura.cliente_id == filters["cliente_id"])
 
-        invoices = query.all()
+            if limit:
+                query = query.limit(limit)
 
-        # Convert to dictionaries for serialization
-        return [
-            {
-                "id": f.id,
-                "numero": f.numero,
-                "anno": f.anno,
-                "data_emissione": f.data_emissione,
-                "cliente_denominazione": f.cliente.denominazione if f.cliente else "N/A",
-                "totale": float(f.totale),
-                "stato": f.stato.value,
-                "num_righe": len(f.righe),
-            }
-            for f in invoices
-        ]
+            invoices = query.all()
+
+            # Convert to dictionaries for serialization
+            return [
+                {
+                    "id": f.id,
+                    "numero": f.numero,
+                    "anno": f.anno,
+                    "data_emissione": f.data_emissione,
+                    "cliente_denominazione": f.cliente.denominazione if f.cliente else "N/A",
+                    "totale": float(f.totale),
+                    "stato": f.stato.value,
+                    "num_righe": len(f.righe),
+                }
+                for f in invoices
+            ]
+        except Exception as e:
+            from openfatture.web.utils.logging_config import log_error
+
+            log_error(e, "get_invoices", {"filters": filters, "limit": limit})
+            # Return empty list on error
+            return []
 
     def get_invoice_detail(self, invoice_id: int) -> Fattura | None:
         """
@@ -91,7 +106,7 @@ class StreamlitInvoiceService:
         anno: int,
         data_emissione: date,
         righe_data: list[dict[str, Any]],
-    ) -> Fattura:
+    ) -> Fattura | None:
         """
         Create a new invoice with line items.
 
@@ -105,76 +120,119 @@ class StreamlitInvoiceService:
             righe_data: List of line item data dicts
 
         Returns:
-            Created Fattura object
+            Created Fattura object or None on error
 
         Raises:
             ValueError: If validation fails
         """
-        # Use context manager for write operations (Best Practice 2025)
-        with db_session_scope() as db:
-            # Validate cliente
-            cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-            if not cliente:
-                raise ValueError(f"Cliente {cliente_id} non trovato")
+        try:
+            # Use context manager for write operations (Best Practice 2025)
+            with db_session_scope() as db:
+                # Validate cliente
+                cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+                if not cliente:
+                    raise ValueError(f"Cliente {cliente_id} non trovato")
 
-            # Create invoice
-            fattura = Fattura(
-                numero=numero,
-                anno=anno,
-                data_emissione=data_emissione,
-                cliente_id=cliente_id,
-                stato=StatoFattura.BOZZA,
-            )
+                # Validate righe_data
+                if not righe_data:
+                    raise ValueError("Almeno una riga è richiesta")
 
-            db.add(fattura)
-            db.flush()  # Get ID
-
-            # Add line items
-            totale_imponibile = Decimal("0")
-            totale_iva = Decimal("0")
-
-            for i, riga_data in enumerate(righe_data, start=1):
-                quantita = Decimal(str(riga_data["quantita"]))
-                prezzo = Decimal(str(riga_data["prezzo_unitario"]))
-                aliquota_iva = Decimal(str(riga_data["aliquota_iva"]))
-
-                imponibile = quantita * prezzo
-                iva = imponibile * aliquota_iva / Decimal("100")
-                totale = imponibile + iva
-
-                riga = RigaFattura(
-                    fattura_id=fattura.id,
-                    numero_riga=i,
-                    descrizione=riga_data["descrizione"],
-                    quantita=quantita,
-                    prezzo_unitario=prezzo,
-                    aliquota_iva=aliquota_iva,
-                    imponibile=imponibile,
-                    iva=iva,
-                    totale=totale,
+                # Create invoice
+                fattura = Fattura(
+                    numero=numero,
+                    anno=anno,
+                    data_emissione=data_emissione,
+                    cliente_id=cliente_id,
+                    stato=StatoFattura.BOZZA,
                 )
 
-                db.add(riga)
-                totale_imponibile += imponibile
-                totale_iva += iva
+                db.add(fattura)
+                db.flush()  # Get ID
 
-            # Update invoice totals
-            fattura.imponibile = totale_imponibile
-            fattura.iva = totale_iva
-            fattura.totale = totale_imponibile + totale_iva
+                # Add line items
+                totale_imponibile = Decimal("0")
+                totale_iva = Decimal("0")
 
-            # Commit happens automatically via context manager
-            # Get fresh instance for return (detached from session)
-            fattura_id = fattura.id
+                for i, riga_data in enumerate(righe_data, start=1):
+                    try:
+                        quantita = Decimal(str(riga_data["quantita"]))
+                        prezzo = Decimal(str(riga_data["prezzo_unitario"]))
+                        aliquota_iva = Decimal(str(riga_data["aliquota_iva"]))
 
-        # Re-fetch with read session to return detached object
-        db_read = get_db_session()
-        result = db_read.query(Fattura).filter(Fattura.id == fattura_id).first()
+                        if quantita <= 0 or prezzo <= 0:
+                            raise ValueError(f"Riga {i}: quantità e prezzo devono essere positivi")
 
-        # Clear cache
-        st.cache_data.clear()
+                        imponibile = quantita * prezzo
+                        iva = imponibile * aliquota_iva / Decimal("100")
+                        totale = imponibile + iva
 
-        return result
+                        riga = RigaFattura(
+                            fattura_id=fattura.id,
+                            numero_riga=i,
+                            descrizione=riga_data["descrizione"],
+                            quantita=quantita,
+                            prezzo_unitario=prezzo,
+                            aliquota_iva=aliquota_iva,
+                            imponibile=imponibile,
+                            iva=iva,
+                            totale=totale,
+                        )
+
+                        db.add(riga)
+                        totale_imponibile += imponibile
+                        totale_iva += iva
+
+                    except (KeyError, ValueError, TypeError) as e:
+                        raise ValueError(f"Errore nella riga {i}: {str(e)}")
+
+                # Update invoice totals
+                fattura.imponibile = totale_imponibile
+                fattura.iva = totale_iva
+                fattura.totale = totale_imponibile + totale_iva
+
+                # Commit happens automatically via context manager
+                # Get fresh instance for return (detached from session)
+                fattura_id = fattura.id
+
+            # Re-fetch with read session to return detached object
+            db_read = get_db_session()
+            result = db_read.query(Fattura).filter(Fattura.id == fattura_id).first()
+
+            # Publish InvoiceCreatedEvent
+            event_bus = get_event_bus()
+            if event_bus and result:
+                event_bus.publish(
+                    InvoiceCreatedEvent(
+                        invoice_id=result.id,
+                        invoice_number=f"{result.numero}/{result.anno}",
+                        client_id=result.cliente_id,
+                        client_name=cliente.denominazione,
+                        total_amount=result.totale,
+                    )
+                )
+
+            # Clear cache
+            st.cache_data.clear()
+
+            return result
+
+        except Exception as e:
+            from openfatture.web.utils.logging_config import log_error
+
+            log_error(
+                e,
+                "create_invoice",
+                {
+                    "cliente_id": cliente_id,
+                    "numero": numero,
+                    "anno": anno,
+                    "righe_count": len(righe_data) if righe_data else 0,
+                },
+            )
+            # Re-raise validation errors, return None for other errors
+            if isinstance(e, ValueError):
+                raise
+            return None
 
     def generate_xml(self, fattura: Fattura, validate: bool = True) -> tuple[str, str | None]:
         """
@@ -244,3 +302,33 @@ class StreamlitInvoiceService:
         db = get_db_session()
         years = db.query(Fattura.anno).distinct().order_by(Fattura.anno.desc()).all()
         return [year[0] for year in years]
+
+    @st.cache_data(ttl=30, show_spinner=False)
+    def get_next_invoice_number(_self, year: int) -> int:
+        """
+        Get the next available invoice number for the given year.
+
+        Args:
+            year: The year for which to get the next invoice number
+
+        Returns:
+            The next available invoice number
+        """
+        db = get_db_session()
+        try:
+            # Find the highest invoice number for the given year
+            from sqlalchemy import func
+
+            result = db.query(func.max(Fattura.numero)).filter(Fattura.anno == year).scalar()
+
+            if result is None:
+                return 1
+
+            # Try to parse as integer, if it fails, increment by 1
+            try:
+                return int(result) + 1
+            except (ValueError, TypeError):
+                return 1
+
+        finally:
+            db.close()

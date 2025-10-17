@@ -1,0 +1,70 @@
+{
+  "version": "1.0",
+  "description": "Configurable alert thresholds for media automation monitoring",
+  "thresholds": {
+    "cost": {
+      "daily_budget_usd": 1.0,
+      "monthly_budget_usd": 30.0,
+      "monthly_warning_pct": 83,
+      "enable_daily_alerts": true,
+      "enable_monthly_alerts": true
+    },
+    "performance": {
+      "max_duration_seconds": 600,
+      "enable_duration_alerts": true,
+      "min_success_rate_pct": 80,
+      "enable_success_rate_alerts": true
+    },
+    "failure": {
+      "enable_failure_alerts": true,
+      "max_consecutive_failures": 3,
+      "alert_on_first_failure": true
+    }
+  },
+  "notifications": {
+    "email": {
+      "enabled": false,
+      "recipients": ["admin@example.com"],
+      "smtp_server": "smtp.example.com",
+      "smtp_port": 587,
+      "sender": "alerts@openfatture.com"
+    },
+    "slack": {
+      "enabled": false,
+      "webhook_url": "https://hooks.slack.com/services/...",
+      "channel": "#alerts",
+      "username": "OpenFatture Media Monitor"
+    },
+    "console": {
+      "enabled": true,
+      "verbose": false
+    }
+  },
+  "alert_levels": {
+    "info": {
+      "color": "blue",
+      "icon": "ℹ️",
+      "retention_days": 7
+    },
+    "warning": {
+      "color": "orange",
+      "icon": "⚠️",
+      "retention_days": 30
+    },
+    "error": {
+      "color": "red",
+      "icon": "❌",
+      "retention_days": 90
+    },
+    "critical": {
+      "color": "darkred",
+      "icon": "🚨",
+      "retention_days": 365
+    }
+  },
+  "maintenance": {
+    "max_alerts_retained": 1000,
+    "cleanup_interval_hours": 24,
+    "enable_auto_cleanup": true
+  }
+}

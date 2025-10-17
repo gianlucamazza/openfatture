@@ -6,7 +6,7 @@ All components support theming and responsive layout.
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 import streamlit as st
 
@@ -15,7 +15,7 @@ def metric_card(
     title: str,
     value: str | int | float,
     delta: str | int | float | None = None,
-    delta_color: str = "normal",
+    delta_color: Literal["normal", "inverse", "off"] = "normal",
     icon: str | None = None,
     help_text: str | None = None,
 ) -> None:

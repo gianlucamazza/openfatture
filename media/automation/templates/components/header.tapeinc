@@ -1,0 +1,18 @@
+# VHS Header Component
+# Include this at the beginning of each scenario
+#
+# Usage in template:
+# {{ components.header }}
+
+Set Shell "{{ global_vars.vhs_settings.shell }}"
+Set FontFamily "{{ global_vars.vhs_settings.font_family }}"
+Set FontSize {{ global_vars.vhs_settings.font_size }}
+Set Width {{ global_vars.vhs_settings.width }}
+Set Height {{ global_vars.vhs_settings.height }}
+Set Theme "{{ global_vars.vhs_settings.theme }}"
+Set CursorBlink {{ global_vars.vhs_settings.cursor_blink | lower }}
+Set TypingSpeed {{ global_vars.vhs_settings.typing_speed }}
+
+Output media/output/scenario_{{ scenario.id.lower() }}_{{ scenario.title | lower | replace(' ', '_') | replace('(', '') | replace(')', '') | replace('scenario_', '') }}.mp4
+
+Sleep 1s

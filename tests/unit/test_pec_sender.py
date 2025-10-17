@@ -1,11 +1,14 @@
 """Unit tests for PEC sender."""
 
+import smtplib
 from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from openfatture.sdi.pec_sender.sender import PECSender, create_log_entry
 from openfatture.storage.database.models import StatoFattura
+from openfatture.utils.rate_limiter import RateLimiter
 
 pytestmark = pytest.mark.unit
 
@@ -150,3 +153,192 @@ class TestPECSender:
 
         assert success is True
         assert len(mock_pec_server) == 1
+
+
+class TestPECSenderRetryLogic:
+    """Tests for PEC sender retry logic and error handling."""
+
+    @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
+    @patch("time.sleep")
+    def test_retry_on_transient_smtp_errors(
+        self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
+    ):
+        """Test retry logic for transient SMTP errors."""
+        # Arrange
+        xml_path = tmp_path / "invoice.xml"
+        xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
+
+        mock_server = MagicMock()
+        # Fail twice, then succeed on third try
+        mock_server.send_message.side_effect = [
+            smtplib.SMTPServerDisconnected("Connection lost"),
+            smtplib.SMTPConnectError(421, "Server busy"),
+            None,  # Success
+        ]
+        mock_smtp_ssl.return_value.__enter__.return_value = mock_server
+
+        sender = PECSender(test_settings, max_retries=3)
+
+        # Act
+        success, error = sender.send_invoice(sample_fattura, xml_path)
+
+        # Assert
+        assert success is True
+        assert error is None
+        assert sample_fattura.stato == StatoFattura.INVIATA
+
+        # Verify retry count
+        assert mock_server.send_message.call_count == 3
+
+        # Verify exponential backoff was applied
+        assert mock_sleep.call_count == 2
+
+    @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
+    @patch("time.sleep")
+    def test_no_retry_on_auth_errors(
+        self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
+    ):
+        """Test that authentication errors are not retried."""
+        # Arrange
+        xml_path = tmp_path / "invoice.xml"
+        xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
+
+        mock_server = MagicMock()
+        mock_server.login.side_effect = smtplib.SMTPAuthenticationError(535, "Auth failed")
+        mock_smtp_ssl.return_value.__enter__.return_value = mock_server
+
+        sender = PECSender(test_settings, max_retries=3)
+
+        # Act
+        success, error = sender.send_invoice(sample_fattura, xml_path)
+
+        # Assert
+        assert success is False
+        assert "authentication failed" in error.lower()
+
+        # Should only try once (no retries for auth errors)
+        assert mock_server.login.call_count == 1
+        mock_sleep.assert_not_called()
+
+    @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
+    @patch("time.sleep")
+    def test_max_retries_exceeded(
+        self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
+    ):
+        """Test behavior when max retries are exceeded."""
+        # Arrange
+        xml_path = tmp_path / "invoice.xml"
+        xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
+
+        mock_server = MagicMock()
+        mock_server.send_message.side_effect = smtplib.SMTPServerDisconnected("Connection lost")
+        mock_smtp_ssl.return_value.__enter__.return_value = mock_server
+
+        sender = PECSender(test_settings, max_retries=3)
+
+        # Act
+        success, error = sender.send_invoice(sample_fattura, xml_path)
+
+        # Assert
+        assert success is False
+        assert "Failed after 3 attempts" in error
+        assert "Connection lost" in error
+
+        # Should have tried max_retries times
+        assert mock_server.send_message.call_count == 3
+
+    @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
+    @patch("time.sleep")
+    def test_exponential_backoff_delays(
+        self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
+    ):
+        """Test exponential backoff increases delay between retries."""
+        # Arrange
+        xml_path = tmp_path / "invoice.xml"
+        xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
+
+        mock_server = MagicMock()
+        mock_server.send_message.side_effect = smtplib.SMTPServerDisconnected("Connection lost")
+        mock_smtp_ssl.return_value.__enter__.return_value = mock_server
+
+        sender = PECSender(test_settings, max_retries=3)
+
+        # Act
+        success, error = sender.send_invoice(sample_fattura, xml_path)
+
+        # Assert - verify delays increase
+        assert mock_sleep.call_count == 2  # 2 retries = 2 sleeps
+        delays = [call[0][0] for call in mock_sleep.call_args_list]
+        assert delays[0] < delays[1]  # Second delay should be longer than first
+
+    @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
+    def test_unexpected_exception_no_retry(
+        self, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
+    ):
+        """Test that unexpected exceptions are not retried."""
+        # Arrange
+        xml_path = tmp_path / "invoice.xml"
+        xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
+
+        mock_server = MagicMock()
+        mock_server.login.side_effect = ValueError("Unexpected error")
+        mock_smtp_ssl.return_value.__enter__.return_value = mock_server
+
+        sender = PECSender(test_settings, max_retries=3)
+
+        # Act
+        success, error = sender.send_invoice(sample_fattura, xml_path)
+
+        # Assert
+        assert success is False
+        assert "Error sending PEC" in error
+
+        # Should only try once
+        assert mock_server.login.call_count == 1
+
+
+class TestPECSenderRateLimiting:
+    """Tests for PEC sender rate limiting functionality."""
+
+    def test_rate_limiting_blocks_when_exceeded(self, test_settings, sample_fattura, tmp_path):
+        """Test that rate limiting blocks when limit is exceeded."""
+        # Arrange
+        xml_path = tmp_path / "invoice.xml"
+        xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
+
+        # Create mock rate limiter that always returns False (blocked)
+        mock_rate_limiter = Mock(spec=RateLimiter)
+        mock_rate_limiter.get_wait_time.return_value = 0
+        mock_rate_limiter.acquire.return_value = False  # Rate limit exceeded
+
+        sender = PECSender(test_settings, rate_limit=mock_rate_limiter, max_retries=1)
+
+        # Act
+        success, error = sender.send_invoice(sample_fattura, xml_path)
+
+        # Assert
+        assert success is False
+        assert "Rate limit exceeded" in error
+
+        # Verify rate limiter was called
+        mock_rate_limiter.get_wait_time.assert_called_once()
+        mock_rate_limiter.acquire.assert_called_once_with(blocking=True, timeout=30)
+
+    def test_custom_rate_limiter_integration(self, test_settings):
+        """Test PEC sender with custom rate limiter."""
+        # Arrange
+        custom_limiter = RateLimiter(max_calls=5, period=30)
+        sender = PECSender(test_settings, rate_limit=custom_limiter)
+
+        # Assert
+        assert sender.rate_limiter == custom_limiter
+        assert sender.rate_limiter.max_calls == 5
+        assert sender.rate_limiter.period == 30
+
+    def test_default_rate_limiter_settings(self, test_settings):
+        """Test default rate limiter is configured correctly."""
+        sender = PECSender(test_settings)
+
+        # Default should be 10 emails per minute
+        assert sender.rate_limiter is not None
+        # Note: Can't easily verify max_calls/period without accessing internals

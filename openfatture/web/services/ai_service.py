@@ -3,6 +3,7 @@
 Provides async/sync bridge and simplified API for AI operations.
 """
 
+import re
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -17,6 +18,56 @@ from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers.factory import create_provider
 from openfatture.utils.config import DebugConfig, get_settings
 from openfatture.web.utils.async_helpers import run_async
+
+
+class ToolCallEvent:
+    """Represents a tool calling event during streaming."""
+
+    def __init__(self, event_type: str, data: dict[str, Any]):
+        self.event_type = event_type  # "start", "success", "error", "summary"
+        self.data = data
+
+    @classmethod
+    def from_chunk(cls, chunk: str) -> "ToolCallEvent | None":
+        """Parse a chunk to see if it's a tool call event."""
+        # Pattern for tool execution start
+        start_match = re.search(r"🔧 Eseguendo (\d+) strumento/i\.\.\.", chunk)
+        if start_match:
+            return cls("start", {"count": int(start_match.group(1))})
+
+        # Pattern for successful tool execution
+        success_match = re.search(r"✅ ([^:]+): (.+)", chunk)
+        if success_match:
+            return cls(
+                "success",
+                {
+                    "tool_name": success_match.group(1).strip(),
+                    "result": success_match.group(2).strip(),
+                },
+            )
+
+        # Pattern for failed tool execution
+        error_match = re.search(r"❌ ([^:]+): (.+)", chunk)
+        if error_match:
+            return cls(
+                "error",
+                {"tool_name": error_match.group(1).strip(), "error": error_match.group(2).strip()},
+            )
+
+        # Pattern for execution summary
+        summary_match = re.search(r"📊 Completato: (\d+) riuscito/i, (\d+) fallito/i", chunk)
+        if summary_match:
+            return cls(
+                "summary",
+                {"successful": int(summary_match.group(1)), "failed": int(summary_match.group(2))},
+            )
+
+        # Pattern for timing
+        timing_match = re.search(r"⏱️ Tempo esecuzione: ([\d.]+)s", chunk)
+        if timing_match:
+            return cls("timing", {"duration": float(timing_match.group(1))})
+
+        return None
 
 
 class StreamlitAIService:
@@ -74,7 +125,9 @@ class StreamlitAIService:
             self._tax_agent = TaxAdvisorAgent(provider=self.provider)
         return self._tax_agent
 
-    def chat(self, message: str, conversation_history: list[dict[str, str]]) -> AgentResponse:
+    def chat(
+        self, message: str, conversation_history: list[dict[str, str]]
+    ) -> AgentResponse | None:
         """
         Send a chat message and get response.
 
@@ -83,33 +136,59 @@ class StreamlitAIService:
             conversation_history: Previous conversation
 
         Returns:
-            Agent response with content and metadata
+            Agent response with content and metadata, or None on error
         """
-        context = ChatContext(
-            user_input=message, conversation_history=self._convert_history(conversation_history)
-        )
+        # Rate limiting for AI queries (Best Practice 2025)
+        from openfatture.web.utils.security import check_rate_limit
 
-        return run_async(self.chat_agent.execute(context))
+        if not check_rate_limit("ai_chat", max_calls=10, window_seconds=60):
+            from openfatture.web.utils.logging_config import log_user_action
+
+            log_user_action("rate_limit_exceeded", {"action": "ai_chat"})
+            return None
+
+        try:
+            context = ChatContext(
+                user_input=message, conversation_history=self._convert_history(conversation_history)
+            )
+
+            return run_async(self.chat_agent.execute(context))
+        except Exception as e:
+            from openfatture.web.utils.logging_config import log_error
+
+            log_error(
+                e,
+                "ai_chat",
+                {"message_length": len(message), "history_length": len(conversation_history)},
+            )
+            return None
 
     async def chat_stream(
         self, message: str, conversation_history: list[dict[str, str]]
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[tuple[str, Any], None]:
         """
-        Send a chat message and stream response chunks.
+        Send a chat message and stream response chunks with tool calling events.
 
         Args:
             message: User message
             conversation_history: Previous conversation
 
         Yields:
-            Response text chunks
+            Tuples of (chunk_type, data) where:
+            - chunk_type: "text" for regular text, "tool_event" for tool calling events
+            - data: The text chunk or ToolCallEvent object
         """
         context = ChatContext(
             user_input=message, conversation_history=self._convert_history(conversation_history)
         )
 
         async for chunk in self.chat_agent.execute_stream(context):
-            yield chunk
+            # Check if this chunk contains a tool call event
+            tool_event = ToolCallEvent.from_chunk(chunk)
+            if tool_event:
+                yield ("tool_event", tool_event)
+            else:
+                yield ("text", chunk)
 
     def generate_invoice_description(
         self,

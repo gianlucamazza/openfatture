@@ -14,10 +14,7 @@ Web interface moderna per OpenFatture basata su **Streamlit**.
 
 ### In Sviluppo
 
-- **👥 Clienti** - Gestione completa clienti (CRUD)
-- **💰 Pagamenti** - Import estratti conto, riconciliazione interattiva
 - **📈 Analytics** - Grafici avanzati, export report
-- **✏️ Creazione Fatture** - Wizard multi-step guidato
 
 ## Installazione 📦
 
@@ -247,10 +244,10 @@ invoices = get_invoices(limit=50)
 - [x] Utilities (cache, async, state)
 
 ### Phase 2 (Next) 🔨
-- [ ] Wizard creazione fattura
-- [ ] Gestione clienti (CRUD completo)
-- [ ] Upload estratti conto
-- [ ] Matching pagamenti interattivo
+- [x] Wizard creazione fattura
+- [x] Gestione clienti (CRUD completo)
+- [x] Upload estratti conto
+- [x] Matching pagamenti interattivo
 
 ### Phase 3 (Future) 🚀
 - [ ] Cash flow forecast visualization
