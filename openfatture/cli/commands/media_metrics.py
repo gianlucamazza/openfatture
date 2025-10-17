@@ -297,7 +297,7 @@ def dashboard():
 
         # Recent alerts
         if alerts_list:
-            recent_alerts = [a for a in alerts_list[-5:]]  # Last 5 alerts
+            recent_alerts = list(alerts_list[-5:])  # Last 5 alerts
             console.print("🚨 [bold]Recent Alerts[/bold]")
             for alert in recent_alerts:
                 level = alert.get("level", "info")

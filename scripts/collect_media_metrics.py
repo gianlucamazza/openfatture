@@ -447,7 +447,7 @@ class MediaMetricsCollector:
             "avg_cost_per_run_usd": total_cost / total_runs if total_runs > 0 else 0,
             "total_duration_seconds": total_duration,
             "avg_duration_seconds": total_duration / total_runs if total_runs > 0 else 0,
-            "scenarios_covered": len(set(run.get("scenario", "") for run in recent_runs)),
+            "scenarios_covered": len({run.get("scenario", "") for run in recent_runs}),
         }
 
     def _load_json_list(self, file_path: Path) -> list[dict]:

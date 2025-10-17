@@ -149,27 +149,22 @@ class LifespanManager:
         except Exception as e:
             logger.warning(f"Failed to initialize Lightning integration: {e}")
 
-            # Only start retraining if scheduler is initialized
-            if self.retraining_scheduler:
-                retraining_status = self.retraining_scheduler.get_status()
+        # Start retraining scheduler if initialized
+        if self.retraining_scheduler:
+            retraining_status = self.retraining_scheduler.get_status()
 
-                if retraining_status["enabled"]:
-                    logger.info("ML retraining enabled, starting scheduler")
-                    self.retraining_scheduler.start()
-                    logger.info(
-                        "Retraining scheduler started",
-                        interval_hours=retraining_status["interval_hours"],
-                        dry_run=retraining_status["dry_run"],
-                    )
-                else:
-                    logger.debug("ML retraining disabled")
+            if retraining_status["enabled"]:
+                logger.info("ML retraining enabled, starting scheduler")
+                self.retraining_scheduler.start()
+                logger.info(
+                    "Retraining scheduler started",
+                    interval_hours=retraining_status["interval_hours"],
+                    dry_run=retraining_status["dry_run"],
+                )
+            else:
+                logger.debug("ML retraining disabled")
 
-                logger.info("Self-learning systems initialized successfully")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize self-learning systems: {e}", exc_info=True)
-            # Don't fail startup if self-learning systems fail
-            # They are optional enhancements
+            logger.info("Self-learning systems initialized successfully")
 
     async def _graceful_shutdown(self) -> None:
         """Perform graceful shutdown of all resources."""

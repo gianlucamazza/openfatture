@@ -241,7 +241,7 @@ class NotificationManager:
 
             dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
             return dt.timestamp()
-        except:
+        except Exception:
             return None
 
 

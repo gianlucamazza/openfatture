@@ -72,9 +72,9 @@ class TestEndToEndWorkflowPerformance:
 
         for query in queries:
 
-            async def search_flow():
+            async def search_flow(q=query):
                 # Retrieve
-                results = await e2e_retriever.retrieve(query, top_k=5)
+                results = await e2e_retriever.retrieve(q, top_k=5)
 
                 # Format
                 formatted = e2e_retriever.format_results(results)

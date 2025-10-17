@@ -4,7 +4,7 @@ Consistent alert/notification components for user feedback.
 """
 
 from collections.abc import Callable
-from typing import Literal, cast
+from typing import Literal
 
 import streamlit as st
 

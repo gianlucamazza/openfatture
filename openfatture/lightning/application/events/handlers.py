@@ -474,8 +474,8 @@ def register_lightning_event_handlers(event_bus):
         handler_instance = handler_class()
 
         # Create async wrapper for the handler
-        async def async_handler(event):
-            await handler_instance.handle(event)
+        async def async_handler(event, handler=handler_instance):
+            await handler.handle(event)
 
         event_bus.subscribe(event_type, async_handler)
         print(f"Registered Lightning event handler: {event_type.__name__}")
