@@ -430,19 +430,37 @@ class TestStreamingToolCalls:
     async def test_openai_stream_structured_basic_content_only(self, mock_openai_provider):
         """Test stream_structured yields content chunks without tools."""
 
-        final_response = SimpleNamespace(
-            status=SimpleNamespace(value="stop"),
-            usage=SimpleNamespace(input_tokens=0, output_tokens=0, total_tokens=0),
-        )
+        # Chat Completions API streaming format
         events = [
-            SimpleNamespace(type="response.output_text.delta", delta="Hello"),
-            SimpleNamespace(type="response.output_text.delta", delta=" world"),
-            SimpleNamespace(type="response.completed", response=final_response),
+            SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content="Hello", tool_calls=None), finish_reason=None
+                    )
+                ],
+                usage=None,
+            ),
+            SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=" world", tool_calls=None), finish_reason=None
+                    )
+                ],
+                usage=None,
+            ),
+            SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=None, tool_calls=None), finish_reason="stop"
+                    )
+                ],
+                usage=SimpleNamespace(input_tokens=10, output_tokens=5, total_tokens=15),
+            ),
         ]
 
-        mock_openai_provider.client.responses.stream.return_value = MockResponseStream(
+        mock_openai_provider.client.chat.completions.create.return_value = MockResponseStream(
             events=events,
-            final_response=final_response,
+            final_response=None,
         )
 
         messages = [Message(role=Role.USER, content="Test")]
@@ -460,38 +478,46 @@ class TestStreamingToolCalls:
     async def test_openai_stream_structured_tool_calls_single(self, mock_openai_provider):
         """Test stream_structured yields tool calls correctly."""
 
-        final_response = SimpleNamespace(
-            status=SimpleNamespace(value="tool_calls"),
-            usage=SimpleNamespace(input_tokens=0, output_tokens=0, total_tokens=0),
+        # Chat Completions API streaming format with tool calls
+        tool_call_delta = SimpleNamespace(
+            index=0,
+            id="call_123",
+            function=SimpleNamespace(name="search_invoices", arguments='{"query": "test"}'),
         )
+
         events = [
-            SimpleNamespace(type="response.output_text.delta", delta="I'll help you"),
             SimpleNamespace(
-                type="response.output_item.added",
-                item=SimpleNamespace(
-                    type="function_call",
-                    id="call_123",
-                    call_id="call_123",
-                    name="search_invoices",
-                ),
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content="I'll help you", tool_calls=None),
+                        finish_reason=None,
+                    )
+                ],
+                usage=None,
             ),
             SimpleNamespace(
-                type="response.function_call_arguments.delta",
-                item_id="call_123",
-                snapshot='{"query": "test"}',
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=None, tool_calls=[tool_call_delta]),
+                        finish_reason=None,
+                    )
+                ],
+                usage=None,
             ),
             SimpleNamespace(
-                type="response.function_call_arguments.done",
-                item_id="call_123",
-                name="search_invoices",
-                arguments='{"query": "test"}',
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=None, tool_calls=None),
+                        finish_reason="tool_calls",
+                    )
+                ],
+                usage=SimpleNamespace(input_tokens=15, output_tokens=10, total_tokens=25),
             ),
-            SimpleNamespace(type="response.completed", response=final_response),
         ]
 
-        mock_openai_provider.client.responses.stream.return_value = MockResponseStream(
+        mock_openai_provider.client.chat.completions.create.return_value = MockResponseStream(
             events=events,
-            final_response=final_response,
+            final_response=None,
         )
 
         messages = [Message(role=Role.USER, content="Search for test invoices")]
@@ -513,58 +539,60 @@ class TestStreamingToolCalls:
     async def test_openai_stream_structured_tool_calls_multiple(self, mock_openai_provider):
         """Test stream_structured handles multiple tool calls."""
 
-        final_response = SimpleNamespace(
-            status=SimpleNamespace(value="tool_calls"),
-            usage=SimpleNamespace(input_tokens=0, output_tokens=0, total_tokens=0),
+        # Chat Completions API streaming format with multiple tool calls
+        tool_call_1 = SimpleNamespace(
+            index=0,
+            id="call_123",
+            function=SimpleNamespace(name="search_invoices", arguments='{"query": "revenue"}'),
         )
+        tool_call_2 = SimpleNamespace(
+            index=1,
+            id="call_456",
+            function=SimpleNamespace(name="analyze_revenue", arguments='{"period": "2024"}'),
+        )
+
         events = [
-            SimpleNamespace(type="response.output_text.delta", delta="I'll search and analyze"),
             SimpleNamespace(
-                type="response.output_item.added",
-                item=SimpleNamespace(
-                    type="function_call",
-                    id="call_123",
-                    call_id="call_123",
-                    name="search_invoices",
-                ),
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content="I'll search and analyze", tool_calls=None),
+                        finish_reason=None,
+                    )
+                ],
+                usage=None,
             ),
             SimpleNamespace(
-                type="response.function_call_arguments.delta",
-                item_id="call_123",
-                snapshot='{"query": "revenue"}',
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=None, tool_calls=[tool_call_1]),
+                        finish_reason=None,
+                    )
+                ],
+                usage=None,
             ),
             SimpleNamespace(
-                type="response.function_call_arguments.done",
-                item_id="call_123",
-                name="search_invoices",
-                arguments='{"query": "revenue"}',
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=None, tool_calls=[tool_call_2]),
+                        finish_reason=None,
+                    )
+                ],
+                usage=None,
             ),
             SimpleNamespace(
-                type="response.output_item.added",
-                item=SimpleNamespace(
-                    type="function_call",
-                    id="call_456",
-                    call_id="call_456",
-                    name="analyze_revenue",
-                ),
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=None, tool_calls=None),
+                        finish_reason="tool_calls",
+                    )
+                ],
+                usage=SimpleNamespace(input_tokens=20, output_tokens=15, total_tokens=35),
             ),
-            SimpleNamespace(
-                type="response.function_call_arguments.delta",
-                item_id="call_456",
-                snapshot='{"period": "2024"}',
-            ),
-            SimpleNamespace(
-                type="response.function_call_arguments.done",
-                item_id="call_456",
-                name="analyze_revenue",
-                arguments='{"period": "2024"}',
-            ),
-            SimpleNamespace(type="response.completed", response=final_response),
         ]
 
-        mock_openai_provider.client.responses.stream.return_value = MockResponseStream(
+        mock_openai_provider.client.chat.completions.create.return_value = MockResponseStream(
             events=events,
-            final_response=final_response,
+            final_response=None,
         )
 
         messages = [Message(role=Role.USER, content="Analyze revenue for 2024")]
@@ -585,38 +613,46 @@ class TestStreamingToolCalls:
     async def test_openai_stream_structured_malformed_json(self, mock_openai_provider):
         """Test stream_structured handles malformed tool call arguments."""
 
-        final_response = SimpleNamespace(
-            status=SimpleNamespace(value="tool_calls"),
-            usage=SimpleNamespace(input_tokens=0, output_tokens=0, total_tokens=0),
+        # Chat Completions API streaming format with malformed JSON
+        tool_call_delta = SimpleNamespace(
+            index=0,
+            id="call_123",
+            function=SimpleNamespace(name="search_invoices", arguments="{invalid json"),
         )
+
         events = [
-            SimpleNamespace(type="response.output_text.delta", delta="Calling tool"),
             SimpleNamespace(
-                type="response.output_item.added",
-                item=SimpleNamespace(
-                    type="function_call",
-                    id="call_123",
-                    call_id="call_123",
-                    name="search_invoices",
-                ),
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content="Calling tool", tool_calls=None),
+                        finish_reason=None,
+                    )
+                ],
+                usage=None,
             ),
             SimpleNamespace(
-                type="response.function_call_arguments.delta",
-                item_id="call_123",
-                snapshot="{invalid json",
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=None, tool_calls=[tool_call_delta]),
+                        finish_reason=None,
+                    )
+                ],
+                usage=None,
             ),
             SimpleNamespace(
-                type="response.function_call_arguments.done",
-                item_id="call_123",
-                name="search_invoices",
-                arguments="{invalid json",
+                choices=[
+                    SimpleNamespace(
+                        delta=SimpleNamespace(content=None, tool_calls=None),
+                        finish_reason="tool_calls",
+                    )
+                ],
+                usage=SimpleNamespace(input_tokens=12, output_tokens=8, total_tokens=20),
             ),
-            SimpleNamespace(type="response.completed", response=final_response),
         ]
 
-        mock_openai_provider.client.responses.stream.return_value = MockResponseStream(
+        mock_openai_provider.client.chat.completions.create.return_value = MockResponseStream(
             events=events,
-            final_response=final_response,
+            final_response=None,
         )
 
         messages = [Message(role=Role.USER, content="Test malformed JSON")]
