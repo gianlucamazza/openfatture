@@ -56,8 +56,8 @@ class StreamlitReportService:
         invoices = query.all()
 
         # Calculate totals
-        total_revenue = sum(float(f.totale) for f in invoices)
-        total_vat = sum(float(f.iva) for f in invoices)
+        total_revenue = sum(float(f.totale or 0) for f in invoices)
+        total_vat = sum(float(f.iva or 0) for f in invoices)
         total_invoices = len(invoices)
 
         # Monthly breakdown
@@ -73,7 +73,7 @@ class StreamlitReportService:
 
             month_invoices = [f for f in invoices if month_start <= f.data_emissione <= month_end]
             monthly_data[month] = {
-                "revenue": sum(float(f.totale) for f in month_invoices),
+                "revenue": sum(float(f.totale or 0) for f in month_invoices),
                 "invoices": len(month_invoices),
             }
 
@@ -173,7 +173,7 @@ class StreamlitReportService:
         invoices = query.all()
 
         # Group by client
-        client_data = {}
+        client_data: dict[str, Any] = {}
         for invoice in invoices:
             if invoice.cliente:
                 client_name = invoice.cliente.denominazione

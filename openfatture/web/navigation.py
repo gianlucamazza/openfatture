@@ -19,10 +19,12 @@ Benefits:
 - Better control over page order and grouping
 """
 
+from typing import Any
+
 import streamlit as st
 
 
-def create_page_registry() -> dict[str, st.Page]:
+def create_page_registry() -> dict[str, Any]:
     """
     Create registry of all application pages using st.Page.
 
@@ -107,7 +109,7 @@ def create_page_registry() -> dict[str, st.Page]:
     }
 
 
-def setup_navigation() -> st.Page:
+def setup_navigation() -> Any:
     """
     Setup modern navigation with st.navigation and grouped pages.
 
@@ -152,7 +154,7 @@ def setup_navigation() -> st.Page:
     return navigation
 
 
-def setup_navigation_with_conditions() -> st.Page:
+def setup_navigation_with_conditions() -> Any:
     """
     Setup conditional navigation based on features/auth.
 

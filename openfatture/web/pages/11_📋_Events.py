@@ -51,31 +51,29 @@ selected_days = st.sidebar.selectbox(
 
 # Event type filter
 available_event_types = events_service.get_available_event_types()
+event_type_filter: list[str] | None = None
 if available_event_types:
-    event_type_filter = st.sidebar.multiselect(
+    event_type_filter_raw = st.sidebar.multiselect(
         "Tipo Evento",
         ["Tutti"] + available_event_types,
         default=["Tutti"],
         help="Filtra per tipo di evento",
     )
-    if "Tutti" in event_type_filter:
-        event_type_filter = None
-else:
-    event_type_filter = None
+    if "Tutti" not in event_type_filter_raw:
+        event_type_filter = event_type_filter_raw
 
 # Entity type filter
 available_entity_types = events_service.get_available_entity_types()
+entity_type_filter: list[str] | None = None
 if available_entity_types:
-    entity_type_filter = st.sidebar.multiselect(
+    entity_type_filter_raw = st.sidebar.multiselect(
         "Tipo Entità",
         ["Tutti"] + available_entity_types,
         default=["Tutti"],
         help="Filtra per tipo di entità",
     )
-    if "Tutti" in entity_type_filter:
-        entity_type_filter = None
-else:
-    entity_type_filter = None
+    if "Tutti" not in entity_type_filter_raw:
+        entity_type_filter = entity_type_filter_raw
 
 # Search
 search_term = st.sidebar.text_input(

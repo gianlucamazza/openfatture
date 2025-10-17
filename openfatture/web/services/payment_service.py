@@ -374,7 +374,8 @@ class StreamlitPaymentService:
         db = get_db_session()
         try:
             # Search for unpaid invoices that match the search term
-            invoices = (
+            # Note: oggetto search is done post-query to avoid mypy SQLAlchemy issues
+            invoices_query = (
                 db.query(Fattura)
                 .join(Fattura.cliente)
                 .filter(
@@ -385,11 +386,25 @@ class StreamlitPaymentService:
                 .filter(
                     (Fattura.numero.contains(search_term))
                     | (Fattura.cliente.denominazione.contains(search_term))
-                    | (Fattura.oggetto.contains(search_term))
                 )
-                .limit(limit)
-                .all()
             )
+
+            # Get all matching invoices
+            all_invoices = invoices_query.all()
+
+            # Filter additionally by oggetto if present (post-query to avoid SQLAlchemy type issues)
+            invoices = (
+                [
+                    inv
+                    for inv in all_invoices
+                    if inv.oggetto and search_term.lower() in inv.oggetto.lower()
+                ]
+                if search_term
+                else all_invoices
+            )
+
+            # Limit results
+            invoices = invoices[:limit]
 
             matches = []
             for invoice in invoices:

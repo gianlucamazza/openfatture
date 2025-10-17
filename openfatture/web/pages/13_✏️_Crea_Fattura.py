@@ -12,7 +12,6 @@ import streamlit as st
 from openfatture.web.services.ai_service import get_ai_service
 from openfatture.web.services.client_service import StreamlitClientService
 from openfatture.web.services.invoice_service import StreamlitInvoiceService
-from openfatture.web.utils.async_helpers import run_async
 from openfatture.web.utils.state import init_wizard_state, reset_wizard
 
 
@@ -353,12 +352,10 @@ def step_4_ai_assistance(wizard_state: dict[str, Any]) -> bool:
                             Rendi la descrizione formale, completa e professionale per una fattura italiana.
                             Massimo 200 caratteri."""
 
-                            enhanced_desc = run_async(
-                                ai_service.generate_invoice_description(prompt)
-                            )
+                            response = ai_service.generate_invoice_description(prompt)
 
-                            if enhanced_desc:
-                                item["descrizione"] = enhanced_desc
+                            if response and response.content:
+                                item["descrizione"] = response.content
                                 st.success(f"Descrizione riga {i + 1} migliorata!")
 
                         except Exception as e:
@@ -386,7 +383,12 @@ def step_4_ai_assistance(wizard_state: dict[str, Any]) -> bool:
 
                         Fornisci solo l'aliquota IVA corretta (numero) o "OK" se è corretta."""
 
-                        suggestion = run_async(ai_service.suggest_vat(prompt))
+                        response = ai_service.suggest_vat(prompt)
+
+                        if response and response.content:
+                            suggestion = response.content
+                        else:
+                            suggestion = ""
 
                         if suggestion and suggestion.strip() != "OK":
                             try:
@@ -535,12 +537,15 @@ def step_5_summary_and_create(wizard_state: dict[str, Any]) -> bool:
                     righe_data=righe_data,
                 )
 
+                if not fattura:
+                    raise ValueError("Impossibile creare la fattura")
+
                 st.success(f"✅ Fattura {fattura.numero}/{fattura.anno} creata con successo!")
 
                 # Clear wizard state
                 reset_wizard()
 
-                # Show next steps
+                # Show next steps (fattura is guaranteed non-None here due to check above)
                 st.info(
                     f"""
                 **Prossimi passi:**

@@ -3,8 +3,8 @@
 Displays key business metrics, charts, and recent activity.
 """
 
-import plotly.express as px  # type: ignore[import-untyped]
-import plotly.graph_objects as go  # type: ignore[import-untyped]
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from openfatture.cli.ui.dashboard import DashboardData

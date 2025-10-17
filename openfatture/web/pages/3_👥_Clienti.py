@@ -6,6 +6,7 @@ List, view, create, and manage clients through web interface.
 import pandas as pd
 import streamlit as st
 
+from openfatture.storage.database.models import Cliente
 from openfatture.web.services.client_service import StreamlitClientService
 
 st.set_page_config(page_title="Clienti - OpenFatture", page_icon="👥", layout="wide")
@@ -260,34 +261,34 @@ except Exception as e:
 
 # Client detail modal
 if st.session_state.get("show_client_detail", False):
-    client_id = st.session_state.get("selected_client_id")
-    if client_id:
-        client = client_service.get_client_detail(client_id)
-        if client:
-            with st.expander(f"👁️ Dettagli Cliente: {client.denominazione}", expanded=True):
+    client_id_raw = st.session_state.get("selected_client_id")
+    if client_id_raw and isinstance(client_id_raw, int):
+        client_detail: Cliente | None = client_service.get_client_detail(client_id_raw)
+        if client_detail:
+            with st.expander(f"👁️ Dettagli Cliente: {client_detail.denominazione}", expanded=True):
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.write(f"**ID:** {client.id}")
-                    st.write(f"**Denominazione:** {client.denominazione}")
-                    st.write(f"**P.IVA:** {client.partita_iva or 'N/A'}")
-                    st.write(f"**Codice Fiscale:** {client.codice_fiscale or 'N/A'}")
+                    st.write(f"**ID:** {client_detail.id}")
+                    st.write(f"**Denominazione:** {client_detail.denominazione}")
+                    st.write(f"**P.IVA:** {client_detail.partita_iva or 'N/A'}")
+                    st.write(f"**Codice Fiscale:** {client_detail.codice_fiscale or 'N/A'}")
 
                 with col2:
-                    st.write(f"**SDI:** {client.codice_destinatario or 'N/A'}")
-                    st.write(f"**PEC:** {client.pec or 'N/A'}")
-                    st.write(f"**Telefono:** {client.telefono or 'N/A'}")
-                    st.write(f"**Email:** {client.email or 'N/A'}")
+                    st.write(f"**SDI:** {client_detail.codice_destinatario or 'N/A'}")
+                    st.write(f"**PEC:** {client_detail.pec or 'N/A'}")
+                    st.write(f"**Telefono:** {client_detail.telefono or 'N/A'}")
+                    st.write(f"**Email:** {client_detail.email or 'N/A'}")
 
-                if client.indirizzo:
-                    st.write(f"**Indirizzo:** {client.indirizzo}")
-                    if client.cap and client.comune:
+                if client_detail.indirizzo:
+                    st.write(f"**Indirizzo:** {client_detail.indirizzo}")
+                    if client_detail.cap and client_detail.comune:
                         st.write(
-                            f"**Città:** {client.cap} {client.comune} ({client.provincia or ''})"
+                            f"**Città:** {client_detail.cap} {client_detail.comune} ({client_detail.provincia or ''})"
                         )
 
-                if client.note:
-                    st.write(f"**Note:** {client.note}")
+                if client_detail.note:
+                    st.write(f"**Note:** {client_detail.note}")
 
                 if st.button("❌ Chiudi", key="close_detail"):
                     st.session_state.show_client_detail = False
@@ -298,42 +299,46 @@ if st.session_state.get("show_client_detail", False):
 
 # Edit client modal
 if st.session_state.get("show_edit_client", False):
-    client_id = st.session_state.get("selected_client_id")
-    if client_id:
-        client = client_service.get_client_detail(client_id)
-        if client:
-            with st.expander(f"✏️ Modifica Cliente: {client.denominazione}", expanded=True):
-                with st.form(f"edit_client_form_{client_id}"):
+    client_id_raw = st.session_state.get("selected_client_id")
+    if client_id_raw and isinstance(client_id_raw, int):
+        client_edit: Cliente | None = client_service.get_client_detail(client_id_raw)
+        if client_edit:
+            with st.expander(f"✏️ Modifica Cliente: {client_edit.denominazione}", expanded=True):
+                with st.form(f"edit_client_form_{client_id_raw}"):
                     col1, col2 = st.columns(2)
 
                     with col1:
-                        denominazione = st.text_input("Denominazione *", value=client.denominazione)
-                        partita_iva = st.text_input("Partita IVA", value=client.partita_iva or "")
+                        denominazione = st.text_input(
+                            "Denominazione *", value=client_edit.denominazione
+                        )
+                        partita_iva = st.text_input(
+                            "Partita IVA", value=client_edit.partita_iva or ""
+                        )
                         codice_fiscale = st.text_input(
-                            "Codice Fiscale", value=client.codice_fiscale or ""
+                            "Codice Fiscale", value=client_edit.codice_fiscale or ""
                         )
 
                     with col2:
                         codice_destinatario = st.text_input(
-                            "Codice SDI", value=client.codice_destinatario or ""
+                            "Codice SDI", value=client_edit.codice_destinatario or ""
                         )
-                        pec = st.text_input("PEC", value=client.pec or "")
+                        pec = st.text_input("PEC", value=client_edit.pec or "")
 
                     col3, col4 = st.columns(2)
 
                     with col3:
-                        indirizzo = st.text_input("Indirizzo", value=client.indirizzo or "")
-                        cap = st.text_input("CAP", value=client.cap or "")
-                        telefono = st.text_input("Telefono", value=client.telefono or "")
+                        indirizzo = st.text_input("Indirizzo", value=client_edit.indirizzo or "")
+                        cap = st.text_input("CAP", value=client_edit.cap or "")
+                        telefono = st.text_input("Telefono", value=client_edit.telefono or "")
 
                     with col4:
-                        comune = st.text_input("Comune", value=client.comune or "")
+                        comune = st.text_input("Comune", value=client_edit.comune or "")
                         provincia = st.text_input(
-                            "Provincia", value=client.provincia or "", max_chars=2
+                            "Provincia", value=client_edit.provincia or "", max_chars=2
                         ).upper()
-                        email = st.text_input("Email", value=client.email or "")
+                        email = st.text_input("Email", value=client_edit.email or "")
 
-                    note = st.text_area("Note", value=client.note or "", height=80)
+                    note = st.text_area("Note", value=client_edit.note or "", height=80)
 
                     col_save, col_cancel = st.columns([1, 1])
 
@@ -372,7 +377,7 @@ if st.session_state.get("show_edit_client", False):
                                 }
 
                                 updated_client = client_service.update_client(
-                                    client_id, client_data
+                                    client_id_raw, client_data
                                 )
                                 if updated_client:
                                     st.success(
@@ -392,12 +397,14 @@ if st.session_state.get("show_edit_client", False):
 
 # Delete confirmation modal
 if st.session_state.get("show_delete_confirm", False):
-    client_id = st.session_state.get("selected_client_id")
-    if client_id:
-        client = client_service.get_client_detail(client_id)
-        if client:
-            with st.expander(f"🗑️ Elimina Cliente: {client.denominazione}", expanded=True):
-                st.warning(f"⚠️ Sei sicuro di voler eliminare il cliente '{client.denominazione}'?")
+    client_id_raw = st.session_state.get("selected_client_id")
+    if client_id_raw and isinstance(client_id_raw, int):
+        client_delete: Cliente | None = client_service.get_client_detail(client_id_raw)
+        if client_delete:
+            with st.expander(f"🗑️ Elimina Cliente: {client_delete.denominazione}", expanded=True):
+                st.warning(
+                    f"⚠️ Sei sicuro di voler eliminare il cliente '{client_delete.denominazione}'?"
+                )
                 st.write("Questa azione non può essere annullata.")
 
                 col_yes, col_no = st.columns([1, 3])
@@ -405,9 +412,9 @@ if st.session_state.get("show_delete_confirm", False):
                 with col_yes:
                     if st.button("🗑️ Sì, Elimina", type="primary", use_container_width=True):
                         try:
-                            deleted = client_service.delete_client(client_id)
+                            deleted = client_service.delete_client(client_id_raw)
                             if deleted:
-                                st.success(f"✅ Cliente '{client.denominazione}' eliminato!")
+                                st.success(f"✅ Cliente '{client_delete.denominazione}' eliminato!")
                                 st.session_state.show_delete_confirm = False
                                 st.cache_data.clear()
                                 st.rerun()

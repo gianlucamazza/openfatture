@@ -150,7 +150,7 @@ with tab_export:
     # Export options
     filters = {}
     include_lines = False
-    export_year = "Tutti"
+    export_year: str | int = "Tutti"
 
     if export_type == "Fatture":
         col1, col2 = st.columns(2)
