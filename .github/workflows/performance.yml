@@ -66,7 +66,7 @@ jobs:
           if [ -f ".benchmarks/baseline.json" ] && [ -s ".benchmarks/baseline.json" ]; then
             # Validate JSON using python to ensure we don't attempt to parse invalid/empty JSON later
             python3 - <<'PY'
-          import json,sys
+          import json, sys
           try:
               with open('.benchmarks/baseline.json', 'r') as f:
                   json.load(f)
