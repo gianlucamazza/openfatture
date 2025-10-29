@@ -59,13 +59,13 @@ class TestInvoiceCreationWizard:
         has_products = len(wizard_state.get("line_items", [])) > 0
         assert has_products
 
-    @patch("openfatture.web.services.invoice_service.get_session")
+    @patch("openfatture.web.services.invoice_service.get_db_session")
     @patch("openfatture.web.services.invoice_service.StreamlitInvoiceService")
-    def test_invoice_creation_service(self, mock_service, mock_get_session):
+    def test_invoice_creation_service(self, mock_service, mock_get_db_session):
         """Test the invoice creation service."""
         # Mock database session
         mock_session = Mock()
-        mock_get_session.return_value = mock_session
+        mock_get_db_session.return_value = mock_session
 
         # Mock the service
         mock_instance = Mock()
