@@ -44,6 +44,10 @@ class MockBTCConverter:
             "source": "mock",
         }
 
+    async def get_rate_info(self) -> dict[str, Any]:
+        """Get rate information (alias for get_current_rate)."""
+        return await self.get_current_rate()
+
 
 class MockLNDClient:
     """Mock LND client for testing."""
@@ -51,6 +55,7 @@ class MockLNDClient:
     def __init__(self):
         """Initialize mock LND client."""
         self.invoices: dict[str, dict[str, Any]] = {}
+        self._invoices: dict[str, dict[str, Any]] = self.invoices  # For compatibility with simulate_payment
         # Valid compressed pubkey (66 hex chars, must start with 02 or 03)
         self.node_info = NodeInfo(
             pubkey="03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad",

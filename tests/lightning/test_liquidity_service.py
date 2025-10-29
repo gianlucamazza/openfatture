@@ -24,8 +24,8 @@ class TestLightningLiquidityService:
             ChannelInfo(
                 channel_id="ch1",
                 capacity_sat=1_000_000,
-                local_balance_sat=800_000,  # High outbound (80%)
-                remote_balance_sat=200_000,  # Low inbound (20%)
+                local_balance_sat=810_000,  # High outbound (81%)
+                remote_balance_sat=190_000,  # Low inbound (19% < 20% min)
                 status="open",
                 peer_pubkey="peer1",
                 peer_alias="Peer One",
@@ -83,10 +83,10 @@ class TestLightningLiquidityService:
         assert metrics.total_capacity_sat == 2_250_000  # 1M + 500k + 750k
 
         # Check ratios are calculated correctly
-        expected_inbound_ratio = (200_000 + 400_000 + 375_000) / 2_250_000  # ~0.437
+        expected_inbound_ratio = (190_000 + 400_000 + 375_000) / 2_250_000  # ~0.429
         assert abs(metrics.inbound_ratio - expected_inbound_ratio) < 0.01
 
-        expected_outbound_ratio = (800_000 + 100_000 + 375_000) / 2_250_000  # ~0.563
+        expected_outbound_ratio = (810_000 + 100_000 + 375_000) / 2_250_000  # ~0.571
         assert abs(metrics.outbound_ratio - expected_outbound_ratio) < 0.01
 
     @pytest.mark.asyncio
