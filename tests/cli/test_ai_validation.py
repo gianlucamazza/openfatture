@@ -128,8 +128,8 @@ class TestAISuggestVATCommandValidation:
 
     @patch("openfatture.cli.commands.ai.create_provider")
     @patch("openfatture.cli.commands.ai.enrich_with_rag")
-    @patch("openfatture.cli.commands.ai.TaxAdvisorAgent")
-    @patch("openfatture.cli.commands.ai.TaxContext")
+    @patch("openfatture.ai.agents.tax_advisor.TaxAdvisorAgent")
+    @patch("openfatture.ai.domain.context.TaxContext")
     def test_suggest_vat_valid_description(
         self, mock_context, mock_agent, mock_enrich, mock_provider
     ):
@@ -154,8 +154,8 @@ class TestAISuggestVATCommandValidation:
 
     @patch("openfatture.cli.commands.ai.create_provider")
     @patch("openfatture.cli.commands.ai.enrich_with_rag")
-    @patch("openfatture.cli.commands.ai.TaxAdvisorAgent")
-    @patch("openfatture.cli.commands.ai.TaxContext")
+    @patch("openfatture.ai.agents.tax_advisor.TaxAdvisorAgent")
+    @patch("openfatture.ai.domain.context.TaxContext")
     def test_suggest_vat_with_all_options(
         self, mock_context, mock_agent, mock_enrich, mock_provider
     ):
@@ -193,8 +193,8 @@ class TestAISuggestVATCommandValidation:
 
     @patch("openfatture.cli.commands.ai.create_provider")
     @patch("openfatture.cli.commands.ai.enrich_with_rag")
-    @patch("openfatture.cli.commands.ai.TaxAdvisorAgent")
-    @patch("openfatture.cli.commands.ai.TaxContext")
+    @patch("openfatture.ai.agents.tax_advisor.TaxAdvisorAgent")
+    @patch("openfatture.ai.domain.context.TaxContext")
     def test_suggest_vat_foreign_client(self, mock_context, mock_agent, mock_enrich, mock_provider):
         """Test VAT suggestion for foreign client."""
         # Mock successful agent execution
@@ -402,7 +402,7 @@ class TestAIForecastCommandValidation:
 
     def test_forecast_default_parameters(self):
         """Test forecast command with default parameters."""
-        with patch("openfatture.cli.commands.ai.CashFlowPredictorAgent") as mock_agent_class:
+        with patch("openfatture.ai.agents.cash_flow_predictor.CashFlowPredictorAgent") as mock_agent_class:
             mock_agent = Mock()
             mock_forecast = Mock()
             mock_forecast.months = 3
