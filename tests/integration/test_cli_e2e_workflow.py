@@ -138,7 +138,7 @@ class TestInvoiceCLIE2E:
             numero="001",
             anno=2025,
             data_emissione="2025-01-15",
-            appente_id=appente.id,
+            cliente_id=appente.id,
             tipo_documento=TipoDocumento.TD01,
             stato=StatoFattura.BOZZA,
             imponibile=1000.00,
@@ -173,7 +173,7 @@ class TestInvoiceCLIE2E:
             numero="PDF001",
             anno=2025,
             data_emissione="2025-01-15",
-            appente_id=appente.id,
+            cliente_id=appente.id,
             tipo_documento=TipoDocumento.TD01,
             stato=StatoFattura.BOZZA,
             imponibile=1000.00,
@@ -241,7 +241,7 @@ class TestPaymentCLIE2E:
 class TestAIAssistanceE2E:
     """Test AI assistance workflows via CLI."""
 
-    @patch("openfatture.ai.providers.factory.LLMProviderFactory.create_provider")
+    @patch("openfatture.ai.providers.factory.create_provider")
     def test_ai_describe_invoice_via_app(self, mock_factory, app_runner, temp_config):
         """Test AI invoice description through CLI."""
         # Mock AI provider
@@ -261,7 +261,7 @@ class TestAIAssistanceE2E:
             assert result.exit_code == 0
             assert "Consulenza informatica" in result.output
 
-    @patch("openfatture.ai.providers.factory.LLMProviderFactory.create_provider")
+    @patch("openfatture.ai.providers.factory.create_provider")
     def test_ai_tax_advice_via_app(self, mock_factory, app_runner, temp_config):
         """Test AI tax advice through CLI."""
         # Mock AI provider
