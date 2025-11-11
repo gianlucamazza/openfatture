@@ -25,7 +25,7 @@ from openfatture.storage.database.models import (
 )
 from openfatture.utils.config import get_settings
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 
@@ -48,6 +48,14 @@ def crea_fattura(
 ) -> None:
     """
     Create a new invoice (interactive wizard).
+
+    This command guides you through creating a complete invoice with line items,
+    taxes, and client selection. If no client ID is provided, you'll be prompted
+    to select from existing clients.
+
+    Examples:
+        openfatture fattura crea
+        openfatture fattura crea --cliente 1
     """
     ensure_db()
 
@@ -525,9 +533,14 @@ def invia_fattura(
     pec: bool = typer.Option(True, "--pec", help="Send via PEC"),
 ) -> None:
     """
-    Send invoice to SDI.
+    Send invoice to SDI via PEC.
 
-    Note: This will generate XML and send via PEC in one command.
+    Generates FatturaPA XML, validates it, and sends to SDI through PEC.
+    The invoice status will be updated to 'inviata' upon successful sending.
+
+    Examples:
+        openfatture fattura invia 123
+        openfatture fattura invia 456 --pec
     """
     ensure_db()
 

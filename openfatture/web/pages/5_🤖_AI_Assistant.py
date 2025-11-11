@@ -13,6 +13,7 @@ from openfatture.web.services.ai_service import get_ai_service
 from openfatture.web.services.custom_commands_service import get_custom_commands_service
 from openfatture.web.services.feedback_service import get_feedback_service
 from openfatture.web.services.session_service import get_session_service
+from openfatture.web.services.voice_service import get_voice_service
 from openfatture.web.utils.async_helpers import run_async
 from openfatture.web.utils.state import (
     clear_conversation_history,
@@ -254,6 +255,7 @@ ai_service = get_ai_service()
 custom_commands_service = get_custom_commands_service()
 session_service = get_session_service()
 feedback_service = get_feedback_service()
+voice_service = get_voice_service()
 
 # Check if AI is available
 if not ai_service.is_available():
@@ -273,7 +275,9 @@ if not ai_service.is_available():
     st.stop()
 
 # Tab selection
-tab1, tab2, tab3 = st.tabs(["💬 Chat Assistente", "📝 Genera Descrizione", "🧾 Suggerimento IVA"])
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["💬 Chat Assistente", "📝 Genera Descrizione", "🧾 Suggerimento IVA", "🎤 Voice Chat"]
+)
 
 # =============================================================================
 # TAB 1: Chat Assistant
@@ -985,6 +989,252 @@ with tab3:
                 except Exception as e:
                     st.error(f"❌ Errore durante analisi: {e}")
                     st.exception(e)
+
+# =============================================================================
+# TAB 4: Voice Chat
+# =============================================================================
+with tab4:
+    st.markdown("### 🎤 Chat Vocale con AI")
+
+    # Check if voice is available
+    if not voice_service.is_available():
+        st.warning(
+            """
+            ⚠️ **Voice Chat non configurato**
+
+            Per abilitare il Voice Chat:
+            1. Configura `OPENAI_API_KEY` nel file `.env`
+            2. Imposta `OPENFATTURE_VOICE_ENABLED=true`
+            3. Riavvia l'applicazione
+
+            Consulta la documentazione per i dettagli.
+            """
+        )
+        st.stop()
+
+    st.markdown(
+        """
+        Parla con l'assistente AI usando la tua voce:
+        - 🎤 Registra la tua domanda
+        - 🤖 L'AI la trascrive e risponde
+        - 🔊 Ascolta la risposta vocale
+        - 💬 Supporta conversazioni con contesto
+        """
+    )
+
+    # Voice configuration info
+    with st.expander("⚙️ Configurazione Voice", expanded=False):
+        voice_config = voice_service.get_config()
+
+        col_v1, col_v2, col_v3 = st.columns(3)
+        with col_v1:
+            st.metric("Provider", voice_config.get("provider", "N/A"))
+        with col_v2:
+            st.metric("STT Model", voice_config.get("stt_model", "N/A"))
+        with col_v3:
+            st.metric("TTS Voice", voice_config.get("tts_voice", "N/A"))
+
+        st.markdown(f"**TTS Model:** {voice_config.get('tts_model', 'N/A')}")
+        st.markdown(f"**TTS Speed:** {voice_config.get('tts_speed', 1.0)}x")
+        st.markdown(f"**TTS Format:** {voice_config.get('tts_format', 'mp3')}")
+        st.markdown(f"**Streaming:** {'✓' if voice_config.get('streaming_enabled') else '✗'}")
+
+    # Initialize voice conversation history
+    if "voice_conversation_history" not in st.session_state:
+        st.session_state.voice_conversation_history = []
+
+    voice_history = st.session_state.voice_conversation_history
+
+    # Action buttons
+    voice_col1, voice_col2 = st.columns([4, 1])
+    with voice_col2:
+        if st.button("🗑️ Cancella Voice", use_container_width=True):
+            st.session_state.voice_conversation_history = []
+            st.rerun()
+
+    # Display voice conversation history
+    if voice_history:
+        st.markdown("### 📜 Cronologia Conversazione")
+        with st.container():
+            for i, interaction in enumerate(voice_history):
+                # User message
+                with st.chat_message("user", avatar="🧑"):
+                    st.markdown(f"**Tu:** {interaction['transcription']}")
+                    if interaction.get("language"):
+                        st.caption(f"Lingua rilevata: {interaction['language']}")
+
+                # Assistant response
+                with st.chat_message("assistant", avatar="🤖"):
+                    st.markdown(f"**Assistente:** {interaction['response']}")
+
+                    # Show audio if available
+                    if interaction.get("audio_data"):
+                        st.audio(interaction["audio_data"], format="audio/mp3")
+
+                    # Metrics
+                    if interaction.get("metrics"):
+                        metrics = interaction["metrics"]
+                        metric_cols = st.columns(4)
+                        with metric_cols[0]:
+                            st.caption(f"STT: {metrics.get('stt_ms', 0):.0f}ms")
+                        with metric_cols[1]:
+                            st.caption(f"LLM: {metrics.get('llm_ms', 0):.0f}ms")
+                        with metric_cols[2]:
+                            st.caption(f"TTS: {metrics.get('tts_ms', 0):.0f}ms")
+                        with metric_cols[3]:
+                            st.caption(f"Totale: {metrics.get('total_ms', 0):.0f}ms")
+    else:
+        st.info("👋 Nessuna conversazione vocale ancora. Registra la tua prima domanda!")
+
+    st.markdown("---")
+
+    # Audio input
+    st.markdown("### 🎙️ Registra la tua voce")
+
+    # Streamlit audio input (available from Streamlit 1.28+)
+    audio_input = st.audio_input(
+        "Premi il pulsante per registrare",
+        key="voice_chat_audio_input",
+        help="Parla chiaramente nel microfono. La registrazione si ferma automaticamente dopo il silenzio.",
+    )
+
+    if audio_input is not None:
+        st.success(f"✅ Audio registrato: {audio_input.size} bytes")
+
+        # Show audio preview
+        st.audio(audio_input, format="audio/wav")
+
+        # Process audio button
+        if st.button("🚀 Invia e Processa", type="primary", use_container_width=True):
+            with st.spinner("🤖 Processando il tuo messaggio vocale..."):
+                try:
+                    # Read audio bytes
+                    audio_bytes = audio_input.read()
+                    audio_input.seek(0)  # Reset for reuse
+
+                    # Build conversation history for context
+                    history_for_context = []
+                    for interaction in voice_history:
+                        history_for_context.append(
+                            {"role": "user", "content": interaction["transcription"]}
+                        )
+                        history_for_context.append(
+                            {"role": "assistant", "content": interaction["response"]}
+                        )
+
+                    # Process voice input
+                    response = voice_service.process_voice_input(
+                        audio_bytes=audio_bytes,
+                        conversation_history=history_for_context if history_for_context else None,
+                    )
+
+                    # Store interaction in history
+                    interaction = {
+                        "transcription": response.transcription.text,
+                        "language": response.transcription.language,
+                        "response": response.llm_response,
+                        "audio_data": response.synthesis.audio_data if response.synthesis else None,
+                        "metrics": {
+                            "stt_ms": response.stt_latency_ms,
+                            "llm_ms": response.llm_latency_ms,
+                            "tts_ms": response.tts_latency_ms,
+                            "total_ms": response.total_latency_ms,
+                        },
+                    }
+                    voice_history.append(interaction)
+
+                    # Show success and results
+                    st.success("✅ Messaggio vocale processato con successo!")
+
+                    # Display results
+                    result_col1, result_col2 = st.columns(2)
+
+                    with result_col1:
+                        st.markdown("#### 📝 Trascrizione")
+                        st.info(f"**Tu:** {response.transcription.text}")
+                        st.caption(f"Lingua: {response.transcription.language}")
+
+                    with result_col2:
+                        st.markdown("#### 🤖 Risposta AI")
+                        st.success(f"**Assistente:** {response.llm_response}")
+
+                    # Audio response
+                    if response.synthesis:
+                        st.markdown("#### 🔊 Risposta Vocale")
+                        st.audio(response.synthesis.audio_data, format="audio/mp3")
+
+                    # Metrics
+                    st.markdown("#### 📊 Metriche")
+                    metrics_cols = st.columns(4)
+                    with metrics_cols[0]:
+                        st.metric("STT", f"{response.stt_latency_ms:.0f}ms")
+                    with metrics_cols[1]:
+                        st.metric("LLM", f"{response.llm_latency_ms:.0f}ms")
+                    with metrics_cols[2]:
+                        st.metric("TTS", f"{response.tts_latency_ms or 0:.0f}ms")
+                    with metrics_cols[3]:
+                        st.metric("Totale", f"{response.total_latency_ms:.0f}ms")
+
+                    # Additional info
+                    if response.llm_metadata:
+                        with st.expander("ℹ️ Dettagli Tecnici"):
+                            st.json(
+                                {
+                                    "provider": response.llm_metadata.get("provider"),
+                                    "model": response.llm_metadata.get("model"),
+                                    "tokens": response.llm_metadata.get("tokens"),
+                                    "cost_usd": response.llm_metadata.get("cost_usd"),
+                                }
+                            )
+
+                    # Rerun to refresh history display
+                    st.rerun()
+
+                except Exception as e:
+                    error_msg = str(e)
+                    st.error(f"❌ Errore durante il processamento: {error_msg}")
+
+                    # Show additional help
+                    if "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+                        st.info("💡 Suggerimento: Verifica la tua connessione internet")
+                    elif "auth" in error_msg.lower() or "key" in error_msg.lower():
+                        st.info(
+                            "💡 Suggerimento: Verifica le impostazioni API nelle configurazioni"
+                        )
+                    elif "rate" in error_msg.lower() or "limit" in error_msg.lower():
+                        st.info(
+                            "💡 Suggerimento: Limite di richieste raggiunto. Riprova tra qualche minuto"
+                        )
+
+                    st.exception(e)
+
+    # Help section
+    with st.expander("❓ Come funziona", expanded=False):
+        st.markdown(
+            """
+        **Workflow Voice Chat:**
+
+        1. **🎤 Registrazione**: Premi il pulsante e parla nel microfono
+        2. **📝 Trascrizione (STT)**: OpenAI Whisper converte la voce in testo
+        3. **🤖 Elaborazione (LLM)**: L'AI comprende e genera una risposta
+        4. **🔊 Sintesi (TTS)**: OpenAI TTS converte la risposta in audio
+        5. **▶️ Riproduzione**: Ascolta la risposta vocale
+
+        **Supporto Lingue:**
+        - Rilevamento automatico tra 100+ lingue
+        - Italiano, Inglese, Francese, Tedesco, Spagnolo e molte altre
+
+        **Costi Stimati:**
+        - STT (Whisper): ~$0.006 per minuto di audio
+        - TTS: ~$0.015 per 1.000 caratteri (tts-1) o ~$0.030 (tts-1-hd)
+        - LLM: Prezzo standard del modello configurato
+
+        **Requisiti:**
+        - Microfono funzionante
+        - Browser moderno (Chrome, Firefox, Safari, Edge)
+        - Connessione internet stabile
+        """
+        )
 
 # Info footer
 st.markdown("---")

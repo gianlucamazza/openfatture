@@ -15,7 +15,7 @@ from openfatture.storage.database.base import SessionLocal, get_session, init_db
 from openfatture.storage.database.models import Fattura, StatoFattura, StatoPagamento
 from openfatture.utils.config import get_settings
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 
@@ -217,7 +217,7 @@ def report_scadenze(
         "-f",
         min=1,
         help='Numero di giorni considerati "in scadenza" (default: 14).',
-    )
+    ),
 ) -> None:
     """
     Show overdue and upcoming payment due dates leveraging the Pagamento ledger.

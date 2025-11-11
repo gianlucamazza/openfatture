@@ -44,7 +44,7 @@ from ..infrastructure.repository import (
 )
 from ..matchers import CompositeMatcher, ExactAmountMatcher, IMatcherStrategy
 
-app = typer.Typer(name="payment", help="💰 Payment tracking & reconciliation")
+app = typer.Typer(name="payment", help="💰 Payment tracking & reconciliation", no_args_is_help=True)
 console = Console()
 logger = get_logger(__name__)
 
@@ -79,17 +79,30 @@ def get_db_session() -> Iterator[Session]:
 
 @app.command(name="create-account")
 def create_account(
-    name: str = typer.Argument(..., help="Account name"),
-    iban: str | None = typer.Option(None, "--iban", help="Account IBAN"),
-    bank_name: str | None = typer.Option(None, "--bank-name", help="Bank name"),
-    bic: str | None = typer.Option(None, "--bic", help="BIC/SWIFT code"),
-    currency: str = typer.Option("EUR", "--currency", help="Currency code (default: EUR)"),
-    opening_balance: float = typer.Option(
-        0.00, "--opening-balance", help="Opening balance (default: 0.00)"
+    name: str = typer.Argument(..., help="Account name (e.g., 'Main Business Account')"),
+    iban: str | None = typer.Option(
+        None, "--iban", help="IBAN (International Bank Account Number)"
     ),
-    notes: str | None = typer.Option(None, "--notes", help="Optional notes"),
+    bank_name: str | None = typer.Option(
+        None, "--bank-name", help="Bank name (e.g., 'Intesa Sanpaolo')"
+    ),
+    bic: str | None = typer.Option(
+        None, "--bic", help="BIC/SWIFT code for international transfers"
+    ),
+    currency: str = typer.Option(
+        "EUR", "--currency", help="Currency code (ISO 4217, default: EUR)"
+    ),
+    opening_balance: float = typer.Option(
+        0.00, "--opening-balance", help="Opening balance in account currency (default: 0.00)"
+    ),
+    notes: str | None = typer.Option(None, "--notes", help="Optional notes about the account"),
 ) -> None:
-    """Create a bank account for payment reconciliation."""
+    """
+    Create a bank account for payment reconciliation.
+
+    Bank accounts are used to import transaction data and automatically match
+    payments to outstanding invoices. IBAN is required for most European banks.
+    """
     with get_db_session() as session:
         repo = BankAccountRepository(session)
         try:
@@ -335,7 +348,14 @@ def import_transactions(
         None, "--bank", "-b", help="Bank preset (intesa|unicredit|revolut|...)"
     ),
     auto_match: bool = typer.Option(True, "--auto-match/--no-auto-match"),
-    confidence: float = typer.Option(0.85, "--confidence", "-c", min=0.0, max=1.0),
+    confidence: float = typer.Option(
+        0.85,
+        "--confidence",
+        "-c",
+        min=0.0,
+        max=1.0,
+        help="Minimum confidence threshold for auto-matching (0.0-1.0, default: 0.85)",
+    ),
 ) -> None:
     """📥 Import bank statement and auto-match transactions.
 

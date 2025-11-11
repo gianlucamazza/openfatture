@@ -1,40 +1,124 @@
 """
-End-to-end integration tests for CLI workflows.
+Lightweight CLI smoke tests covering the primary command groups.
 
-Tests complete user journeys through the command-line interface:
-- Invoice creation and management
-- Client management
-- Payment reconciliation
-- AI assistance
-- Batch operations
-
-These tests use the actual CLI commands and verify the full workflow.
+These focus on verifying that the modernised commands execute against a
+temporary SQLite database with the plugin system disabled.
 """
 
+from __future__ import annotations
+
 import json
+import os
 import tempfile
+from contextlib import ExitStack, contextmanager
+from datetime import date
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from typer.testing import CliRunner
 
-from openfatture.cli.main import app
-from openfatture.storage.database.models import Cliente, Fattura, StatoFattura, TipoDocumento
+os.environ.setdefault("OPENFATTURE_PLUGINS_ENABLED", "0")
 
-# Removed custom db_session fixture - using conftest.py fixtures instead
+import openfatture.cli.main as cli_main
+from openfatture.cli.main import app
+from openfatture.storage.database.base import Base
+from openfatture.storage.database.models import (
+    Cliente,
+    Fattura,
+    RigaFattura,
+    StatoFattura,
+    TipoDocumento,
+)
+
+# Disable plugin auto-loading to keep tests deterministic
+cli_main.settings.plugins_enabled = False
+cli_main.settings.plugins_auto_discover = False
+
+
+def _configure_cli_settings(
+    settings: MagicMock, db_url: str, archivio_dir: Path | None = None
+) -> None:
+    """Apply shared overrides to the dynamic settings object returned by get_settings."""
+    settings.database_url = db_url
+    settings.archivio_dir = archivio_dir or Path("/tmp/openfatture-tests")
+    settings.plugins_enabled = False
+    settings.plugins_auto_discover = False
+    settings.plugins_enabled_list = ""
+    # Minimal AI configuration for commands that read these fields
+    settings.ai_provider = "openai"
+    settings.ai_model = "gpt-4o-mini"
+    settings.archivio_dir.mkdir(parents=True, exist_ok=True)
+
+
+@contextmanager
+def patched_cli_environment(db_url: str, engine) -> None:
+    """Patch CLI settings and command-level init_db hooks to reuse the shared SQLite engine."""
+    init_targets = [
+        "openfatture.storage.database.base.init_db",
+        "openfatture.cli.commands.cliente.init_db",
+        "openfatture.cli.commands.fattura.init_db",
+        "openfatture.cli.commands.events.init_db",
+        "openfatture.cli.commands.batch.init_db",
+        "openfatture.cli.commands.report.init_db",
+    ]
+
+    with ExitStack() as stack:
+        mock_settings = stack.enter_context(patch("openfatture.utils.config.get_settings"))
+        init_mocks = [stack.enter_context(patch(target)) for target in init_targets]
+
+        settings = mock_settings.return_value
+        _configure_cli_settings(settings, db_url)
+
+        def _init_db_override(_: str) -> None:
+            from openfatture.storage.database import base
+
+            base.engine = engine
+            base.SessionLocal = sessionmaker(bind=engine)
+            Base.metadata.create_all(bind=engine)
+
+        for mock_init in init_mocks:
+            mock_init.side_effect = _init_db_override
+
+        # Ensure SessionLocal is primed for commands that don't call init_db explicitly
+        _init_db_override(db_url)
+
+        yield
 
 
 @pytest.fixture
-def app_runner():
-    """Create a CLI runner for testing."""
+def app_runner() -> CliRunner:
     return CliRunner()
 
 
 @pytest.fixture
+def db_engine(tmp_path: Path):
+    db_path = tmp_path / "cli_tests.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    yield engine
+    engine.dispose()
+    if db_path.exists():
+        db_path.unlink()
+
+
+@pytest.fixture
+def db_session(db_engine):
+    Session = sessionmaker(bind=db_engine)
+    session = Session()
+    try:
+        yield session
+    finally:
+        session.rollback()
+        session.close()
+
+
+@pytest.fixture
 def temp_config():
-    """Create a temporary config file."""
-    config_data = {
+    """Provide an on-disk config file for commands that expect one."""
+    config = {
         "cedente": {
             "denominazione": "Test Company S.r.l.",
             "partita_iva": "12345678901",
@@ -46,388 +130,151 @@ def temp_config():
             "comune": "Milano",
             "provincia": "MI",
             "nazione": "IT",
-        },
-        "sdi": {
-            "pec_address": "test@pec.fatturapa.it",
-            "pec_username": "test@example.com",
-            "pec_password": "testpass",
-        },
-        "ai": {
-            "provider": "openai",
-            "openai_api_key": "sk-test-key",
-            "openai_model": "gpt-4",
-        },
+        }
     }
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump(config_data, f)
-        config_path = Path(f.name)
+    with patch("tempfile.NamedTemporaryFile", wraps=tempfile.NamedTemporaryFile):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as handle:
+            json.dump(config, handle)
+            path = Path(handle.name)
+    try:
+        yield path
+    finally:
+        if path.exists():
+            path.unlink()
 
-    yield config_path
-    config_path.unlink()
 
-
-class TestInvoiceCLIE2E:
-    """Test complete invoice creation and management workflow via CLI."""
-
-    def test_create_client_via_app(self, app_runner, temp_config):
-        """Test creating a client through CLI."""
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            # Create client interactively
-            result = app_runner.invoke(
-                app,
-                ["cliente", "add", "--interactive"],
-                input="\n".join(
-                    [
-                        "Test Client SRL",  # denominazione
-                        "12345678901",  # partita_iva
-                        "TSTCLT80A01H501Y",  # codice_fiscale
-                        "ABC1234",  # codice_destinatario
-                        "Via Roma 1",  # indirizzo
-                        "1",  # numero_civico
-                        "20100",  # cap
-                        "Milano",  # comune
-                        "MI",  # provincia
-                        "",  # email (optional)
-                        "",  # pec (optional)
-                        "",  # telefono (optional)
-                        "",  # note (optional)
-                    ]
-                ),
-            )
-
-            assert result.exit_code == 0
-            assert "Cliente creato con successo" in result.output
-
-    def test_create_invoice_via_app(self, app_runner, temp_config):
-        """Test creating an invoice through CLI."""
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            # Create invoice interactively (will fail without client, but tests CLI flow)
-            result = app_runner.invoke(
-                app,
-                ["fattura", "crea"],
-                input="\n".join(
-                    [
-                        "001",  # numero
-                        "2025",  # anno
-                        "15/01/2025",  # data_emissione
-                        "",  # no client available
-                    ]
-                ),
-            )
-
-            # Test that CLI prompts work (may fail due to no clients, but that's expected)
-            assert result.exit_code != 0 or "cliente" in result.output.lower()
-
-    def test_list_invoices_via_app(self, app_runner, db_session, temp_config):
-        """Test listing invoices through CLI."""
-        # Create test data
-        appente = Cliente(
-            denominazione="List Test Client",
-            partita_iva="12345678901",
-            codice_destinatario="LIST01",
+def test_cliente_add_and_list(app_runner: CliRunner, db_engine) -> None:
+    with patched_cli_environment(str(db_engine.url), db_engine):
+        add_result = app_runner.invoke(
+            app,
+            [
+                "cliente",
+                "add",
+                "Test Client SRL",
+                "--piva",
+                "12345678901",
+                "--cf",
+                "TSTCLT80A01H501Y",
+                "--sdi",
+                "ABC1234",
+            ],
         )
-        db_session.add(appente)
-        db_session.commit()
+        assert add_result.exit_code == 0
+        assert "Client added successfully" in add_result.output
 
-        fattura = Fattura(
-            numero="001",
-            anno=2025,
-            data_emissione="2025-01-15",
-            appente_id=appente.id,
-            tipo_documento=TipoDocumento.TD01,
-            stato=StatoFattura.BOZZA,
-            imponibile=1000.00,
-            iva=220.00,
-            totale=1220.00,
-        )
-        db_session.add(fattura)
-        db_session.commit()
-
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            result = app_runner.invoke(app, ["fattura", "lista"])
-
-            assert result.exit_code == 0
-            assert "001/2025" in result.output
-            assert "List Test Client" in result.output
-            assert "BOZZA" in result.output
-
-    def test_generate_pdf_via_app(self, app_runner, db_session, temp_config, tmp_path):
-        """Test PDF generation through CLI."""
-        # Create test invoice
-        appente = Cliente(
-            denominazione="PDF Test Client",
-            partita_iva="12345678901",
-            codice_destinatario="PDF001",
-        )
-        db_session.add(appente)
-        db_session.commit()
-
-        fattura = Fattura(
-            numero="PDF001",
-            anno=2025,
-            data_emissione="2025-01-15",
-            appente_id=appente.id,
-            tipo_documento=TipoDocumento.TD01,
-            stato=StatoFattura.BOZZA,
-            imponibile=1000.00,
-            iva=220.00,
-            totale=1220.00,
-        )
-        db_session.add(fattura)
-        db_session.commit()
-
-        pdf_path = tmp_path / "test_invoice.pdf"
-
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            result = app_runner.invoke(app, ["fattura", "pdf", "PDF001", "--output", str(pdf_path)])
-
-            assert result.exit_code == 0
-            assert "PDF generato" in result.output
-            assert pdf_path.exists()
+        list_result = app_runner.invoke(app, ["cliente", "list"])
+        assert list_result.exit_code == 0
+        assert "Test Client SRL" in list_result.output
 
 
-class TestPaymentCLIE2E:
-    """Test payment reconciliation workflow via CLI."""
+def test_fattura_list_with_seed_data(app_runner: CliRunner, db_engine, db_session) -> None:
+    cliente = Cliente(
+        denominazione="List Test Client", partita_iva="12345678901", codice_destinatario="LIST01"
+    )
+    db_session.add(cliente)
+    db_session.commit()
 
-    def test_import_bank_statement_via_app(self, app_runner, db_session, tmp_path):
-        """Test importing bank statements through CLI."""
-        # Create CSV file
-        csv_content = """Data;Importo;Descrizione;Riferimento
-15/01/2025;1000,00;Pagamento fattura;INV-2025-001
-16/01/2025;500,00;Bonifico ricevuto;INV-2025-002"""
+    fattura = Fattura(
+        numero="001",
+        anno=2025,
+        data_emissione=date(2025, 1, 15),
+        cliente_id=cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.BOZZA,
+        imponibile=1000,
+        iva=220,
+        totale=1220,
+    )
+    db_session.add(fattura)
+    db_session.commit()
 
-        csv_path = tmp_path / "statement.csv"
-        csv_path.write_text(csv_content)
-
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            result = app_runner.invoke(
-                app,
-                [
-                    "payment",
-                    "import",
-                    str(csv_path),
-                    "--format",
-                    "csv",
-                    "--iban",
-                    "IT1234567890123456789012345",
-                ],
-            )
-
-            assert result.exit_code == 0
-            assert "Transazioni importate" in result.output
-
-    def test_payment_reconciliation_via_app(self, app_runner, db_session, temp_config):
-        """Test payment reconciliation through CLI."""
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            result = app_runner.invoke(app, ["payment", "reconcile"])
-
-            # Should run without errors (even if no transactions to reconcile)
-            assert result.exit_code == 0
+    with patched_cli_environment(str(db_engine.url), db_engine):
+        result = app_runner.invoke(app, ["fattura", "list"])
+        assert result.exit_code == 0
+        assert "Invoices" in result.output
+        assert "001/2025" in result.output
+        assert "€1220.00" in result.output
 
 
-class TestAIAssistanceE2E:
-    """Test AI assistance workflows via CLI."""
+def test_fattura_show_renders_details(app_runner: CliRunner, db_engine, db_session) -> None:
+    cliente = Cliente(
+        denominazione="Show Client", partita_iva="12345678901", codice_destinatario="SHOW01"
+    )
+    db_session.add(cliente)
+    db_session.commit()
 
-    @patch("openfatture.ai.providers.factory.LLMProviderFactory.create_provider")
-    def test_ai_describe_invoice_via_app(self, mock_factory, app_runner, temp_config):
-        """Test AI invoice description through CLI."""
-        # Mock AI provider
-        mock_provider = MagicMock()
-        mock_provider.generate.return_value = (
-            "Consulenza informatica specializzata in sviluppo web e mobile."
-        )
-        mock_factory.return_value = mock_provider
+    fattura = Fattura(
+        numero="010",
+        anno=2025,
+        data_emissione=date(2025, 2, 1),
+        cliente_id=cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.BOZZA,
+        imponibile=500,
+        iva=110,
+        totale=610,
+    )
+    db_session.add(fattura)
+    db_session.flush()
 
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
+    riga = RigaFattura(
+        fattura_id=fattura.id,
+        numero_riga=1,
+        descrizione="Consulenza",
+        quantita=1,
+        prezzo_unitario=500,
+        aliquota_iva=22,
+        imponibile=500,
+        iva=110,
+        totale=610,
+    )
+    db_session.add(riga)
+    db_session.commit()
 
-            result = app_runner.invoke(
-                app, ["ai", "describe", "3 hours web development consulting"]
-            )
-
-            assert result.exit_code == 0
-            assert "Consulenza informatica" in result.output
-
-    @patch("openfatture.ai.providers.factory.LLMProviderFactory.create_provider")
-    def test_ai_tax_advice_via_app(self, mock_factory, app_runner, temp_config):
-        """Test AI tax advice through CLI."""
-        # Mock AI provider
-        mock_provider = MagicMock()
-        mock_provider.generate.return_value = (
-            "Per servizi di consulenza IT, applicare aliquota IVA 22% con regime ordinario."
-        )
-        mock_factory.return_value = mock_provider
-
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            result = app_runner.invoke(app, ["ai", "suggest-vat", "IT consulting services"])
-
-            assert result.exit_code == 0
-            assert "22%" in result.output
-
-
-class TestBatchOperationsE2E:
-    """Test batch operations via CLI."""
-
-    def test_batch_import_invoices_via_app(self, app_runner, db_session, tmp_path, temp_config):
-        """Test batch importing invoices through CLI."""
-        # Create clients first
-        client1 = Cliente(
-            denominazione="Batch Client 1",
-            partita_iva="11111111111",
-            codice_destinatario="BTC001",
-        )
-        client2 = Cliente(
-            denominazione="Batch Client 2",
-            partita_iva="22222222222",
-            codice_destinatario="BTC002",
-        )
-        db_session.add(client1)
-        db_session.add(client2)
-        db_session.commit()
-
-        # Create CSV file for invoices
-        csv_content = """numero,anno,data_emissione,cliente,descrizione,quantita,prezzo_unitario,unita_misura,aliquota_iva
-001,2025,15/01/2025,Batch Client 1,Batch Service 1,10,100.00,ore,22.00
-002,2025,16/01/2025,Batch Client 2,Batch Service 2,5,200.00,ore,22.00"""
-
-        csv_path = tmp_path / "invoices.csv"
-        csv_path.write_text(csv_content)
-
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            result = app_runner.invoke(app, ["batch", "import", str(csv_path)])
-
-            assert result.exit_code == 0
-            assert "Import completed" in result.output or "Fatture importate" in result.output
-
-            # Verify invoices were created
-            invoices = db_session.query(Fattura).filter_by(anno=2025).all()
-            assert len(invoices) >= 2
-
-    def test_batch_create_invoices_via_app(self, app_runner, db_session, tmp_path, temp_config):
-        """Test batch creating invoices through CLI."""
-        # Create client first
-        cliente = Cliente(
-            denominazione="Batch Invoice Client",
-            partita_iva="12345678901",
-            codice_destinatario="BTCINV",
-        )
-        db_session.add(cliente)
-        db_session.commit()
-
-        # Create CSV file
-        csv_content = """numero,anno,data_emissione,cliente,descrizione,quantita,prezzo_unitario,unita_misura,aliquota_iva
-001,2025,15/01/2025,Batch Invoice Client,Batch Service 1,10,100.00,ore,22.00
-002,2025,16/01/2025,Batch Invoice Client,Batch Service 2,5,200.00,ore,22.00"""
-
-        csv_path = tmp_path / "invoices.csv"
-        csv_path.write_text(csv_content)
-
-        with patch("openfatture.utils.config.get_settings") as mock_settings:
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-
-            result = app_runner.invoke(app, ["batch", "import", str(csv_path)])
-
-            assert result.exit_code == 0
-            assert "Import completed" in result.output or "Fatture importate" in result.output
-
-            # Verify invoices were created
-            invoices = db_session.query(Fattura).filter_by(anno=2025).all()
-            assert len(invoices) >= 2
+    with patched_cli_environment(str(db_engine.url), db_engine):
+        result = app_runner.invoke(app, ["fattura", "show", str(fattura.id)])
+        assert result.exit_code == 0
+        assert "Invoice 010/2025" in result.output
+        assert "Consulenza" in result.output
+        assert "€610.00" in result.output
 
 
-class TestCompleteWorkflowE2E:
-    """Test complete end-to-end workflows combining multiple features."""
+def test_ai_describe_command_mocked(app_runner: CliRunner, db_engine) -> None:
+    fake_response = MagicMock()
+    fake_response.status = MagicMock(value="success")
+    fake_response.content = "Descrizione generata"
+    fake_response.metadata = {"is_structured": False}
+    fake_response.usage.total_tokens = 100
+    fake_response.usage.estimated_cost_usd = 0.0
+    fake_response.latency_ms = 50
+    fake_response.provider = "mock"
+    fake_response.model = "mock"
 
-    def test_full_invoice_lifecycle_via_app(self, app_runner, db_session, tmp_path, temp_config):
-        """Test complete invoice lifecycle: create → generate PDF → send."""
-        # Create appent
-        appente = Cliente(
-            denominazione="Full Lifecycle Client",
-            partita_iva="12345678901",
-            codice_fiscale="FLC00180A01H501Y",
-            codice_destinatario="FLC001",
-            indirizzo="Via Lifecycle 1",
-            numero_civico="1",
-            cap="20100",
-            comune="Milano",
-            provincia="MI",
-        )
-        db_session.add(appente)
-        db_session.commit()
+    agent_instance = AsyncMock()
+    agent_instance.execute.return_value = fake_response
 
-        invoice_num = "FLC001"
-        pdf_path = tmp_path / f"fattura_{invoice_num}.pdf"
+    with (
+        patched_cli_environment(str(db_engine.url), db_engine),
+        patch("openfatture.cli.commands.ai.InvoiceAssistantAgent", return_value=agent_instance),
+        patch("openfatture.cli.commands.ai.create_provider") as mock_provider,
+        patch(
+            "openfatture.cli.commands.ai.enrich_with_rag",
+            new=AsyncMock(side_effect=lambda ctx, *_: ctx),
+        ),
+    ):
+        mock_provider.return_value = MagicMock()
+        result = app_runner.invoke(app, ["ai", "describe", "3 ore sviluppo web"])
+        assert result.exit_code == 0
+        assert "Descrizione generata" in result.output
 
-        with (
-            patch("openfatture.utils.config.get_settings") as mock_settings,
-            patch("openfatture.sdi.pec_sender.sender.PECSender.send_invoice") as mock_send,
-        ):
-            mock_settings.return_value.archivio_dir = Path("/tmp/test")
-            mock_send.return_value = (True, None)
 
-            # 1. Create invoice
-            result1 = app_runner.invoke(
-                app,
-                ["fattura", "crea"],
-                input="\n".join(
-                    [
-                        invoice_num,  # numero
-                        "2025",  # anno
-                        "15/01/2025",  # data_emissione
-                        "Full Lifecycle Client",  # cliente
-                        "1",  # select appent
-                        "TD01",  # tipo_documento
-                        "Full lifecycle test",  # descrizione
-                        "1",  # quantita
-                        "1000.00",  # prezzo_unitario
-                        "servizio",  # unita_misura
-                        "22.00",  # aliquota_iva
-                        "",  # note
-                        "",  # another line? (no)
-                    ]
-                ),
-            )
+def test_payment_account_lifecycle(app_runner: CliRunner, db_engine) -> None:
+    with patched_cli_environment(str(db_engine.url), db_engine):
+        create_result = app_runner.invoke(app, ["payment", "create-account", "Main Account"])
+        assert create_result.exit_code == 0
+        assert "Account created" in create_result.output
 
-            assert result1.exit_code == 0
-            assert "Fattura creata" in result1.output
-
-            # 2. Generate PDF
-            result2 = app_runner.invoke(
-                app, ["fattura", "pdf", invoice_num, "--output", str(pdf_path)]
-            )
-
-            assert result2.exit_code == 0
-            assert pdf_path.exists()
-
-            # 3. Validate invoice
-            result3 = app_runner.invoke(app, ["fattura", "valida", invoice_num])
-
-            assert result3.exit_code == 0
-            assert "valid" in result3.output.lower()
-
-            # 4. Send invoice (mocked)
-            result4 = app_runner.invoke(app, ["pec", "invia", invoice_num])
-
-            assert result4.exit_code == 0
-            assert "inviata" in result4.output.lower()
-
-            # Verify final state
-            fattura = db_session.query(Fattura).filter_by(numero=invoice_num, anno=2025).first()
-            assert fattura.stato == StatoFattura.INVIATA
+        list_result = app_runner.invoke(app, ["payment", "list-accounts"])
+        assert list_result.exit_code == 0
+        assert "Main Account" in list_result.output

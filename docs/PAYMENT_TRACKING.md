@@ -58,7 +58,7 @@ OpenFatture's **Payment Tracking** module provides enterprise-grade automated ba
 - **5 Matching Strategies**:
   1. **Exact Matcher** - Exact amount + date match
   2. **Fuzzy Matcher** - Similarity-based description matching (RapidFuzz)
-  3. **IBAN Matcher** - Match by counterparty IBAN
+  3. **IBAN Matcher** - Match by counterparty IBAN (supports all 30 SEPA countries)
   4. **Date Window Matcher** - Flexible date range matching
   5. **Composite Matcher** - Weighted combination of all strategies
 
@@ -439,40 +439,72 @@ if result.matched:
 
 #### 2. Fuzzy Matcher
 
-Uses RapidFuzz for similarity-based description matching.
+Uses RapidFuzz (C-optimized) for fast Levenshtein distance matching.
 
 ```python
 from openfatture.payment.matchers import FuzzyDescriptionMatcher
 
 matcher = FuzzyDescriptionMatcher(
-    description_threshold=0.7,
-    amount_threshold=0.95
+    min_similarity=85.0,  # 0-100 percentage
+    date_tolerance_days=14,
+    amount_tolerance_pct=5.0
 )
-result = matcher.match(transaction, payments)
+results = matcher.match(transaction, payments)
 
-if result.matched:
+for result in results:
     print(f"Fuzzy match: {result.payment.numero_fattura}")
-    print(f"Similarity: {result.confidence:.2%}")
+    print(f"Confidence: {result.confidence:.2%}")
+    print(f"Reason: {result.match_reason}")
 ```
 
 **Parameters**:
-- `description_threshold` (float): Minimum similarity (0.0-1.0, default: 0.7)
-- `amount_threshold` (float): Amount tolerance (0.0-1.0, default: 0.95)
+- `min_similarity` (float): Minimum similarity percentage (0-100, default: 85.0)
+- `date_tolerance_days` (int): Date window for matching (default: 14 days)
+- `amount_tolerance_pct` (float): Amount tolerance percentage (default: 5.0%)
+- `early_stop_threshold` (float): Early termination threshold (default: 95.0%)
 
-**Algorithm**: Uses `fuzz.token_sort_ratio` from RapidFuzz
+**Algorithm**:
+- Uses `fuzz.ratio` and `fuzz.partial_ratio` from RapidFuzz
+- Compares transaction description against payment fields (description, cliente name, fattura number)
+- Early termination when ≥95% similarity found for faster matching
+- Confidence scoring: 95%+ → 0.95, 90-95% → 0.90, 85-90% → 0.85, etc.
+
+**Performance**: Typical latency <20ms per match with 10 payments, >10 tx/s throughput
 
 #### 3. IBAN Matcher
 
-Matches by counterparty IBAN when available.
+Matches by counterparty IBAN with multi-country SEPA support (30 countries).
 
 ```python
 from openfatture.payment.matchers import IBANMatcher
 
-matcher = IBANMatcher()
+matcher = IBANMatcher(date_tolerance_days=30, amount_tolerance_pct=5.0)
 result = matcher.match(transaction, payments)
+
+if result.matched:
+    print(f"IBAN match: {result.payment.numero_fattura}")
+    print(f"Country: {result.match_reason}")  # e.g., "IBAN match (Germany): DE8937...3000"
+    print(f"Confidence: {result.confidence:.2f}")
 ```
 
-**Confidence**: 1.0 if IBAN matches, 0.0 otherwise
+**Features**:
+- **SEPA Coverage**: Supports all 30 SEPA countries (27 EU + 3 EEA members)
+- **Country Detection**: Automatically detects country from IBAN prefix (IT, DE, FR, ES, etc.)
+- **Length Validation**: Validates IBAN length (15-31 chars depending on country)
+- **Partial Matching**: Falls back to last 4 digits if full IBAN not found
+- **Normalized Matching**: Handles IBANs with spaces/formatting
+
+**Supported Countries**: Austria, Belgium, Bulgaria, Croatia, Cyprus, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Italy, Latvia, Liechtenstein, Lithuania, Luxembourg, Malta, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden
+
+**Parameters**:
+- `date_tolerance_days` (int): Date window for matching (default: 30 days)
+- `amount_tolerance_pct` (float): Amount difference tolerance (default: 5%)
+
+**Confidence Scoring**:
+- Base: 0.90 (full IBAN match) or 0.75 (partial match on last 4 digits)
+- +0.05 if amount exact match (within 1 cent)
+- +0.05 if date exact match (same day)
+- Max: 0.95 (full IBAN + amount + date match)
 
 #### 4. Date Window Matcher
 

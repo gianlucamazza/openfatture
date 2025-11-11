@@ -207,7 +207,7 @@ class TestOllamaTaxAdvisor:
         if response_data:
             assert validate_tax_response(response_data)
             # Should suggest standard rate for generic IT consulting
-            assert isinstance(response_data["aliquota_iva"], (int, float))
+            assert isinstance(response_data["aliquota_iva"], int | float)
             assert response_data["aliquota_iva"] >= 0
 
     async def test_construction_reverse_charge(self, ollama_provider):
@@ -272,7 +272,7 @@ class TestOllamaTaxAdvisor:
             assert validate_tax_response(response_data)
             # Education services are often exempt
             aliquota = response_data["aliquota_iva"]
-            assert isinstance(aliquota, (int, float))
+            assert isinstance(aliquota, int | float)
 
     async def test_foreign_client_export(self, ollama_provider):
         """Test services to foreign clients."""

@@ -9,12 +9,13 @@ from rich.table import Table
 from ...web_scraper.config import get_web_scraper_config
 from ...web_scraper.service import RegulatoryUpdateService
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 
 @app.command()
 def status():
+    """Show web scraper status and cache information."""
     try:
         config = get_web_scraper_config()
         service = RegulatoryUpdateService(config)

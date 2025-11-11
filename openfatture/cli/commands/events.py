@@ -16,7 +16,7 @@ from openfatture.core.events.repository import EventRepository
 from openfatture.storage.database.base import init_db
 from openfatture.utils.config import get_settings
 
-app = typer.Typer(help="View and analyze event history")
+app = typer.Typer(help="View and analyze event history", no_args_is_help=True)
 console = Console()
 
 
@@ -30,7 +30,7 @@ def ensure_db() -> None:
 def list_events(
     event_type: str | None = typer.Option(None, "--type", "-t", help="Filter by event type"),
     entity_type: str | None = typer.Option(
-        None, "--entity", "-e", help="Filter by entity type (invoice, client, etc.)"
+        None, "--entity", "-e", help="Filter by entity type (fattura, cliente, pagamento, etc.)"
     ),
     entity_id: int | None = typer.Option(None, "--entity-id", help="Filter by entity ID"),
     last_hours: int | None = typer.Option(
@@ -114,7 +114,15 @@ def list_events(
 def show_event(
     event_id: str = typer.Argument(..., help="Event ID (UUID)"),
 ) -> None:
-    """Show detailed information about a specific event."""
+    """
+    Show detailed information about a specific event.
+
+    Displays complete event details including metadata, entity information,
+    and structured event data in readable format.
+
+    Examples:
+        openfatture events show 123e4567-e89b-12d3-a456-426614174000
+    """
     ensure_db()
 
     repo = EventRepository()
@@ -144,12 +152,12 @@ def show_event(
         # Create detailed view
         details = f"""[bold cyan]Event ID:[/bold cyan] {event.event_id}
 [bold cyan]Event Type:[/bold cyan] {event.event_type}
-[bold cyan]Occurred At:[/bold cyan] {event.occurred_at.strftime('%Y-%m-%d %H:%M:%S')}
-[bold cyan]Published At:[/bold cyan] {event.published_at.strftime('%Y-%m-%d %H:%M:%S')}
+[bold cyan]Occurred At:[/bold cyan] {event.occurred_at.strftime("%Y-%m-%d %H:%M:%S")}
+[bold cyan]Published At:[/bold cyan] {event.published_at.strftime("%Y-%m-%d %H:%M:%S")}
 
-[bold cyan]Entity Type:[/bold cyan] {event.entity_type or 'N/A'}
-[bold cyan]Entity ID:[/bold cyan] {event.entity_id or 'N/A'}
-[bold cyan]User ID:[/bold cyan] {event.user_id or 'N/A'}
+[bold cyan]Entity Type:[/bold cyan] {event.entity_type or "N/A"}
+[bold cyan]Entity ID:[/bold cyan] {event.entity_id or "N/A"}
+[bold cyan]User ID:[/bold cyan] {event.user_id or "N/A"}
 
 [bold cyan]Event Data:[/bold cyan]
 {event_data_formatted}

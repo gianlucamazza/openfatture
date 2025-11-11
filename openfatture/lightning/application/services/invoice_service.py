@@ -85,7 +85,11 @@ class LightningInvoiceService:
 
         # Get current BTC/EUR rate for tax tracking
         rate_info = await self.btc_converter.get_rate_info()
-        btc_eur_rate = rate_info["rate"]  # Extract rate from rate_info dict
+        btc_eur_rate = rate_info.get("rate") or rate_info.get("current_rate")
+
+        if btc_eur_rate is None:
+            # Fallback: derive rate by converting 1 BTC to EUR
+            btc_eur_rate = float(await self.btc_converter.convert_btc_to_eur(Decimal("1")))
 
         # Convert to millisatoshis (1 sat = 1000 msat)
         amount_msat = int(btc_amount * Decimal("100000000") * Decimal("1000"))

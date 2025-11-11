@@ -16,7 +16,7 @@ from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 

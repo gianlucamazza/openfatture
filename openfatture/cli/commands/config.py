@@ -8,7 +8,7 @@ from rich.table import Table
 
 from openfatture.utils.config import get_settings, reload_settings
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 
@@ -26,7 +26,15 @@ def _format_value(value: Any, fallback: str = "[red]Not set[/red]") -> str:
 
 @app.command("show")
 def show_config() -> None:
-    """Show current configuration."""
+    """
+    Show current configuration settings.
+
+    Displays all configuration values from environment variables and .env file,
+    organized by category (company data, AI settings, database, etc.).
+
+    Examples:
+        openfatture config show
+    """
     settings = get_settings()
 
     table = Table(title="OpenFatture Configuration", show_header=True)
@@ -138,7 +146,7 @@ def show_config() -> None:
             tool_names = [tool.strip() for tool in enabled_tools.split(",") if tool.strip()]
             if tool_names:
                 table.add_row("Enabled Tools", f"{len(tool_names)} tools")
-    elif isinstance(enabled_tools, (list, tuple, set)):
+    elif isinstance(enabled_tools, list | tuple | set):
         table.add_row("Enabled Tools", f"{len(enabled_tools)} tools")
 
     console.print(table)

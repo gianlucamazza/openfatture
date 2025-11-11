@@ -13,7 +13,7 @@ from openfatture.storage.database.base import SessionLocal, get_session, init_db
 from openfatture.storage.database.models import Cliente, StatoPreventivo, TipoDocumento
 from openfatture.utils.config import get_settings
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 

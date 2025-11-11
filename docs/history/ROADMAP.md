@@ -1,8 +1,8 @@
 # OpenFatture Development Roadmap
 
-**Last Updated:** October 10, 2025
-**Current Version:** 1.0.0
-**Project Status:** Phases 1-5 complete (v1.0.0). Phase 4 advanced items still in progress, Phase 6 planning underway.
+**Last Updated:** October 18, 2025
+**Current Version:** 1.1.0
+**Project Status:** Phases 1-5 complete (v1.1.0). Phase 4 advanced items still in progress, Phase 6 planning underway.
 
 ---
 
@@ -139,13 +139,13 @@ Highlights:
 | Version | Status | Focus |
 |---------|--------|-------|
 | **v1.0.0** (Oct 2025) | ✅ Released | Payment module, documentation consolidation, AI refresh. |
-| **v1.0.1** (Q4 2025) | Planned | Bug fixes, due-date reporting, documentation polish. |
-| **v1.1.0** (Q1 2026) | Planned | AI cash flow & compliance agents, LangGraph orchestration. |
-| **v1.2.0** (2026) | Planned | Production deployments, accountant exports, performance tuning. |
+| **v1.1.0** (Oct 2025) | ✅ Released | English-first experience, documentation refresh, payment CLI alignment. |
+| **v1.2.0** (Q1 2026) | Planned | AI cash flow & compliance agents, LangGraph orchestration. |
+| **v1.3.0** (2026) | Planned | Production deployments, accountant exports, performance tuning. |
 
 ---
 
-## 🗺️ Next Release (v1.0.2 Preview)
+## 🗺️ Next Release (v1.2.0 Preview)
 - **Payment CLI parity** – comandi core consegnati (account, reconcile, reminder management). Prossimi step: UX avanzata e audit trail (`docs/history/NEXT_RELEASE_PLAN.md`).
 - **Coverage uplift** – alzare la soglia CI a ≥60% e stimare roadmap verso l'85%.
 - **Doc & UX alignment** – aggiornare `docs/CLI_REFERENCE.md`, completare esempi CLI e sincronizzare la dashboard interattiva con i nuovi comandi.

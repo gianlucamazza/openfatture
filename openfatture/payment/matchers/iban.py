@@ -1,8 +1,10 @@
-"""IBAN matcher strategy.
+"""IBAN matcher strategy with SEPA multi-country support.
 
 Matches bank transactions to payments by finding IBAN in transaction reference field.
-Particularly useful for Italian bank transfers where the payment IBAN is often included
-in the bank statement reference/memo field.
+Supports all 27 SEPA countries with automatic country detection and validation.
+
+Particularly useful for European bank transfers where the beneficiary IBAN is often
+included in the bank statement reference/memo field.
 """
 
 import re
@@ -13,6 +15,7 @@ from typing import TYPE_CHECKING
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
 from .base import IMatcherStrategy, as_match_results, payment_amount_for_matching
+from .iban_formats import SEPAIBANFormats
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -23,8 +26,14 @@ class IBANMatcher(IMatcherStrategy):
     """Match transactions by finding payment IBAN in transaction reference.
 
     This strategy looks for the payment's IBAN (from payment.iban field) in the
-    transaction's reference or description field. Common in Italy where bank
-    transfers include beneficiary IBAN in the reference.
+    transaction's reference or description field. Supports all 27 SEPA countries
+    with automatic country detection and format validation.
+
+    Supported SEPA Countries (27):
+        Austria, Belgium, Bulgaria, Croatia, Cyprus, Czech Republic, Denmark,
+        Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland,
+        Italy, Latvia, Liechtenstein, Lithuania, Luxembourg, Malta, Netherlands,
+        Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden
 
     Confidence Scoring:
     - IBAN found in reference → confidence 0.90
@@ -37,15 +46,22 @@ class IBANMatcher(IMatcherStrategy):
 
     Example:
         >>> matcher = IBANMatcher()
+        >>> # Italian IBAN
         >>> # Transaction has reference: "Bonifico a IT60X0542811101000000123456"
         >>> # Payment has iban: "IT60X0542811101000000123456"
         >>> results = matcher.match(transaction, payments)
         >>> assert results[0].confidence >= 0.90
+        >>> assert "Italy" in results[0].match_reason
+
+        >>> # German IBAN
+        >>> # Transaction: "Transfer from DE89370400440532013000"
+        >>> results = matcher.match(transaction, payments)
+        >>> assert "Germany" in results[0].match_reason
     """
 
-    # Italian IBAN format: IT + 2 check digits + 23 digits
-    # We'll support flexible IBAN detection (with/without spaces)
-    IBAN_PATTERN = re.compile(r"IT\d{2}[A-Z]\d{10}[0-9A-Z]{12}", re.IGNORECASE)
+    # SEPA IBAN pattern: Supports all 27 SEPA countries
+    # Pattern auto-generated from SEPAIBANFormats registry
+    IBAN_PATTERN = re.compile(SEPAIBANFormats.get_combined_pattern(), re.IGNORECASE)
 
     def __init__(self, date_tolerance_days: int = 30, amount_tolerance_pct: float = 5.0) -> None:
         """Initialize IBAN matcher.
@@ -153,11 +169,15 @@ class IBANMatcher(IMatcherStrategy):
     def _extract_ibans(self, transaction: "BankTransaction") -> set[str]:
         """Extract and normalize all IBANs from transaction text fields.
 
+        Extracts IBANs from multiple transaction fields (reference, description,
+        memo, counterparty_iban) and validates them against SEPA country formats.
+
         Args:
             transaction: Bank transaction
 
         Returns:
-            Set of normalized IBANs (uppercase, no spaces)
+            Set of normalized and validated IBANs (uppercase, no spaces)
+            Only includes IBANs that match SEPA country patterns and lengths
         """
         ibans: set[str] = set()
 
@@ -182,7 +202,10 @@ class IBANMatcher(IMatcherStrategy):
         if counterparty_iban:
             ibans.add(self._normalize_iban(counterparty_iban))
 
-        return ibans
+        # Validate extracted IBANs against SEPA country formats
+        validated_ibans = {iban for iban in ibans if SEPAIBANFormats.validate_length(iban)}
+
+        return validated_ibans
 
     def _collect_transaction_text(self, transaction: "BankTransaction") -> str:
         """Collect normalized text blob for partial IBAN matching."""
@@ -304,6 +327,8 @@ class IBANMatcher(IMatcherStrategy):
     ) -> str:
         """Build human-readable explanation of IBAN match.
 
+        Includes country detection for enhanced context and transparency.
+
         Args:
             transaction: Bank transaction
             payment: Payment record
@@ -311,21 +336,26 @@ class IBANMatcher(IMatcherStrategy):
             is_partial: Whether the match used partial digits
 
         Returns:
-            Human-readable match reason
+            Human-readable match reason with country name
+            Example: "IBAN match (Germany): DE8937...3000 found in transaction, exact amount"
         """
         transaction_amount = abs(transaction.amount)
         amount_diff = abs(transaction_amount - payment_amount_for_matching(payment))
         date_diff_days = abs((payment.data_scadenza - transaction.date).days)
+
+        # Detect country from IBAN
+        country_name = SEPAIBANFormats.get_country_name(matched_iban) or "Unknown"
 
         # Mask IBAN for privacy (show first 6 and last 4)
         masked_iban = f"{matched_iban[:6]}...{matched_iban[-4:]}"
 
         if is_partial:
             reason = (
-                f"IBAN partial match: last 4 digits {matched_iban[-4:]} detected in transaction"
+                f"IBAN partial match ({country_name}): "
+                f"last 4 digits {matched_iban[-4:]} detected in transaction"
             )
         else:
-            reason = f"IBAN match: {masked_iban} found in transaction"
+            reason = f"IBAN match ({country_name}): {masked_iban} found in transaction"
 
         if amount_diff <= Decimal("0.01"):
             reason += ", exact amount"

@@ -32,7 +32,7 @@
 - **Quote management** – Create and manage preventivi (quotes/estimates) with automatic PDF generation and client tracking.
 - **Payment & reconciliation** – Multi-bank imports, intelligent reconciliation, and configurable reminders (`docs/PAYMENT_TRACKING.md`).
 - **Lightning Network payments** – Instant Bitcoin payments via LND integration with automatic EUR conversion, channel liquidity monitoring, and real-time webhook notifications.
-- **AI workflows** – Chat assistant, VAT guidance, description generation, custom slash commands, RAG knowledge base, ReAct tool calling, and ML model retraining powered by OpenAI, Anthropic, or Ollama (`examples/AI_CHAT_ASSISTANT.md`).
+- **AI workflows** – Chat assistant, VAT guidance, description generation, **voice interaction** with speech-to-text and text-to-speech, custom slash commands, RAG knowledge base, ReAct tool calling, and ML model retraining powered by OpenAI, Anthropic, or Ollama (`examples/AI_CHAT_ASSISTANT.md`).
 - **Web UI** – Modern Streamlit interface with real-time dashboard, invoice management, AI assistant, and Lightning payments (`docs/WEB_UI_GUIDE.md`).
 - **Custom AI commands** – User-defined slash commands for repetitive workflows (invoicing, tax, reporting) with Jinja2 templating.
 - **Automation hooks** – Lifecycle hooks for custom automation on invoice creation, sending, and other events.
@@ -147,6 +147,8 @@ uv run openfatture ai rag search "reverse charge"  # Semantic search
 uv run openfatture ai feedback stats  # User feedback analytics
 uv run openfatture ai retrain status  # ML model retraining status
 uv run openfatture ai chat  # Interactive with custom commands
+uv run openfatture ai voice-chat  # Voice interaction (STT + TTS)
+uv run openfatture ai voice-chat --interactive  # Continuous voice conversation
 
 # Event analytics & audit
 uv run openfatture events dashboard
@@ -314,6 +316,21 @@ uv run openfatture events stats
 
 # View recent errors
 uv run openfatture events list --type ErrorEvent --limit 10
+```
+
+**Voice Features Issues:**
+```bash
+# Check voice configuration
+uv run openfatture config show | grep VOICE
+
+# Test voice interaction
+uv run openfatture ai voice-chat --duration 5 --no-playback
+
+# Verify OpenAI API key (required for voice)
+uv run openfatture config show | grep OPENAI_API_KEY
+
+# Test microphone access
+uv run openfatture ai voice-chat --save-audio --duration 3
 ```
 
 ### Getting Help

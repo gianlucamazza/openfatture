@@ -32,6 +32,10 @@ def init(
     - Database structure
     - Configuration directories
     - Initial settings (in interactive mode)
+
+    Examples:
+        openfatture init                    # Interactive setup wizard
+        openfatture init --no-interactive   # Automated setup with defaults
     """
     console.print("\n[bold blue]🚀 OpenFatture Setup[/bold blue]\n")
 

@@ -212,7 +212,7 @@ def _pop_float_param(
     provider: str,
 ) -> float:
     value = params.pop(name, default)
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return float(value)
     raise ProviderError(f"Parameter '{name}' must be a number", provider=provider)
 

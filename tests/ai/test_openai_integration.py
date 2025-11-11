@@ -13,6 +13,8 @@ from openfatture.ai.agents.tax_advisor import TaxAdvisorAgent
 from openfatture.ai.domain.context import InvoiceContext, TaxContext
 from openfatture.ai.domain.response import ResponseStatus
 
+pytestmark = pytest.mark.asyncio
+
 
 @pytest.mark.openai
 @pytest.mark.e2e
@@ -22,7 +24,10 @@ class TestOpenAIInvoiceAssistant:
     async def test_basic_invoice_description(self, openai_provider):
         """Test basic invoice description generation."""
         agent = InvoiceAssistantAgent(provider=openai_provider)
-        context = InvoiceContext(user_input="3 ore consulenza web")
+        context = InvoiceContext(
+            user_input="3 ore consulenza web",
+            servizio_base="Consulenza web",
+        )
 
         response = await agent.execute(context)
 
@@ -47,7 +52,9 @@ class TestOpenAIInvoiceAssistant:
         """Test invoice description with client context."""
         agent = InvoiceAssistantAgent(provider=openai_provider)
         context = InvoiceContext(
-            user_input="Sviluppo applicazione mobile per cliente TechCorp", progetto="TechCorp SRL"
+            user_input="Sviluppo applicazione mobile per cliente TechCorp",
+            servizio_base="Sviluppo applicazione mobile",
+            progetto="TechCorp SRL",
         )
 
         response = await agent.execute(context)
@@ -62,7 +69,10 @@ class TestOpenAIInvoiceAssistant:
     async def test_technical_focus_invoice(self, openai_provider):
         """Test invoice with technical focus."""
         agent = InvoiceAssistantAgent(provider=openai_provider)
-        context = InvoiceContext(user_input="Implementazione API REST con FastAPI e PostgreSQL")
+        context = InvoiceContext(
+            user_input="Implementazione API REST con FastAPI e PostgreSQL",
+            servizio_base="Implementazione API REST",
+        )
 
         response = await agent.execute(context)
 
@@ -84,7 +94,10 @@ class TestOpenAIInvoiceAssistant:
         import time
 
         agent = InvoiceAssistantAgent(provider=openai_provider)
-        context = InvoiceContext(user_input="1 ora formazione Python")
+        context = InvoiceContext(
+            user_input="1 ora formazione Python",
+            servizio_base="Formazione Python",
+        )
 
         start = time.time()
         response = await agent.execute(context)
@@ -96,7 +109,10 @@ class TestOpenAIInvoiceAssistant:
     async def test_token_usage_tracking(self, openai_provider):
         """Test token usage is properly tracked."""
         agent = InvoiceAssistantAgent(provider=openai_provider)
-        context = InvoiceContext(user_input="Consulenza strategica aziendale")
+        context = InvoiceContext(
+            user_input="Consulenza strategica aziendale",
+            servizio_base="Consulenza strategica",
+        )
 
         response = await agent.execute(context)
 
@@ -116,7 +132,7 @@ class TestOpenAIInvoiceAssistant:
         agent = InvoiceAssistantAgent(provider=openai_provider)
 
         # Test with very short input
-        context = InvoiceContext(user_input="x")
+        context = InvoiceContext(user_input="x", servizio_base="Servizio generico")
         response = await agent.execute(context)
 
         # Should still succeed and provide reasonable response
@@ -127,7 +143,10 @@ class TestOpenAIInvoiceAssistant:
     async def test_structured_output_fallback(self, openai_provider):
         """Test fallback when structured output fails."""
         agent = InvoiceAssistantAgent(provider=openai_provider)
-        context = InvoiceContext(user_input="Attività non standard senza descrizione chiara")
+        context = InvoiceContext(
+            user_input="Attività non standard senza descrizione chiara",
+            servizio_base="Attività non standard",
+        )
 
         response = await agent.execute(context)
 
@@ -160,7 +179,7 @@ class TestOpenAITaxAdvisor:
 
         # Should recommend 22% for standard VAT
         aliquota = response_data["aliquota_iva"]
-        assert isinstance(aliquota, (int, float))
+        assert isinstance(aliquota, int | float)
         assert aliquota == 22.0
 
     async def test_reverse_charge_construction(self, openai_provider):
@@ -336,7 +355,10 @@ class TestOpenAIProviderCapabilities:
         # This test might be skipped if no rate limits occur
         # But ensures error handling works
         agent = InvoiceAssistantAgent(provider=openai_provider)
-        context = InvoiceContext(user_input="Test rate limit handling")
+        context = InvoiceContext(
+            user_input="Test rate limit handling",
+            servizio_base="Test rate limit handling",
+        )
 
         response = await agent.execute(context)
 

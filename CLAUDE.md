@@ -118,8 +118,169 @@ The AI module (`openfatture/ai/`) implements a provider-agnostic architecture fo
 uv run openfatture ai describe "3 hours consulting"      # Generate invoice description
 uv run openfatture ai suggest-vat "IT consulting"        # VAT rate suggestion
 uv run openfatture ai chat                               # Interactive chat assistant
+uv run openfatture ai voice-chat --interactive           # Voice-based chat assistant
 uv run openfatture ai forecast --retrain                 # Train ML models for cash flow
 ```
+
+### Voice Features (NEW!)
+
+The voice module (`openfatture/ai/voice/`) adds text-to-speech (TTS) and speech-to-text (STT) capabilities for natural voice interactions with the AI assistant.
+
+**Purpose**: Enable hands-free voice interaction for invoice creation, tax queries, and business questions using OpenAI Whisper (STT) and OpenAI TTS API.
+
+**Architecture:**
+- **Provider Abstraction**: `BaseVoiceProvider` abstract class for future extensibility (Google, Azure, etc.)
+- **OpenAI Implementation**: Full Whisper STT (100+ languages) + TTS (6 voices) integration
+- **Factory Pattern**: `create_voice_provider()` with environment-based configuration
+- **Orchestration Layer**: `VoiceAssistant` coordinates STT → ChatAgent → TTS pipeline
+- **Audio Handling**: Microphone recording via `sounddevice`, multi-format support (mp3, opus, aac, flac, wav)
+
+**Key Components:**
+```
+openfatture/ai/voice/
+├── __init__.py           # Public API exports
+├── base.py               # BaseVoiceProvider abstract interface
+├── models.py             # VoiceConfig, TranscriptionResult, SynthesisResult, VoiceResponse
+├── openai_voice.py       # OpenAI Whisper + TTS implementation
+├── factory.py            # create_voice_provider(), get_default_voice_config()
+└── assistant.py          # VoiceAssistant orchestration layer
+```
+
+**Configuration (`.env`):**
+```bash
+# Enable voice features
+OPENFATTURE_VOICE_ENABLED=true
+OPENFATTURE_VOICE_PROVIDER=openai
+
+# Speech-to-Text (Whisper)
+OPENFATTURE_VOICE_STT_MODEL=whisper-1
+OPENFATTURE_VOICE_STT_LANGUAGE=it  # or auto-detect (leave empty)
+
+# Text-to-Speech
+OPENFATTURE_VOICE_TTS_MODEL=tts-1-hd  # or tts-1 for lower cost
+OPENFATTURE_VOICE_TTS_VOICE=nova      # alloy, echo, fable, onyx, nova, shimmer
+OPENFATTURE_VOICE_TTS_SPEED=1.0       # 0.25 - 4.0
+OPENFATTURE_VOICE_TTS_FORMAT=mp3      # mp3, opus, aac, flac
+OPENFATTURE_VOICE_STREAMING=true      # Enable streaming TTS
+```
+
+**Voice Selection Guide:**
+- `alloy`: Neutral, professional (best for English)
+- `echo`: Clear, articulate
+- `fable`: Expressive, storytelling
+- `onyx`: Deep, authoritative
+- `nova`: Warm, conversational (best for Italian)
+- `shimmer`: Soft, gentle (best for French)
+
+**CLI Commands:**
+```bash
+# Single voice interaction (5-second recording)
+uv run openfatture ai voice-chat --duration 5
+
+# Interactive mode (press Enter to record each time)
+uv run openfatture ai voice-chat --interactive --duration 10
+
+# Save audio files for debugging
+uv run openfatture ai voice-chat -i -d 8 --save-audio
+
+# Disable audio playback (text output only)
+uv run openfatture ai voice-chat --no-playback
+
+# Custom audio settings
+uv run openfatture ai voice-chat --sample-rate 16000 --channels 1
+```
+
+**Usage Example:**
+```python
+from openfatture.ai.voice import create_voice_provider, VoiceAssistant
+from openfatture.ai.agents.chat_agent import ChatAgent
+from openfatture.ai.providers.factory import create_provider
+
+# Create voice provider
+voice_provider = create_voice_provider(api_key="your-openai-key")
+
+# Create voice assistant
+chat_provider = create_provider()
+chat_agent = ChatAgent(provider=chat_provider)
+assistant = VoiceAssistant(
+    voice_provider=voice_provider,
+    chat_agent=chat_agent,
+    enable_tts=True,
+)
+
+# Process voice input
+audio_bytes = Path("recording.mp3").read_bytes()
+response = await assistant.process_voice_input(audio_bytes)
+
+print(f"You said: {response.transcription.text}")
+print(f"Language: {response.transcription.language}")
+print(f"Assistant: {response.llm_response}")
+
+# Save response audio
+if response.synthesis:
+    Path("response.mp3").write_bytes(response.synthesis.audio_data)
+```
+
+**Voice Orchestration Flow:**
+```
+1. Audio Recording (sounddevice)
+   ↓
+2. Speech-to-Text (Whisper API)
+   ↓ transcription.text + language
+3. LLM Processing (ChatAgent with context)
+   ↓ llm_response
+4. Text-to-Speech (OpenAI TTS)
+   ↓ audio_data (MP3/OPUS/etc)
+5. Audio Playback (sounddevice) or Save
+```
+
+**Features:**
+- **Multi-language Support**: Auto-detect from 100+ languages (Whisper)
+- **Language-Voice Mapping**: Automatic voice selection based on detected language
+- **Streaming TTS**: Chunked audio streaming for reduced perceived latency
+- **Conversation Context**: Full conversation history support in voice mode
+- **Metrics Tracking**: STT, LLM, and TTS latency tracking with cost estimation
+- **Error Handling**: Comprehensive exception hierarchy (VoiceProviderError, AuthError, RateLimitError, TimeoutError)
+
+**Audio Specifications:**
+- **Recording**: 16kHz sample rate, mono (configurable), 16-bit PCM → WAV
+- **STT Input**: Supports WAV, MP3, M4A, WEBM, MP4 (Whisper API)
+- **TTS Output**: MP3 (default), OPUS, AAC, FLAC, PCM at 24kHz
+- **Latency**: ~1-3s STT + LLM time + ~0.5-1s TTS = 2-5s total typical
+
+**Cost Estimation:**
+- **Whisper STT**: ~$0.006 per minute of audio
+- **TTS**: ~$0.015 per 1,000 characters (tts-1) or ~$0.030 (tts-1-hd)
+- **LLM**: Standard ChatGPT pricing (varies by model)
+
+**Testing:**
+```bash
+# Unit tests (28 tests, 85%+ coverage)
+uv run python -m pytest tests/ai/voice/ -v
+
+# Test models
+uv run python -m pytest tests/ai/voice/test_models.py -v
+
+# Test factory
+uv run python -m pytest tests/ai/voice/test_factory.py -v
+```
+
+**Limitations & Future Enhancements:**
+- Currently OpenAI-only (future: Google TTS/STT, Azure, ElevenLabs)
+- MP3 playback requires decoding (currently saves to temp file)
+- No real-time streaming in interactive mode yet
+- Push-to-talk only (no voice activity detection)
+
+**Dependencies:**
+```bash
+sounddevice>=0.4.6  # Audio recording and playback
+numpy>=1.26.0       # Required by sounddevice
+```
+
+**See also:**
+- `openfatture/ai/voice/models.py` - Data models and enums
+- `openfatture/ai/voice/assistant.py` - Orchestration layer
+- `.env.example` - Complete voice configuration reference
 
 ### Custom Slash Commands (NEW!)
 
@@ -453,7 +614,9 @@ The payment module (`openfatture/payment/`) uses Domain-Driven Design:
 **Matchers:**
 - `ExactMatcher`: Exact amount + invoice number matching
 - `FuzzyDescriptionMatcher`: Fuzzy string matching with `rapidfuzz` (threshold: 80)
+- `IBANMatcher`: IBAN matching with SEPA multi-country support (30 countries: 27 EU + 3 EEA)
 - `DateWindowMatcher`: Matches within ±N days of invoice date
+- `CompositeMatcher`: Weighted combination of all strategies (parallel execution, 3.87x speedup)
 
 **Commands:**
 ```bash

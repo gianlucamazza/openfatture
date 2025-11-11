@@ -344,6 +344,7 @@ Configure `AI_PROVIDER`, `AI_MODEL`, and `AI_API_KEY` (or Ollama) first. Validat
 | `openfatture ai check ID [--level advanced]` | Analyses the invoice using rules + AI to catch issues before submission. | `openfatture ai check 45 --level standard --verbose` |
 | `openfatture ai create-invoice "desc"` | Creates complete invoices using AI workflow orchestration. | `openfatture ai create-invoice "consulenza web" --client 123 --amount 300` |
 | `openfatture ai chat ["message"]` | Interactive AI chat assistant for invoice/tax questions. | `openfatture ai chat --stream` (or interactive mode) |
+| `openfatture ai voice-chat` | Interactive voice interface for hands-free AI assistance with speech-to-text and text-to-speech. | `openfatture ai voice-chat --duration 5 --interactive` |
 | `openfatture ai rag status` | Displays knowledge-base sources, document counts, and ChromaDB directory. |  |
 | `openfatture ai rag index [--source id]` | Indexes or re-indexes the RAG sources defined in the manifest. | `openfatture ai rag index --source tax_guides` |
 | `openfatture ai rag search "query"` | Semantic search inside the knowledge base (great for debugging or audits). | `openfatture ai rag search "reverse charge edilizia" --source tax_guides` |
@@ -399,6 +400,150 @@ Consulenza tecnica backend per sviluppo API RESTful...
 **Cost:** $0.0045
 **Latency:** 850ms
 ```
+
+### Voice Chat
+
+`openfatture ai voice-chat` provides hands-free interaction with the AI assistant using speech-to-text (OpenAI Whisper) and text-to-speech (OpenAI TTS).
+
+**Prerequisites:**
+- OpenAI API key configured (`OPENAI_API_KEY` in `.env`)
+- Voice features enabled (`VOICE_ENABLED=true`)
+- Microphone access (for recording)
+- Audio output device (for playback)
+
+**Command Options:**
+
+| Option | Short | Type | Default | Description |
+|--------|-------|------|---------|-------------|
+| `--duration` | `-d` | Integer | 5 | Recording duration in seconds |
+| `--sample-rate` | `-s` | Integer | 16000 | Audio sample rate in Hz (8000, 16000, 44100, 48000) |
+| `--channels` | `-c` | Integer | 1 | Number of audio channels (1=mono, 2=stereo) |
+| `--interactive` | `-i` | Flag | False | Enable interactive mode with multiple conversations |
+| `--save-audio` | | Flag | False | Save audio files to disk for debugging |
+| `--no-playback` | | Flag | False | Disable audio playback (text-only mode) |
+
+**Basic Usage:**
+
+```bash
+# Single recording (5 seconds)
+openfatture ai voice-chat
+
+# Custom recording duration (10 seconds)
+openfatture ai voice-chat --duration 10
+
+# Interactive mode (continuous conversation)
+openfatture ai voice-chat --interactive
+
+# High quality recording with stereo
+openfatture ai voice-chat --sample-rate 48000 --channels 2
+
+# Save audio files for debugging
+openfatture ai voice-chat --save-audio --interactive
+
+# Text-only mode (no audio playback)
+openfatture ai voice-chat --no-playback
+```
+
+**Workflow:**
+
+1. **Record**: Press ENTER to start recording (duration: `--duration` seconds)
+2. **Transcribe**: Audio sent to OpenAI Whisper for speech-to-text
+3. **Process**: Transcribed text processed by AI chat agent
+4. **Synthesize**: Response converted to speech with OpenAI TTS
+5. **Play**: Audio response played automatically (unless `--no-playback`)
+
+**Interactive Mode:**
+
+```bash
+openfatture ai voice-chat --interactive
+```
+
+- Continue conversations with context retention
+- Type 'quit', 'exit', or 'q' to stop
+- Press ENTER to start each new recording
+- Full conversation history maintained
+
+**Audio Configuration:**
+
+Voice settings are configured in `.env`:
+
+```bash
+# Enable voice features
+VOICE_ENABLED=true
+
+# Speech-to-Text
+VOICE_STT_MODEL=whisper-1              # OpenAI Whisper model
+VOICE_STT_LANGUAGE=it                  # Language code (auto-detect if empty)
+
+# Text-to-Speech
+VOICE_TTS_MODEL=tts-1                  # tts-1 or tts-1-hd (higher quality)
+VOICE_TTS_VOICE=nova                   # Voice: nova, alloy, echo, fable, onyx, shimmer
+VOICE_TTS_SPEED=1.0                    # Playback speed: 0.25-4.0
+VOICE_TTS_FORMAT=mp3                   # Format: mp3, opus, aac, flac
+
+# Advanced
+VOICE_STREAMING_ENABLED=false          # Enable streaming TTS for lower latency
+VOICE_CHUNK_SIZE=4096                  # Streaming chunk size in bytes
+```
+
+**Language Support:**
+
+Whisper automatically detects 100+ languages including:
+- Italian (it)
+- English (en)
+- Spanish (es)
+- French (fr)
+- German (de)
+- Portuguese (pt)
+- Dutch (nl)
+- And more...
+
+Set `VOICE_STT_LANGUAGE` to specify a language or leave empty for auto-detection.
+
+**Voice Selection Guide:**
+
+| Voice | Gender | Characteristics | Best for |
+|-------|--------|-----------------|----------|
+| nova | Female | Warm, conversational | Italian, general use |
+| alloy | Neutral | Balanced, professional | English, technical |
+| echo | Male | Clear, articulate | Presentations |
+| fable | Male | British, expressive | Storytelling |
+| onyx | Male | Deep, authoritative | Business |
+| shimmer | Female | Soft, gentle | French, customer service |
+
+**Cost Estimation:**
+
+- **STT (Whisper)**: ~$0.006 per minute of audio
+- **TTS**: ~$0.015 per 1,000 characters (tts-1), ~$0.030 per 1,000 characters (tts-1-hd)
+
+Example 5-minute conversation:
+- Recording: 5 min × $0.006 = $0.03
+- Response (500 chars): 0.5 × $0.015 = $0.0075
+- **Total**: ~$0.04 per conversation
+
+**Troubleshooting:**
+
+```bash
+# Test microphone recording
+openfatture ai voice-chat --duration 3 --save-audio
+
+# Test without playback (check transcription only)
+openfatture ai voice-chat --no-playback
+
+# High quality for difficult audio
+openfatture ai voice-chat --sample-rate 48000 --channels 2
+
+# Check voice configuration
+openfatture config show | grep VOICE
+```
+
+**Common Issues:**
+
+1. **No microphone access**: Check system permissions and microphone device
+2. **Poor transcription**: Increase sample rate (`--sample-rate 48000`) or reduce background noise
+3. **No audio playback**: Check audio output device or use `--no-playback` to see text response
+4. **API errors**: Verify `OPENAI_API_KEY` is set correctly
+5. **Voice not available**: Ensure `VOICE_ENABLED=true` in `.env`
 
 ### Notes
 

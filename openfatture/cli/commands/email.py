@@ -14,7 +14,7 @@ from openfatture.utils.email.models import FatturaInvioContext
 from openfatture.utils.email.renderer import TemplateRenderer
 from openfatture.utils.email.sender import TemplatePECSender
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 

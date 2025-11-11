@@ -17,7 +17,7 @@ from openfatture.utils.validators import (
     validate_pec_email,
 )
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 
@@ -36,26 +36,41 @@ def _get_session():
 
 @app.command("add")
 def add_cliente(
-    denominazione: str = typer.Argument(..., help="Client name/company name"),
+    denominazione: str | None = typer.Argument(
+        None, help="Client name/company name (omit to be prompted in --interactive mode)"
+    ),
     partita_iva: str | None = typer.Option(None, "--piva", help="Partita IVA"),
     codice_fiscale: str | None = typer.Option(None, "--cf", help="Codice Fiscale"),
     codice_destinatario: str | None = typer.Option(None, "--sdi", help="SDI code"),
     pec: str | None = typer.Option(None, "--pec", help="PEC address"),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive mode"),
 ) -> None:
-    """Add a new client."""
+    """
+    Add a new client to the database.
+
+    Creates a new client record with tax information required for Italian invoicing.
+    Use --interactive mode for guided setup with validation.
+
+    Examples:
+        openfatture cliente add "ACME Corp" --piva IT12345678901 --sdi ABCDEFG
+        openfatture cliente add "John Doe" --cf RSSGNN80A01H501U --interactive
+    """
     ensure_db()
 
     indirizzo: str | None = None
+    numero_civico: str | None = None
     cap: str | None = None
     comune: str | None = None
     provincia: str | None = None
     email: str | None = None
     telefono: str | None = None
+    note: str | None = None
 
     # Interactive mode collects all data
     if interactive:
-        denominazione = Prompt.ask("Client name/Company", default=denominazione)
+        denominazione = (
+            Prompt.ask("Client name/Company", default=denominazione or "").strip() or None
+        )
 
         partita_iva_input = Prompt.ask("Partita IVA (optional)", default=partita_iva or "")
         if partita_iva_input and validate_partita_iva(partita_iva_input):
@@ -70,10 +85,11 @@ def add_cliente(
             console.print("[yellow]Warning: Invalid Codice Fiscale, skipping[/yellow]")
 
         # Address
-        indirizzo = Prompt.ask("Address (Via/Piazza)", default="")
-        cap = Prompt.ask("CAP", default="")
-        comune = Prompt.ask("City", default="")
-        provincia = Prompt.ask("Province (2 letters)", default="").upper()
+        indirizzo = Prompt.ask("Address (Via/Piazza)", default="").strip() or None
+        numero_civico = Prompt.ask("Civic number (optional)", default="").strip() or None
+        cap = Prompt.ask("CAP", default="").strip() or None
+        comune = Prompt.ask("City", default="").strip() or None
+        provincia = Prompt.ask("Province (2 letters)", default="").strip().upper() or None
 
         # SDI/PEC
         sdi_input = Prompt.ask("SDI Code (7 chars, or 0000000 for PEC)", default="")
@@ -84,10 +100,14 @@ def add_cliente(
         if pec_input and validate_pec_email(pec_input):
             pec = pec_input
 
-        email = Prompt.ask("Regular email (optional)", default="")
-        telefono = Prompt.ask("Phone (optional)", default="")
+        email = Prompt.ask("Regular email (optional)", default="").strip() or None
+        telefono = Prompt.ask("Phone (optional)", default="").strip() or None
+        note = Prompt.ask("Notes (optional)", default="").strip() or None
 
     # Validate required fields
+    if denominazione:
+        denominazione = denominazione.strip()
+
     if not denominazione:
         console.print("[red]Error: Client name is required[/red]")
         raise typer.Exit(1)
@@ -114,14 +134,14 @@ def add_cliente(
             codice_destinatario=codice_destinatario,
             pec=pec,
             indirizzo=indirizzo if interactive else None,
-            numero_civico=None,  # Set to None if not provided in interactive mode
+            numero_civico=numero_civico if interactive else None,
             cap=cap if interactive else None,
             comune=comune if interactive else None,
             provincia=provincia if interactive else None,
             nazione="IT",  # Default to Italy
             email=email if interactive else None,
             telefono=telefono if interactive else None,
-            note=None,  # Set to None if not provided
+            note=note if interactive else None,
         )
 
         db.add(cliente)

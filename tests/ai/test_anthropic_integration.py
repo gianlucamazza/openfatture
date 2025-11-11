@@ -160,7 +160,7 @@ class TestAnthropicTaxAdvisor:
 
         # Should recommend 22% for standard VAT
         aliquota = response_data["aliquota_iva"]
-        assert isinstance(aliquota, (int, float))
+        assert isinstance(aliquota, int | float)
         assert aliquota == 22.0
 
     async def test_reverse_charge_construction(self, anthropic_provider):

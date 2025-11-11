@@ -26,6 +26,7 @@ from .commands import (
     media,
     notifiche,
     pec,
+    plugin,
     preventivo,
     report,
     web_scraper,
@@ -40,6 +41,60 @@ app = typer.Typer(
     no_args_is_help=True,  # Show help when no command is provided
 )
 console = Console()
+
+
+def _initialize_plugin_system(settings) -> None:
+    """Initialize the plugin system."""
+    try:
+        from openfatture.plugins import PluginDiscovery, get_plugin_registry
+
+        registry = get_plugin_registry()
+
+        # Auto-discover plugins if enabled
+        if settings.plugins_auto_discover:
+            discovery = PluginDiscovery([settings.plugins_dir])
+            discovery.auto_register_plugins()
+
+        # Enable plugins from configuration
+        if settings.plugins_enabled_list:
+            enabled_plugins = [p.strip() for p in settings.plugins_enabled_list.split(",")]
+            for plugin_name in enabled_plugins:
+                registry.enable_plugin(plugin_name)
+        else:
+            # Enable all discovered plugins by default
+            for plugin in registry.list_plugins():
+                registry.enable_plugin(plugin.metadata.name)
+
+        # Initialize enabled plugins with empty config for now
+        # TODO: Load plugin-specific configuration
+        registry.initialize_enabled_plugins({})
+
+    except Exception as e:
+        # Don't fail startup if plugin system fails
+        console.print(f"[yellow]Warning: Plugin system initialization failed: {e}[/yellow]")
+
+
+def _register_plugin_commands() -> None:
+    """Register plugin CLI commands with the main app."""
+    try:
+        from openfatture.plugins import get_plugin_registry
+        from openfatture.utils.config import get_settings
+
+        settings = get_settings()
+        if not settings.plugins_enabled:
+            return
+
+        registry = get_plugin_registry()
+
+        # Register CLI commands for enabled plugins
+        for plugin in registry.list_enabled_plugins():
+            cli_app = plugin.get_cli_app()
+            if cli_app:
+                app.add_typer(cli_app, name=plugin.metadata.name)
+
+    except Exception as e:
+        # Don't fail if plugin command registration fails
+        pass
 
 
 def version_callback(value: bool) -> None:
@@ -83,6 +138,12 @@ def main(
     settings = get_settings()
     configure_dynamic_logging(settings.debug_config)
 
+    # Initialize plugin system
+    if settings.plugins_enabled:
+        _initialize_plugin_system(settings)
+        # Register plugin CLI commands after initialization
+        _register_plugin_commands()
+
     # Store format option in context for subcommands to access
     ctx.ensure_object(dict)
     ctx.obj["format"] = format_type
@@ -113,7 +174,22 @@ app.add_typer(hooks.app, name="hooks", help="🪝 Manage lifecycle hooks")
 app.add_typer(events.app, name="events", help="📜 View event history & audit log")
 app.add_typer(report.app, name="report", help="📊 Generate reports")
 app.add_typer(web_scraper.app, name="web-scraper", help="🕷️ Regulatory web scraping")
+app.add_typer(plugin.app, name="plugin", help="🔌 Manage plugins")
 app.add_typer(payment_app, name="payment", help="💰 Payment tracking & reconciliation")
+
+# Pre-load plugins and register their CLI commands
+try:
+    from openfatture.utils.config import get_settings
+
+    settings = get_settings()
+    if settings.plugins_enabled:
+        # Initialize plugin system
+        _initialize_plugin_system(settings)
+        # Register plugin CLI commands
+        _register_plugin_commands()
+except Exception as e:
+    # Don't fail startup if plugin system fails during import
+    pass
 
 
 if __name__ == "__main__":

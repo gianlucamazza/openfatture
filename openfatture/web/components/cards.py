@@ -118,7 +118,7 @@ def invoice_card(
         ... )
     """
     # Format values
-    data_str = data.strftime("%d/%m/%Y") if isinstance(data, (date, datetime)) else str(data)
+    data_str = data.strftime("%d/%m/%Y") if isinstance(data, date | datetime) else str(data)
     totale_str = f"€{float(totale):,.2f}"
 
     # Status color mapping

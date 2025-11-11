@@ -96,3 +96,6 @@ media/videos/sd/
 media/videos/mobile/
 *.palette.png
 ffmpeg2pass-*.log
+
+# External Plugins (separate repositories)
+openfatture-plugin-*/

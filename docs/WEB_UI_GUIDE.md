@@ -177,7 +177,7 @@ docker run -p 8501:8501 -v $(pwd)/.env:/app/.env openfatture-web
 
 ### 🤖 AI Assistant
 
-**3 Tab Principali:**
+**4 Tab Principali:**
 
 #### 💬 Chat Assistente
 
@@ -201,6 +201,153 @@ docker run -p 8501:8501 -v $(pwd)/.env:/app/.env openfatture-web
 - "Devo applicare IVA su consulenza IT per PA?"
 - "Cosa succede se una fattura viene rifiutata da SDI?"
 - "Come gestisco una fattura con split payment?"
+
+#### 🎙️ Voice Chat
+
+**Funzionalità:**
+- **Interazione vocale** hands-free con l'AI Assistant
+- **Speech-to-Text:** Trascrizione automatica con OpenAI Whisper (100+ lingue)
+- **Text-to-Speech:** Sintesi vocale con voce personalizzabile
+- **Memoria conversazione:** Mantiene contesto tra più interazioni vocali
+- **Supporto multilingua:** Rilevamento automatico della lingua
+- **Riproduzione audio:** Ascolta la risposta dell'AI direttamente nel browser
+
+**Come Usare:**
+1. Assicurati che il microfono sia abilitato nel browser
+2. Click sul pulsante "🎙️ Registra Audio" e concedi permessi microfono
+3. Parla la tua domanda (es. "Quale IVA per consulenza web?")
+4. Attendi elaborazione:
+   - 🎤 Trascrizione audio → testo
+   - 🤖 Elaborazione risposta AI
+   - 🔊 Sintesi vocale risposta
+5. Ascolta la risposta audio automaticamente
+6. Visualizza trascrizione e risposta testuale
+7. Continua la conversazione vocale (mantiene contesto)
+
+**Configurazione Richiesta:**
+
+Aggiungi al file `.env`:
+```bash
+# Abilita voice features
+VOICE_ENABLED=true
+
+# OpenAI API key (richiesta per Whisper + TTS)
+OPENAI_API_KEY=sk-...
+
+# Configurazione STT (Speech-to-Text)
+VOICE_STT_MODEL=whisper-1         # Modello Whisper
+VOICE_STT_LANGUAGE=it             # Lingua (lascia vuoto per auto-detect)
+
+# Configurazione TTS (Text-to-Speech)
+VOICE_TTS_MODEL=tts-1             # tts-1 o tts-1-hd (alta qualità)
+VOICE_TTS_VOICE=nova              # Voce: nova, alloy, echo, fable, onyx, shimmer
+VOICE_TTS_SPEED=1.0               # Velocità: 0.25-4.0
+VOICE_TTS_FORMAT=mp3              # Formato: mp3, opus, aac, flac
+```
+
+**Selezione Voce TTS:**
+
+| Voce | Genere | Caratteristiche | Consigliato per |
+|------|--------|-----------------|-----------------|
+| **nova** | Femminile | Calda, conversazionale | **Italiano, uso generale** ⭐ |
+| alloy | Neutro | Bilanciata, professionale | Inglese, tecnico |
+| echo | Maschile | Chiara, articolata | Presentazioni |
+| fable | Maschile | British, espressivo | Storytelling |
+| onyx | Maschile | Profonda, autorevole | Business formale |
+| shimmer | Femminile | Dolce, gentile | Francese, customer service |
+
+**Workflow Tipico:**
+
+1. **Prima volta:** Verifica configurazione in Impostazioni → Voice Config
+2. **Registra domanda:** Click "Registra" e parla naturalmente
+3. **Rivedi trascrizione:** Controlla che il testo sia corretto
+4. **Ascolta risposta:** Audio riprodotto automaticamente
+5. **Continua conversazione:** Mantiene memoria dei messaggi precedenti
+6. **Reset:** Click "Cancella" per nuova conversazione
+
+**Esempi Domande Vocali:**
+- 🇮🇹 "Crea una fattura per consulenza web di tre ore"
+- 🇮🇹 "Quale aliquota IVA devo usare per formazione online?"
+- 🇮🇹 "Quante fatture ho emesso questo mese?"
+- 🇬🇧 "How does reverse charge work in Italy?"
+- 🇪🇸 "¿Qué IVA aplico a servicios digitales?"
+
+**Supporto Lingue:**
+
+Whisper rileva automaticamente oltre 100 lingue, tra cui:
+- 🇮🇹 Italiano (it)
+- 🇬🇧 Inglese (en)
+- 🇪🇸 Spagnolo (es)
+- 🇫🇷 Francese (fr)
+- 🇩🇪 Tedesco (de)
+- 🇵🇹 Portoghese (pt)
+- 🇳🇱 Olandese (nl)
+
+**Costi Indicativi:**
+
+- **STT (Whisper):** ~€0.006 per minuto audio
+- **TTS:** ~€0.015 per 1.000 caratteri (tts-1), ~€0.030 per 1.000 caratteri (tts-1-hd)
+- **Esempio conversazione 5 minuti:**
+  - Registrazione: 5 min × €0.006 = €0.03
+  - Risposta (500 caratteri): 0.5 × €0.015 = €0.0075
+  - **Totale: ~€0.04 per conversazione**
+
+**Performance:**
+
+- **Latenza STT:** 1-3 secondi per audio 5-10 secondi
+- **Latenza TTS:** 1-2 secondi per risposta 100-200 caratteri
+- **Latenza totale:** 3-7 secondi per interazione completa
+- **Qualità audio:** 16kHz mono (default), 48kHz stereo (opzionale)
+
+**Troubleshooting:**
+
+- **Microfono non rilevato:** Verifica permessi browser (icona lucchetto URL)
+- **Trascrizione errata:** Parla più chiaramente o riduci rumore ambiente
+- **Nessun audio risposta:** Controlla volume sistema e formato audio supportato
+- **Errore API:** Verifica `OPENAI_API_KEY` valida in `.env`
+- **Voice non disponibile:** Assicurati che `VOICE_ENABLED=true` in `.env`
+
+**Test Configurazione:**
+
+```bash
+# Verifica voice config da CLI
+uv run openfatture config show | grep VOICE
+
+# Test voice chat da terminale
+uv run openfatture ai voice-chat --duration 5
+
+# Test interattivo con conversazione
+uv run openfatture ai voice-chat --interactive
+```
+
+**Vantaggi Voice Chat:**
+
+✅ **Hands-Free:** Ideale per multitasking o mobilità
+✅ **Accessibilità:** Supporto per utenti con disabilità visive
+✅ **Multilingua:** Cambia lingua on-the-fly senza configurazione
+✅ **Naturale:** Conversazione più fluida rispetto a testo
+✅ **Mobile-Friendly:** Ottimo per smartphone e tablet
+
+**Limitazioni Attuali:**
+
+⚠️ Richiede connessione internet (API OpenAI)
+⚠️ Latenza ~5s per risposta completa
+⚠️ Costi API per ogni interazione
+⚠️ Qualità dipende da microfono e ambiente
+
+**Alternative CLI:**
+
+Se preferisci il terminale, usa il comando `voice-chat`:
+```bash
+# Singola interazione
+uv run openfatture ai voice-chat --duration 10
+
+# Modalità interattiva
+uv run openfatture ai voice-chat --interactive
+
+# Salva audio per debug
+uv run openfatture ai voice-chat --save-audio --interactive
+```
 
 #### 📝 Genera Descrizione
 

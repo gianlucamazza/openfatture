@@ -210,6 +210,184 @@ class TestCompositeMatcherBasic:
         # Should only return ONE result (deduplicated by payment ID)
         assert len(results) == 1
 
+    @pytest.mark.asyncio
+    async def test_composite_exception_isolation(self):
+        """Test that exception in one strategy doesn't fail other strategies.
+
+        PHASE 1 Enhancement: Parallel execution with exception isolation.
+        """
+        # Strategy 1: Fails with exception
+        strategy1 = AsyncMock()
+        strategy1.match.side_effect = ValueError("Strategy 1 failed")
+        strategy1.__class__.__name__ = "FailingStrategy"
+
+        # Strategy 2: Succeeds normally
+        strategy2 = AsyncMock()
+        strategy2.match.return_value = [
+            MatchResult(
+                payment=Mock(id=1),
+                confidence=Decimal("0.85"),
+                match_type=MatchType.EXACT,
+                match_reason="Exact match",
+            )
+        ]
+        strategy2.__class__.__name__ = "SuccessfulStrategy"
+
+        # Strategy 3: Also succeeds
+        strategy3 = AsyncMock()
+        strategy3.match.return_value = [
+            MatchResult(
+                payment=Mock(id=2),
+                confidence=Decimal("0.75"),
+                match_type=MatchType.FUZZY,
+                match_reason="Fuzzy match",
+            )
+        ]
+        strategy3.__class__.__name__ = "AnotherSuccessfulStrategy"
+
+        composite = CompositeMatcher(strategies=[strategy1, strategy2, strategy3])
+
+        transaction = Mock(
+            id="test-tx-123",
+            amount=Decimal("100.00"),
+            description="Test payment",
+            date=date.today(),
+        )
+        candidates = [Mock(id=1), Mock(id=2)]
+
+        results = await composite.match(transaction, candidates)
+
+        # Should return results from successful strategies only
+        assert len(results) == 2
+        assert results[0].confidence == 0.85  # From strategy2
+        assert results[1].confidence == 0.75  # From strategy3
+
+        # Verify all strategies were called (even the failing one)
+        strategy1.match.assert_called_once()
+        strategy2.match.assert_called_once()
+        strategy3.match.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_composite_parallel_execution_ordering(self):
+        """Test that results from parallel execution maintain correct ordering.
+
+        PHASE 1 Enhancement: Verify parallel execution produces same results as sequential.
+        """
+        # Create strategies that return predictable results
+        strategy1 = AsyncMock()
+        strategy1.match.return_value = [
+            MatchResult(
+                payment=Mock(id=1),
+                confidence=Decimal("0.90"),
+                match_type=MatchType.EXACT,
+                match_reason="Exact",
+            )
+        ]
+
+        strategy2 = AsyncMock()
+        strategy2.match.return_value = [
+            MatchResult(
+                payment=Mock(id=2),
+                confidence=Decimal("0.80"),
+                match_type=MatchType.FUZZY,
+                match_reason="Fuzzy",
+            )
+        ]
+
+        strategy3 = AsyncMock()
+        strategy3.match.return_value = [
+            MatchResult(
+                payment=Mock(id=3),
+                confidence=Decimal("0.70"),
+                match_type=MatchType.DATE_WINDOW,
+                match_reason="Date window",
+            )
+        ]
+
+        composite = CompositeMatcher(strategies=[strategy1, strategy2, strategy3])
+
+        transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
+        candidates = [Mock(id=1), Mock(id=2), Mock(id=3)]
+
+        results = await composite.match(transaction, candidates)
+
+        # Results should be sorted by confidence descending
+        assert len(results) == 3
+        assert results[0].confidence == 0.90  # Highest
+        assert results[1].confidence == 0.80  # Medium
+        assert results[2].confidence == 0.70  # Lowest
+
+        # Verify ordering is stable across multiple calls
+        results2 = await composite.match(transaction, candidates)
+        assert [r.confidence for r in results] == [r.confidence for r in results2]
+
+    @pytest.mark.asyncio
+    async def test_composite_all_strategies_fail(self):
+        """Test graceful handling when all strategies fail with exceptions."""
+        # All strategies fail
+        strategy1 = AsyncMock()
+        strategy1.match.side_effect = ValueError("Failed 1")
+        strategy1.__class__.__name__ = "FailingStrategy1"
+
+        strategy2 = AsyncMock()
+        strategy2.match.side_effect = RuntimeError("Failed 2")
+        strategy2.__class__.__name__ = "FailingStrategy2"
+
+        composite = CompositeMatcher(strategies=[strategy1, strategy2])
+
+        transaction = Mock(
+            id="test-tx-456",
+            amount=Decimal("100.00"),
+            description="Test",
+            date=date.today(),
+        )
+        candidates = [Mock(id=1)]
+
+        results = await composite.match(transaction, candidates)
+
+        # Should return empty list, not raise exception
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_composite_mixed_sync_async_strategies(self):
+        """Test CompositeMatcher works with both sync and async strategies.
+
+        PHASE 1 Enhancement: Ensure backward compatibility with sync matchers.
+        """
+        # Async strategy
+        async_strategy = AsyncMock()
+        async_strategy.match.return_value = [
+            MatchResult(
+                payment=Mock(id=1),
+                confidence=Decimal("0.85"),
+                match_type=MatchType.EXACT,
+                match_reason="Async match",
+            )
+        ]
+
+        # Sync strategy (returns result immediately, not awaitable)
+        sync_strategy = Mock()
+        sync_strategy.match.return_value = [
+            MatchResult(
+                payment=Mock(id=1),
+                confidence=Decimal("0.75"),
+                match_type=MatchType.FUZZY,
+                match_reason="Sync match",
+            )
+        ]
+
+        composite = CompositeMatcher(strategies=[async_strategy, sync_strategy])
+
+        transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
+        candidates = [Mock(id=1)]
+
+        results = await composite.match(transaction, candidates)
+
+        # Both strategies should contribute to final result
+        assert len(results) == 1
+        # Average of 0.85 and 0.75 with equal weights = 0.80
+        assert results[0].confidence == pytest.approx(0.80)
+
 
 class TestCompositeMatcherPropertyBased:
     """Property-based tests for CompositeMatcher using Hypothesis."""

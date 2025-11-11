@@ -8,12 +8,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-app = typer.Typer(name="lightning", help="⚡ Lightning Network payment management")
+app = typer.Typer(
+    name="lightning", help="⚡ Lightning Network payment management", no_args_is_help=True
+)
 console = Console()
 
 # Sub-commands for compliance
-report_app = typer.Typer(name="report", help="📊 Generate compliance reports")
-aml_app = typer.Typer(name="aml", help="🔍 Anti-Money Laundering management")
+report_app = typer.Typer(name="report", help="📊 Generate compliance reports", no_args_is_help=True)
+aml_app = typer.Typer(name="aml", help="🔍 Anti-Money Laundering management", no_args_is_help=True)
 
 app.add_typer(report_app)
 app.add_typer(aml_app)
@@ -355,7 +357,7 @@ def generate_capital_gains_report(
             console.print(f"[cyan]📊 Total invoices with gains: {len(invoices)}[/cyan]")
             console.print(f"[yellow]💰 Total capital gains: {total_gains:,.2f} EUR[/yellow]")
             console.print(
-                f"[red]💸 Estimated tax ({int(tax_rate_float*100)}%): {estimated_tax:,.2f} EUR[/red]"
+                f"[red]💸 Estimated tax ({int(tax_rate_float * 100)}%): {estimated_tax:,.2f} EUR[/red]"
             )
 
     except Exception as e:

@@ -140,7 +140,7 @@ class DigitalSigner:
             # Detached signature
             options = [pkcs7.PKCS7Options.DetachedSignature]
 
-        if not isinstance(private_key, (rsa.RSAPrivateKey, ec.EllipticCurvePrivateKey)):
+        if not isinstance(private_key, rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey):
             raise ValueError("Unsupported private key type for PKCS#7 signing")
 
         # Sign the data

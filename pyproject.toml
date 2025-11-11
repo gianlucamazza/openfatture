@@ -83,6 +83,9 @@ dependencies = [
     "click>=8.1.7",
     "pandas>=2.3.3",
     "plotly>=6.3.1",
+    # Audio Processing (for voice features)
+    "sounddevice>=0.4.6",  # Audio recording and playback
+    "numpy>=1.26.0",  # Required by sounddevice
 ]
 
 [project.optional-dependencies]
@@ -94,7 +97,6 @@ dev = [
     "pytest-mock>=3.12.0",
     "pytest-benchmark>=4.0.0",
     "hypothesis>=6.98.0",
-    "numpy>=1.26.0",  # For performance testing utilities
 
     # Code Quality
     "black>=25.9.0",
@@ -202,6 +204,11 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["fastapi.*", "fastapi", "fastapi.responses"]
 ignore_missing_imports = true
+
+# Voice module - complex type interactions with OpenAI API
+[[tool.mypy.overrides]]
+module = ["openfatture.ai.voice.*"]
+disable_error_code = ["call-overload", "arg-type", "assignment"]
 
 # Moduli pianificati/non implementati (payment import refactoring)
 # Attualmente si usa: openfatture.payment.infrastructure.importers.ofx_importer

@@ -877,6 +877,338 @@ AI_TOOLS_REQUIRE_CONFIRMATION=false  # Execute immediately
 
 ---
 
+## Voice (STT/TTS) Configuration
+
+Enable voice interaction features for hands-free invoice management and AI assistance using OpenAI Whisper (Speech-to-Text) and OpenAI TTS (Text-to-Speech).
+
+### `VOICE_ENABLED`
+
+**Description:** Enable voice capabilities
+**Type:** Boolean
+**Default:** `false`
+
+```env
+VOICE_ENABLED=true   # Enable voice features
+VOICE_ENABLED=false  # Disable (default)
+```
+
+**Notes**
+- Requires `OPENAI_API_KEY` to be set
+- Enables CLI `voice-chat` command and Web UI voice tab
+- Uses OpenAI Whisper for STT and OpenAI TTS API
+
+---
+
+### `VOICE_PROVIDER`
+
+**Description:** Voice provider
+**Type:** String
+**Default:** `openai`
+
+```env
+VOICE_PROVIDER=openai  # Currently only supported provider
+```
+
+**Notes**
+- Future providers may include Google Cloud, Azure, ElevenLabs
+- OpenAI provides Whisper (STT) and TTS in one API
+
+---
+
+### `VOICE_STT_MODEL`
+
+**Description:** Speech-to-text model
+**Type:** String
+**Default:** `whisper-1`
+
+```env
+VOICE_STT_MODEL=whisper-1  # OpenAI Whisper
+```
+
+**Notes**
+- Supports 100+ languages with auto-detection
+- High accuracy for multiple accents
+- Single model for all languages
+
+---
+
+### `VOICE_STT_LANGUAGE`
+
+**Description:** Language code for STT (ISO 639-1)
+**Type:** String (optional)
+**Default:** None (auto-detect)
+
+```env
+# Auto-detect language (recommended)
+VOICE_STT_LANGUAGE=
+
+# Force specific language
+VOICE_STT_LANGUAGE=it  # Italian
+VOICE_STT_LANGUAGE=en  # English
+VOICE_STT_LANGUAGE=fr  # French
+VOICE_STT_LANGUAGE=de  # German
+VOICE_STT_LANGUAGE=es  # Spanish
+```
+
+**Notes**
+- Leave empty for automatic language detection
+- Set explicitly if you know the input language
+- Improves accuracy for specific languages
+
+---
+
+### `VOICE_STT_PROMPT`
+
+**Description:** Optional STT prompt to guide transcription
+**Type:** String (optional)
+**Default:** None
+
+```env
+VOICE_STT_PROMPT="fattura, cliente, IVA, pagamento, scadenza"
+```
+
+**Notes**
+- Helps Whisper understand domain-specific terminology
+- Use technical terms related to invoicing/accounting
+- Max 224 tokens
+
+---
+
+### `VOICE_TTS_MODEL`
+
+**Description:** Text-to-speech model
+**Type:** String
+**Default:** `tts-1-hd`
+
+```env
+VOICE_TTS_MODEL=tts-1-hd  # High quality (recommended)
+VOICE_TTS_MODEL=tts-1     # Standard quality (faster/cheaper)
+```
+
+**Cost comparison**
+- `tts-1`: ~$0.015 per 1,000 characters
+- `tts-1-hd`: ~$0.030 per 1,000 characters
+
+---
+
+### `VOICE_TTS_VOICE`
+
+**Description:** TTS voice selection
+**Type:** String
+**Default:** `nova`
+
+```env
+VOICE_TTS_VOICE=nova     # Female, warm (default, best for Italian)
+VOICE_TTS_VOICE=alloy    # Neutral, balanced (best for English)
+VOICE_TTS_VOICE=echo     # Male, clear
+VOICE_TTS_VOICE=fable    # British accent, expressive
+VOICE_TTS_VOICE=onyx     # Male, deep
+VOICE_TTS_VOICE=shimmer  # Female, soft (best for French)
+```
+
+**Voice selection guide**
+| Voice | Gender | Characteristics | Best for |
+|-------|--------|-----------------|----------|
+| nova | Female | Warm, conversational | Italian, general use |
+| alloy | Neutral | Balanced, professional | English, technical |
+| echo | Male | Clear, articulate | Presentations |
+| fable | Male | British, expressive | Storytelling |
+| onyx | Male | Deep, authoritative | Business |
+| shimmer | Female | Soft, gentle | French, customer service |
+
+---
+
+### `VOICE_TTS_SPEED`
+
+**Description:** TTS playback speed
+**Type:** Float (0.25 – 4.0)
+**Default:** `1.0`
+
+```env
+VOICE_TTS_SPEED=0.75  # Slower (clearer)
+VOICE_TTS_SPEED=1.0   # Normal (default)
+VOICE_TTS_SPEED=1.25  # Faster
+VOICE_TTS_SPEED=1.5   # Much faster
+```
+
+**Notes**
+- 1.0 = natural speaking speed
+- < 1.0 = slower (improves clarity)
+- > 1.0 = faster (saves time)
+- Extreme values (< 0.5 or > 2.0) may sound unnatural
+
+---
+
+### `VOICE_TTS_FORMAT`
+
+**Description:** Audio output format
+**Type:** String
+**Default:** `mp3`
+
+```env
+VOICE_TTS_FORMAT=mp3   # MP3 (default, widely supported)
+VOICE_TTS_FORMAT=opus  # Opus (smaller file size)
+VOICE_TTS_FORMAT=aac   # AAC (good quality)
+VOICE_TTS_FORMAT=flac  # FLAC (lossless, largest)
+```
+
+**Format comparison**
+| Format | Quality | Size | Use case |
+|--------|---------|------|----------|
+| mp3 | Good | Medium | General use, browser playback |
+| opus | Good | Small | Low bandwidth, streaming |
+| aac | Very good | Medium | High quality, modern browsers |
+| flac | Lossless | Large | Archival, maximum quality |
+
+---
+
+### `VOICE_STREAMING_ENABLED`
+
+**Description:** Enable TTS streaming for lower latency
+**Type:** Boolean
+**Default:** `true`
+
+```env
+VOICE_STREAMING_ENABLED=true   # Stream audio chunks (recommended)
+VOICE_STREAMING_ENABLED=false  # Wait for complete audio
+```
+
+**Notes**
+- Streaming reduces perceived latency
+- Audio starts playing before synthesis completes
+- Recommended for interactive voice chat
+
+---
+
+### `VOICE_CHUNK_SIZE`
+
+**Description:** Audio chunk size for streaming (bytes)
+**Type:** Integer
+**Default:** `4096`
+
+```env
+VOICE_CHUNK_SIZE=4096   # Default (balanced)
+VOICE_CHUNK_SIZE=2048   # Smaller (lower latency)
+VOICE_CHUNK_SIZE=8192   # Larger (more efficient)
+```
+
+---
+
+### `VOICE_STT_TIMEOUT`
+
+**Description:** STT request timeout (seconds)
+**Type:** Integer
+**Default:** `30`
+
+```env
+VOICE_STT_TIMEOUT=30  # Standard timeout
+VOICE_STT_TIMEOUT=60  # Longer recordings
+```
+
+**Notes**
+- Increase for long audio files
+- Network latency may require higher values
+
+---
+
+### `VOICE_TTS_TIMEOUT`
+
+**Description:** TTS request timeout (seconds)
+**Type:** Integer
+**Default:** `60`
+
+```env
+VOICE_TTS_TIMEOUT=60   # Standard timeout
+VOICE_TTS_TIMEOUT=120  # Very long text responses
+```
+
+**Notes**
+- Increase for long text synthesis
+- Higher values for slower connections
+
+---
+
+### Cost Estimation
+
+**Speech-to-Text (Whisper)**
+- $0.006 per minute of audio
+- Example: 10-minute recording = ~$0.06
+
+**Text-to-Speech**
+- `tts-1`: $0.015 per 1,000 characters
+- `tts-1-hd`: $0.030 per 1,000 characters
+- Example: 500-character response with `tts-1-hd` = ~$0.015
+
+**Total cost for typical voice interaction:**
+- 30-second audio input: ~$0.003
+- 200-character TTS response: ~$0.006
+- **Total**: ~$0.009 per interaction
+
+---
+
+### Usage Examples
+
+**CLI Voice Chat**
+```bash
+# Single voice interaction
+uv run openfatture ai voice-chat --duration 5
+
+# Interactive mode (multiple recordings)
+uv run openfatture ai voice-chat --interactive --duration 10
+
+# Save audio files for debugging
+uv run openfatture ai voice-chat -i --save-audio
+
+# Text output only (disable playback)
+uv run openfatture ai voice-chat --no-playback
+```
+
+**Web UI Voice Chat**
+1. Navigate to **🤖 AI Assistant** page
+2. Select **🎤 Voice Chat** tab
+3. Click microphone button and speak
+4. Click **Invia e Processa** to process
+5. View transcription, AI response, and play audio
+
+---
+
+### Troubleshooting
+
+**Audio not recording in CLI**
+```bash
+# Check audio dependencies
+uv run python -c "import sounddevice; print('✓ sounddevice OK')"
+
+# List available audio devices
+uv run python -c "import sounddevice as sd; print(sd.query_devices())"
+```
+
+**OpenAI API errors**
+```bash
+# Verify API key
+uv run python -c "
+from openfatture.utils.config import get_settings
+s = get_settings()
+print(f'API Key set: {bool(s.openai_api_key)}')
+print(f'Voice enabled: {s.voice_enabled}')
+"
+
+# Test voice provider
+uv run python -c "
+from openfatture.ai.voice import create_voice_provider
+provider = create_voice_provider()
+print(f'✓ Voice provider initialized: {provider.provider_name}')
+"
+```
+
+**Web UI voice not working**
+- Ensure browser has microphone permissions
+- Use HTTPS (required for microphone access in most browsers)
+- Check browser console for errors
+- Verify `VOICE_ENABLED=true` in `.env`
+
+---
+
 ## Lightning Network Configuration
 
 Enable Lightning Network payments for instant, low-fee Bitcoin transactions.

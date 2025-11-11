@@ -6,7 +6,6 @@ import pytest
 
 from openfatture.lightning.application.services.invoice_service import LightningInvoiceService
 from openfatture.lightning.application.services.payment_service import LightningPaymentService
-from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
 
 
 class TestLightningBasicIntegration:
@@ -18,10 +17,14 @@ class TestLightningBasicIntegration:
         return LightningInvoiceService(mock_lnd_client, mock_btc_converter)
 
     @pytest.fixture
-    def payment_service(self, mock_lnd_client):
+    def invoice_repo(self, in_memory_invoice_repo):
+        """Expose in-memory invoice repository for tests."""
+        return in_memory_invoice_repo
+
+    @pytest.fixture
+    def payment_service(self, mock_lnd_client, invoice_repo):
         """Lightning payment service for testing."""
-        repo = LightningInvoiceRepository()
-        return LightningPaymentService(mock_lnd_client, repo)
+        return LightningPaymentService(mock_lnd_client, invoice_repo)
 
     @pytest.mark.asyncio
     async def test_create_invoice_from_fattura(self, invoice_service):
@@ -60,10 +63,15 @@ class TestLightningBasicIntegration:
         assert invoice.description == descrizione
 
     @pytest.mark.asyncio
-    async def test_simulate_payment_settlement(self, invoice_service, payment_service):
+    async def test_simulate_payment_settlement(
+        self, invoice_service, payment_service, invoice_repo
+    ):
         """Test simulating payment settlement."""
         # Create an invoice
         invoice = await invoice_service.create_zero_amount_invoice("Test payment")
+
+        # Persist invoice record for payment tracking
+        invoice_repo.create_from_invoice(invoice)
 
         # Simulate payment
         success = await payment_service.simulate_payment(invoice.payment_hash)

@@ -148,7 +148,7 @@ class EventPersistenceListener:
                 result[key] = float(value)
             elif isinstance(value, dict):
                 result[key] = self._prepare_json_data(value)
-            elif isinstance(value, (list, tuple)):
+            elif isinstance(value, list | tuple):
                 result[key] = [
                     (
                         self._prepare_json_data(item)

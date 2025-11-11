@@ -414,7 +414,7 @@ def _coerce_metadata_dict(metadata: Mapping[str, Any]) -> dict[str, MetadataValu
     """Convert metadata values to supported scalar types."""
     typed_metadata: dict[str, MetadataValue] = {}
     for key, value in metadata.items():
-        if isinstance(value, (str, int, float, bool)) or value is None:
+        if isinstance(value, str | int | float | bool) or value is None:
             typed_metadata[key] = value
         else:
             typed_metadata[key] = str(value)

@@ -899,6 +899,499 @@ For OpenAI/Anthropic, native function calling is used instead.
 
 ---
 
+### 6. Voice Module
+
+**Purpose:** Enable hands-free AI interaction through speech-to-text (STT) and text-to-speech (TTS) capabilities.
+
+**Module Location:** `openfatture/ai/voice/`
+
+**Architecture:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Voice Module Architecture                    │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐         ┌──────────────────┐
+│  CLI Interface  │         │   Web UI (5.1)   │
+│  voice-chat     │         │  Audio Recorder  │
+└────────┬────────┘         └────────┬─────────┘
+         │                           │
+         │        ┌──────────────────┴──────────┐
+         │        │                             │
+         └────────▼─────────────────────────────▼───────┐
+                  │      VoiceService (Web)             │
+                  │   (Streamlit integration)           │
+                  └─────────────┬───────────────────────┘
+                                │
+         ┌──────────────────────▼──────────────────────┐
+         │         VoiceAssistant                      │
+         │  (Orchestrates STT → Chat → TTS pipeline)   │
+         └──┬───────────────┬──────────────┬───────────┘
+            │               │              │
+    ┌───────▼─────┐  ┌─────▼──────┐  ┌────▼────────┐
+    │  STT (Whisper)│  │ ChatAgent  │  │ TTS (OpenAI)│
+    │   Provider   │  │  (AI Core) │  │   Provider  │
+    └──────────────┘  └────────────┘  └─────────────┘
+            │                              │
+    ┌───────▼────────┐           ┌────────▼──────────┐
+    │ Audio Input    │           │  Audio Output     │
+    │ (mic, file)    │           │  (speaker, file)  │
+    └────────────────┘           └───────────────────┘
+```
+
+**Module Structure:**
+
+```python
+openfatture/ai/voice/
+├── __init__.py              # Public API exports
+├── base.py                  # BaseVoiceProvider abstract class
+├── models.py                # Pydantic models (VoiceConfig, TranscriptionResult, etc.)
+├── factory.py               # create_voice_provider() factory
+├── openai_voice.py          # OpenAIVoiceProvider implementation
+├── assistant.py             # VoiceAssistant orchestrator
+└── audio_utils.py           # Audio I/O utilities (recording, playback)
+
+openfatture/cli/commands/ai.py    # voice-chat CLI command
+openfatture/web/services/voice_service.py  # Web UI integration
+openfatture/web/pages/5_🤖_AI_Assistant.py  # Voice chat UI tab
+```
+
+**Key Components:**
+
+**1. BaseVoiceProvider** (Strategy Pattern)
+
+```python
+class BaseVoiceProvider(ABC):
+    """Abstract voice provider interface."""
+
+    @abstractmethod
+    async def transcribe(
+        self,
+        audio: bytes,
+        language: str | None = None
+    ) -> TranscriptionResult:
+        """Convert speech to text."""
+        pass
+
+    @abstractmethod
+    async def synthesize(
+        self,
+        text: str,
+        voice: str = "nova"
+    ) -> SynthesisResult:
+        """Convert text to speech."""
+        pass
+
+    @abstractmethod
+    async def synthesize_streaming(
+        self,
+        text: str,
+        voice: str = "nova"
+    ) -> AsyncIterator[bytes]:
+        """Stream TTS audio chunks for lower latency."""
+        pass
+```
+
+**2. Voice Models** (Type-Safe Configuration)
+
+```python
+class VoiceConfig(BaseModel):
+    """Voice configuration."""
+
+    # Provider
+    provider: str = "openai"
+    api_key: str
+
+    # STT Settings
+    stt_model: STTModel = STTModel.WHISPER_1
+    stt_language: str | None = None  # Auto-detect if None
+    stt_prompt: str | None = None    # Domain terminology hints
+    stt_timeout: int = 30
+
+    # TTS Settings
+    tts_model: TTSModel = TTSModel.TTS_1
+    tts_voice: TTSVoice = TTSVoice.NOVA
+    tts_speed: float = 1.0  # 0.25-4.0
+    tts_format: AudioFormat = AudioFormat.MP3
+    tts_timeout: int = 30
+
+    # Streaming
+    streaming_enabled: bool = False
+    chunk_size: int = 4096
+
+
+class TranscriptionResult(BaseModel):
+    """Speech-to-text result."""
+
+    text: str
+    language: str
+    duration_ms: int
+    confidence: float | None = None
+
+
+class SynthesisResult(BaseModel):
+    """Text-to-speech result."""
+
+    audio: bytes
+    format: AudioFormat
+    duration_ms: int
+    text_length: int
+
+
+class VoiceResponse(BaseModel):
+    """Complete voice interaction result."""
+
+    transcription: TranscriptionResult
+    llm_response: str
+    synthesis: SynthesisResult | None = None
+    total_latency_ms: int
+```
+
+**3. VoiceAssistant** (Pipeline Orchestrator)
+
+```python
+class VoiceAssistant:
+    """
+    Orchestrates complete voice interaction pipeline.
+
+    Flow:
+    1. Record/receive audio input
+    2. Transcribe with Whisper (STT)
+    3. Process with ChatAgent (AI)
+    4. Synthesize response (TTS)
+    5. Play/return audio output
+    """
+
+    def __init__(
+        self,
+        voice_provider: BaseVoiceProvider,
+        chat_agent: ChatAgent,
+        enable_tts: bool = True,
+    ) -> None:
+        self.voice_provider = voice_provider
+        self.chat_agent = chat_agent
+        self.enable_tts = enable_tts
+        self.logger = get_logger(__name__)
+
+    async def process_voice_input(
+        self,
+        audio: bytes,
+        context: ChatContext | None = None,
+    ) -> VoiceResponse:
+        """
+        Process voice input through complete pipeline.
+
+        Args:
+            audio: Audio bytes (WAV, MP3, etc.)
+            context: Optional chat context with history
+
+        Returns:
+            VoiceResponse with transcription, LLM response, and synthesis
+        """
+        start_time = time.time()
+
+        # 1. Transcribe audio to text
+        transcription = await self.voice_provider.transcribe(audio)
+        self.logger.info("transcription_completed",
+                        text_length=len(transcription.text),
+                        language=transcription.language)
+
+        # 2. Process with chat agent
+        if context is None:
+            context = ChatContext(user_input=transcription.text)
+        else:
+            context.user_input = transcription.text
+
+        agent_response = await self.chat_agent.execute(context)
+        self.logger.info("llm_response_received",
+                        response_length=len(agent_response.content))
+
+        # 3. Synthesize response to speech (optional)
+        synthesis = None
+        if self.enable_tts and agent_response.content:
+            synthesis = await self.voice_provider.synthesize(
+                agent_response.content
+            )
+            self.logger.info("synthesis_completed",
+                           audio_size=len(synthesis.audio))
+
+        total_latency = int((time.time() - start_time) * 1000)
+
+        return VoiceResponse(
+            transcription=transcription,
+            llm_response=agent_response.content,
+            synthesis=synthesis,
+            total_latency_ms=total_latency,
+        )
+```
+
+**OpenAI Voice Provider Implementation:**
+
+```python
+class OpenAIVoiceProvider(BaseVoiceProvider):
+    """OpenAI Whisper (STT) + TTS provider."""
+
+    def __init__(self, api_key: str, config: VoiceConfig) -> None:
+        self.client = openai.AsyncOpenAI(api_key=api_key)
+        self.config = config
+
+    async def transcribe(
+        self,
+        audio: bytes,
+        language: str | None = None
+    ) -> TranscriptionResult:
+        """Transcribe with Whisper API."""
+        start_time = time.time()
+
+        # Prepare audio file
+        audio_file = io.BytesIO(audio)
+        audio_file.name = "audio.wav"
+
+        # Call Whisper API
+        result = await self.client.audio.transcriptions.create(
+            model=self.config.stt_model,
+            file=audio_file,
+            language=language or self.config.stt_language,
+            prompt=self.config.stt_prompt,
+        )
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        return TranscriptionResult(
+            text=result.text,
+            language=result.language or "unknown",
+            duration_ms=duration_ms,
+        )
+
+    async def synthesize(
+        self,
+        text: str,
+        voice: str | None = None
+    ) -> SynthesisResult:
+        """Synthesize with OpenAI TTS API."""
+        start_time = time.time()
+
+        # Call TTS API
+        response = await self.client.audio.speech.create(
+            model=self.config.tts_model,
+            voice=voice or self.config.tts_voice,
+            input=text,
+            speed=self.config.tts_speed,
+            response_format=self.config.tts_format,
+        )
+
+        # Read audio content
+        audio_bytes = response.read()
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        return SynthesisResult(
+            audio=audio_bytes,
+            format=self.config.tts_format,
+            duration_ms=duration_ms,
+            text_length=len(text),
+        )
+
+    async def synthesize_streaming(
+        self,
+        text: str,
+        voice: str | None = None
+    ) -> AsyncIterator[bytes]:
+        """Stream TTS audio chunks."""
+        response = await self.client.audio.speech.create(
+            model=self.config.tts_model,
+            voice=voice or self.config.tts_voice,
+            input=text,
+            speed=self.config.tts_speed,
+            response_format=self.config.tts_format,
+        )
+
+        # Stream audio chunks
+        async for chunk in response.iter_bytes(
+            chunk_size=self.config.chunk_size
+        ):
+            yield chunk
+```
+
+**CLI Integration:**
+
+```bash
+# Single voice interaction
+openfatture ai voice-chat --duration 5
+
+# Interactive mode with conversation history
+openfatture ai voice-chat --interactive --duration 10
+
+# Save audio for debugging
+openfatture ai voice-chat --save-audio --interactive
+```
+
+**Web UI Integration:**
+
+```python
+# openfatture/web/services/voice_service.py
+
+class VoiceService:
+    """Voice service for Streamlit Web UI."""
+
+    def __init__(self) -> None:
+        self.settings = get_settings()
+        self._voice_assistant: VoiceAssistant | None = None
+
+    def is_available(self) -> bool:
+        """Check if voice features are configured."""
+        return (
+            self.settings.voice_enabled
+            and self.settings.openai_api_key is not None
+        )
+
+    def get_voice_assistant(self) -> VoiceAssistant:
+        """Get or create voice assistant singleton."""
+        if self._voice_assistant is None:
+            voice_provider = create_voice_provider(
+                api_key=self.settings.openai_api_key
+            )
+            chat_agent = ChatAgent(
+                provider=create_provider(),
+                enable_streaming=False
+            )
+            self._voice_assistant = VoiceAssistant(
+                voice_provider=voice_provider,
+                chat_agent=chat_agent,
+                enable_tts=True,
+            )
+        return self._voice_assistant
+
+    async def process_voice_input_async(
+        self,
+        audio_bytes: bytes,
+        conversation_history: list[dict[str, str]] | None = None,
+    ) -> VoiceResponse:
+        """Process voice input with conversation history."""
+        assistant = self.get_voice_assistant()
+
+        # Build context with history
+        context = None
+        if conversation_history:
+            conv_history = ConversationHistory()
+            for msg in conversation_history:
+                conv_history.add_message(
+                    Message(role=Role(msg["role"]), content=msg["content"])
+                )
+            context = ChatContext(
+                user_input="",  # Filled by transcription
+                conversation_history=conv_history,
+            )
+
+        return await assistant.process_voice_input(audio, context)
+```
+
+**Features:**
+
+1. **Multi-Language Support** - Whisper supports 100+ languages with auto-detection
+2. **Voice Selection** - 6 OpenAI voices (nova, alloy, echo, fable, onyx, shimmer)
+3. **Audio Formats** - mp3, opus, aac, flac with quality/size tradeoffs
+4. **Streaming TTS** - Chunked audio delivery for reduced perceived latency
+5. **Conversation Context** - Full history maintained across voice interactions
+6. **Cost Tracking** - ~$0.006/min STT, ~$0.015-0.030/1K chars TTS
+7. **Error Handling** - Comprehensive exception handling with fallbacks
+8. **Observability** - Structured logging for all voice operations
+
+**Configuration:**
+
+```bash
+# Enable voice features
+VOICE_ENABLED=true
+
+# OpenAI API key (required)
+OPENAI_API_KEY=sk-...
+
+# STT Configuration
+VOICE_STT_MODEL=whisper-1
+VOICE_STT_LANGUAGE=it       # or empty for auto-detect
+VOICE_STT_PROMPT=           # Domain-specific terminology
+
+# TTS Configuration
+VOICE_TTS_MODEL=tts-1       # or tts-1-hd for higher quality
+VOICE_TTS_VOICE=nova        # nova, alloy, echo, fable, onyx, shimmer
+VOICE_TTS_SPEED=1.0         # 0.25-4.0
+VOICE_TTS_FORMAT=mp3        # mp3, opus, aac, flac
+
+# Advanced
+VOICE_STREAMING_ENABLED=false
+VOICE_CHUNK_SIZE=4096
+VOICE_STT_TIMEOUT=30
+VOICE_TTS_TIMEOUT=30
+```
+
+**Performance Characteristics:**
+
+- **STT Latency**: 1-3s for 5-10s audio clips
+- **TTS Latency**: 1-2s for 100-200 character responses
+- **Total Latency**: 3-7s for complete voice interaction
+- **Streaming TTS**: Reduces perceived latency to <1s (first chunk)
+- **Language Detection**: 100ms overhead for auto-detection
+
+**Testing:**
+
+```python
+# Unit tests (mocked providers)
+pytest tests/ai/voice/test_voice_assistant.py -v
+
+# Integration tests (real OpenAI API)
+pytest tests/ai/voice/test_openai_integration.py -v --api
+
+# Web UI tests
+pytest tests/web/test_voice_service.py -v
+```
+
+**Error Handling:**
+
+```python
+class VoiceProviderError(Exception):
+    """Base exception for voice provider errors."""
+    pass
+
+class VoiceProviderAuthError(VoiceProviderError):
+    """Authentication failure."""
+    pass
+
+class VoiceProviderRateLimitError(VoiceProviderError):
+    """Rate limit exceeded."""
+    pass
+
+class VoiceProviderTimeoutError(VoiceProviderError):
+    """Request timeout."""
+    pass
+```
+
+**Use Cases:**
+
+1. **Hands-Free Invoice Creation** - Voice command: "Crea fattura per consulenza web"
+2. **VAT Queries** - Voice: "Quale IVA per formazione online?"
+3. **Invoice Status** - Voice: "Quante fatture ho inviato questo mese?"
+4. **Accessibility** - Screen reader compatibility for visually impaired users
+5. **Mobile Workflow** - Voice input on mobile devices via Web UI
+
+**Future Enhancements:**
+
+- [ ] Support for additional providers (ElevenLabs, Azure Speech)
+- [ ] Wake word detection for hands-free activation
+- [ ] Speaker diarization for multi-user conversations
+- [ ] Real-time streaming for lower latency
+- [ ] Voice biometrics for authentication
+- [ ] Custom voice cloning for personalized TTS
+
+**Security Considerations:**
+
+1. **Audio Privacy** - Audio not stored by default (optional `--save-audio`)
+2. **API Key Security** - Keys stored in `.env`, never logged
+3. **Rate Limiting** - Timeout controls prevent abuse
+4. **Input Validation** - Audio format and size validation
+5. **Output Sanitization** - TTS text sanitized before synthesis
+
+---
+
 ## Agent Implementations
 
 ### Invoice Assistant Agent

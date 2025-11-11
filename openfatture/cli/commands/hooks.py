@@ -15,7 +15,7 @@ from openfatture.core.hooks import get_hook_registry
 from openfatture.core.hooks.executor import HookExecutor
 from openfatture.core.hooks.models import HookMetadata
 
-app = typer.Typer(help="Manage lifecycle hooks")
+app = typer.Typer(help="Manage lifecycle hooks", no_args_is_help=True)
 console = Console()
 
 

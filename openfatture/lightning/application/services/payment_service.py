@@ -232,5 +232,13 @@ class LightningPaymentService:
             "fee_paid_msat": 1000,  # Mock fee
         }
 
+        # Update mock LND client state if available
+        if hasattr(self.lnd_client, "simulate_payment"):
+            try:
+                await self.lnd_client.simulate_payment(payment_hash)
+            except Exception:
+                # Best-effort update for test environments
+                pass
+
         await self._process_settlement(invoice_record, mock_lnd_data)
         return True

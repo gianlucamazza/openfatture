@@ -250,6 +250,60 @@ class Settings(BaseSettings):
         description="Require user confirmation before executing tools",
     )
 
+    # Voice (STT/TTS) Configuration
+    voice_enabled: bool = Field(
+        default=False,
+        description="Enable voice capabilities (STT/TTS)",
+    )
+    voice_provider: str = Field(
+        default="openai",
+        description="Voice provider (openai, etc.)",
+    )
+    voice_stt_model: str = Field(
+        default="whisper-1",
+        description="Speech-to-text model",
+    )
+    voice_stt_language: str | None = Field(
+        default=None,
+        description="STT language code (ISO 639-1, auto-detect if None)",
+    )
+    voice_stt_prompt: str | None = Field(
+        default=None,
+        description="Optional STT prompt to guide transcription",
+    )
+    voice_tts_model: str = Field(
+        default="tts-1-hd",
+        description="Text-to-speech model (tts-1, tts-1-hd)",
+    )
+    voice_tts_voice: str = Field(
+        default="nova",
+        description="TTS voice (alloy, echo, fable, onyx, nova, shimmer)",
+    )
+    voice_tts_speed: float = Field(
+        default=1.0,
+        description="TTS speed (0.25-4.0)",
+    )
+    voice_tts_format: str = Field(
+        default="mp3",
+        description="TTS output format (mp3, opus, aac, flac)",
+    )
+    voice_streaming_enabled: bool = Field(
+        default=True,
+        description="Enable TTS streaming for lower latency",
+    )
+    voice_chunk_size: int = Field(
+        default=4096,
+        description="Audio chunk size for streaming (bytes)",
+    )
+    voice_stt_timeout: int = Field(
+        default=30,
+        description="STT request timeout (seconds)",
+    )
+    voice_tts_timeout: int = Field(
+        default=60,
+        description="TTS request timeout (seconds)",
+    )
+
     # Vector Store (for AI)
     vector_store_path: Path = Field(default=Path.home() / ".openfatture" / "vector_store")
 
@@ -378,6 +432,18 @@ class Settings(BaseSettings):
     # Web scraper configuration
     web_scraper_enabled: bool = Field(
         default=True, description="Enable regulatory web scraping system"
+    )
+
+    # Plugin system configuration
+    plugins_enabled: bool = Field(default=True, description="Enable plugin system")
+    plugins_dir: Path = Field(
+        default=Path.home() / ".openfatture" / "plugins", description="Directory for user plugins"
+    )
+    plugins_auto_discover: bool = Field(
+        default=True, description="Automatically discover and load plugins on startup"
+    )
+    plugins_enabled_list: str = Field(
+        default="", description="Comma-separated list of enabled plugins (empty = all discovered)"
     )
 
     # Debug configuration
