@@ -7,7 +7,18 @@ from decimal import Decimal
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ...utils.datetime import utc_now
@@ -602,6 +613,12 @@ class EventLog(IntPKMixin, Base):
     """
 
     __tablename__ = "event_log"
+    __table_args__ = (
+        # Composite index for queries filtering by event_type and sorting by occurred_at
+        Index("ix_event_log_type_occurred", "event_type", "occurred_at"),
+        # Composite index for queries filtering by entity
+        Index("ix_event_log_entity", "entity_type", "entity_id"),
+    )
 
     # Event identification
     event_id: Mapped[str] = mapped_column(

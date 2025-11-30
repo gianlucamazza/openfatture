@@ -17,6 +17,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -116,6 +117,10 @@ class BankTransaction(UUIDPKMixin, Base):
     """
 
     __tablename__ = "bank_transactions"
+    __table_args__ = (
+        # Composite index for queries filtering by status and sorting by date
+        Index("ix_bank_transactions_status_date", "status", "date"),
+    )
 
     # Bank account relationship
     account_id: Mapped[int] = mapped_column(ForeignKey("bank_accounts.id"), nullable=False)
