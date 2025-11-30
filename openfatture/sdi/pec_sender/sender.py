@@ -9,9 +9,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
+from openfatture.exceptions import ConfigurationError, FileNotFoundError as OFFileNotFoundError, PECError
 from openfatture.storage.database.models import Fattura, LogSDI, StatoFattura
 from openfatture.utils.config import Settings
+from openfatture.utils.logging import get_logger
 from openfatture.utils.rate_limiter import RateLimiter
+
+logger = get_logger(__name__)
 
 
 class PECSender:

@@ -15,6 +15,9 @@ from openfatture.core.events.analytics import EventAnalytics
 from openfatture.core.events.repository import EventRepository
 from openfatture.storage.database.base import init_db
 from openfatture.utils.config import get_settings
+from openfatture.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 app = typer.Typer(help="View and analyze event history", no_args_is_help=True)
 console = Console()
@@ -84,8 +87,14 @@ def list_events(
             try:
                 event_data = json.loads(event.event_data)
                 summary = repo._create_event_summary(event.event_type, event_data)
-            except Exception:
-                summary = event.event_type
+            except (json.JSONDecodeError, KeyError, AttributeError) as e:
+                logger.warning(
+                    "event_summary_failed",
+                    event_id=event.event_id,
+                    event_type=event.event_type,
+                    error=str(e),
+                )
+                summary = event.event_type  # Fallback to event type
 
             # Add row
             table.add_row(timestamp, event.event_type, entity, summary)
@@ -137,8 +146,13 @@ def show_event(
         try:
             event_data = json.loads(event.event_data)
             event_data_formatted = json.dumps(event_data, indent=2)
-        except Exception:
-            event_data_formatted = event.event_data
+        except json.JSONDecodeError as e:
+            logger.warning(
+                "event_data_parse_failed",
+                event_id=event.event_id,
+                error=str(e),
+            )
+            event_data_formatted = event.event_data  # Show raw data
 
         # Parse metadata
         metadata_formatted = None
@@ -146,8 +160,13 @@ def show_event(
             try:
                 metadata = json.loads(event.metadata_json)
                 metadata_formatted = json.dumps(metadata, indent=2)
-            except Exception:
-                metadata_formatted = event.metadata_json
+            except json.JSONDecodeError as e:
+                logger.warning(
+                    "event_metadata_parse_failed",
+                    event_id=event.event_id,
+                    error=str(e),
+                )
+                metadata_formatted = event.metadata_json  # Show raw data
 
         # Create detailed view
         details = f"""[bold cyan]Event ID:[/bold cyan] {event.event_id}
@@ -348,8 +367,14 @@ def search_events(
                     match = snippet
                 else:
                     match = repo._create_event_summary(event.event_type, event_data)
-            except Exception:
-                match = event.event_type
+            except (json.JSONDecodeError, KeyError, AttributeError) as e:
+                logger.warning(
+                    "event_search_parse_failed",
+                    event_id=event.event_id,
+                    query=query,
+                    error=str(e),
+                )
+                match = event.event_type  # Fallback to event type
 
             table.add_row(timestamp, event.event_type, match)
 

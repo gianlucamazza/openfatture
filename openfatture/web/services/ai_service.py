@@ -16,8 +16,18 @@ from openfatture.ai.domain.context import ChatContext, InvoiceContext, TaxContex
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers.factory import create_provider
+from openfatture.exceptions import (
+    AIError,
+    AIProviderAuthError,
+    AIProviderError,
+    AIProviderTimeoutError,
+    ConfigurationError,
+)
 from openfatture.utils.config import DebugConfig, get_settings
+from openfatture.utils.logging import get_logger
 from openfatture.web.utils.async_helpers import run_async
+
+logger = get_logger(__name__)
 
 
 class ToolCallEvent:
@@ -153,13 +163,13 @@ class StreamlitAIService:
             )
 
             return run_async(self.chat_agent.execute(context))
-        except Exception as e:
-            from openfatture.web.utils.logging_config import log_error
-
-            log_error(
-                e,
-                "ai_chat",
-                {"message_length": len(message), "history_length": len(conversation_history)},
+        except (AIError, AIProviderError, AIProviderTimeoutError, ValueError) as e:
+            logger.error(
+                "ai_chat_failed",
+                message_length=len(message),
+                history_length=len(conversation_history),
+                error=str(e),
+                error_type=type(e).__name__,
             )
             return None
 
@@ -267,7 +277,12 @@ class StreamlitAIService:
         try:
             _ = self.provider
             return True
-        except Exception:
+        except (AIError, AIProviderAuthError, ConfigurationError) as e:
+            logger.debug(
+                "ai_provider_unavailable",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return False
 
 

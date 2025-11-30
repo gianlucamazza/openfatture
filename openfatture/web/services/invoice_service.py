@@ -11,10 +11,14 @@ import streamlit as st
 
 from openfatture.core.events.invoice_events import InvoiceCreatedEvent
 from openfatture.core.fatture.service import InvoiceService as CoreInvoiceService
+from openfatture.exceptions import DatabaseError, DatabaseIntegrityError, RecordNotFoundError
 from openfatture.storage.database.models import Cliente, Fattura, RigaFattura, StatoFattura
 from openfatture.utils.config import Settings, get_settings
+from openfatture.utils.logging import get_logger
 from openfatture.web.utils.cache import db_session_scope, get_db_session
 from openfatture.web.utils.lifespan import get_event_bus
+
+logger = get_logger(__name__)
 
 
 class StreamlitInvoiceService:
@@ -79,10 +83,14 @@ class StreamlitInvoiceService:
                 }
                 for f in invoices
             ]
-        except Exception as e:
-            from openfatture.web.utils.logging_config import log_error
-
-            log_error(e, "get_invoices", {"filters": filters, "limit": limit})
+        except (DatabaseError, AttributeError) as e:
+            logger.warning(
+                "invoice_retrieval_failed",
+                filters=filters,
+                limit=limit,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             # Return empty list on error
             return []
 
@@ -216,22 +224,19 @@ class StreamlitInvoiceService:
 
             return result
 
-        except Exception as e:
-            from openfatture.web.utils.logging_config import log_error
-
-            log_error(
-                e,
-                "create_invoice",
-                {
-                    "cliente_id": cliente_id,
-                    "numero": numero,
-                    "anno": anno,
-                    "righe_count": len(righe_data) if righe_data else 0,
-                },
+        except ValueError:
+            # Re-raise validation errors for caller to handle
+            raise
+        except (DatabaseError, DatabaseIntegrityError, RecordNotFoundError) as e:
+            logger.error(
+                "invoice_creation_failed",
+                cliente_id=cliente_id,
+                numero=numero,
+                anno=anno,
+                righe_count=len(righe_data) if righe_data else 0,
+                error=str(e),
+                error_type=type(e).__name__,
             )
-            # Re-raise validation errors, return None for other errors
-            if isinstance(e, ValueError):
-                raise
             return None
 
     def generate_xml(self, fattura: Fattura, validate: bool = True) -> tuple[str, str | None]:

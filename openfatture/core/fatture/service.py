@@ -2,10 +2,14 @@
 
 from pathlib import Path
 
+from openfatture.exceptions import XMLValidationError
 from openfatture.sdi.validator.xsd_validator import FatturaPAValidator
 from openfatture.sdi.xml_builder.fatturapa import FatturaPABuilder, generate_filename
 from openfatture.storage.database.models import Fattura
 from openfatture.utils.config import Settings
+from openfatture.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class InvoiceService:
@@ -27,6 +31,9 @@ class InvoiceService:
 
         Returns:
             tuple[str, Optional[str]]: (xml_content, error_message)
+
+        Raises:
+            XMLValidationError: If XML validation fails
         """
         try:
             # Generate filename
@@ -40,14 +47,40 @@ class InvoiceService:
             if validate:
                 is_valid, error = self.validator.validate(xml_content)
                 if not is_valid:
-                    return xml_content, f"Validation failed: {error}"
+                    logger.error(
+                        "xml_validation_failed",
+                        invoice_id=fattura.numero,
+                        xml_path=str(output_path),
+                        error=error,
+                    )
+                    raise XMLValidationError(
+                        f"XML validation failed: {error}",
+                        xml_path=str(output_path),
+                        validation_errors=[error] if error else [],
+                    )
 
             # Update fattura record
             fattura.xml_path = str(output_path)
 
+            logger.info(
+                "xml_generated_successfully",
+                invoice_id=fattura.numero,
+                xml_path=str(output_path),
+                validated=validate,
+            )
+
             return xml_content, None
 
+        except XMLValidationError:
+            # Re-raise validation errors
+            raise
         except Exception as e:
+            logger.error(
+                "xml_generation_failed",
+                invoice_id=fattura.numero,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return "", f"Error generating XML: {e}"
 
     def get_xml_path(self, fattura: Fattura) -> Path:

@@ -8,7 +8,11 @@ import csv
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from openfatture.utils.logging import get_logger
+
 from .base import BaseImporter, FileFormat
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from .csv_importer import CSVConfig
@@ -132,7 +136,14 @@ class ImporterFactory:
                     # that confuse Sniffer. Treat as CSV based on extension.
                     return True
 
-        except Exception:
+        except (OSError, UnicodeDecodeError) as e:
+            logger.warning(
+                "format_verification_failed",
+                file_path=str(file_path),
+                expected_format=expected_format.value,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return False
 
         return True
@@ -168,8 +179,13 @@ class ImporterFactory:
             except csv.Error:
                 pass
 
-        except Exception:
-            pass
+        except (OSError, UnicodeDecodeError) as e:
+            logger.warning(
+                "content_detection_failed",
+                file_path=str(file_path),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
 
         return FileFormat.UNKNOWN
 

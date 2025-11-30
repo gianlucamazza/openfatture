@@ -9,9 +9,18 @@ from typing import Any
 
 import streamlit as st
 
+from openfatture.exceptions import (
+    BankImportError,
+    DatabaseError,
+    DatabaseIntegrityError,
+    RecordNotFoundError,
+)
 from openfatture.payment.domain.models import BankAccount, BankTransaction
 from openfatture.utils.config import Settings, get_settings
+from openfatture.utils.logging import get_logger
 from openfatture.web.utils.cache import get_db_session
+
+logger = get_logger(__name__)
 
 
 class StreamlitPaymentService:
@@ -249,7 +258,15 @@ class StreamlitPaymentService:
                     # Clean up temporary file
                     temp_file_path.unlink(missing_ok=True)
 
-        except Exception as e:
+        except (BankImportError, DatabaseError, ValueError, OSError) as e:
+            logger.error(
+                "bank_statement_import_failed",
+                account_id=account_id,
+                filename=filename,
+                bank_preset=bank_preset,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return {
                 "success": False,
                 "message": f"Import failed: {str(e)}",
@@ -310,7 +327,14 @@ class StreamlitPaymentService:
             matches.sort(key=lambda x: x["confidence"], reverse=True)
             return matches
 
-        except Exception as e:
+        except (DatabaseError, AttributeError, KeyError) as e:
+            logger.warning(
+                "potential_matches_retrieval_failed",
+                transaction_id=transaction_id,
+                limit=limit,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             st.error(f"Errore nel recupero abbinamenti: {str(e)}")
             return []
         finally:
@@ -350,7 +374,14 @@ class StreamlitPaymentService:
                 self._clear_payment_cache()
                 return {"success": True, "message": "Transazione abbinata con successo"}
 
-        except Exception as e:
+        except (DatabaseError, DatabaseIntegrityError, RecordNotFoundError) as e:
+            logger.error(
+                "transaction_matching_failed",
+                transaction_id=transaction_id,
+                invoice_id=invoice_id,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return {"success": False, "message": f"Errore: {str(e)}"}
 
     @st.cache_data(ttl=30, show_spinner=False)
@@ -427,7 +458,15 @@ class StreamlitPaymentService:
             matches.sort(key=lambda x: x["confidence"], reverse=True)
             return matches
 
-        except Exception as e:
+        except (DatabaseError, AttributeError, KeyError, ZeroDivisionError) as e:
+            logger.warning(
+                "invoice_search_failed",
+                search_term=search_term,
+                amount=amount,
+                limit=limit,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             st.error(f"Errore nella ricerca fatture: {str(e)}")
             return []
         finally:
