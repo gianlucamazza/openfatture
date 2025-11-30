@@ -58,20 +58,42 @@ jobs:
             .benchmarks/
           retention-days: 30
 
+      - name: Check for valid benchmark baseline
+        if: github.event_name == 'pull_request'
+        id: check_baseline
+        run: |
+          set -euo pipefail
+          if [ -f ".benchmarks/baseline.json" ] && [ -s ".benchmarks/baseline.json" ]; then
+            # Validate JSON using python to ensure we don't attempt to parse invalid/empty JSON later
+            python3 - <<'PY'
+          import json, sys
+          try:
+              with open('.benchmarks/baseline.json', 'r') as f:
+                  json.load(f)
+          except Exception as e:
+              print('Baseline exists but contains invalid JSON:', e, file=sys.stderr)
+              sys.exit(2)
+          print('baseline_valid')
+          PY
+            echo "has_baseline=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_baseline=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Compare with baseline
         if: github.event_name == 'pull_request'
         run: |
           # Download baseline from main branch
           git fetch origin main:main
 
-          # Compare with baseline (if exists)
-          if [ -f ".benchmarks/baseline.json" ]; then
+          # Compare with baseline (if valid baseline exists)
+          if [ "${{ steps.check_baseline.outputs.has_baseline }}" = "true" ]; then
             uv run pytest -v -m performance \
               --benchmark-only \
               --benchmark-compare=baseline \
               --benchmark-compare-fail=mean:20% || echo "⚠️  Performance regression detected"
           else
-            echo "ℹ️  No baseline found, skipping comparison"
+            echo "ℹ️  No valid baseline found, skipping comparison"
           fi
 
       - name: Comment PR with results

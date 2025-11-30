@@ -351,7 +351,8 @@ class StreamlitPaymentService:
         Returns:
             Match result dictionary
         """
-        from openfatture.storage.database.models import Fattura, PaymentAllocation
+        from openfatture.payment.domain.payment_allocation import PaymentAllocation
+        from openfatture.storage.database.models import Fattura
         from openfatture.web.utils.cache import db_session_scope
 
         try:
