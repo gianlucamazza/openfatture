@@ -324,13 +324,16 @@ class SessionManager:
         Returns:
             Dictionary with stats
         """
-        all_sessions = self.list_sessions()
+        # Get all sessions by loading each status separately
+        active = self.list_sessions(status=SessionStatus.ACTIVE)
+        archived = self.list_sessions(status=SessionStatus.ARCHIVED)
+        deleted = self.list_sessions(status=SessionStatus.DELETED)
 
         stats = {
-            "total": len(all_sessions),
-            "active": sum(1 for s in all_sessions if s.status == SessionStatus.ACTIVE),
-            "archived": sum(1 for s in all_sessions if s.status == SessionStatus.ARCHIVED),
-            "deleted": sum(1 for s in all_sessions if s.status == SessionStatus.DELETED),
+            "total": len(active) + len(archived) + len(deleted),
+            "active": len(active),
+            "archived": len(archived),
+            "deleted": len(deleted),
         }
 
         return stats
