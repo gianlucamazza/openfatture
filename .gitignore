@@ -75,6 +75,9 @@ certificates/
 models/
 .cache/
 
+# ChromaDB Vector Store
+.chroma/
+
 # PDF Output (but not media/output/)
 /output/
 /*.pdf
