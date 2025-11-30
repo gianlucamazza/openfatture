@@ -141,12 +141,14 @@ class OpenAIProvider(BaseLLMProvider):
         "user",
         "stream_options",
         "response_format",  # Now supported in Chat Completions
+        "reasoning_effort",  # GPT-5 reasoning control: "low", "medium", "high", or "none"
     }
 
     def _build_usage_metrics(self, usage: Any | None) -> UsageMetrics:
         """Create UsageMetrics from OpenAI usage payload."""
-        prompt_tokens = getattr(usage, "input_tokens", 0) if usage else 0
-        completion_tokens = getattr(usage, "output_tokens", 0) if usage else 0
+        # OpenAI uses prompt_tokens/completion_tokens (not input_tokens/output_tokens like Anthropic)
+        prompt_tokens = getattr(usage, "prompt_tokens", 0) if usage else 0
+        completion_tokens = getattr(usage, "completion_tokens", 0) if usage else 0
         total_tokens = getattr(usage, "total_tokens", 0) if usage else 0
 
         metrics = UsageMetrics(
@@ -433,12 +435,10 @@ class OpenAIProvider(BaseLLMProvider):
                 "messages": chat_messages,
             }
 
-            if max_output_tokens:
-                # Use max_completion_tokens for GPT-5, max_tokens for others
-                token_param = (
-                    "max_completion_tokens" if self.model.startswith("gpt-5") else "max_tokens"
-                )
-                api_params[token_param] = max_output_tokens
+            # GPT-5 models don't support max_tokens or max_completion_tokens
+            # They use adaptive reasoning instead
+            if max_output_tokens and not self.model.startswith("gpt-5"):
+                api_params["max_tokens"] = max_output_tokens
 
             # Set temperature - GPT-5 only supports default temperature (1)
             temp = self._get_temperature(temperature)
@@ -538,12 +538,10 @@ class OpenAIProvider(BaseLLMProvider):
                 "stream": True,
             }
 
-            if max_output_tokens:
-                # Use max_completion_tokens for GPT-5, max_tokens for others
-                token_param = (
-                    "max_completion_tokens" if self.model.startswith("gpt-5") else "max_tokens"
-                )
-                stream_params[token_param] = max_output_tokens
+            # GPT-5 models don't support max_tokens or max_completion_tokens
+            # They use adaptive reasoning instead
+            if max_output_tokens and not self.model.startswith("gpt-5"):
+                stream_params["max_tokens"] = max_output_tokens
 
             # Set temperature - GPT-5 only supports default temperature (1)
             temp = self._get_temperature(temperature)
@@ -595,12 +593,10 @@ class OpenAIProvider(BaseLLMProvider):
                 "stream": True,
             }
 
-            if max_output_tokens:
-                # Use max_completion_tokens for GPT-5, max_tokens for others
-                token_param = (
-                    "max_completion_tokens" if self.model.startswith("gpt-5") else "max_tokens"
-                )
-                stream_params[token_param] = max_output_tokens
+            # GPT-5 models don't support max_tokens or max_completion_tokens
+            # They use adaptive reasoning instead
+            if max_output_tokens and not self.model.startswith("gpt-5"):
+                stream_params["max_tokens"] = max_output_tokens
 
             # Set temperature - GPT-5 only supports default temperature (1)
             temp = self._get_temperature(temperature)
@@ -819,19 +815,18 @@ class OpenAIProvider(BaseLLMProvider):
     async def health_check(self) -> bool:
         """Check if OpenAI API is accessible."""
         try:
-            # Use max_completion_tokens for GPT-5, max_tokens for others
-            if self.model.startswith("gpt-5"):
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": "health_check"}],
-                    max_completion_tokens=5,
-                )
-            else:
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": "health_check"}],
-                    max_tokens=5,
-                )
+            # GPT-5 models don't support max_tokens parameters
+            # They use adaptive reasoning instead
+            params: dict[str, Any] = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": "Say OK"}],
+            }
+
+            # Only add max_tokens for non-GPT-5 models
+            if not self.model.startswith("gpt-5"):
+                params["max_tokens"] = 5
+
+            response = await self.client.chat.completions.create(**params)
             return response is not None
 
         except Exception as e:
