@@ -19,6 +19,7 @@ from openfatture.ai.feedback import FeedbackCreate, FeedbackService
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.session import ChatSession, SessionManager
+from openfatture.ai.streaming import StreamAccumulator, StreamEventType
 from openfatture.cli.commands.custom_commands import get_command_registry
 from openfatture.cli.ui.styles import openfatture_style
 from openfatture.storage.database.models import FeedbackType
@@ -41,6 +42,10 @@ class InteractiveChatUI:
     - Markdown rendering
     """
 
+    # Memory limits for streaming (used by StreamAccumulator for automatic overflow)
+    MAX_CONTENT_CHUNKS = 1000  # Maximum number of content chunks (bounded deque)
+    MAX_PROGRESS_MESSAGES = 50  # Maximum number of progress messages (bounded deque)
+
     def __init__(
         self,
         session: ChatSession | None = None,
@@ -53,8 +58,65 @@ class InteractiveChatUI:
             session: Existing session to resume (creates new if None)
             session_manager: Session manager (creates new if None)
         """
-        self.session = session or ChatSession()
-        self.session_manager = session_manager or SessionManager()
+        # Cache panel width to avoid repeated calculations
+        self._panel_width: int | None = None
+
+        # Initialize session - ensure it's always created
+        if session is not None:
+            self._session = session
+        else:
+            # Try to create ChatSession, fallback to a mock if it fails
+            try:
+                self._session = ChatSession()
+            except Exception as e:
+                logger.warning("ChatSession creation failed, using mock", error=str(e))
+
+                # Create a minimal mock session
+                class MockMetadata:
+                    def __init__(self):
+                        self.message_count = 0
+                        self.total_tokens = 0
+                        self.total_cost_usd = 0.0
+                        self.title = "Mock Session"
+                        self.primary_provider = None
+                        self.primary_model = None
+                        self.tools_used = []
+
+                class MockSession:
+                    def __init__(self):
+                        self.id = "mock-session"
+                        self.metadata = MockMetadata()
+                        self.auto_save = False
+
+                    def add_user_message(self, msg):
+                        pass
+
+                    def add_assistant_message(self, content, **kwargs):
+                        pass
+
+                    def clear_messages(self, keep_system=True):
+                        pass
+
+                    def get_messages(self, include_system=False):
+                        return []
+
+                    def get_summary(self):
+                        return "Mock session"
+
+                self._session = MockSession()  # type: ignore[assignment]
+
+        # Initialize session manager with error handling
+        try:
+            self.session_manager = session_manager or SessionManager()
+        except Exception as e:
+            logger.warning("session_manager_creation_failed", error=str(e))
+            try:
+                self.session_manager = SessionManager()
+            except Exception as fallback_e:
+                logger.error("session_manager_fallback_failed", error=str(fallback_e))
+                # Last resort: raise the original error
+                raise e from fallback_e
+
         self.agent: ChatAgent | None = None
         self.provider: BaseLLMProvider | None = None
 
@@ -79,6 +141,38 @@ class InteractiveChatUI:
         # Feedback tracking
         self.last_ai_message: str | None = None
         self.feedback_service = FeedbackService()
+
+    @property
+    def session(self):
+        """Get the chat session."""
+        return self._session
+
+    @property
+    def panel_width(self) -> int:
+        """Get cached panel width to avoid repeated calculations."""
+        if self._panel_width is None:
+            self._panel_width = min(int(console.width * 0.8), 120)
+        return self._panel_width
+
+    def _handle_error(self, error: Exception, context: str, show_suggestions: bool = True) -> None:
+        """Centralized error handling with consistent formatting and logging."""
+        logger.error(f"{context}_error", error=str(error))
+
+        error_lines = [f"[red]❌ Errore {context}: {error}[/red]"]
+
+        if show_suggestions:
+            error_lines.extend(
+                [
+                    "",
+                    "[yellow]💡 Suggerimenti:[/yellow]",
+                    "• Riprova l'operazione",
+                    "• Controlla la connessione",
+                    "• Usa /help per assistenza",
+                ]
+            )
+
+        console.print("\n".join(error_lines))
+        console.print()
 
     async def start(self) -> None:
         """Start the interactive chat loop."""
@@ -112,10 +206,9 @@ class InteractiveChatUI:
                     console.print("\n[yellow]Usa /exit per uscire dalla chat[/yellow]")
                     continue
 
-                except Exception as e:
-                    logger.error("chat_error", error=str(e))
-                    console.print(f"\n[red]Errore: {e}[/red]")
-                    continue
+        except Exception as e:
+            self._handle_error(e, "inizializzazione")
+            raise
 
         finally:
             # Save session on exit
@@ -180,10 +273,13 @@ class InteractiveChatUI:
 
     async def _get_user_input(self) -> str:
         """Get user input with improved UX."""
-        # Show token counter with better formatting
-        console.print()  # Spacing
-        self._show_mini_stats()
-        console.print()  # Spacing
+        # Show token counter with better formatting using buffered output
+        output_lines = [
+            "",  # Spacing
+            self._get_mini_stats_str(),
+            "",  # Spacing
+        ]
+        console.print("\n".join(output_lines))
 
         # Get input with better prompt
         user_input = await questionary.text(
@@ -224,7 +320,7 @@ class InteractiveChatUI:
                 title_align="left",
                 width=min(int(console.width * 0.8), 100),
             )
-            with Live(thinking_content, console=console, refresh_per_second=10) as live:
+            with Live(thinking_content, console=console, refresh_per_second=4) as live:
                 # Build context while showing thinking
                 context = await self._build_context(user_input)
                 # Stream response with real-time rendering
@@ -247,10 +343,10 @@ class InteractiveChatUI:
         Args:
             context: Chat context
         """
-        # Collect response chunks for session storage
+        # Collect response chunks for session storage using bounded accumulators
         full_response = ""
-        content_chunks: list[str] = []  # Only actual content (no progress messages)
-        progress_messages: list[str] = []  # Progress messages to show in bubble
+        content_acc = StreamAccumulator(max_size=self.MAX_CONTENT_CHUNKS)
+        progress_acc = StreamAccumulator(max_size=self.MAX_PROGRESS_MESSAGES)
 
         try:
             if self.agent is None:
@@ -261,25 +357,19 @@ class InteractiveChatUI:
 
             timestamp = datetime.now().strftime("%H:%M")
 
-            def create_live_content(content: str = "", progress: list[str] | None = None) -> Panel:
+            def create_live_content(
+                content: str = "", progress_chunks: list[str] | None = None
+            ) -> Panel:
                 """Create the complete bubble content for Live display."""
                 bubble_content = content
-                if progress:
+                if progress_chunks:
                     if bubble_content:
-                        bubble_content += "\n\n" + "\n".join(progress)
+                        bubble_content += "\n\n" + "\n".join(progress_chunks)
                     else:
-                        bubble_content = "\n".join(progress)
+                        bubble_content = "\n".join(progress_chunks)
 
-                # Truncate long lines for bubble
-                if bubble_content:
-                    lines = []
-                    for line in bubble_content.split("\n"):
-                        if line.strip():
-                            truncated_line = line[:80] + "..." if len(line) > 80 else line
-                            lines.append(truncated_line)
-                        else:
-                            lines.append("")
-                    bubble_content = "\n".join(lines)
+                # Don't truncate content during streaming - let Rich handle wrapping
+                # The Panel will handle width constraints automatically
 
                 return Panel(
                     bubble_content,
@@ -287,57 +377,84 @@ class InteractiveChatUI:
                     padding=(0, 1),
                     title=f"[dim]🤖 AI • {timestamp}[/dim]",
                     title_align="left",
-                    width=min(int(console.width * 0.8), 100),
+                    width=min(
+                        int(console.width * 0.8), 120
+                    ),  # Increased width for better formatting
                 )
 
                 # Live is already started in caller
 
-            async for chunk in self.agent.execute_stream(context):
-                full_response += chunk
+            async for event in self.agent.execute_stream(context):
+                # Handle different event types
+                if event.is_content():
+                    # Content event - accumulate and display
+                    chunk = event.get_text()
+                    full_response += chunk
+                    content_acc.add(chunk)
 
-                # Detect progress messages vs content
-                is_progress = (
-                    chunk.startswith("\n\n🔧")
-                    or chunk.startswith("\n  ")
-                    or chunk.startswith("     ")
-                    or chunk.startswith("\n📊")
-                    or chunk.startswith("⏱️")
-                    or chunk.startswith("\n\n🤖 Continuando")
-                )
+                    rendered_content = content_acc.get_text()
+                    live.update(create_live_content(rendered_content, progress_acc.get_chunks()))
 
-                if is_progress:
-                    # Add progress to bubble content
-                    progress_messages.append(chunk.strip())
-                    live.update(
-                        create_live_content(
-                            "".join(content_chunks) if content_chunks else "", progress_messages
+                elif event.type == StreamEventType.TOOL_START:
+                    # Tool started - show progress
+                    if isinstance(event.data, dict):
+                        tool_name = event.data.get("tool_name", "unknown")
+                        progress_acc.add(f"🔧 Avvio {tool_name}...")
+                        live.update(
+                            create_live_content(content_acc.get_text(), progress_acc.get_chunks())
                         )
-                    )
-                else:
-                    # Accumulate content and update bubble
-                    content_chunks.append(chunk)
-                    rendered_content = "".join(content_chunks)
-                    live.update(create_live_content(rendered_content, progress_messages))
+
+                elif event.type == StreamEventType.TOOL_RESULT:
+                    # Tool succeeded - show result
+                    if isinstance(event.data, dict):
+                        tool_name = event.data.get("tool_name", "unknown")
+                        result = str(event.data.get("result", ""))
+                        # Truncate long results
+                        if len(result) > 200:
+                            result = result[:200] + "..."
+                        progress_acc.add(f"✅ {tool_name}: {result}")
+                        live.update(
+                            create_live_content(content_acc.get_text(), progress_acc.get_chunks())
+                        )
+
+                elif event.type == StreamEventType.TOOL_ERROR:
+                    # Tool failed - show error
+                    if isinstance(event.data, dict):
+                        tool_name = event.data.get("tool_name", "unknown")
+                        error = event.data.get("error", "Errore sconosciuto")
+                        progress_acc.add(f"❌ {tool_name}: {error}")
+                        live.update(
+                            create_live_content(content_acc.get_text(), progress_acc.get_chunks())
+                        )
+
+                elif event.type == StreamEventType.METRICS:
+                    # Metrics event - show summary
+                    if isinstance(event.data, dict):
+                        exec_time = event.data.get("execution_time_ms", 0) / 1000
+                        successful = event.data.get("successful_tools", 0)
+                        failed = event.data.get("failed_tools", 0)
+                        progress_acc.add(
+                            f"📊 Completato: {successful} OK, {failed} errori ({exec_time:.1f}s)"
+                        )
+                        live.update(
+                            create_live_content(content_acc.get_text(), progress_acc.get_chunks())
+                        )
 
             # Final display in proper bubble format via Live
-            if content_chunks:
-                final_content = "".join(content_chunks)
-                md = Markdown(final_content)
-                with console.capture() as capture:
-                    console.print(md)
-                rendered_final = capture.get().strip()
-                # Create final bubble content
+            if len(content_acc) > 0:
+                final_content = content_acc.get_text()
+                # Create final bubble content with markdown rendered inside panel
                 from datetime import datetime
 
                 timestamp = datetime.now().strftime("%H:%M")
                 live.update(
                     Panel(
-                        rendered_final,
+                        Markdown(final_content),
                         border_style="green",
                         padding=(0, 1),
                         title=f"[dim]🤖 AI • {timestamp}[/dim]",
                         title_align="left",
-                        width=min(int(console.width * 0.8), 100),
+                        width=min(int(console.width * 0.8), 120),  # Match streaming width
                     )
                 )
 
@@ -378,8 +495,7 @@ class InteractiveChatUI:
             await self._ask_for_feedback()
 
         except Exception as e:
-            logger.error("streaming_failed", error=str(e))
-            self._display_error_bubble(str(e))
+            self._handle_error(e, "streaming")
 
     async def _process_message_non_streaming(self, context: ChatContext) -> None:
         """
@@ -423,8 +539,7 @@ class InteractiveChatUI:
             await self._ask_for_feedback()
 
         except Exception as e:
-            logger.error("non_streaming_failed", error=str(e))
-            self._display_error_bubble(str(e))
+            self._handle_error(e, "elaborazione")
 
     async def _build_context(self, user_input: str) -> ChatContext:
         """
@@ -499,8 +614,9 @@ class InteractiveChatUI:
             padding=(0, 1),
             title=f"[dim]👤 Tu • {timestamp}[/dim]",
             title_align="right",
+            width=min(int(console.width * 0.8), 120),  # Match other widths
         )
-        console.print(Align.right(bubble, width=min(int(console.width * 0.8), 100)))
+        console.print(Align.right(bubble, width=min(int(console.width * 0.8), 120)))
         console.print()  # Spacing
 
     def _display_ai_message_bubble(self, content: str) -> None:
@@ -515,9 +631,9 @@ class InteractiveChatUI:
             padding=(0, 1),
             title=f"[dim]🤖 AI • {timestamp}[/dim]",
             title_align="left",
-            width=min(int(console.width * 0.8), 100),
+            width=min(int(console.width * 0.8), 120),  # Match streaming width
         )
-        console.print(Align.left(bubble, width=min(int(console.width * 0.8), 100)))
+        console.print(bubble)
         console.print()  # Spacing
 
     def _display_error_bubble(self, error_message: str) -> None:
@@ -535,7 +651,7 @@ class InteractiveChatUI:
         console.print(error_bubble)
         console.print()
 
-    async def _show_typing_indicator(self, max_duration: int = 10) -> None:
+    async def _show_typing_indicator(self, max_duration: int = 5) -> None:
         """Show typing indicator during AI processing."""
         frames = [
             "🤖 AI sta pensando",
@@ -544,20 +660,30 @@ class InteractiveChatUI:
             "🤖 AI sta pensando...",
         ]
 
-        with Live("", console=console, refresh_per_second=2) as live:
-            for i in range(max_duration * 2):  # 2 updates per second
+        with Live("", console=console, refresh_per_second=1) as live:  # Reduced refresh rate
+            for i in range(max_duration * 1):  # 1 update per second
                 frame = frames[i % len(frames)]
                 live.update(f"[dim]{frame}[/dim]")
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1.0)  # Longer sleep interval
 
     def _show_mini_stats(self) -> None:
         """Show mini stats bar."""
-        stats = (
-            f"[dim]Msgs: {self.session.metadata.message_count} | "
-            f"Tokens: {self.session.metadata.total_tokens} | "
-            f"Cost: ${self.session.metadata.total_cost_usd:.4f}[/dim]"
-        )
+        stats = self._get_mini_stats_str()
         console.print(stats)
+
+    def _get_mini_stats_str(self) -> str:
+        """Get mini stats as string for buffered output."""
+        if not hasattr(self, "session") or self.session is None:
+            return "[dim]Sessione in inizializzazione...[/dim]"
+
+        try:
+            return (
+                f"[dim]Msgs: {self.session.metadata.message_count} | "
+                f"Tokens: {self.session.metadata.total_tokens} | "
+                f"Cost: ${self.session.metadata.total_cost_usd:.4f}[/dim]"
+            )
+        except AttributeError:
+            return "[dim]Statistiche non disponibili[/dim]"
 
     async def _handle_command(self, command: str) -> str | None:
         """
@@ -653,7 +779,10 @@ Use /custom to see available custom commands
 
     async def _save_session(self) -> None:
         """Save current session."""
-        if self.session_manager.save_session(self.session):
+        # Only save if we have a real ChatSession (not MockSession)
+        if isinstance(self.session, ChatSession) and self.session_manager.save_session(
+            self.session
+        ):
             console.print(f"[green]✓ Session saved: {self.session.id[:8]}...[/green]\n")
         else:
             console.print("[red]✗ Error while saving[/red]\n")
@@ -760,8 +889,10 @@ Use /custom to see available custom commands
     def _auto_save(self) -> None:
         """Auto-save session."""
         try:
-            self.session_manager.save_session(self.session)
-            logger.debug("session_auto_saved", session_id=self.session.id)
+            # Only auto-save if we have a real ChatSession (not MockSession)
+            if isinstance(self.session, ChatSession):
+                self.session_manager.save_session(self.session)
+                logger.debug("session_auto_saved", session_id=self.session.id)
         except Exception as e:
             logger.warning("session_auto_save_failed", error=str(e))
 
@@ -810,6 +941,7 @@ Use /custom to see available custom commands
                 feedback = FeedbackCreate(
                     session_id=self.session.id,
                     feedback_type=FeedbackType.THUMBS_UP,
+                    rating=None,
                     original_text=self.last_ai_message[:500],
                     agent_type="chat_agent",
                 )
@@ -821,6 +953,7 @@ Use /custom to see available custom commands
                 feedback = FeedbackCreate(
                     session_id=self.session.id,
                     feedback_type=FeedbackType.THUMBS_DOWN,
+                    rating=None,
                     original_text=self.last_ai_message[:500],
                     agent_type="chat_agent",
                 )
@@ -871,6 +1004,10 @@ Use /custom to see available custom commands
                 style=openfatture_style,
             ).ask_async()
 
+            if not rating_value:
+                console.print("[red]Rating è obbligatorio per questo tipo di feedback[/red]")
+                return None
+
             feedback = FeedbackCreate(
                 session_id=self.session.id,
                 feedback_type=FeedbackType.RATING,
@@ -896,9 +1033,16 @@ Use /custom to see available custom commands
                 style=openfatture_style,
             ).ask_async()
 
+            if not corrected:
+                console.print(
+                    "[red]Testo corretto è obbligatorio per questo tipo di feedback[/red]"
+                )
+                return None
+
             feedback = FeedbackCreate(
                 session_id=self.session.id,
                 feedback_type=FeedbackType.CORRECTION,
+                rating=None,
                 original_text=self.last_ai_message[:1000],
                 corrected_text=corrected,
                 user_comment=comment if comment else None,
@@ -916,6 +1060,7 @@ Use /custom to see available custom commands
             feedback = FeedbackCreate(
                 session_id=self.session.id,
                 feedback_type=FeedbackType.COMMENT,
+                rating=None,
                 original_text=self.last_ai_message[:1000],
                 user_comment=comment,
                 agent_type="chat_agent",

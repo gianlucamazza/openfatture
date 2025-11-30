@@ -8,6 +8,7 @@ from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.orchestration.react import ReActOrchestrator
 from openfatture.ai.providers import BaseLLMProvider
+from openfatture.ai.streaming import StreamEvent
 from openfatture.ai.tools import ToolRegistry, get_tool_registry
 from openfatture.utils.config import DebugConfig
 from openfatture.utils.logging import get_dynamic_logger, get_logger
@@ -146,7 +147,9 @@ class ChatAgent(BaseAgent[ChatContext]):
                 collector.record_error("chat_agent_error", str(e), {"agent": self.config.name})
                 raise
 
-    async def execute_stream(self, context: ChatContext, **kwargs: Any) -> AsyncIterator[str]:
+    async def execute_stream(  # type: ignore[override]
+        self, context: ChatContext, **kwargs: Any
+    ) -> AsyncIterator[StreamEvent]:
         """
         Execute chat agent with streaming, using ReAct or native tool calling.
 
@@ -158,7 +161,7 @@ class ChatAgent(BaseAgent[ChatContext]):
             context: Chat context
 
         Yields:
-            Response chunks
+            StreamEvent: Typed streaming events (CONTENT, TOOL_START, TOOL_RESULT, etc.)
         """
         # Check if we need ReAct orchestration
         needs_react = (
@@ -183,9 +186,9 @@ class ChatAgent(BaseAgent[ChatContext]):
                 debug_config=self.debug_config,
             )
 
-            # Make sure we return something even if ReAct doesn't stream properly
+            # Wrap ReAct string chunks in StreamEvent.content()
             async for chunk in orchestrator.stream(context):
-                yield chunk
+                yield StreamEvent.content(chunk)
 
         elif (
             self.enable_tools and self.provider.supports_tools and len(context.available_tools) > 0
@@ -198,8 +201,8 @@ class ChatAgent(BaseAgent[ChatContext]):
                 tools_count=len(context.available_tools),
             )
 
-            async for chunk in self._execute_stream_with_tools(context, **kwargs):
-                yield chunk
+            async for event in self._execute_stream_with_tools(context, **kwargs):
+                yield event
 
         else:
             # Use standard streaming from BaseAgent
@@ -213,14 +216,15 @@ class ChatAgent(BaseAgent[ChatContext]):
                 available_tools=len(context.available_tools),
             )
 
+            # Wrap BaseAgent string chunks in StreamEvent.content()
             async for chunk in super().execute_stream(context, **kwargs):
-                yield chunk
+                yield StreamEvent.content(chunk)
 
     async def _execute_stream_with_tools(
         self,
         context: ChatContext,
         **kwargs: Any,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncIterator[StreamEvent]:
         """
         Execute with native tool calling support using streaming.
 
@@ -231,7 +235,7 @@ class ChatAgent(BaseAgent[ChatContext]):
             context: Chat context
 
         Yields:
-            Response chunks with real-time streaming and tool execution feedback
+            StreamEvent: Typed events (CONTENT, TOOL_START, TOOL_PROGRESS, TOOL_RESULT, TOOL_ERROR)
         """
         # Get tools schema for the provider
         tools_schema = self.get_tools_schema()
@@ -260,9 +264,9 @@ class ChatAgent(BaseAgent[ChatContext]):
                 **stream_kwargs,
             ):
                 if chunk.content:
-                    # Yield content chunk immediately
+                    # Yield content chunk as StreamEvent
                     accumulated_content += chunk.content
-                    yield chunk.content
+                    yield StreamEvent.content(chunk.content)
 
                 elif chunk.tool_call:
                     # Accumulate tool calls
@@ -297,16 +301,20 @@ class ChatAgent(BaseAgent[ChatContext]):
 
                         execution_time = time.time() - start_time
 
-                        # Yield tool execution progress with real-time indicators
-                        yield f"\n\n🔧 Eseguendo {len(pending_tool_calls)} strumento/i..."
-
-                        # Execute tools with detailed progress feedback
+                        # Emit tool execution events
                         successful_count = 0
                         failed_count = 0
 
-                        for i, tool_call in enumerate(pending_tool_calls, 1):
+                        for tool_call in pending_tool_calls:
                             tool_name = tool_call.name
-                            yield f"\n  {i}. 🔄 {tool_name}..."
+                            # tool_call.arguments is already a dict[str, Any]
+                            tool_args_dict = tool_call.arguments
+
+                            # Emit TOOL_START event
+                            yield StreamEvent.tool_start(
+                                tool_name=tool_name,
+                                parameters=tool_args_dict,
+                            )
 
                             # Find corresponding result
                             result = next(
@@ -317,23 +325,35 @@ class ChatAgent(BaseAgent[ChatContext]):
                                 tool_data = result["result"]
                                 if tool_data.get("success"):
                                     successful_count += 1
-                                    # Truncate long results for better UX
-                                    data_str = str(tool_data.get("data", ""))
-                                    if len(data_str) > 200:
-                                        data_str = data_str[:200] + "..."
-                                    yield f"     ✅ {tool_name}: {data_str}"
+                                    # Emit TOOL_RESULT event
+                                    yield StreamEvent.tool_result(
+                                        tool_name=tool_name,
+                                        result=tool_data.get("data", ""),
+                                        duration_ms=execution_time * 1000,
+                                    )
                                 else:
                                     failed_count += 1
                                     error_msg = tool_data.get("error", "Errore sconosciuto")
-                                    yield f"     ❌ {tool_name}: {error_msg}"
+                                    # Emit TOOL_ERROR event
+                                    yield StreamEvent.tool_error(
+                                        tool_name=tool_name,
+                                        error=error_msg,
+                                    )
                             else:
                                 failed_count += 1
-                                yield f"     ❌ {tool_name}: Risultato non disponibile"
+                                # Emit TOOL_ERROR event
+                                yield StreamEvent.tool_error(
+                                    tool_name=tool_name,
+                                    error="Risultato non disponibile",
+                                )
 
-                        # Summary statistics with timing
+                        # Emit summary metrics event
                         if successful_count > 0 or failed_count > 0:
-                            yield f"\n📊 Completato: {successful_count} riuscito/i, {failed_count} fallito/i"
-                            yield f"⏱️  Tempo esecuzione: {execution_time:.1f}s"
+                            yield StreamEvent.metrics(
+                                successful_tools=successful_count,
+                                failed_tools=failed_count,
+                                execution_time_ms=execution_time * 1000,
+                            )
 
                         # Follow-up conversation with tool results
                         followup_messages = messages.copy()
@@ -374,7 +394,7 @@ class ChatAgent(BaseAgent[ChatContext]):
                             )
 
                         # Stream follow-up response
-                        yield "\n\n🤖 Continuando..."
+                        # (Status message now handled by consumer via METRICS event)
 
                         followup_content = ""
                         async for followup_chunk in self.provider.stream(
@@ -383,7 +403,7 @@ class ChatAgent(BaseAgent[ChatContext]):
                             max_tokens=self.config.max_tokens,
                         ):
                             followup_content += followup_chunk
-                            yield followup_chunk
+                            yield StreamEvent.content(followup_chunk)
 
                         logger.info(
                             "streaming_with_tools_completed",
@@ -410,7 +430,8 @@ class ChatAgent(BaseAgent[ChatContext]):
                 error=str(e),
                 accumulated_content_length=len(accumulated_content),
             )
-            yield f"\n\n❌ Errore durante l'esecuzione: {str(e)}"
+            # Emit error as StreamEvent
+            yield StreamEvent.content(f"\n\n❌ Errore durante l'esecuzione: {str(e)}")
 
     async def _build_prompt(self, context: ChatContext) -> list[Message]:
         """
