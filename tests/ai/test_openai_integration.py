@@ -301,10 +301,12 @@ class TestOpenAIProviderCapabilities:
 
     async def test_streaming_support(self, openai_provider):
         """Test that OpenAI provider supports streaming."""
+        from openfatture.ai.domain.message import Message, Role
+
         assert openai_provider.supports_streaming
 
-        # Test basic streaming
-        messages = [{"role": "user", "content": "Hello"}]
+        # Test basic streaming (must use Message objects, not dicts)
+        messages = [Message(role=Role.USER, content="Hello")]
         tokens = []
         async for token in openai_provider.stream(messages):
             tokens.append(token)

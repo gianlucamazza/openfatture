@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from openfatture.storage.database.models import FeedbackType, PredictionType
 
@@ -23,21 +23,9 @@ class FeedbackCreate(BaseModel):
     feature_name: str | None = None
     metadata: dict[str, Any] | None = None
 
-    @field_validator("rating")
-    @classmethod
-    def validate_rating(cls, v: int | None, info) -> int | None:
-        """Validate rating is provided for RATING type."""
-        if info.data.get("feedback_type") == FeedbackType.RATING and v is None:
-            raise ValueError("rating is required when feedback_type is RATING")
-        return v
+    # Removed automatic validation - handled in application code
 
-    @field_validator("corrected_text")
-    @classmethod
-    def validate_correction(cls, v: str | None, info) -> str | None:
-        """Validate correction is provided for CORRECTION type."""
-        if info.data.get("feedback_type") == FeedbackType.CORRECTION and not v:
-            raise ValueError("corrected_text is required when feedback_type is CORRECTION")
-        return v
+    # Removed automatic validation - handled in application code
 
     class Config:
         use_enum_values = False

@@ -636,6 +636,32 @@ def get_preventivo_tools() -> list[Tool]:
                     type=ToolParameterType.ARRAY,
                     description="List of line items (each with descrizione, quantita, prezzo_unitario, aliquota_iva, unita_misura)",
                     required=True,
+                    items={
+                        "type": "object",
+                        "properties": {
+                            "descrizione": {
+                                "type": "string",
+                                "description": "Line item description",
+                            },
+                            "quantita": {
+                                "type": "number",
+                                "description": "Quantity",
+                            },
+                            "prezzo_unitario": {
+                                "type": "number",
+                                "description": "Unit price",
+                            },
+                            "aliquota_iva": {
+                                "type": "number",
+                                "description": "VAT rate percentage (default 22.0)",
+                            },
+                            "unita_misura": {
+                                "type": "string",
+                                "description": "Unit of measure (default 'ore')",
+                            },
+                        },
+                        "required": ["descrizione", "quantita", "prezzo_unitario"],
+                    },
                 ),
                 ToolParameter(
                     name="validita_giorni",

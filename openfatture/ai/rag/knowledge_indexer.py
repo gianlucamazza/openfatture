@@ -179,7 +179,7 @@ class KnowledgeIndexer:
                     metadata.update(source.metadata)
 
                 metadatas.append(metadata)
-                ids.append(self._build_document_id(source.id, section_title, index))
+                ids.append(self._build_document_id(source.id, section_title, index, chunk))
 
         if not documents:
             logger.info("knowledge_source_empty", source_id=source.id)
@@ -290,10 +290,26 @@ class KnowledgeIndexer:
         return chunks
 
     @staticmethod
-    def _build_document_id(source_id: str, title: str, chunk_index: int) -> str:
-        """Create deterministic document ids."""
+    def _build_document_id(source_id: str, title: str, chunk_index: int, content: str = "") -> str:
+        """Create deterministic document ids.
+
+        Args:
+            source_id: Knowledge source identifier
+            title: Section title
+            chunk_index: Index of chunk within section
+            content: Chunk content (used for uniqueness hash)
+
+        Returns:
+            Unique document ID
+        """
+        import hashlib
+
         slug = KnowledgeIndexer._slugify(title) or "section"
-        return f"kb-{source_id}-{slug}-{chunk_index}"
+
+        # Add short hash of content to ensure uniqueness
+        content_hash = hashlib.sha256(content.encode()).hexdigest()[:8]
+
+        return f"kb-{source_id}-{slug}-{chunk_index}-{content_hash}"
 
     @staticmethod
     def _slugify(value: str) -> str:

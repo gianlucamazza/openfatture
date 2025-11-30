@@ -4,7 +4,7 @@ import time
 from collections.abc import AsyncIterator
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 from openai import AsyncOpenAI, OpenAIError
 
@@ -155,24 +155,28 @@ class OpenAIVoiceProvider(BaseVoiceProvider):
             # Prepare audio input
             audio_file = self._prepare_audio_input(audio)
 
-            # Prepare API parameters
-            params = {
+            # Build API parameters conditionally
+            params: dict[str, Any] = {
                 "model": self.config.stt_model.value,
                 "file": audio_file,
                 "response_format": "verbose_json",  # Get metadata
             }
 
-            # Add optional parameters
+            # Add optional language parameter
+            api_language: str | None = None
             if language:
                 if not self._validate_language(language):
                     raise VoiceProviderValidationError(
                         f"Unsupported language: {language}",
                         provider=self.provider_name,
                     )
+                api_language = language
                 params["language"] = language
             elif self.config.stt_language:
+                api_language = self.config.stt_language
                 params["language"] = self.config.stt_language
 
+            # Add optional prompt parameter
             stt_prompt = prompt or self.config.stt_prompt
             if stt_prompt:
                 params["prompt"] = stt_prompt
@@ -180,8 +184,8 @@ class OpenAIVoiceProvider(BaseVoiceProvider):
             # Call Whisper API
             logger.debug(
                 "whisper_transcription_started",
-                language=params.get("language", "auto"),
-                has_prompt=bool(params.get("prompt")),
+                language=api_language or "auto",
+                has_prompt=bool(stt_prompt),
             )
 
             response = await self.client.audio.transcriptions.create(**params)
@@ -189,12 +193,12 @@ class OpenAIVoiceProvider(BaseVoiceProvider):
             # Extract transcription result
             transcription = TranscriptionResult(
                 text=response.text,
-                language=response.language if hasattr(response, "language") else language,
+                language=response.language if hasattr(response, "language") else api_language,
                 confidence=None,  # Whisper doesn't provide confidence scores
                 duration_seconds=response.duration if hasattr(response, "duration") else None,
                 metadata={
                     "model": self.config.stt_model.value,
-                    "prompt": params.get("prompt"),
+                    "prompt": stt_prompt,
                 },
             )
 
@@ -249,15 +253,6 @@ class OpenAIVoiceProvider(BaseVoiceProvider):
             # Determine output format
             selected_format = output_format or self.config.tts_format
 
-            # Prepare API parameters
-            params = {
-                "model": self.config.tts_model.value,
-                "voice": selected_voice,
-                "input": text,
-                "response_format": selected_format.value,
-                "speed": self.config.tts_speed,
-            }
-
             logger.debug(
                 "tts_synthesis_started",
                 text_length=len(text),
@@ -265,6 +260,15 @@ class OpenAIVoiceProvider(BaseVoiceProvider):
                 format=selected_format.value,
                 speed=self.config.tts_speed,
             )
+
+            # Build API parameters
+            params: dict[str, Any] = {
+                "model": self.config.tts_model.value,
+                "voice": selected_voice,
+                "input": text,
+                "response_format": selected_format.value,
+                "speed": self.config.tts_speed,
+            }
 
             # Call TTS API (non-streaming)
             response = await self.client.audio.speech.create(**params)
@@ -336,15 +340,6 @@ class OpenAIVoiceProvider(BaseVoiceProvider):
             selected_voice = self._select_voice(voice, language)
             selected_format = output_format or self.config.tts_format
 
-            # Prepare API parameters
-            params = {
-                "model": self.config.tts_model.value,
-                "voice": selected_voice,
-                "input": text,
-                "response_format": selected_format.value,
-                "speed": self.config.tts_speed,
-            }
-
             logger.debug(
                 "tts_streaming_started",
                 text_length=len(text),
@@ -352,10 +347,17 @@ class OpenAIVoiceProvider(BaseVoiceProvider):
                 format=selected_format.value,
             )
 
+            # Build API parameters
+            params: dict[str, Any] = {
+                "model": self.config.tts_model.value,
+                "voice": selected_voice,
+                "input": text,
+                "response_format": selected_format.value,
+                "speed": self.config.tts_speed,
+            }
+
             # Call TTS API with streaming
-            async with self.client.audio.speech.with_streaming_response.create(
-                **params
-            ) as response:
+            async with self.client.audio.speech.with_streaming_response.create(**params) as response:
                 # Stream audio chunks
                 async for chunk in response.iter_bytes(chunk_size=self.config.chunk_size_bytes):
                     if chunk:  # Filter out empty chunks
