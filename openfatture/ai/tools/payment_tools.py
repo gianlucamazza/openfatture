@@ -373,12 +373,19 @@ def reconcile_payment(
             strategies=[ExactAmountMatcher(), FuzzyDescriptionMatcher()],
         )
 
+        # Note: GlobalEventBus and payment.EventBus have compatible interfaces at runtime
+        # (both have publish() and subscribe() methods), but MyPy sees them as distinct
+        # protocols due to different event type hierarchies (BaseEvent vs PaymentEvent).
+        # This is safe because PaymentEvent inherits from BaseEvent.
+        from typing import cast
+        from openfatture.payment.application.events import EventBus as PaymentEventBus
+
         reconciliation_service = ReconciliationService(
             tx_repo=tx_repo,
             payment_repo=payment_repo,
             matching_service=matching_service,
             session=db,
-            event_bus=event_bus,  # type: ignore[arg-type]
+            event_bus=cast(PaymentEventBus, event_bus) if event_bus else None,
         )
 
         # Perform reconciliation

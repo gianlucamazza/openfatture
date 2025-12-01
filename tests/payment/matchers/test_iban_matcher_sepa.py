@@ -13,7 +13,6 @@ from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
-from pydantic import ValidationError
 
 from openfatture.payment.domain.enums import MatchType
 from openfatture.payment.matchers.iban import IBANMatcher
@@ -70,9 +69,13 @@ class TestSEPAIBANFormats:
 
     def test_iban_format_immutable(self):
         """Test IBANFormat is frozen (immutable)."""
+        from dataclasses import FrozenInstanceError
+
         fmt = SEPAIBANFormats.FORMATS["IT"]
 
-        with pytest.raises(ValidationError):  # Pydantic frozen model raises ValidationError
+        with pytest.raises(
+            FrozenInstanceError
+        ):  # Pydantic V2 frozen model raises FrozenInstanceError
             fmt.country_code = "XX"  # type: ignore
 
     def test_combined_pattern_generation(self):

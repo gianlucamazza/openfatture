@@ -33,18 +33,12 @@ from openfatture.ai.orchestration.states import (
     CashFlowAnalysisState,
 )
 from openfatture.ai.providers import create_provider
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.datetime import utc_now
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call init_db() before running workflows.")
-    return SessionLocal()
 
 
 if TYPE_CHECKING:
@@ -206,41 +200,41 @@ class CashFlowAnalysisWorkflow:
             client_id=state.client_id,
         )
 
-        db = _get_session()
         try:
-            # Query unpaid invoices
-            query = db.query(Fattura).filter(
-                Fattura.stato.in_(
-                    [
-                        StatoFattura.DA_INVIARE,
-                        StatoFattura.INVIATA,
-                        StatoFattura.CONSEGNATA,
-                    ]
+            with db_session() as db:
+                # Query unpaid invoices
+                query = db.query(Fattura).filter(
+                    Fattura.stato.in_(
+                        [
+                            StatoFattura.DA_INVIARE,
+                            StatoFattura.INVIATA,
+                            StatoFattura.CONSEGNATA,
+                        ]
+                    )
                 )
-            )
 
-            # Filter by client if specified
-            if state.client_id:
-                query = query.filter(Fattura.cliente_id == state.client_id)
+                # Filter by client if specified
+                if state.client_id:
+                    query = query.filter(Fattura.cliente_id == state.client_id)
 
-            # Filter by invoice IDs if specified
-            if state.invoice_ids:
-                query = query.filter(Fattura.id.in_(state.invoice_ids))
+                # Filter by invoice IDs if specified
+                if state.invoice_ids:
+                    query = query.filter(Fattura.id.in_(state.invoice_ids))
 
-            invoices = query.all()
+                invoices = query.all()
 
-            # Store invoice IDs for processing
-            state.metadata["invoice_ids"] = [f.id for f in invoices]
-            state.total_invoices_analyzed = len(invoices)
+                # Store invoice IDs for processing
+                state.metadata["invoice_ids"] = [f.id for f in invoices]
+                state.total_invoices_analyzed = len(invoices)
 
-            if len(invoices) == 0:
-                state.add_warning("No unpaid invoices found matching criteria")
+                if len(invoices) == 0:
+                    state.add_warning("No unpaid invoices found matching criteria")
 
-            logger.info(
-                "invoices_loaded",
-                workflow_id=state.workflow_id,
-                count=len(invoices),
-            )
+                logger.info(
+                    "invoices_loaded",
+                    workflow_id=state.workflow_id,
+                    count=len(invoices),
+                )
 
             state.updated_at = utc_now()
             return state
@@ -253,9 +247,6 @@ class CashFlowAnalysisWorkflow:
             )
             state.add_error(f"Failed to load invoices: {e}")
             return state
-
-        finally:
-            db.close()
 
     async def _predict_batch_node(self, state: CashFlowAnalysisState) -> CashFlowAnalysisState:
         """Predict payment delays for all invoices."""
@@ -333,16 +324,16 @@ class CashFlowAnalysisWorkflow:
         """Aggregate predictions into monthly buckets."""
         logger.info("aggregating_monthly_forecast", workflow_id=state.workflow_id)
 
-        db = _get_session()
         try:
-            invoice_ids = [p["invoice_id"] for p in state.predictions]
-            invoices = db.query(Fattura).filter(Fattura.id.in_(invoice_ids)).all()
+            with db_session() as db:
+                invoice_ids = [p["invoice_id"] for p in state.predictions]
+                invoices = db.query(Fattura).filter(Fattura.id.in_(invoice_ids)).all()
 
-            # Create invoice lookup
-            invoice_map = {f.id: f for f in invoices}
+                # Create invoice lookup
+                invoice_map = {f.id: f for f in invoices}
 
             # Initialize monthly totals
-            monthly_totals: dict[int, float] = dict.fromkeys(range(state.forecast_months), 0.0)  # type: ignore[assignment]
+            monthly_totals: dict[int, float] = {i: 0.0 for i in range(state.forecast_months)}
 
             today = date.today()
 
@@ -400,8 +391,6 @@ class CashFlowAnalysisWorkflow:
             )
             state.add_error(f"Monthly aggregation failed: {e}")
             return state
-        finally:
-            db.close()
 
     async def _analyze_risks_node(self, state: CashFlowAnalysisState) -> CashFlowAnalysisState:
         """Analyze payment risks and overdue predictions."""

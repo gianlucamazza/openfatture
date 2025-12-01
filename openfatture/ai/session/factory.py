@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from openfatture.ai.session.file_store import FileSessionStore
 from openfatture.ai.session.store import SessionStore
@@ -98,7 +98,8 @@ def get_session_store(
     # Check environment variable override
     env_store_type = os.getenv("OPENFATTURE_SESSION_STORE", "").lower()
     if env_store_type in ("file", "streamlit"):
-        store_type = env_store_type  # type: ignore
+        # Explicit conversion with validation (env var is str, store_type is Literal)
+        store_type = cast(StoreType, env_store_type)
 
     # Auto-detect if requested
     if store_type == "auto":

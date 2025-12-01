@@ -1,7 +1,6 @@
 """Interactive configuration wizard for OpenFatture."""
 
 from pathlib import Path
-from typing import cast
 
 import questionary
 from rich.console import Console
@@ -438,10 +437,13 @@ def edit_ai_config(env_file: Path, settings) -> None:
         current_tools_str = env_dict.get("AI_ENABLED_TOOLS", ",".join(all_tools))
         current_tools = [t.strip() for t in current_tools_str.split(",")]
 
+        # Build choices with pre-selection using Choice objects (questionary best practice)
+        tool_choices = [
+            questionary.Choice(title=tool, checked=tool in current_tools) for tool in all_tools
+        ]
         selected_tools = questionary.checkbox(
             "Seleziona tools da abilitare:",
-            choices=all_tools,
-            default=cast("list[str]", [t for t in current_tools if t in all_tools]),  # type: ignore[arg-type]
+            choices=tool_choices,
             style=openfatture_style,
         ).ask()
 
