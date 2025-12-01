@@ -22,18 +22,11 @@ import pandas as pd
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    """Return database session ensuring initialisation."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialised. Call init_db() before loading data.")
-    return SessionLocal()
 
 
 @dataclass
@@ -228,9 +221,7 @@ class InvoiceDataLoader:
         Returns:
             DataFrame with invoice data
         """
-        db = _get_session()
-
-        try:
+        with db_session() as db:
             # Query invoices with payments and client data
             fatture = (
                 db.query(Fattura)
@@ -297,9 +288,6 @@ class InvoiceDataLoader:
                 df["payment_due_date"] = pd.to_datetime(df["payment_due_date"])
 
             return df
-
-        finally:
-            db.close()
 
     def _create_target_variable(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create target variable (payment delay in days).

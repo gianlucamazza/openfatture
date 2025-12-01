@@ -11,7 +11,8 @@ from openfatture.payment.application.services.payment_overview import (
     PaymentDueEntry,
     collect_payment_due_summary,
 )
-from openfatture.storage.database.base import SessionLocal, get_session, init_db
+from openfatture.storage.database.base import init_db
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, StatoFattura, StatoPagamento
 from openfatture.utils.config import get_settings
 
@@ -24,12 +25,6 @@ def ensure_db() -> None:
     settings = get_settings()
     init_db(str(settings.database_url))
 
-
-def _get_session():
-    """Return a database session using the configured factory."""
-    if SessionLocal is not None:
-        return SessionLocal()
-    return get_session()
 
 
 @app.command("iva")
@@ -65,8 +60,7 @@ def report_iva(
         mese_inizio, mese_fine = 1, 12
         console.print("[cyan]Full year[/cyan]\n")
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         # Query invoices
         query = (
             db.query(Fattura)
@@ -138,9 +132,6 @@ def report_iva(
         console.print(aliquote_table)
         console.print()
 
-    finally:
-        db.close()
-
 
 @app.command("clienti")
 def report_clienti(
@@ -156,8 +147,7 @@ def report_clienti(
 
     console.print(f"\n[bold blue]📊 Client Revenue Report - {anno}[/bold blue]\n")
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         from sqlalchemy import func
 
         # Query with aggregation
@@ -205,9 +195,6 @@ def report_clienti(
         totale_generale = sum(r[2] for r in results)
         console.print(f"\n[bold]Total revenue: €{totale_generale:,.2f}[/bold]\n")
 
-    finally:
-        db.close()
-
 
 @app.command("scadenze")
 def report_scadenze(
@@ -229,8 +216,7 @@ def report_scadenze(
 
     console.print("\n[bold blue]📅 Payment Due Dates Overview[/bold blue]\n")
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         summary = collect_payment_due_summary(db, window_days=finestra, max_upcoming=20)
 
         has_entries = any(summary.overdue or summary.due_soon or summary.upcoming)
@@ -319,6 +305,3 @@ def report_scadenze(
         console.print(
             f"[bold]Totale residuo complessivo: {_format_money(summary.total_outstanding)}[/bold]\n"
         )
-
-    finally:
-        db.close()

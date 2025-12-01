@@ -1,6 +1,5 @@
 """AI-powered assistance commands."""
 
-import asyncio
 import json
 import os
 from collections.abc import Iterable
@@ -13,6 +12,8 @@ from rich.console import Console
 from rich.json import JSON
 from rich.panel import Panel
 from rich.table import Table
+
+from openfatture.utils.async_bridge import run_async
 
 from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.agents.compliance import ComplianceChecker
@@ -59,7 +60,7 @@ def _convert_history(history: list[dict[str, str]]) -> ConversationHistory:
 @rag_app.command("status")
 def rag_status() -> None:
     """Show knowledge base status and vector collection."""
-    asyncio.run(_rag_status())
+    run_async(_rag_status())
 
 
 @rag_app.command("index")
@@ -72,7 +73,7 @@ def rag_index(
     ),
 ) -> None:
     """Index knowledge base sources."""
-    asyncio.run(_rag_index(sources))
+    run_async(_rag_index(sources))
 
 
 @rag_app.command("search")
@@ -84,7 +85,7 @@ def rag_search(
     ),
 ) -> None:
     """Execute semantic search in knowledge base."""
-    asyncio.run(_rag_search(query, top, source))
+    run_async(_rag_search(query, top, source))
 
 
 async def _create_knowledge_indexer() -> KnowledgeIndexer:
@@ -409,7 +410,7 @@ def retrain_trigger(
     import asyncio
 
     with console.status("[bold green]Triggering retraining..."):
-        result = asyncio.run(scheduler.trigger_manual_retraining("cash_flow", force=force))
+        result = run_async(scheduler.trigger_manual_retraining("cash_flow", force=force))
 
     # Display results
     if result["success"]:
@@ -727,7 +728,7 @@ def auto_update_start() -> None:
     console.print("\n[bold blue]🔄 Starting RAG Auto-Update Service[/bold blue]\n")
 
     with console.status("[bold green]Starting service..."):
-        asyncio.run(service.start())
+        run_async(service.start())
 
     console.print("[bold green]✅ Service started successfully[/bold green]\n")
 
@@ -751,7 +752,7 @@ def auto_update_stop() -> None:
     console.print("\n[bold blue]🔄 Stopping RAG Auto-Update Service[/bold blue]\n")
 
     with console.status("[bold yellow]Stopping service..."):
-        asyncio.run(service.stop())
+        run_async(service.stop())
 
     console.print("[bold yellow]⏸️  Service stopped[/bold yellow]\n")
 
@@ -832,7 +833,7 @@ def auto_update_manual(
     console.print(f"[bold]Entity IDs:[/bold] {', '.join(map(str, entity_ids))}\n")
 
     with console.status("[bold green]Reindexing..."):
-        result = asyncio.run(service.manual_reindex(entity_type, entity_ids))
+        result = run_async(service.manual_reindex(entity_type, entity_ids))
 
     # Display results
     console.print("[bold green]✅ Reindexing completed[/bold green]\n")
@@ -1040,7 +1041,7 @@ def ai_describe(
         openfatture ai describe "sviluppo backend API" --hours 5 --tech "Python,FastAPI"
         openfatture ai describe "consulenza" --format markdown
     """
-    asyncio.run(_run_invoice_assistant(ctx, text, hours, rate, project, technologies, json_output))
+    run_async(_run_invoice_assistant(ctx, text, hours, rate, project, technologies, json_output))
 
 
 async def _run_invoice_assistant(
@@ -1309,7 +1310,7 @@ def ai_suggest_vat(
         openfatture ai suggest-vat "formazione professionale" --pa
         openfatture ai suggest-vat "consulenza" --estero --paese US --format markdown
     """
-    asyncio.run(
+    run_async(
         _run_tax_advisor(
             ctx, description, pa, estero, paese, categoria, importo, ateco, json_output
         )
@@ -1555,7 +1556,7 @@ def ai_forecast(
         openfatture ai forecast --retrain --months 12
         openfatture ai forecast --months 6 --format markdown
     """
-    asyncio.run(_run_cash_flow_forecast(ctx, months, client_id, retrain, json_output))
+    run_async(_run_cash_flow_forecast(ctx, months, client_id, retrain, json_output))
 
 
 async def _run_cash_flow_forecast(
@@ -1746,7 +1747,7 @@ def ai_check(
         openfatture ai check 123 -v  # Show all issues
         openfatture ai check 123 --format markdown
     """
-    asyncio.run(_run_compliance_check(ctx, fattura_id, level, json_output, verbose))
+    run_async(_run_compliance_check(ctx, fattura_id, level, json_output, verbose))
 
 
 async def _run_compliance_check(
@@ -2002,7 +2003,7 @@ def ai_create_invoice(
         openfatture ai create-invoice "sviluppo app mobile" --hours 20 --rate 50 --require-approvals
         openfatture ai create-invoice "development" --client 1 --amount 500 --format json
     """
-    asyncio.run(
+    run_async(
         _run_invoice_workflow(
             ctx=ctx,
             description=description,

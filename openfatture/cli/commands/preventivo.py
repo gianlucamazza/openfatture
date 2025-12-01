@@ -9,8 +9,9 @@ from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
 
 from openfatture.core.preventivi.service import PreventivoService
-from openfatture.storage.database.base import SessionLocal, get_session, init_db
+from openfatture.storage.database.base import init_db
 from openfatture.storage.database.models import Cliente, StatoPreventivo, TipoDocumento
+from openfatture.storage.session import db_session
 from openfatture.utils.config import get_settings
 
 app = typer.Typer(no_args_is_help=True)
@@ -21,13 +22,6 @@ def ensure_db() -> None:
     """Ensure database is initialized."""
     settings = get_settings()
     init_db(str(settings.database_url))
-
-
-def _get_session():
-    """Return a database session using the configured factory."""
-    if SessionLocal is not None:
-        return SessionLocal()
-    return get_session()
 
 
 @app.command("crea")
@@ -42,8 +36,7 @@ def crea_preventivo(
 
     console.print("\n[bold blue]📋 Create New Preventivo (Quote)[/bold blue]\n")
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         # Select client
         if not cliente_id:
             clienti = db.query(Cliente).order_by(Cliente.denominazione).all()
@@ -170,13 +163,6 @@ def crea_preventivo(
             f"\n[dim]Next: openfatture preventivo converti {preventivo.id} (to create invoice)[/dim]"
         )
 
-    except Exception as e:
-        db.rollback()
-        console.print(f"\n[red]Error creating preventivo: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()
-
 
 @app.command("lista")
 def list_preventivi(
@@ -188,8 +174,7 @@ def list_preventivi(
     """List preventivi (quotes)."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         settings = get_settings()
         service = PreventivoService(settings)
 
@@ -248,9 +233,6 @@ def list_preventivi(
 
         console.print(table)
 
-    finally:
-        db.close()
-
 
 @app.command("show")
 def show_preventivo(
@@ -259,8 +241,7 @@ def show_preventivo(
     """Show preventivo details."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         settings = get_settings()
         service = PreventivoService(settings)
 
@@ -341,9 +322,6 @@ def show_preventivo(
 
         console.print()
 
-    finally:
-        db.close()
-
 
 @app.command("delete")
 def delete_preventivo(
@@ -353,8 +331,7 @@ def delete_preventivo(
     """Delete a preventivo."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         settings = get_settings()
         service = PreventivoService(settings)
 
@@ -378,12 +355,6 @@ def delete_preventivo(
 
         console.print(f"[green]✓ Preventivo {preventivo.numero}/{preventivo.anno} deleted[/green]")
 
-    except Exception as e:
-        console.print(f"[red]Error deleting preventivo: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()
-
 
 @app.command("converti")
 def converti_preventivo(
@@ -399,8 +370,7 @@ def converti_preventivo(
 
     console.print("\n[bold blue]🔄 Converting Preventivo to Fattura[/bold blue]\n")
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         settings = get_settings()
         service = PreventivoService(settings)
 
@@ -459,13 +429,6 @@ def converti_preventivo(
         )
         console.print(f"\n[dim]Next: openfatture fattura invia {fattura.id} --pec[/dim]")
 
-    except Exception as e:
-        db.rollback()
-        console.print(f"\n[red]Error: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()
-
 
 @app.command("aggiorna-stato")
 def aggiorna_stato(
@@ -477,8 +440,7 @@ def aggiorna_stato(
     """Update preventivo status."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         settings = get_settings()
         service = PreventivoService(settings)
 
@@ -498,9 +460,3 @@ def aggiorna_stato(
             raise typer.Exit(1)
 
         console.print(f"[green]✓ Status updated to: {stato_enum.value}[/green]")
-
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()

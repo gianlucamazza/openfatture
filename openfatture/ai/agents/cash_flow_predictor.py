@@ -48,18 +48,11 @@ from openfatture.ai.ml.retraining.evaluator import ModelEvaluator
 from openfatture.ai.ml.retraining.versioning import ModelVersionManager
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, PredictionType, StatoFattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    """Return database session ensuring initialisation."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call init_db() before using the agent.")
-    return SessionLocal()
 
 
 @dataclass
@@ -239,8 +232,7 @@ class CashFlowPredictorAgent:
         logger.info("predicting_invoice", invoice_id=invoice_id)
 
         # Load invoice data
-        db = _get_session()
-        try:
+        with db_session() as db:
             fattura = db.query(Fattura).filter(Fattura.id == invoice_id).first()
 
             if not fattura:
@@ -287,9 +279,6 @@ class CashFlowPredictorAgent:
 
             return result
 
-        finally:
-            db.close()
-
     async def forecast_cash_flow(
         self,
         months: int = 3,
@@ -310,8 +299,7 @@ class CashFlowPredictorAgent:
         logger.info("forecasting_cash_flow", months=months, client_id=client_id)
 
         # Get unpaid invoices
-        db = _get_session()
-        try:
+        with db_session() as db:
             query = db.query(Fattura).filter(
                 Fattura.stato.in_(
                     [
@@ -404,9 +392,6 @@ class CashFlowPredictorAgent:
             )
 
             return result
-
-        finally:
-            db.close()
 
     async def retrain_from_feedback(self, min_feedback_count: int = 10) -> dict[str, Any]:
         """Retrain model using accumulated user feedback.

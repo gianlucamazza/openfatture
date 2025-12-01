@@ -4,7 +4,7 @@ Provides interactive commands for bank statement import, transaction matching,
 reconciliation, and payment reminders.
 """
 
-import asyncio
+from openfatture.utils.async_bridge import run_async
 import os
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
@@ -54,7 +54,7 @@ _INSIGHT_INITIALIZED = False
 
 def _run(coro):
     """Execute coroutine synchronously using a fresh event loop."""
-    return asyncio.run(coro)
+    return run_async(coro)
 
 
 @contextmanager
@@ -431,7 +431,7 @@ def import_transactions(
             )
 
             # Batch reconcile
-            recon_result = asyncio.run(
+            recon_result = run_async(
                 reconciliation_service.reconcile_batch(
                     account_id, auto_apply=True, auto_apply_threshold=confidence
                 )

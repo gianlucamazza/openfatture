@@ -7,7 +7,8 @@ from rich.console import Console
 from rich.table import Table
 
 from openfatture.sdi.notifiche.processor import NotificationProcessor
-from openfatture.storage.database.base import SessionLocal, get_session, init_db
+from openfatture.storage.database.base import init_db
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import LogSDI
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
@@ -21,12 +22,6 @@ def ensure_db() -> None:
     settings = get_settings()
     init_db(str(settings.database_url))
 
-
-def _get_session():
-    """Return a database session using the configured factory."""
-    if SessionLocal is not None:
-        return SessionLocal()
-    return get_session()
 
 
 @app.command("process")
@@ -57,9 +52,7 @@ def process_notification(
     console.print(f"[cyan]Size:[/cyan] {file.stat().st_size} bytes\n")
 
     settings = get_settings()
-    db = _get_session()
-
-    try:
+    with db_session() as db:
         # Initialize processor with optional email sender
         email_sender = None
         if not no_email and settings.notification_enabled and settings.notification_email:
@@ -108,13 +101,6 @@ def process_notification(
 
         console.print()
 
-    except Exception as e:
-        db.rollback()
-        console.print(f"\n[red]❌ Error processing notification: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()
-
 
 @app.command("list")
 def list_notifications(
@@ -133,8 +119,7 @@ def list_notifications(
 
     console.print("\n[bold blue]📬 SDI Notifications[/bold blue]\n")
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         query = db.query(LogSDI).order_by(LogSDI.data_ricezione.desc())
 
         if tipo:
@@ -182,9 +167,6 @@ def list_notifications(
         console.print(table)
         console.print()
 
-    finally:
-        db.close()
-
 
 @app.command("show")
 def show_notification(
@@ -198,8 +180,7 @@ def show_notification(
     """
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         notifica = db.query(LogSDI).filter(LogSDI.id == notification_id).first()
 
         if notifica is None:
@@ -240,6 +221,3 @@ def show_notification(
 
         console.print(table)
         console.print()
-
-    finally:
-        db.close()

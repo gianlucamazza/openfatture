@@ -26,18 +26,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy.orm import Session
 
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    """Return a database session, ensuring the engine is initialised."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialised. Call init_db() before using features.")
-    return SessionLocal()
 
 
 # Italian public holidays (fixed dates)
@@ -211,12 +204,9 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
         # Compute stats for each unique client
         unique_clients = X["cliente_id"].unique()
 
-        db = _get_session()
-        try:
+        with db_session() as db:
             for client_id in unique_clients:
                 self.client_stats_cache_[client_id] = self._compute_client_stats(db, client_id)
-        finally:
-            db.close()
 
         logger.info(
             "client_behavior_features_fitted",

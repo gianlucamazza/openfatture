@@ -15,7 +15,7 @@ from openfatture.core.events import (
     InvoiceSentEvent,
     InvoiceValidatedEvent,
 )
-from openfatture.storage.database.base import SessionLocal, get_session, init_db
+from openfatture.storage.database.base import init_db
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
@@ -23,6 +23,7 @@ from openfatture.storage.database.models import (
     StatoFattura,
     TipoDocumento,
 )
+from openfatture.storage.session import db_session
 from openfatture.utils.config import get_settings
 
 app = typer.Typer(no_args_is_help=True)
@@ -33,13 +34,6 @@ def ensure_db() -> None:
     """Ensure database is initialized."""
     settings = get_settings()
     init_db(str(settings.database_url))
-
-
-def _get_session():
-    """Return a database session using the configured factory."""
-    if SessionLocal is not None:
-        return SessionLocal()
-    return get_session()
 
 
 @app.command("crea")
@@ -61,8 +55,7 @@ def crea_fattura(
 
     console.print("\n[bold blue]🧾 Create New Invoice[/bold blue]\n")
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         # Select client
         if not cliente_id:
             clienti = db.query(Cliente).order_by(Cliente.denominazione).all()
@@ -213,13 +206,6 @@ def crea_fattura(
 
         console.print(f"\n[dim]Next: openfatture fattura invia {fattura.id} --pec[/dim]")
 
-    except Exception as e:
-        db.rollback()
-        console.print(f"\n[red]Error creating invoice: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()
-
 
 @app.command("list")
 def list_fatture(
@@ -230,8 +216,7 @@ def list_fatture(
     """List invoices."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         query = db.query(Fattura).order_by(Fattura.anno.desc(), Fattura.numero.desc())
 
         if stato:
@@ -279,9 +264,6 @@ def list_fatture(
 
         console.print(table)
 
-    finally:
-        db.close()
-
 
 @app.command("show")
 def show_fattura(
@@ -290,8 +272,7 @@ def show_fattura(
     """Show invoice details."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
@@ -361,9 +342,6 @@ def show_fattura(
         console.print(totals)
         console.print()
 
-    finally:
-        db.close()
-
 
 @app.command("delete")
 def delete_fattura(
@@ -373,8 +351,7 @@ def delete_fattura(
     """Delete an invoice."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
@@ -416,13 +393,6 @@ def delete_fattura(
 
         console.print(f"[green]✓ Invoice {invoice_number} deleted[/green]")
 
-    except Exception as e:
-        db.rollback()
-        console.print(f"[red]Error deleting invoice: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()
-
 
 @app.command("xml")
 def genera_xml(
@@ -435,8 +405,6 @@ def genera_xml(
 
     console.print("\n[bold blue]🔧 Generating FatturaPA XML[/bold blue]\n")
 
-    db = _get_session()
-
     # Track validation status for event publishing
     validation_status = "failed"
     issues = []
@@ -444,7 +412,7 @@ def genera_xml(
     invoice_number = None
     invoice_id = None
 
-    try:
+    with db_session() as db:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
@@ -503,28 +471,19 @@ def genera_xml(
         console.print("\n[dim]Preview (first 500 chars):[/dim]")
         console.print(f"[dim]{xml_content[:500]}...[/dim]")
 
-    except Exception as e:
-        db.rollback()
-        if not issues:  # Only add if not already captured
-            issues.append(str(e))
-        console.print(f"\n[red]Error generating XML: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        # Publish InvoiceValidatedEvent
-        if invoice_id and invoice_number:
-            event_bus = get_event_bus()
-            if event_bus:
-                event_bus.publish(
-                    InvoiceValidatedEvent(
-                        invoice_id=invoice_id,
-                        invoice_number=invoice_number,
-                        validation_status=validation_status,
-                        issues=issues,
-                        xml_path=xml_path_str,
-                    )
+    # Publish InvoiceValidatedEvent
+    if invoice_id and invoice_number:
+        event_bus = get_event_bus()
+        if event_bus:
+            event_bus.publish(
+                InvoiceValidatedEvent(
+                    invoice_id=invoice_id,
+                    invoice_number=invoice_number,
+                    validation_status=validation_status,
+                    issues=issues,
+                    xml_path=xml_path_str,
                 )
-
-        db.close()
+            )
 
 
 @app.command("invia")
@@ -546,8 +505,7 @@ def invia_fattura(
 
     console.print("\n[bold blue]📤 Sending Invoice to SDI[/bold blue]\n")
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
@@ -642,10 +600,3 @@ def invia_fattura(
             console.print(f"  1. XML saved at: {xml_path}")
             console.print(f"  2. Sign if needed, then send to: {settings.sdi_pec_address}")
             raise typer.Exit(1)
-
-    except Exception as e:
-        db.rollback()
-        console.print(f"\n[red]Error: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()

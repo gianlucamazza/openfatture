@@ -11,20 +11,14 @@ from sqlalchemy.orm import Session
 from openfatture.cli.lifespan import get_event_bus
 from openfatture.core.batch.invoice_processor import InvoiceBatchProcessor
 from openfatture.core.events import BatchImportCompletedEvent, BatchImportStartedEvent
-from openfatture.storage.database.base import SessionLocal, init_db
+from openfatture.storage.database.base import init_db
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
-
-
-def _get_session() -> Session:
-    """Return a database session ensuring initialisation."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialised. Call init_db() before batch operations.")
-    return SessionLocal()
 
 
 def ensure_db() -> None:

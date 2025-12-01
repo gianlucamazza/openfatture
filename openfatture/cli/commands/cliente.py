@@ -7,8 +7,9 @@ from rich.table import Table
 
 from openfatture.cli.lifespan import get_event_bus
 from openfatture.core.events import ClientCreatedEvent, ClientDeletedEvent
-from openfatture.storage.database.base import SessionLocal, get_session, init_db
+from openfatture.storage.database.base import init_db
 from openfatture.storage.database.models import Cliente
+from openfatture.storage.session import db_session
 from openfatture.utils.config import get_settings
 from openfatture.utils.validators import (
     validate_codice_destinatario,
@@ -25,13 +26,6 @@ def ensure_db() -> None:
     """Ensure database is initialized."""
     settings = get_settings()
     init_db(str(settings.database_url))
-
-
-def _get_session():
-    """Return a database session using the configured factory."""
-    if SessionLocal is not None:
-        return SessionLocal()
-    return get_session()
 
 
 @app.command("add")
@@ -113,8 +107,7 @@ def add_cliente(
         raise typer.Exit(1)
 
     # Create client
-    db = _get_session()
-    try:
+    with db_session() as db:
         # Parse name into first and last name if possible
         nome = None
         cognome = None
@@ -180,13 +173,6 @@ def add_cliente(
 
         console.print(table)
 
-    except Exception as e:
-        db.rollback()
-        console.print(f"[red]Error adding client: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()
-
 
 @app.command("list")
 def list_clienti(
@@ -195,8 +181,7 @@ def list_clienti(
     """List all clients."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         clienti = db.query(Cliente).order_by(Cliente.denominazione).limit(limit).all()
 
         if not clienti:
@@ -223,9 +208,6 @@ def list_clienti(
 
         console.print(table)
 
-    finally:
-        db.close()
-
 
 @app.command("show")
 def show_cliente(
@@ -234,8 +216,7 @@ def show_cliente(
     """Show detailed client information."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 
         if not cliente:
@@ -272,9 +253,6 @@ def show_cliente(
 
         console.print(table)
 
-    finally:
-        db.close()
-
 
 @app.command("delete")
 def delete_cliente(
@@ -284,8 +262,7 @@ def delete_cliente(
     """Delete a client."""
     ensure_db()
 
-    db = _get_session()
-    try:
+    with db_session() as db:
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
 
         if not cliente:
@@ -328,10 +305,3 @@ def delete_cliente(
             )
 
         console.print(f"[green]✓ Client '{client_name}' deleted[/green]")
-
-    except Exception as e:
-        db.rollback()
-        console.print(f"[red]Error deleting client: {e}[/red]")
-        raise typer.Exit(1)
-    finally:
-        db.close()
