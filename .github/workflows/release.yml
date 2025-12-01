@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v1
         with:
-          version: '0.7.12'  # Using a recent stable version
+          version: "0.7.12" # Using a recent stable version
 
       - name: Set up Python
         run: uv python install 3.12
@@ -34,10 +34,12 @@ jobs:
         run: uv run --extra dev pytest
 
       - name: Build package
-        run: uvx --from build pyproject-build
+        run: |
+          uv pip install build
+          uv run python -m build
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           files: dist/*
@@ -46,11 +48,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to PyPI
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && secrets.PYPI_TOKEN != ''
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: |
+          if [ -z "${TWINE_PASSWORD}" ]; then
+            echo "⚠️ PYPI_TOKEN secret is missing. Skipping upload."
+            exit 0
+          fi
+
           echo "Publishing to PyPI..."
           # Check current package version
           PACKAGE_VERSION=$(python -c "from openfatture import __version__; print(__version__)")
@@ -58,14 +65,6 @@ jobs:
 
           # Try to upload with skip-existing flag to avoid errors on duplicate uploads
           uvx twine upload --skip-existing dist/* --verbose
-
-          # Check if upload was successful or skipped
-          if [ $? -eq 0 ]; then
-            echo "✓ PyPI upload completed (or skipped if already exists)"
-          else
-            echo "⚠️ PyPI upload failed"
-            exit 1
-          fi
 
   # Docker Hub publishing - to be configured later
   # docker:
