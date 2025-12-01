@@ -1,18 +1,26 @@
 """Factory for creating LLM providers."""
 
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import httpx
 
 from openfatture.ai.config import AISettings, get_ai_settings
 
-try:
-    from openfatture.cli.lifespan import _http_client_context  # type: ignore
+if TYPE_CHECKING:
+    from contextvars import ContextVar
 
-    _has_context = True
-except ImportError:
-    _http_client_context = None  # type: ignore
-    _has_context = False
+    _http_client_context: ContextVar[httpx.AsyncClient | None] | None
+    _has_context: bool
+else:
+    try:
+        # _http_client_context is intentionally private - used for shared HTTP client lifecycle
+        from openfatture.cli.lifespan import _http_client_context
+
+        _has_context = True
+    except ImportError:
+        # CLI lifespan module not available (e.g., in tests or non-CLI usage)
+        _http_client_context = None
+        _has_context = False
 from openfatture.ai.providers.anthropic import AnthropicProvider
 from openfatture.ai.providers.base import BaseLLMProvider, ProviderError
 from openfatture.ai.providers.ollama import OllamaProvider

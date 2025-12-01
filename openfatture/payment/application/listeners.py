@@ -26,8 +26,8 @@ def audit_log_listener(event: PaymentEvent) -> None:
 
 def register_default_payment_listeners(event_bus: InMemoryEventBus) -> None:
     """Attach default listeners (audit logging) to the provided event bus."""
-    existing = event_bus._listeners.get(PaymentEvent, [])  # type: ignore[attr-defined]
-    if audit_log_listener not in existing:
+    # Idempotent registration - only subscribe if not already registered
+    if not event_bus.has_listener(PaymentEvent, audit_log_listener):
         event_bus.subscribe(PaymentEvent, audit_log_listener)
 
 

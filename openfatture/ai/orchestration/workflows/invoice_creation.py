@@ -47,7 +47,6 @@ from openfatture.ai.orchestration.states import (
 )
 from openfatture.ai.providers import BaseLLMProvider, create_provider
 from openfatture.core.fatture.service import InvoiceService
-from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
@@ -57,17 +56,12 @@ from openfatture.storage.database.models import (
     StatoPagamento,
     TipoDocumento,
 )
+from openfatture.storage.session import db_session
 from openfatture.utils.config import Settings, get_settings
 from openfatture.utils.datetime import utc_now
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call init_db() before running workflows.")
-    return SessionLocal()
 
 
 if TYPE_CHECKING:
@@ -240,44 +234,44 @@ class InvoiceCreationWorkflow:
         """Enrich state with business context."""
         logger.info("enriching_context", workflow_id=state.workflow_id)
 
-        db = _get_session()
         try:
-            # Load year-to-date statistics
-            from sqlalchemy import extract, func
+            with db_session() as db:
+                # Load year-to-date statistics
+                from sqlalchemy import extract, func
 
-            current_year = utc_now().year
+                current_year = utc_now().year
 
-            cliente = db.query(Cliente).filter(Cliente.id == state.client_id).first()
-            if not cliente:
-                raise ValueError(f"Cliente {state.client_id} non trovato")
+                cliente = db.query(Cliente).filter(Cliente.id == state.client_id).first()
+                if not cliente:
+                    raise ValueError(f"Cliente {state.client_id} non trovato")
 
-            state.context["total_invoices_ytd"] = (
-                db.query(func.count(Fattura.id))
-                .filter(extract("year", Fattura.data_emissione) == current_year)
-                .scalar()
-                or 0
-            )
+                state.context["total_invoices_ytd"] = (
+                    db.query(func.count(Fattura.id))
+                    .filter(extract("year", Fattura.data_emissione) == current_year)
+                    .scalar()
+                    or 0
+                )
 
-            state.context["total_revenue_ytd"] = (
-                db.query(func.sum(Fattura.totale))
-                .filter(extract("year", Fattura.data_emissione) == current_year)
-                .scalar()
-                or 0.0
-            )
+                state.context["total_revenue_ytd"] = (
+                    db.query(func.sum(Fattura.totale))
+                    .filter(extract("year", Fattura.data_emissione) == current_year)
+                    .scalar()
+                    or 0.0
+                )
 
-            # Basic client snapshot for downstream agents
-            state.metadata["cliente_denominazione"] = cliente.denominazione
-            state.metadata["cliente_paese"] = cliente.nazione
-            state.metadata["cliente"] = {
-                "id": cliente.id,
-                "denominazione": cliente.denominazione,
-                "paese": cliente.nazione,
-                "codice_destinatario": cliente.codice_destinatario,
-                "pec": cliente.pec,
-                "partita_iva": cliente.partita_iva,
-            }
+                # Basic client snapshot for downstream agents
+                state.metadata["cliente_denominazione"] = cliente.denominazione
+                state.metadata["cliente_paese"] = cliente.nazione
+                state.metadata["cliente"] = {
+                    "id": cliente.id,
+                    "denominazione": cliente.denominazione,
+                    "paese": cliente.nazione,
+                    "codice_destinatario": cliente.codice_destinatario,
+                    "pec": cliente.pec,
+                    "partita_iva": cliente.partita_iva,
+                }
 
-            # Set invoice and payment dates
+            # Set invoice and payment dates (outside context - no DB access)
             issue_date = state.invoice_date or date.today()
             state.invoice_date = issue_date
             state.payment_due_date = state.payment_due_date or (
@@ -292,7 +286,7 @@ class InvoiceCreationWorkflow:
                 "context_enriched",
                 workflow_id=state.workflow_id,
                 invoices_ytd=state.context["total_invoices_ytd"],
-                cliente_id=cliente.id,
+                cliente_id=state.client_id,
             )
 
             return state
@@ -306,19 +300,13 @@ class InvoiceCreationWorkflow:
             state.add_error(f"Failed to enrich context: {e}")
             return state
 
-        finally:
-            db.close()
-
     async def _description_agent_node(self, state: InvoiceCreationState) -> InvoiceCreationState:
         """Execute Description Agent."""
         logger.info("executing_description_agent", workflow_id=state.workflow_id)
 
         try:
-            db = _get_session()
-            try:
+            with db_session() as db:
                 cliente = db.query(Cliente).filter(Cliente.id == state.client_id).first()
-            finally:
-                db.close()
 
             if not cliente:
                 raise ValueError(f"Cliente {state.client_id} non trovato")
@@ -502,8 +490,7 @@ class InvoiceCreationWorkflow:
                 issue_date + timedelta(days=state.payment_terms_days)
             )
 
-            db = _get_session()
-            try:
+            with db_session() as db:
                 fattura = None
                 if state.invoice_id:
                     fattura = db.query(Fattura).filter(Fattura.id == state.invoice_id).first()
@@ -610,14 +597,10 @@ class InvoiceCreationWorkflow:
                     }
                 ]
 
-            except Exception:
-                db.rollback()
-                raise
-            finally:
-                db.close()
-
             # Run compliance checker on persisted invoice
-            report = await self.compliance_checker.check_invoice(state.invoice_id)  # type: ignore[arg-type]
+            # invoice_id is guaranteed to be set at line 512 above
+            assert state.invoice_id is not None, "invoice_id must be set after fattura creation"
+            report = await self.compliance_checker.check_invoice(state.invoice_id)
 
             confidence = max(0.0, min(1.0, report.compliance_score / 100))
             summary = (
@@ -686,8 +669,7 @@ class InvoiceCreationWorkflow:
             if not state.invoice_id:
                 raise ValueError("Nessuna fattura generata durante i passaggi precedenti")
 
-            db = _get_session()
-            try:
+            with db_session() as db:
                 fattura = db.query(Fattura).filter(Fattura.id == state.invoice_id).first()
                 if not fattura:
                     raise ValueError(
@@ -719,12 +701,6 @@ class InvoiceCreationWorkflow:
                 db.commit()
 
                 state.invoice_xml_path = fattura.xml_path
-
-            except Exception:
-                db.rollback()
-                raise
-            finally:
-                db.close()
 
             state.mark_completed()
 

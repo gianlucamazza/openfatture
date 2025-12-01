@@ -64,6 +64,14 @@ class InMemoryEventBus:
         """Register handler for the given event type."""
         self._listeners.setdefault(event_type, []).append(handler)
 
+    def has_listener(
+        self,
+        event_type: type[PaymentEvent],
+        handler: Callable[[PaymentEvent], object],
+    ) -> bool:
+        """Check if handler is already registered for the given event type."""
+        return handler in self._listeners.get(event_type, [])
+
     def publish(self, event: PaymentEvent) -> None:
         """Dispatch event to registered handlers."""
         for event_type, handlers in self._listeners.items():

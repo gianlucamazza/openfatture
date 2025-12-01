@@ -114,7 +114,8 @@ class OpenAIProvider(BaseLLMProvider):
         self._encoding = None
         if TIKTOKEN_AVAILABLE:
             try:
-                self._encoding = tiktoken.encoding_for_model(self.model)  # type: ignore
+                # tiktoken lacks type stubs, but returns Encoding object with encode() method
+                self._encoding = cast(Any, tiktoken.encoding_for_model(self.model))
             except KeyError:
                 # Fallback to cl100k_base for unknown models (GPT-4/GPT-5 compatible)
                 logger.info(
@@ -122,7 +123,7 @@ class OpenAIProvider(BaseLLMProvider):
                     model=self.model,
                     message="Using cl100k_base encoding as fallback",
                 )
-                self._encoding = tiktoken.get_encoding("cl100k_base")  # type: ignore
+                self._encoding = cast(Any, tiktoken.get_encoding("cl100k_base"))
 
     def _get_deprecated_models(self) -> list[str]:
         """Get list of deprecated model names."""
