@@ -161,7 +161,8 @@ body {
   background: linear-gradient(
     135deg,
     var(--color-primary),
-    var(--color-accent)
+    var(--color-accent),
+    #ec4899
   );
   background-clip: text;
   -webkit-background-clip: text;
