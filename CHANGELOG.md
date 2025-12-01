@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-12-02
+
 ### Added
+
 - **Event System & Audit Trail**:
+
   - `EventLog` database model for complete event audit trail with UUID, timestamps, and entity tracking
   - Automatic event persistence with `EventPersistenceListener` (priority -100, error isolation)
   - Entity tracking (invoice, client, etc.) for filtering and timeline generation
@@ -17,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Global event bus initialization and shutdown management
 
 - **Event Repository**:
+
   - Advanced query methods with flexible filtering (event_type, entity_type, entity_id, date_range)
   - Full-text search in event data with SQLite LIKE queries
   - Timeline generation for entities with human-readable summaries
@@ -25,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Session management (internal or external session support)
 
 - **Event Analytics Service**:
+
   - Time-based aggregations: daily, weekly, monthly activity
   - Event type distribution with percentages
   - Entity activity metrics (most active entities)
@@ -34,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive dashboard summary with key metrics
 
 - **CLI Event Commands** (`openfatture events`):
+
   - `list` - List events with rich filtering (type, entity, date range, limit)
   - `show <event-id>` - Detailed event view with JSON-formatted data and metadata
   - `stats [--last-days N]` - Statistics summary with event type and entity breakdowns
@@ -55,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Panels for headers and detailed views
 
 ### Technical
+
 - **Tests**: 45+ new comprehensive tests for event system
   - 13 tests for event persistence (100% passing)
   - 27 tests for EventRepository (filters, search, stats, pagination)
@@ -81,6 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Testing**: 77% coverage with 17 tests, mock-based isolation from Streamlit dependencies
 
 ### Technical (Web UI)
+
 - **Architecture**: Service layer pattern with async/sync bridging, component reusability
 - **Security**: OWASP-compliant validation, XSS prevention, path traversal protection
 - **Performance**: Selective cache invalidation, lazy loading, pagination
@@ -90,19 +99,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Best Practices**: Explicit resource cleanup, async standardization, production config
 
 ## [1.1.0] - 2025-10-12
+
 ### Changed
+
 - Localised the CLI, interactive experience, email templates, and PDF outputs to English for consistency across platforms.
 - Updated documentation, quickstarts, automation tapes, and examples to reflect global English-first messaging.
 
 ### Removed
+
 - Dropped the legacy `openfatture payment import-statement` command alias in favour of `openfatture payment import`.
 
 ## [1.0.0] - 2025-10-10
 
 ### Added
+
 - **Payment Tracking Module** - Enterprise-grade bank reconciliation system:
 
   **Domain Models**:
+
   - `BankAccount`: Multi-account support with IBAN validation
   - `BankTransaction`: Full transaction lifecycle (UNMATCHED → MATCHED → IGNORED)
   - `PaymentReminder`: Automated payment tracking with configurable strategies
@@ -110,11 +124,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enums: `TransactionStatus`, `MatchType`, `ReminderStatus`, `ReminderStrategy`
 
   **Application Services**:
+
   - `MatchingService`: Intelligent payment matching with pluggable algorithms (Facade pattern)
   - `ReconciliationService`: Saga-based workflow for multi-step reconciliation
   - `ReminderScheduler`: Automated payment reminder system with escalation strategies
 
   **Matching Strategies** (Strategy pattern):
+
   - `ExactAmountMatcher`: Amount + date window matching (configurable tolerance)
   - `FuzzyDescriptionMatcher`: NLP-based description matching with Levenshtein distance
   - `IBANMatcher`: Direct IBAN/BIC validation for wire transfers
@@ -122,24 +138,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CompositeMatcher`: Weighted combination of multiple strategies
 
   **Import Infrastructure**:
+
   - Bank statement importers: CSV (Intesa Sanpaolo, UniCredit, Revolut), OFX, QIF
   - Factory pattern for format detection
   - Bank-specific presets with field mapping
   - Transaction deduplication and validation
 
   **Notification System** (Strategy + Composite patterns):
+
   - `EmailNotifier`: SMTP with Jinja2 templates (HTML + text fallback)
   - `ConsoleNotifier`: Development/testing output
   - `CompositeNotifier`: Multi-channel notifications (email + SMS + webhook)
   - Configurable SMTP settings with TLS support
 
   **Reminder Strategies**:
+
   - `DEFAULT`: Single reminder at due date
   - `PROGRESSIVE`: Escalating reminders (-7, -3, 0, +3, +7 days)
   - `AGGRESSIVE`: Frequent follow-ups for high-risk clients
   - `CUSTOM`: User-defined reminder schedules
 
   **CLI Interface** (`openfatture payment`):
+
   - `import`: Bulk transaction import with progress tracking
   - `list-transactions`: Paginated transaction browser with filters
   - `reconcile`: Interactive matching with confidence scores
@@ -149,6 +169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `reminders`: Schedule and manage payment reminders
 
   **Testing & Quality**:
+
   - 74 comprehensive tests (62 deliverable + 12 integration)
   - 100% test pass rate
   - 82-96% code coverage on critical services
@@ -157,6 +178,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CI/CD pipeline with GitHub Actions (multi-OS, multi-Python)
 
   **Architecture**:
+
   - Hexagonal Architecture (Ports & Adapters)
   - Domain-Driven Design (DDD) with aggregates and entities
   - SOLID principles throughout
@@ -165,10 +187,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Structured logging with structlog
 
 ### Changed
+
 - Enhanced `Pagamento` model with `stato` tracking and `data_pagamento`
 - Improved database models for payment reconciliation workflows
 
 ### Technical Metrics
+
 - **Production Code**: 6,742 LOC
 - **Test Code**: 6,014 LOC
 - **Examples**: 900 LOC
@@ -179,7 +203,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-01-10
 
 ### Added
+
 - **Core Invoicing**:
+
   - FatturaPA XML v1.9 generation with full compliance
   - SDI integration via PEC (Certified Email)
   - Automatic XSD schema validation
@@ -189,6 +215,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Payment tracking and due date monitoring
 
 - **Interactive CLI**:
+
   - Modern TUI with Rich and Questionary
   - Hierarchical menu system (9 sections, 40+ actions)
   - Numeric shortcuts (1-9, 0) for fast navigation
@@ -198,24 +225,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Interactive dashboard with real-time statistics
 
 - **AI-Powered Workflows** (CLI stubs - implementation planned for Phase 4):
+
   - CLI commands for AI features (`ai describe`, `ai suggest-vat`, `ai forecast`, `ai check`)
   - Placeholder responses showing planned functionality
   - Full implementation with LangChain/LangGraph planned for Phase 4
   - Dependencies included (langchain, langgraph, openai, anthropic, chromadb)
 
 - **Email System**:
+
   - Professional HTML email templates with Jinja2
   - Multipart MIME support
   - Automatic notifications for SDI events
   - Template preview and testing
 
 - **Batch Operations**:
+
   - CSV import/export for invoices
   - Bulk send to SDI with progress tracking
   - Bulk delete with safety confirmations
   - Operation history logging
 
 - **Developer Experience**:
+
   - Type-safe code with Pydantic and mypy
   - Comprehensive test suite with pytest (>80% coverage)
   - Code formatting with Black and Ruff
@@ -225,6 +256,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automated version bumping with bump-my-version
 
 - **Autocomplete & Data**:
+
   - Italian provinces (110 codes)
   - Postal codes for major cities
   - Tax regimes (RF01-RF19)
@@ -239,15 +271,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Database initialization wizard
 
 ### Changed
+
 - Migrated from Poetry to uv for faster dependency management
 - Changed license from MIT to GPL-3.0-or-later
 
 ### Security
+
 - Secure credential storage for PEC accounts
 - Encrypted digital signature handling
 - Input validation for all user data
 
-[Unreleased]: https://github.com/gianlucamazza/openfatture/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/gianlucamazza/openfatture/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/gianlucamazza/openfatture/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/gianlucamazza/openfatture/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/gianlucamazza/openfatture/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/gianlucamazza/openfatture/releases/tag/v0.1.0
