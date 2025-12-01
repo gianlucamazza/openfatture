@@ -8,7 +8,7 @@ from typing import Any
 import structlog
 
 from ..ai.providers import BaseLLMProvider
-from ..storage.database import SessionLocal
+from ..storage.session import db_session
 from .agent import RegulatoryUpdateAgent
 from .config import WebScraperConfig, get_web_scraper_config
 from .extractor import ContentExtractor
@@ -308,10 +308,6 @@ class RegulatoryUpdateService:
             approved=validation_results.get("approved", 0),
         )
 
-        if SessionLocal is None:
-            logger.warning("database_not_initialized_skipping_kb_updates")
-            return
-
         # Get approved documents
         approved_docs = []
         for doc in documents:
@@ -389,8 +385,7 @@ Riepilogo:
             )
 
             # Create RegulatoryUpdate records
-            db = SessionLocal()
-            try:
+            with db_session() as db:
                 for doc, added_id in zip(approved_docs, added_ids, strict=False):
                     update_record = RegulatoryUpdate(
                         document_id=doc.id,
@@ -415,21 +410,15 @@ Riepilogo:
                     kb_collection=rag_config.collection_name,
                 )
 
-            finally:
-                db.close()
-
         except Exception as e:
             logger.error("failed_to_apply_kb_updates", error=str(e))
             # Mark documents as failed
-            db = SessionLocal()
-            try:
+            with db_session() as db:
                 for doc in approved_docs:
                     doc.error_message = f"KB update failed: {str(e)}"
                     doc.status = UpdateStatus.FAILED
                     db.merge(doc)
                 db.commit()
-            finally:
-                db.close()
 
     def should_check_for_updates(self) -> bool:
         """Check if it's time to perform regulatory update check.
@@ -493,17 +482,10 @@ Riepilogo:
         )
 
         # Save to database
-        if SessionLocal is None:
-            logger.warning("database_not_initialized_skipping_session_save")
-            return session
-
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             db.add(session)
             db.commit()
             db.refresh(session)
-        finally:
-            db.close()
 
         logger.info("scraping_session_created", session_id=session.session_id)
 
@@ -528,16 +510,9 @@ Riepilogo:
         session.errors_count = results.get("errors", 0)
 
         # Update database
-        if SessionLocal is None:
-            logger.warning("database_not_initialized_skipping_session_update")
-            return
-
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             db.merge(session)  # Use merge in case session was modified elsewhere
             db.commit()
-        finally:
-            db.close()
 
         logger.info(
             "scraping_session_completed",

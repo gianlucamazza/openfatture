@@ -152,8 +152,8 @@ class AutoIndexingService:
         Args:
             change: Client change to process
         """
-        from openfatture.storage.database.base import SessionLocal
         from openfatture.storage.database.models import Fattura
+        from openfatture.storage.session import db_session
 
         if change.change_type == ChangeType.DELETE:
             # Client deleted - their invoices should already be deleted
@@ -161,14 +161,8 @@ class AutoIndexingService:
             logger.info("client_deleted", client_id=change.entity_id)
             return
 
-        # Check if database is initialized
-        if SessionLocal is None:
-            logger.warning("database_not_initialized_skipping_client_reindex")
-            return
-
         # For CREATE/UPDATE, reindex all client's invoices
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             # Get all invoices for this client
             invoices = db.query(Fattura).filter(Fattura.cliente_id == change.entity_id).all()
 
@@ -193,9 +187,6 @@ class AutoIndexingService:
                 client_id=change.entity_id,
                 invoice_count=len(invoices),
             )
-
-        finally:
-            db.close()
 
     def get_status(self) -> dict[str, Any]:
         """Get service status.

@@ -6,7 +6,7 @@ from sqlalchemy import Integer, func
 from sqlalchemy.orm import Session
 
 from openfatture.ai.feedback.models import FeedbackStats, PredictionFeedbackStats
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import (
     FeedbackType,
     ModelPredictionFeedback,
@@ -15,13 +15,6 @@ from openfatture.storage.database.models import (
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    """Get database session."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
-    return SessionLocal()
 
 
 class FeedbackAnalytics:
@@ -37,9 +30,7 @@ class FeedbackAnalytics:
         Returns:
             Feedback statistics
         """
-        db = _get_session()
-
-        try:
+        with db_session() as db:
             cutoff_date = datetime.utcnow() - timedelta(days=days)
 
             # Total feedback
@@ -102,9 +93,6 @@ class FeedbackAnalytics:
                 recent_feedback_count=recent_count,
             )
 
-        finally:
-            db.close()
-
     @staticmethod
     def get_prediction_feedback_stats(days: int = 30) -> PredictionFeedbackStats:
         """Get ML prediction feedback statistics.
@@ -115,9 +103,7 @@ class FeedbackAnalytics:
         Returns:
             Prediction feedback statistics
         """
-        db = _get_session()
-
-        try:
+        with db_session() as db:
             cutoff_date = datetime.utcnow() - timedelta(days=days)
 
             # Total predictions with feedback
@@ -226,9 +212,6 @@ class FeedbackAnalytics:
                 by_model_version=by_model_version,
             )
 
-        finally:
-            db.close()
-
     @staticmethod
     def get_correction_patterns(limit: int = 20) -> list[dict]:
         """Analyze common correction patterns.
@@ -239,9 +222,7 @@ class FeedbackAnalytics:
         Returns:
             List of correction patterns with frequency
         """
-        db = _get_session()
-
-        try:
+        with db_session() as db:
             # Get recent corrections
             corrections = (
                 db.query(
@@ -273,9 +254,6 @@ class FeedbackAnalytics:
 
             return patterns
 
-        finally:
-            db.close()
-
     @staticmethod
     def get_low_confidence_predictions(threshold: float = 0.6, limit: int = 20) -> list[dict]:
         """Get low-confidence predictions for human review.
@@ -287,9 +265,7 @@ class FeedbackAnalytics:
         Returns:
             List of low-confidence predictions
         """
-        db = _get_session()
-
-        try:
+        with db_session() as db:
             predictions = (
                 db.query(
                     ModelPredictionFeedback.id,
@@ -337,6 +313,3 @@ class FeedbackAnalytics:
             )
 
             return results
-
-        finally:
-            db.close()

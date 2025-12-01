@@ -29,6 +29,7 @@ from openfatture.ai.rag.auto_update import (
 )
 from openfatture.core.events import GlobalEventBus, initialize_event_system
 from openfatture.core.hooks import HookEventBridge, initialize_hook_system
+from openfatture.utils.async_bridge import run_async
 from openfatture.utils.logging import get_logger
 
 # Context variable to hold the shared HTTP client
@@ -286,7 +287,7 @@ def run_sync_with_lifespan(main_coro: Any) -> Any:
         The result of the main coroutine
     """
     try:
-        return asyncio.run(run_with_lifespan(main_coro))
+        return run_async(run_with_lifespan(main_coro))
     except KeyboardInterrupt:
         logger.info("Application shutdown requested by user")
         return None

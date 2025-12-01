@@ -25,16 +25,14 @@ from datetime import date, timedelta
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy.orm import Session
-
 from openfatture.ai.agents.cash_flow_predictor import CashFlowPredictorAgent
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.orchestration.states import (
     CashFlowAnalysisState,
 )
 from openfatture.ai.providers import create_provider
-from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.storage.session import db_session
 from openfatture.utils.datetime import utc_now
 from openfatture.utils.logging import get_logger
 
@@ -333,7 +331,7 @@ class CashFlowAnalysisWorkflow:
                 invoice_map = {f.id: f for f in invoices}
 
             # Initialize monthly totals
-            monthly_totals: dict[int, float] = {i: 0.0 for i in range(state.forecast_months)}
+            monthly_totals: dict[int, float] = dict.fromkeys(range(state.forecast_months), 0.0)
 
             today = date.today()
 

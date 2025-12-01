@@ -378,6 +378,7 @@ def reconcile_payment(
         # protocols due to different event type hierarchies (BaseEvent vs PaymentEvent).
         # This is safe because PaymentEvent inherits from BaseEvent.
         from typing import cast
+
         from openfatture.payment.application.events import EventBus as PaymentEventBus
 
         reconciliation_service = ReconciliationService(

@@ -6,18 +6,11 @@ This module handles indexing of invoices and related documents into the vector s
 from sqlalchemy.orm import Session
 
 from openfatture.ai.rag.vector_store import VectorStore
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    """Return a database session, ensuring the engine is initialised."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialised. Call init_db() first.")
-    return SessionLocal()
 
 
 class InvoiceIndexer:
@@ -59,9 +52,7 @@ class InvoiceIndexer:
         Returns:
             Number of invoices indexed
         """
-        db = _get_session()
-
-        try:
+        with db_session() as db:
             # Query invoices
             query = db.query(Fattura)
 
@@ -104,13 +95,6 @@ class InvoiceIndexer:
 
             return indexed_count
 
-        except Exception as e:
-            logger.error("indexing_invoices_failed", error=str(e))
-            raise
-
-        finally:
-            db.close()
-
     async def index_invoice(self, invoice_id: int) -> str:
         """Index a single invoice.
 
@@ -120,9 +104,7 @@ class InvoiceIndexer:
         Returns:
             Document ID
         """
-        db = _get_session()
-
-        try:
+        with db_session() as db:
             fattura = db.query(Fattura).filter(Fattura.id == invoice_id).first()
 
             if not fattura:
@@ -156,17 +138,6 @@ class InvoiceIndexer:
                 logger.info("invoice_indexed", invoice_id=invoice_id, doc_id=doc_id)
 
             return doc_id
-
-        except Exception as e:
-            logger.error(
-                "index_invoice_failed",
-                invoice_id=invoice_id,
-                error=str(e),
-            )
-            raise
-
-        finally:
-            db.close()
 
     async def _index_invoice_batch(self, fatture: list[Fattura]) -> list[str]:
         """Index a batch of invoices.

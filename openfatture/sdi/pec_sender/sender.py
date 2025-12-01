@@ -14,6 +14,7 @@ from openfatture.storage.database.models import Fattura, LogSDI, StatoFattura
 from openfatture.utils.config import Settings
 from openfatture.utils.logging import get_logger
 from openfatture.utils.rate_limiter import RateLimiter
+from openfatture.utils.retry import retry_sync, RetryConfig
 
 logger = get_logger(__name__)
 
@@ -95,7 +96,10 @@ class PECSender:
         self, fattura: Fattura, xml_path: Path, signed: bool = False
     ) -> tuple[bool, str | None]:
         """
-        Send email with retry logic for transient errors.
+        Send email with unified retry logic for transient errors.
+
+        Uses modern retry utilities with exponential backoff. Authentication errors
+        are not retried as they indicate configuration issues.
 
         Args:
             fattura: Invoice model
@@ -105,14 +109,24 @@ class PECSender:
         Returns:
             Tuple[bool, Optional[str]]: (success, error_message)
         """
-        import time
+        # Configure retry for network/server errors only
+        retry_config = RetryConfig(
+            max_retries=self.max_retries,
+            base_delay=1.0,
+            max_delay=30.0,
+            backoff_factor=2.0,
+            jitter=True,
+            # Only retry transient network/server errors
+            retryable_exceptions=(
+                smtplib.SMTPServerDisconnected,
+                smtplib.SMTPConnectError,
+                smtplib.SMTPException,
+                ConnectionError,
+            ),
+        )
 
-        from openfatture.utils.rate_limiter import ExponentialBackoff
-
-        backoff = ExponentialBackoff(base=1.0, max_delay=30.0)
-        last_error = None
-
-        for attempt in range(self.max_retries):
+        def _send_email() -> tuple[bool, str | None]:
+            """Inner function that performs the actual send operation."""
             try:
                 # Create message
                 msg = MIMEMultipart()
@@ -150,34 +164,54 @@ class PECSender:
                 fattura.stato = StatoFattura.INVIATA
                 fattura.data_invio_sdi = datetime.now(UTC)
 
+                logger.info(
+                    "pec_sent_successfully",
+                    fattura_numero=fattura.numero,
+                    fattura_anno=fattura.anno,
+                    recipient=self.settings.sdi_pec_address,
+                )
+
                 return True, None
 
-            except smtplib.SMTPAuthenticationError:
+            except smtplib.SMTPAuthenticationError as e:
                 # Authentication errors are not transient - don't retry
-                return False, "PEC authentication failed. Check credentials."
+                logger.error(
+                    "pec_authentication_failed",
+                    error=str(e),
+                    pec_address=self.settings.pec_address,
+                )
+                # Raise as non-retryable exception
+                raise ValueError("PEC authentication failed. Check credentials.") from e
 
-            except (smtplib.SMTPServerDisconnected, smtplib.SMTPConnectError, ConnectionError) as e:
-                # Transient network errors - retry with backoff
-                last_error = str(e)
-                if attempt < self.max_retries - 1:
-                    delay = backoff.get_delay(attempt)
-                    time.sleep(delay)
-                continue
+        # Callback for logging retry attempts
+        def on_retry(error: Exception, attempt: int) -> None:
+            logger.warning(
+                "pec_send_retry",
+                attempt=attempt,
+                max_retries=self.max_retries,
+                error=str(error),
+                error_type=type(error).__name__,
+                fattura_numero=fattura.numero,
+            )
 
-            except smtplib.SMTPException as e:
-                # Other SMTP errors
-                last_error = str(e)
-                if attempt < self.max_retries - 1:
-                    delay = backoff.get_delay(attempt)
-                    time.sleep(delay)
-                continue
+        try:
+            # Execute with unified retry logic
+            result = retry_sync(_send_email, config=retry_config, on_retry=on_retry)
+            return result
 
-            except Exception as e:
-                # Unexpected errors - return immediately
-                return False, f"Error sending PEC: {e}"
+        except ValueError as e:
+            # Authentication error (non-retryable)
+            return False, str(e)
 
-        # All retry attempts failed
-        return False, f"Failed after {self.max_retries} attempts. Last error: {last_error}"
+        except Exception as e:
+            # All retries exhausted
+            logger.error(
+                "pec_send_failed_all_retries",
+                error=str(e),
+                fattura_numero=fattura.numero,
+                max_retries=self.max_retries,
+            )
+            return False, f"Failed after {self.max_retries} attempts: {e}"
 
     def _create_email_body(self, fattura: Fattura) -> str:
         """

@@ -159,11 +159,15 @@ class TestPECSenderRetryLogic:
     """Tests for PEC sender retry logic and error handling."""
 
     @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
-    @patch("time.sleep")
+    @patch("openfatture.utils.retry.asyncio.sleep")  # Patch asyncio.sleep in retry module
     def test_retry_on_transient_smtp_errors(
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
-        """Test retry logic for transient SMTP errors."""
+        """Test retry logic for transient SMTP errors with unified retry."""
+        # Make mock_sleep async-compatible
+        async def async_sleep(_):
+            pass
+        mock_sleep.side_effect = async_sleep
         # Arrange
         xml_path = tmp_path / "invoice.xml"
         xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
@@ -187,18 +191,21 @@ class TestPECSenderRetryLogic:
         assert error is None
         assert sample_fattura.stato == StatoFattura.INVIATA
 
-        # Verify retry count
+        # Verify retry count (3 attempts total: 2 failures + 1 success)
         assert mock_server.send_message.call_count == 3
 
-        # Verify exponential backoff was applied
+        # Verify sleep was called between retries (2 sleeps for 2 retries)
         assert mock_sleep.call_count == 2
 
     @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
-    @patch("time.sleep")
+    @patch("openfatture.utils.retry.asyncio.sleep")
     def test_no_retry_on_auth_errors(
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
-        """Test that authentication errors are not retried."""
+        """Test that authentication errors are not retried (modern retry)."""
+        async def async_sleep(_):
+            pass
+        mock_sleep.side_effect = async_sleep
         # Arrange
         xml_path = tmp_path / "invoice.xml"
         xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
@@ -216,16 +223,20 @@ class TestPECSenderRetryLogic:
         assert success is False
         assert "authentication failed" in error.lower()
 
-        # Should only try once (no retries for auth errors)
+        # Should only try once (no retries for auth errors - not in retryable_exceptions)
         assert mock_server.login.call_count == 1
+        # No sleep should occur (auth error raises immediately)
         mock_sleep.assert_not_called()
 
     @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
-    @patch("time.sleep")
+    @patch("openfatture.utils.retry.asyncio.sleep")
     def test_max_retries_exceeded(
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
-        """Test behavior when max retries are exceeded."""
+        """Test behavior when max retries are exceeded (modern retry)."""
+        async def async_sleep(_):
+            pass
+        mock_sleep.side_effect = async_sleep
         # Arrange
         xml_path = tmp_path / "invoice.xml"
         xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
@@ -244,15 +255,18 @@ class TestPECSenderRetryLogic:
         assert "Failed after 3 attempts" in error
         assert "Connection lost" in error
 
-        # Should have tried max_retries times
-        assert mock_server.send_message.call_count == 3
+        # Should have tried max_retries + 1 times (initial + retries)
+        assert mock_server.send_message.call_count == 4  # 1 initial + 3 retries
 
     @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
-    @patch("time.sleep")
+    @patch("openfatture.utils.retry.asyncio.sleep")
     def test_exponential_backoff_delays(
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
-        """Test exponential backoff increases delay between retries."""
+        """Test exponential backoff increases delay between retries (modern retry)."""
+        async def async_sleep(_):
+            pass
+        mock_sleep.side_effect = async_sleep
         # Arrange
         xml_path = tmp_path / "invoice.xml"
         xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
@@ -266,8 +280,8 @@ class TestPECSenderRetryLogic:
         # Act
         success, error = sender.send_invoice(sample_fattura, xml_path)
 
-        # Assert - verify delays increase
-        assert mock_sleep.call_count == 2  # 2 retries = 2 sleeps
+        # Assert - verify delays increase (3 retries = 3 sleeps)
+        assert mock_sleep.call_count == 3
         delays = [call[0][0] for call in mock_sleep.call_args_list]
         assert delays[0] < delays[1]  # Second delay should be longer than first
 
@@ -275,7 +289,7 @@ class TestPECSenderRetryLogic:
     def test_unexpected_exception_no_retry(
         self, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
-        """Test that unexpected exceptions are not retried."""
+        """Test that unexpected exceptions are not retried (modern retry)."""
         # Arrange
         xml_path = tmp_path / "invoice.xml"
         xml_path.write_text('<?xml version="1.0"?><FatturaElettronica/>')
@@ -291,7 +305,8 @@ class TestPECSenderRetryLogic:
 
         # Assert
         assert success is False
-        assert "Error sending PEC" in error
+        # Unexpected exceptions return the error message directly
+        assert "Unexpected error" in error
 
         # Should only try once
         assert mock_server.login.call_count == 1

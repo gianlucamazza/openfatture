@@ -12,6 +12,9 @@ from decimal import Decimal
 import httpx
 
 from ...utils.config import Settings
+from ...utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -262,7 +265,12 @@ class BTCConversionService:
                 return rate
 
             except Exception as e:
-                print(f"Provider {provider.name} failed: {e}")
+                logger.warning(
+                    "exchange_provider_failed",
+                    provider=provider.name,
+                    error=str(e),
+                    circuit_failures=self.circuit_failures + 1,
+                )
                 self.circuit_failures += 1
                 self.circuit_last_failure = time.time()
                 continue
@@ -272,7 +280,11 @@ class BTCConversionService:
             (p for p in self.providers if isinstance(p, FallbackProvider)), FallbackProvider()
         )
         rate = await fallback_provider.get_btc_eur_rate()
-        print(f"Using fallback rate: {rate}")
+        logger.warning(
+            "all_providers_failed_using_fallback",
+            fallback_rate=float(rate),
+            circuit_failures=self.circuit_failures,
+        )
         return rate
 
     def _is_circuit_open(self) -> bool:

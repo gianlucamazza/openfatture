@@ -114,13 +114,12 @@ def get_prodotto_details(prodotto_id: int) -> dict[str, Any]:
             return {"error": f"Prodotto {prodotto_id} not found"}
 
         # Calculate usage statistics
-        # TODO: prodotto_id field does not exist in RigaFattura model - needs migration
-        righe_count = db.query(Riga).filter(Riga.prodotto_id == prodotto_id).count()  # type: ignore[attr-defined]
+        righe_count = db.query(Riga).filter(Riga.prodotto_id == prodotto_id).count()
 
         # Get recent invoices using this product
         recent_righe = (
             db.query(Riga)
-            .filter(Riga.prodotto_id == prodotto_id)  # type: ignore[attr-defined]
+            .filter(Riga.prodotto_id == prodotto_id)
             .order_by(Riga.id.desc())
             .limit(5)
             .all()
@@ -409,8 +408,7 @@ def delete_prodotto(
             return {"success": False, "error": f"Prodotto {prodotto_id} not found"}
 
         # Check if product is used in invoices
-        # TODO: prodotto_id field does not exist in RigaFattura model - needs migration
-        usage_count = db.query(Riga).filter(Riga.prodotto_id == prodotto_id).count()  # type: ignore[attr-defined]
+        usage_count = db.query(Riga).filter(Riga.prodotto_id == prodotto_id).count()
 
         if usage_count > 0 and not force:
             return {
@@ -425,7 +423,7 @@ def delete_prodotto(
 
         # If force=True and product is used, set righe.prodotto_id to NULL
         if usage_count > 0 and force:
-            db.query(Riga).filter(Riga.prodotto_id == prodotto_id).update({"prodotto_id": None})  # type: ignore[attr-defined]
+            db.query(Riga).filter(Riga.prodotto_id == prodotto_id).update({"prodotto_id": None})
 
         # Delete product
         db.delete(prodotto)

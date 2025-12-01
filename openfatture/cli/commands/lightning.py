@@ -1,6 +1,6 @@
 """Lightning Network payment management commands."""
 
-import asyncio
+from openfatture.utils.async_bridge import run_async
 from datetime import datetime
 from pathlib import Path
 
@@ -131,7 +131,7 @@ def compliance_check(
         console.print(f"\n[bold cyan]🔍 Lightning Compliance Check - {tax_year}[/bold cyan]\n")
 
         # 1. Tax Year Summary
-        summary = asyncio.run(compliance_service.generate_tax_year_summary(tax_year))
+        summary = run_async(compliance_service.generate_tax_year_summary(tax_year))
 
         console.print("[bold]📊 Tax Year Summary[/bold]")
         table = Table(show_header=False, box=None, padding=(0, 2))
@@ -268,7 +268,7 @@ def generate_quadro_rw_report(
         )
 
         # Safe to cast after validation
-        report_content = asyncio.run(
+        report_content = run_async(
             compliance_service.generate_quadro_rw_report(
                 tax_year, output_format=cast(ReportFormat, output_format)
             )
@@ -335,7 +335,7 @@ def generate_capital_gains_report(
         )
 
         # Safe to cast after validation
-        report_content = asyncio.run(
+        report_content = run_async(
             compliance_service.generate_capital_gains_report(
                 tax_year, output_format=cast(ReportFormat, output_format)
             )
@@ -402,7 +402,7 @@ def generate_aml_report(
             f"\n[bold cyan]🛡️ Generating AML Compliance Report (Threshold: {threshold:,.2f} EUR)[/bold cyan]\n"
         )
 
-        report = asyncio.run(
+        report = run_async(
             compliance_service.generate_aml_compliance_report(Decimal(str(threshold)))
         )
 

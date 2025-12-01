@@ -21,18 +21,11 @@ from openfatture.ai.agents.compliance.rules import ValidationIssue, ValidationSe
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    """Return database session ensuring initialisation."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call init_db() before compliance analysis.")
-    return SessionLocal()
 
 
 @dataclass
@@ -482,8 +475,7 @@ Rispondi in formato JSON con:
 
         for fattura in fatture:
             # Get client history
-            db = _get_session()
-            try:
+            with db_session() as db:
                 client_history = (
                     db.query(Fattura)
                     .filter(
@@ -498,9 +490,6 @@ Rispondi in formato JSON con:
 
                 analysis = await self.analyze_invoice(fattura, client_history)
                 results[fattura.id] = analysis
-
-            finally:
-                db.close()
 
         logger.info("batch_heuristic_analysis_completed", count=len(results))
 

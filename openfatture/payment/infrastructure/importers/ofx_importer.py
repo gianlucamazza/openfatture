@@ -11,9 +11,12 @@ from typing import TYPE_CHECKING
 
 from ofxparse import OfxParser
 
+from ....utils.logging import get_logger
 from ...domain.enums import ImportSource
 from ...domain.models import BankTransaction
 from .base import BaseImporter
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from ...domain.models import BankAccount
@@ -112,7 +115,12 @@ class OFXImporter(BaseImporter):
 
             except Exception as e:
                 # Log error but continue processing
-                print(f"Warning: Skipping OFX transaction {getattr(ofx_tx, 'id', 'unknown')}: {e}")
+                logger.warning(
+                    "ofx_transaction_skipped",
+                    transaction_id=getattr(ofx_tx, 'id', 'unknown'),
+                    error=str(e),
+                    account_id=self.account_id,
+                )
                 continue
 
         return transactions

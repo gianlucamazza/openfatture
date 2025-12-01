@@ -91,3 +91,7 @@ assets/
 tmp/
 temp/
 .tmp/
+
+# Landing Page
+landing-page/node_modules/
+landing-page/dist/

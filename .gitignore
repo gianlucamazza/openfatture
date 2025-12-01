@@ -102,3 +102,7 @@ ffmpeg2pass-*.log
 
 # External Plugins (separate repositories)
 openfatture-plugin-*/
+
+# Landing Page
+landing-page/node_modules/
+landing-page/dist/

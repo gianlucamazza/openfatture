@@ -47,8 +47,8 @@ Migration from old patterns:
 """
 
 import asyncio
+from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
-from typing import AsyncGenerator, Generator
 
 from sqlalchemy.orm import Session
 

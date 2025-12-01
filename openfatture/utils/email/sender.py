@@ -28,6 +28,7 @@ from openfatture.utils.email.models import (
     FatturaInvioContext,
     NotificaSDIContext,
 )
+from openfatture.utils.retry import retry_sync, RetryConfig
 from openfatture.utils.email.renderer import TemplateRenderer
 from openfatture.utils.rate_limiter import ExponentialBackoff, RateLimiter
 
@@ -395,7 +396,7 @@ class TemplatePECSender:
 
     def _send_with_retry(self, email: EmailMessage) -> tuple[bool, str | None]:
         """
-        Send email with retry logic for transient errors.
+        Send email with unified retry logic for transient errors.
 
         Args:
             email: Email message to send
@@ -403,12 +404,23 @@ class TemplatePECSender:
         Returns:
             Tuple[bool, Optional[str]]: (success, error_message)
         """
-        import time
+        # Configure retry for network/server errors only
+        retry_config = RetryConfig(
+            max_retries=self.max_retries,
+            base_delay=1.0,
+            max_delay=30.0,
+            backoff_factor=2.0,
+            jitter=True,
+            retryable_exceptions=(
+                smtplib.SMTPServerDisconnected,
+                smtplib.SMTPConnectError,
+                smtplib.SMTPException,
+                ConnectionError,
+            ),
+        )
 
-        backoff = ExponentialBackoff(base=1.0, max_delay=30.0)
-        last_error = None
-
-        for attempt in range(self.max_retries):
+        def _send_email() -> tuple[bool, str | None]:
+            """Inner function that performs the actual send operation."""
             try:
                 # Create multipart message
                 msg = MIMEMultipart("alternative")
@@ -448,33 +460,19 @@ class TemplatePECSender:
 
                 return True, None
 
-            except smtplib.SMTPAuthenticationError:
+            except smtplib.SMTPAuthenticationError as e:
                 # Authentication errors are permanent - don't retry
-                return False, "PEC authentication failed. Check credentials."
+                raise ValueError("PEC authentication failed. Check credentials.") from e
 
-            except (
-                smtplib.SMTPServerDisconnected,
-                smtplib.SMTPConnectError,
-                ConnectionError,
-            ) as e:
-                # Transient network errors - retry with backoff
-                last_error = str(e)
-                if attempt < self.max_retries - 1:
-                    delay = backoff.get_delay(attempt)
-                    time.sleep(delay)
-                continue
+        try:
+            # Execute with unified retry logic
+            result = retry_sync(_send_email, config=retry_config)
+            return result
 
-            except smtplib.SMTPException as e:
-                # Other SMTP errors
-                last_error = str(e)
-                if attempt < self.max_retries - 1:
-                    delay = backoff.get_delay(attempt)
-                    time.sleep(delay)
-                continue
+        except ValueError as e:
+            # Authentication error (non-retryable)
+            return False, str(e)
 
-            except Exception as e:
-                # Unexpected errors - return immediately
-                return False, f"Error sending email: {e}"
-
-        # All retry attempts failed
-        return False, f"Failed after {self.max_retries} attempts. Last error: {last_error}"
+        except Exception as e:
+            # All retries exhausted
+            return False, f"Failed after {self.max_retries} attempts: {e}"

@@ -391,3 +391,28 @@ def get_dynamic_logger(name: str, debug_config=None) -> structlog.stdlib.BoundLo
 
 # Initialize logging on module import
 configure_logging()
+
+
+class suppress_stdout_logging:
+    """
+    Context manager to temporarily suppress stdout logging.
+    Useful for TUI applications where stdout is used for UI.
+    """
+
+    def __init__(self):
+        self.root_logger = logging.getLogger()
+        self.stdout_handlers = []
+
+    def __enter__(self):
+        # Find and remove stdout handlers
+        for handler in self.root_logger.handlers[:]:
+            if isinstance(handler, logging.StreamHandler) and (
+                handler.stream == sys.stdout or handler.stream == sys.stderr
+            ):
+                self.stdout_handlers.append(handler)
+                self.root_logger.removeHandler(handler)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Restore stdout handlers
+        for handler in self.stdout_handlers:
+            self.root_logger.addHandler(handler)

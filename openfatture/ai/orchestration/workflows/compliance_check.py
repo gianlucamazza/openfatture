@@ -37,8 +37,8 @@ from openfatture.ai.agents.compliance import (
 from openfatture.ai.orchestration.states import (
     ComplianceCheckState,
 )
-from openfatture.storage.database.base import SessionLocal
 from openfatture.storage.database.models import Fattura
+from openfatture.storage.session import db_session
 from openfatture.utils.datetime import utc_now
 from openfatture.utils.logging import get_logger
 
@@ -54,12 +54,6 @@ StateGraph = _StateGraph
 END = _END
 
 logger = get_logger(__name__)
-
-
-def _get_session() -> Session:
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call init_db() before running workflows.")
-    return SessionLocal()
 
 
 class ComplianceCheckWorkflow:
@@ -209,21 +203,21 @@ class ComplianceCheckWorkflow:
             invoice_id=state.invoice_id,
         )
 
-        db = _get_session()
         try:
-            fattura = db.query(Fattura).filter(Fattura.id == state.invoice_id).first()
+            with db_session() as db:
+                fattura = db.query(Fattura).filter(Fattura.id == state.invoice_id).first()
 
-            if not fattura:
-                state.add_error(f"Invoice {state.invoice_id} not found")
-                return state
+                if not fattura:
+                    state.add_error(f"Invoice {state.invoice_id} not found")
+                    return state
 
-            # Store in metadata for later use
-            state.metadata["invoice"] = {
-                "numero": fattura.numero,
-                "anno": fattura.anno,
-                "cliente": fattura.cliente.denominazione if fattura.cliente else "Unknown",
-                "totale": float(fattura.totale),
-            }
+                # Store in metadata for later use
+                state.metadata["invoice"] = {
+                    "numero": fattura.numero,
+                    "anno": fattura.anno,
+                    "cliente": fattura.cliente.denominazione if fattura.cliente else "Unknown",
+                    "totale": float(fattura.totale),
+                }
 
             state.status = "in_progress"
             state.updated_at = utc_now()
@@ -244,9 +238,6 @@ class ComplianceCheckWorkflow:
             )
             state.add_error(f"Failed to load invoice: {e}")
             return state
-
-        finally:
-            db.close()
 
     async def _rules_check_node(self, state: ComplianceCheckState) -> ComplianceCheckState:
         """Execute deterministic rules check."""

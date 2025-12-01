@@ -40,6 +40,174 @@ openfatture/
 - **SDI Integration**: XML generation → validation → PEC sending → notification processing
 - **Database**: SQLAlchemy ORM with models: Fattura, Riga, Cliente, Prodotto, NotificaSDI, PaymentAllocation, EventLog
 
+## Modern Utilities (2025)
+
+OpenFatture uses unified, modern utilities following best practices to replace legacy patterns:
+
+### Retry Logic (`openfatture/utils/retry.py`)
+
+**Purpose**: Centralized retry logic with exponential backoff, replacing 9+ scattered implementations.
+
+**Usage**:
+```python
+from openfatture.utils.retry import retry_async, retry_sync, RetryConfig, NETWORK_RETRY
+
+# Async function with custom config
+result = await retry_async(
+    lambda: api_call(),
+    config=RetryConfig(max_retries=5, base_delay=2.0),
+)
+
+# Sync function with pre-configured strategy
+result = retry_sync(
+    lambda: risky_operation(),
+    config=NETWORK_RETRY,  # Fast retries for transient network errors
+)
+
+# With retry callback for logging
+async def on_retry(error: Exception, attempt: int):
+    logger.warning(f"Retry attempt {attempt}: {error}")
+
+result = await retry_async(func, on_retry=on_retry)
+```
+
+**Pre-configured Strategies**:
+- `NETWORK_RETRY`: Fast retries (5 attempts, 0.5s base, 5s max) for transient network errors
+- `RATE_LIMIT_RETRY`: Slow retries (10 attempts, 5s base, 120s max) for API rate limiting
+- `DATABASE_RETRY`: Database retries (3 attempts, 1s base, 10s max)
+- `AI_PROVIDER_RETRY`: AI provider retries (5 attempts, 2s base, 60s max, backoff 2.5x)
+
+**Features**:
+- Exponential backoff with configurable factor (default 2.0x)
+- Jitter (±10%) to prevent thundering herd
+- Selective exception retry (configure `retryable_exceptions` tuple)
+- Automatic logging at info/warning/error levels
+- Custom retry callbacks for metrics/observability
+
+**Migration from legacy**:
+```python
+# OLD (scattered across codebase)
+for attempt in range(max_retries):
+    try:
+        return await func()
+    except Exception as e:
+        if attempt == max_retries - 1:
+            raise
+        await asyncio.sleep(2 ** attempt)
+
+# NEW (unified)
+return await retry_async(func, config=RetryConfig(max_retries=max_retries))
+```
+
+### Async/Sync Bridge (`openfatture/utils/async_bridge.py`)
+
+**Purpose**: Unified async/sync interop, replacing 19+ `asyncio.run()` calls with proper event loop handling.
+
+**Usage**:
+```python
+from openfatture.utils.async_bridge import run_async, run_with_lifespan, AsyncRunner, async_context
+
+# Basic async->sync bridge (CLI commands, scripts)
+result = run_async(async_function())
+
+# With lifespan management (CLI commands needing DB/HTTP clients)
+result = run_with_lifespan(async_command())
+
+# Reusable runner for multiple operations
+with AsyncRunner() as runner:
+    result1 = runner.run(async_func1())
+    result2 = runner.run(async_func2())
+    # Automatic cleanup
+
+# Context manager for batch async operations
+with async_context() as execute:
+    result1 = execute(async_func1())
+    result2 = execute(async_func2())
+
+# Safe execution with default on error
+result = run_async_safe(risky_async_op(), default=[])
+
+# With timeout
+result = run_async_timeout(slow_async_op(), timeout=5.0, default="timed out")
+```
+
+**Features**:
+- Handles nested event loops (Streamlit, Jupyter) automatically
+- Thread-safe execution with proper cleanup
+- Context variable propagation
+- Debug mode for development
+- Lifespan management for CLI commands (database connections, HTTP clients)
+
+**Migration from legacy**:
+```python
+# OLD (inconsistent)
+asyncio.run(coro)                    # Various places
+loop.run_until_complete(coro)        # Legacy
+nest_asyncio.apply()                 # Streamlit-specific
+
+# NEW (unified)
+run_async(coro)                      # Everywhere
+```
+
+### Database Session Management (`openfatture/storage/session.py`)
+
+**Purpose**: Context managers for database sessions, replacing 26+ direct `SessionLocal()` instantiations.
+
+**Usage**:
+```python
+from openfatture.storage.session import db_session, async_db_session, get_db_session
+
+# Sync context manager (recommended)
+with db_session() as db:
+    fattura = db.query(Fattura).filter_by(numero="001").first()
+    db.commit()
+    # Automatic cleanup, rollback on exception
+
+# Async context manager (for async CLI commands)
+async with async_db_session() as db:
+    fattura = Fattura(numero="001", ...)
+    db.add(fattura)
+    db.commit()
+
+# Direct session (manual cleanup required, use only when necessary)
+db = get_db_session()
+try:
+    fattura = db.query(Fattura).first()
+    db.commit()
+finally:
+    db.close()
+```
+
+**Features**:
+- Automatic session cleanup (no memory leaks)
+- Automatic rollback on exceptions
+- Proper connection pool management
+- Structured logging for debugging
+- Thread-safe
+
+**Migration from legacy**:
+```python
+# OLD (manual cleanup, error-prone)
+from openfatture.storage.database.base import SessionLocal
+db = SessionLocal()
+try:
+    # Use db
+    db.commit()
+finally:
+    db.close()
+
+# NEW (automatic cleanup, safe)
+from openfatture.storage.session import db_session
+with db_session() as db:
+    # Use db
+    db.commit()
+```
+
+**Testing**:
+- Retry logic: 28/28 tests passing (`tests/utils/test_retry.py`)
+- Async bridge: 30/31 tests passing (`tests/utils/test_async_bridge.py`)
+- Session management: 19/19 tests passing (`tests/storage/test_session.py`)
+
 ## Development Commands
 
 ### Setup

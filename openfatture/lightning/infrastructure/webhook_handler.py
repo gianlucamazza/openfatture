@@ -13,6 +13,7 @@ from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
 from ...core.events.base import get_global_event_bus
+from ...utils.logging import get_logger
 from ..domain.events import (
     LightningChannelClosed,
     LightningChannelOpened,
@@ -20,6 +21,8 @@ from ..domain.events import (
     LightningInvoiceExpired,
     LightningPaymentSettled,
 )
+
+logger = get_logger(__name__)
 
 
 class LightningWebhookHandler:
@@ -64,7 +67,7 @@ class LightningWebhookHandler:
             return JSONResponse(content={"status": "ok", "processed": True}, status_code=200)
 
         except Exception as e:
-            print(f"Webhook processing error: {e}")
+            logger.error("webhook_processing_error", error=str(e), exc_info=True)
             raise HTTPException(status_code=500, detail="Webhook processing failed")
 
     async def _verify_signature(self, request: Request):
@@ -105,10 +108,10 @@ class LightningWebhookHandler:
         event_type = payload.get("event_type") or payload.get("type")
 
         if not event_type:
-            print(f"Webhook missing event_type: {payload}")
+            logger.warning("webhook_missing_event_type", payload_keys=list(payload.keys()))
             return
 
-        print(f"Processing Lightning webhook: {event_type}")
+        logger.info("processing_lightning_webhook", event_type=event_type)
 
         # Route to appropriate handler
         handlers = {
@@ -125,7 +128,7 @@ class LightningWebhookHandler:
         if handler:
             await handler(payload)
         else:
-            print(f"Unknown webhook event type: {event_type}")
+            logger.warning("unknown_webhook_event_type", event_type=event_type)
 
     async def _handle_invoice_created(self, payload: dict[str, Any]):
         """Handle invoice creation event."""
@@ -228,7 +231,11 @@ class LightningWebhookHandler:
         # For now, just log outgoing payments
         # Could emit a custom event for payment tracking
         payment_data = payload.get("payment", {})
-        print(f"Outgoing Lightning payment: {payment_data.get('payment_hash', 'unknown')}")
+        logger.info(
+            "outgoing_lightning_payment",
+            payment_hash=payment_data.get("payment_hash", "unknown"),
+            amount_msat=payment_data.get("amount_msat"),
+        )
 
     async def health_check(self) -> dict[str, Any]:
         """Health check for webhook handler.
@@ -281,8 +288,12 @@ async def run_webhook_server(
     async def health():
         return await handler.health_check()
 
-    print(f"Starting Lightning webhook server on {host}:{port}")
-    print(f"Webhook endpoint: POST http://{host}:{port}/webhook/lightning")
+    logger.info(
+        "starting_lightning_webhook_server",
+        host=host,
+        port=port,
+        endpoint=f"POST http://{host}:{port}/webhook/lightning",
+    )
 
     # Note: In production, use a proper ASGI server like uvicorn
     import uvicorn
