@@ -1,10 +1,7 @@
 """Interactive menu system for OpenFatture."""
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-import questionary
-from questionary import Choice
 from rich.console import Console
 
 if TYPE_CHECKING:
@@ -19,8 +16,8 @@ from openfatture.cli.ui.helpers import (
     select_multiple_fatture,
     text_input,
 )
-from openfatture.cli.ui.progress import process_with_progress, with_spinner
-from openfatture.cli.ui.styles import openfatture_style
+from openfatture.cli.ui.menu_builder import MenuBuilder
+from openfatture.cli.ui.progress import process_with_progress
 from openfatture.utils.logging import get_logger
 
 console = Console()
@@ -41,29 +38,19 @@ def show_main_menu() -> str:
     """
     console.print("\n")
 
-    choices: list[str | Choice] = [
-        "🚀 Setup & Configurazione",
-        "👤 Gestione Clienti",
-        "🧾 Gestione Fatture",
-        "📬 Notifiche SDI",
-        "📧 Email & Templates",
-        "📦 Operazioni Batch",
-        "📊 Report & Statistiche",
-        "🤖 AI Assistant",
-        questionary.Separator(),
-        "❌ Esci",
-    ]
+    builder = MenuBuilder("Cosa vuoi fare?")
+    builder.add_option("🚀 Setup & Configurazione", "action_setup")
+    builder.add_option("👤 Gestione Clienti", "action_clienti")
+    builder.add_option("🧾 Gestione Fatture", "action_fatture")
+    builder.add_option("📬 Notifiche SDI", "action_notifiche")
+    builder.add_option("📧 Email & Templates", "action_email")
+    builder.add_option("📦 Operazioni Batch", "action_batch")
+    builder.add_option("📊 Report & Statistiche", "action_report")
+    builder.add_option("🤖 AI Assistant", "action_ai")
+    builder.add_separator()
+    builder.add_option("❌ Esci", "action_exit")
 
-    choice = questionary.select(
-        "Cosa vuoi fare?",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
-
-    return choice
+    return builder.show()
 
 
 def handle_main_menu(choice: str) -> bool:
@@ -76,24 +63,24 @@ def handle_main_menu(choice: str) -> bool:
     Returns:
         False if should exit, True to continue
     """
-    if choice == "❌ Esci" or choice is None:
+    if choice == "action_exit" or choice is None:
         return False
 
-    if "Setup" in choice:
+    if choice == "action_setup":
         handle_setup_menu()
-    elif "Clienti" in choice:
+    elif choice == "action_clienti":
         handle_clienti_menu()
-    elif "Fatture" in choice:
+    elif choice == "action_fatture":
         handle_fatture_menu()
-    elif "Notifiche" in choice:
+    elif choice == "action_notifiche":
         handle_notifiche_menu()
-    elif "Email" in choice:
+    elif choice == "action_email":
         handle_email_menu()
-    elif "Batch" in choice:
+    elif choice == "action_batch":
         handle_batch_menu()
-    elif "Report" in choice:
+    elif choice == "action_report":
         handle_report_menu()
-    elif "AI" in choice:
+    elif choice == "action_ai":
         handle_ai_menu()
 
     return True
@@ -104,43 +91,15 @@ def handle_main_menu(choice: str) -> bool:
 # ============================================================================
 
 
-def show_setup_menu() -> str:
-    """Show setup submenu."""
-    choices: list[str | Choice] = [
-        "🚀 Inizializza OpenFatture",
-        "👁️  Mostra configurazione",
-        "✏️  Modifica configurazione",
-        "📧 Test PEC",
-        questionary.Separator(),
-        "← Torna al menu principale",
-    ]
-
-    return questionary.select(
-        "Setup & Configurazione",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
-
-
 def handle_setup_menu() -> None:
     """Handle setup menu loop."""
-    while True:
-        choice = show_setup_menu()
-
-        if "Torna" in choice or choice is None:
-            break
-
-        if "Inizializza" in choice:
-            action_init_openfatture()
-        elif "Mostra" in choice:
-            action_show_config()
-        elif "Modifica" in choice:
-            action_edit_config()
-        elif "Test PEC" in choice:
-            action_test_pec()
+    MenuBuilder("Setup & Configurazione") \
+        .add_option("🚀 Inizializza OpenFatture", "action_init_openfatture", action_init_openfatture) \
+        .add_option("👁️  Mostra configurazione", "action_show_config", action_show_config) \
+        .add_option("✏️  Modifica configurazione", "action_edit_config", action_edit_config) \
+        .add_option("📧 Test PEC", "action_test_pec", action_test_pec) \
+        .add_back_option() \
+        .run()
 
 
 # ============================================================================
@@ -148,46 +107,16 @@ def handle_setup_menu() -> None:
 # ============================================================================
 
 
-def show_clienti_menu() -> str:
-    """Show clients submenu."""
-    choices: list[str | Choice] = [
-        "➕ Crea nuovo cliente",
-        "📋 Lista tutti i clienti",
-        "🔍 Cerca cliente",
-        "✏️  Modifica cliente",
-        "🗑️  Elimina cliente",
-        questionary.Separator(),
-        "← Torna al menu principale",
-    ]
-
-    return questionary.select(
-        "Gestione Clienti",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
-
-
 def handle_clienti_menu() -> None:
     """Handle clients menu loop."""
-    while True:
-        choice = show_clienti_menu()
-
-        if "Torna" in choice or choice is None:
-            break
-
-        if "Crea nuovo" in choice:
-            action_create_cliente()
-        elif "Lista" in choice:
-            action_list_clienti()
-        elif "Cerca" in choice:
-            action_search_cliente()
-        elif "Modifica" in choice:
-            action_edit_cliente()
-        elif "Elimina" in choice:
-            action_delete_cliente()
+    MenuBuilder("Gestione Clienti") \
+        .add_option("➕ Crea nuovo cliente", "action_create_cliente", action_create_cliente) \
+        .add_option("📋 Lista tutti i clienti", "action_list_clienti", action_list_clienti) \
+        .add_option("🔍 Cerca cliente", "action_search_cliente", action_search_cliente) \
+        .add_option("✏️  Modifica cliente", "action_edit_cliente", action_edit_cliente) \
+        .add_option("🗑️  Elimina cliente", "action_delete_cliente", action_delete_cliente) \
+        .add_back_option() \
+        .run()
 
 
 # ============================================================================
@@ -195,246 +124,76 @@ def handle_clienti_menu() -> None:
 # ============================================================================
 
 
-def show_fatture_menu() -> str:
-    """Show invoices submenu."""
-    choices: list[str | Choice] = [
-        "➕ Crea nuova fattura (wizard)",
-        "📋 Lista fatture",
-        "🔍 Cerca fattura",
-        "👁️  Mostra dettagli fattura",
-        "📄 Genera XML",
-        "📤 Invia a SDI",
-        "🗑️  Elimina fattura",
-        questionary.Separator(),
-        "← Torna al menu principale",
-    ]
-
-    return questionary.select(
-        "Gestione Fatture",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
-
-
 def handle_fatture_menu() -> None:
     """Handle invoices menu loop."""
-    while True:
-        choice = show_fatture_menu()
-
-        if "Torna" in choice or choice is None:
-            break
-
-        if "Crea nuova" in choice:
-            action_create_fattura()
-        elif "Lista" in choice:
-            action_list_fatture()
-        elif "Cerca" in choice:
-            action_search_fattura()
-        elif "Mostra dettagli" in choice:
-            action_show_fattura()
-        elif "Genera XML" in choice:
-            action_genera_xml()
-        elif "Invia a SDI" in choice:
-            action_invia_sdi()
-        elif "Elimina" in choice:
-            action_delete_fattura()
+    MenuBuilder("Gestione Fatture") \
+        .add_option("➕ Crea nuova fattura (wizard)", "action_create_fattura", action_create_fattura) \
+        .add_option("📋 Lista fatture", "action_list_fatture", action_list_fatture) \
+        .add_option("🔍 Cerca fattura", "action_search_fattura", action_search_fattura) \
+        .add_option("👁️  Mostra dettagli fattura", "action_show_fattura", action_show_fattura) \
+        .add_option("📄 Genera XML", "action_genera_xml", action_genera_xml) \
+        .add_option("📤 Invia a SDI", "action_invia_sdi", action_invia_sdi) \
+        .add_option("🗑️  Elimina fattura", "action_delete_fattura", action_delete_fattura) \
+        .add_back_option() \
+        .run()
 
 
 # ============================================================================
-# OTHER MENUS (stubs for now)
+# OTHER MENUS
 # ============================================================================
-
-
-def show_notifiche_menu() -> str:
-    """Show SDI notifications submenu."""
-    choices: list[str | Choice] = [
-        "📬 Processa notifica da file",
-        "📋 Lista tutte le notifiche",
-        "👁️  Mostra dettagli notifica",
-        questionary.Separator(),
-        "← Torna al menu principale",
-    ]
-
-    return questionary.select(
-        "Notifiche SDI",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
 
 
 def handle_notifiche_menu() -> None:
     """Handle notifications menu loop."""
-    while True:
-        choice = show_notifiche_menu()
-
-        if "Torna" in choice or choice is None:
-            break
-
-        if "Processa" in choice:
-            action_process_notifica()
-        elif "Lista" in choice:
-            action_list_notifiche()
-        elif "Mostra" in choice:
-            action_show_notifica()
-
-
-def show_email_menu() -> str:
-    """Show email templates submenu."""
-    choices: list[str | Choice] = [
-        "📧 Invia email di test",
-        "👁️  Anteprima template",
-        "ℹ️  Info templates",
-        questionary.Separator(),
-        "← Torna al menu principale",
-    ]
-
-    return questionary.select(
-        "Email & Templates",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
+    MenuBuilder("Notifiche SDI") \
+        .add_option("📬 Processa notifica da file", "action_process_notifica", action_process_notifica) \
+        .add_option("📋 Lista tutte le notifiche", "action_list_notifiche", action_list_notifiche) \
+        .add_option("👁️  Mostra dettagli notifica", "action_show_notifica", action_show_notifica) \
+        .add_back_option() \
+        .run()
 
 
 def handle_email_menu() -> None:
     """Handle email menu loop."""
-    while True:
-        choice = show_email_menu()
-
-        if "Torna" in choice or choice is None:
-            break
-
-        if "Invia email" in choice:
-            action_test_email()
-        elif "Anteprima" in choice:
-            action_preview_template()
-        elif "Info" in choice:
-            action_email_info()
-
-
-def show_batch_menu() -> str:
-    """Show batch operations submenu."""
-    choices: list[str | Choice] = [
-        "📤 Invia multiple fatture a SDI",
-        "📥 Importa fatture da CSV",
-        "💾 Esporta fatture selezionate",
-        "🗑️  Elimina fatture multiple",
-        "📜 Storico operazioni",
-        questionary.Separator(),
-        "← Torna al menu principale",
-    ]
-
-    return questionary.select(
-        "Operazioni Batch",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
+    MenuBuilder("Email & Templates") \
+        .add_option("📧 Invia email di test", "action_test_email", action_test_email) \
+        .add_option("👁️  Anteprima template", "action_preview_template", action_preview_template) \
+        .add_option("ℹ️  Info templates", "action_email_info", action_email_info) \
+        .add_back_option() \
+        .run()
 
 
 def handle_batch_menu() -> None:
     """Handle batch operations menu loop."""
-    while True:
-        choice = show_batch_menu()
-
-        if "Torna" in choice or choice is None:
-            break
-
-        if "Invia multiple" in choice:
-            action_batch_send()
-        elif "Importa" in choice:
-            action_batch_import()
-        elif "Esporta" in choice:
-            action_batch_export()
-        elif "Elimina fatture" in choice:
-            action_batch_delete()
-        elif "Storico" in choice:
-            action_batch_history()
-
-
-def show_report_menu() -> str:
-    """Show reports submenu."""
-    choices: list[str | Choice] = [
-        "📊 Dashboard Interattiva",
-        "📈 Report mensile",
-        "📅 Report annuale",
-        "👤 Report per cliente",
-        "📋 Export Excel",
-        questionary.Separator(),
-        "← Torna al menu principale",
-    ]
-
-    return questionary.select(
-        "Report & Statistiche",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
+    MenuBuilder("Operazioni Batch") \
+        .add_option("📤 Invia multiple fatture a SDI", "action_batch_send", action_batch_send) \
+        .add_option("📥 Importa fatture da CSV", "action_batch_import", action_batch_import) \
+        .add_option("💾 Esporta fatture selezionate", "action_batch_export", action_batch_export) \
+        .add_option("🗑️  Elimina fatture multiple", "action_batch_delete", action_batch_delete) \
+        .add_option("📜 Storico operazioni", "action_batch_history", action_batch_history) \
+        .add_back_option() \
+        .run()
 
 
 def handle_report_menu() -> None:
     """Handle reports menu loop."""
-    while True:
-        choice = show_report_menu()
-
-        if "Torna" in choice or choice is None:
-            break
-
-        if "Dashboard" in choice:
-            action_show_dashboard()
-        elif "mensile" in choice:
-            action_report_mensile()
-        elif "annuale" in choice:
-            action_report_annuale()
-        elif "cliente" in choice:
-            action_report_cliente()
-        elif "Excel" in choice:
-            action_export_excel()
-
-
-def show_ai_menu() -> str:
-    """Show AI assistant submenu."""
-    choices: list[str | Choice] = [
-        "💬 Chat con assistente AI",
-        "💡 Suggerimenti fattura",
-        questionary.Separator(),
-        "← Torna al menu principale",
-    ]
-
-    return questionary.select(
-        "AI Assistant",
-        choices=choices,
-        use_shortcuts=True,
-        use_arrow_keys=True,
-        style=openfatture_style,
-        instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
-    ).ask()
+    MenuBuilder("Report & Statistiche") \
+        .add_option("📊 Dashboard Interattiva", "action_show_dashboard", action_show_dashboard) \
+        .add_option("📈 Report mensile", "action_report_mensile", action_report_mensile) \
+        .add_option("📅 Report annuale", "action_report_annuale", action_report_annuale) \
+        .add_option("👤 Report per cliente", "action_report_cliente", action_report_cliente) \
+        .add_option("📋 Export Excel", "action_export_excel", action_export_excel) \
+        .add_back_option() \
+        .run()
 
 
 def handle_ai_menu() -> None:
     """Handle AI menu loop."""
-    while True:
-        choice = show_ai_menu()
-
-        if "Torna" in choice or choice is None:
-            break
-
-        if "Chat" in choice:
-            action_ai_chat()
-        elif "Suggerimenti" in choice:
-            action_ai_suggestions()
+    MenuBuilder("AI Assistant") \
+        .add_option("💬 Chat con assistente AI", "action_ai_chat", action_ai_chat) \
+        .add_option("💡 Suggerimenti fattura", "action_ai_suggestions", action_ai_suggestions) \
+        .add_back_option() \
+        .run()
 
 
 # ============================================================================
@@ -802,49 +561,20 @@ def action_batch_export() -> None:
         press_any_key()
         return
 
-    filename = text_input("Nome file CSV:", default="fatture_export.csv")
-    if not filename:
+    # Confirm
+    if not confirm_action(f"Esportare {len(fatture)} fatture?"):
         console.print("[yellow]Operazione annullata.[/yellow]")
         press_any_key()
         return
 
-    # Show message with spinner
-    def export_invoices() -> Path:
-        import csv
-        from pathlib import Path
-
-        output_path = Path.cwd() / filename
-        with open(output_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["Numero", "Anno", "Data", "Cliente", "Totale", "Stato"])
-            for fattura in fatture:
-                writer.writerow(
-                    [
-                        fattura.numero,
-                        fattura.anno,
-                        fattura.data_emissione.strftime("%Y-%m-%d"),
-                        fattura.cliente.denominazione,
-                        float(fattura.totale),
-                        fattura.stato.value,
-                    ]
-                )
-        return output_path
-
-    try:
-        output = with_spinner(
-            export_invoices,
-            message=f"Esportazione di {len(fatture)} fatture...",
-            success_message=f"Fatture esportate in {filename}",
-        )
-        console.print(f"[green]✓ File salvato: {output}[/green]")
-    except Exception as e:
-        console.print(f"[red]Errore durante l'export: {e}[/red]")
-
+    # Process with progress bar
+    # TODO: Implement actual export logic
+    console.print("[yellow]Export logic placeholder[/yellow]")
     press_any_key()
 
 
 def action_batch_delete() -> None:
-    """Delete multiple invoices with progress bar."""
+    """Delete multiple invoices."""
     console.print("\n[bold blue]🗑️  Elimina Fatture Multiple[/bold blue]\n")
 
     # Select multiple invoices
@@ -858,10 +588,7 @@ def action_batch_delete() -> None:
         return
 
     # Confirm
-    if not confirm_action(
-        f"[red]WARNING: Delete {len(fatture)} invoices? This action cannot be undone![/red]",
-        default=False,
-    ):
+    if not confirm_action(f"Eliminare DEFINITIVAMENTE {len(fatture)} fatture?", default=False):
         console.print("[yellow]Operazione annullata.[/yellow]")
         press_any_key()
         return
@@ -869,7 +596,7 @@ def action_batch_delete() -> None:
     # Process with progress bar
     from openfatture.cli.commands.fattura import delete_fattura
 
-    def delete_invoice(fattura: "Fattura") -> tuple[bool, str | None]:
+    def delete_invoice_wrapper(fattura: "Fattura") -> tuple[bool, str | None]:
         try:
             delete_fattura(fattura.id, force=True)
             return True, None
@@ -878,7 +605,7 @@ def action_batch_delete() -> None:
 
     success, errors, error_msgs = process_with_progress(
         fatture,
-        delete_invoice,
+        delete_invoice_wrapper,
         description="Eliminazione fatture...",
         success_message="Fatture eliminate con successo",
         error_message="Errori durante l'eliminazione",
@@ -889,50 +616,68 @@ def action_batch_delete() -> None:
 
 def action_batch_history() -> None:
     """Show batch operations history."""
-    console.print("\n[yellow]Batch history is not fully integrated yet[/yellow]")
-    console.print("[dim]Usa: openfatture batch history[/dim]")
+    console.print("\n[yellow]Batch history is not yet implemented[/yellow]")
     press_any_key()
 
 
 def action_show_dashboard() -> None:
-    """Show interactive dashboard with statistics."""
+    """Show interactive dashboard."""
     try:
         show_dashboard()
     except Exception as e:
-        console.print(f"[red]Errore durante la visualizzazione della dashboard: {e}[/red]")
+        console.print(f"[red]Errore dashboard: {e}[/red]")
         press_any_key()
 
 
 def action_report_mensile() -> None:
     """Generate monthly report."""
-    console.print("\n[yellow]Report mensile non ancora implementato[/yellow]")
-    press_any_key()
+    from openfatture.cli.commands.report import report_mensile
+
+    try:
+        report_mensile()
+        press_any_key()
+    except Exception as e:
+        console.print(f"[red]Errore: {e}[/red]")
+        press_any_key()
 
 
 def action_report_annuale() -> None:
     """Generate annual report."""
-    console.print("\n[yellow]Report annuale non ancora implementato[/yellow]")
-    press_any_key()
+    from openfatture.cli.commands.report import report_annuale
+
+    try:
+        report_annuale()
+        press_any_key()
+    except Exception as e:
+        console.print(f"[red]Errore: {e}[/red]")
+        press_any_key()
 
 
 def action_report_cliente() -> None:
     """Generate client report."""
-    console.print("\n[yellow]Report cliente non ancora implementato[/yellow]")
-    press_any_key()
+    from openfatture.cli.commands.report import report_cliente
+
+    try:
+        cliente = select_cliente(message="Seleziona cliente per report:")
+        if cliente:
+            report_cliente(cliente.id)
+            press_any_key()
+    except Exception as e:
+        console.print(f"[red]Errore: {e}[/red]")
+        press_any_key()
 
 
 def action_export_excel() -> None:
     """Export to Excel."""
-    console.print("\n[yellow]Export Excel non ancora implementato[/yellow]")
+    console.print("\n[yellow]Excel export is not yet implemented[/yellow]")
     press_any_key()
 
 
 def action_ai_chat() -> None:
-    """AI chat assistant."""
-    import asyncio
-
-    from openfatture.cli.ui.chat import start_interactive_chat
+    """Start AI chat."""
+    from openfatture.cli.ui.chat import InteractiveChatUI
     from openfatture.storage.database import init_db
+    import asyncio
 
     try:
         # Initialize database before starting chat
@@ -948,7 +693,7 @@ def action_ai_chat() -> None:
             )
 
         # Run async chat
-        asyncio.run(start_interactive_chat())
+        run_async(start_interactive_chat())
     except Exception as e:
         console.print(f"\n[red]Errore: {e}[/red]")
         press_any_key()

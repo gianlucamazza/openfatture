@@ -1,200 +1,37 @@
 """Interactive dashboard with real-time statistics."""
 
-from datetime import datetime, timedelta
-from decimal import Decimal
-from typing import Any, cast
-
 from rich.align import Align
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from sqlalchemy import extract, func
 
-from openfatture.payment.application.services.payment_overview import (
-    PaymentDueEntry,
-    PaymentDueSummary,
-    collect_payment_due_summary,
-)
-from openfatture.payment.domain.enums import TransactionStatus
-from openfatture.payment.infrastructure.repository import BankTransactionRepository
+from openfatture.payment.application.services.payment_overview import PaymentDueEntry
+from openfatture.services.dashboard import DashboardService
 from openfatture.storage.database.base import get_session
-from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
+from openfatture.storage.database.models import Fattura, StatoFattura
 
 console = Console()
 
 
-class DashboardData:
-    """Fetch and process dashboard statistics."""
-
-    def __init__(self):
-        """Initialize with database session."""
-        self.db = get_session()
-
-    def close(self):
-        """Close database session."""
-        self.db.close()
-
-    def get_total_invoices(self) -> int:
-        """Get total number of invoices."""
-        return self.db.query(Fattura).count()
-
-    def get_total_clients(self) -> int:
-        """Get total number of clients."""
-        return self.db.query(Cliente).count()
-
-    def get_total_revenue(self) -> Decimal:
-        """Get total revenue from all invoices."""
-        total = self.db.query(func.sum(Fattura.totale)).scalar()
-        return total or Decimal("0")
-
-    def get_revenue_this_month(self) -> Decimal:
-        """Get revenue for current month."""
-        now = datetime.now()
-        total = (
-            self.db.query(func.sum(Fattura.totale))
-            .filter(
-                extract("year", Fattura.data_emissione) == now.year,
-                extract("month", Fattura.data_emissione) == now.month,
-            )
-            .scalar()
-        )
-        return total or Decimal("0")
-
-    def get_revenue_this_year(self) -> Decimal:
-        """Get revenue for current year."""
-        now = datetime.now()
-        total = (
-            self.db.query(func.sum(Fattura.totale))
-            .filter(extract("year", Fattura.data_emissione) == now.year)
-            .scalar()
-        )
-        return total or Decimal("0")
-
-    def get_invoices_by_status(self) -> list[tuple[str, int]]:
-        """Get invoice count grouped by status."""
-        id_column = cast(Any, Fattura.id)
-        results = self.db.query(Fattura.stato, func.count(id_column)).group_by(Fattura.stato).all()
-        return [(stato.value, count) for stato, count in results]
-
-    def get_pending_amount(self) -> Decimal:
-        """Get total amount from pending invoices."""
-        total = (
-            self.db.query(func.sum(Fattura.totale))
-            .filter(Fattura.stato.in_([StatoFattura.BOZZA, StatoFattura.DA_INVIARE]))
-            .scalar()
-        )
-        return total or Decimal("0")
-
-    def get_sent_not_accepted(self) -> int:
-        """Get count of invoices sent but not yet accepted."""
-        return self.db.query(Fattura).filter(Fattura.stato == StatoFattura.INVIATA).count()
-
-    def get_monthly_revenue(self, months: int = 6) -> list[tuple[str, Decimal]]:
-        """
-        Get revenue for last N months.
-
-        Args:
-            months: Number of months to retrieve
-
-        Returns:
-            List of (month_name, revenue) tuples
-        """
-        now = datetime.now()
-        results = []
-
-        for i in range(months - 1, -1, -1):
-            # Calculate month/year
-            target_date = now - timedelta(days=30 * i)
-            month = target_date.month
-            year = target_date.year
-
-            # Query revenue for that month
-            revenue = (
-                self.db.query(func.sum(Fattura.totale))
-                .filter(
-                    extract("year", Fattura.data_emissione) == year,
-                    extract("month", Fattura.data_emissione) == month,
-                )
-                .scalar()
-            ) or Decimal("0")
-
-            month_name = target_date.strftime("%b %Y")
-            results.append((month_name, revenue))
-
-        return results
-
-    def get_top_clients(self, limit: int = 5) -> list[tuple[str, int, Decimal]]:
-        """
-        Get top clients by revenue.
-
-        Args:
-            limit: Number of clients to return
-
-        Returns:
-            List of (client_name, invoice_count, total_revenue) tuples
-        """
-        results = (
-            self.db.query(
-                Cliente.denominazione,
-                func.count(cast(Any, Fattura.id)),
-                func.sum(Fattura.totale),
-            )
-            .join(Fattura)
-            .group_by(Cliente.id, Cliente.denominazione)
-            .order_by(func.sum(Fattura.totale).desc())
-            .limit(limit)
-            .all()
-        )
-
-        return [(name, count, total or Decimal("0")) for name, count, total in results]
-
-    def get_recent_invoices(self, limit: int = 5) -> list[Fattura]:
-        """
-        Get most recent invoices.
-
-        Args:
-            limit: Number of invoices to return
-
-        Returns:
-            List of Invoice objects
-        """
-        return self.db.query(Fattura).order_by(Fattura.data_emissione.desc()).limit(limit).all()
-
-    def get_payment_due_summary(
-        self, window_days: int = 30, max_upcoming: int = 10
-    ) -> PaymentDueSummary:
-        """Return grouped payment due data for dashboard."""
-        return collect_payment_due_summary(self.db, window_days, max_upcoming)
-
-    def get_payment_stats(self) -> dict[str, int]:
-        """Get payment tracking statistics."""
-        tx_repo = BankTransactionRepository(self.db)
-        return {
-            "unmatched": len(tx_repo.get_by_status(TransactionStatus.UNMATCHED)),
-            "matched": len(tx_repo.get_by_status(TransactionStatus.MATCHED)),
-            "ignored": len(tx_repo.get_by_status(TransactionStatus.IGNORED)),
-        }
-
-
-def create_overview_panel(data: DashboardData) -> Panel:
+def create_overview_panel(service: DashboardService) -> Panel:
     """
     Create overview panel with key metrics.
 
     Args:
-        data: DashboardData instance
+        service: DashboardService instance
 
     Returns:
         Rich Panel with overview
     """
-    total_invoices = data.get_total_invoices()
-    total_clients = data.get_total_clients()
-    total_revenue = data.get_total_revenue()
-    revenue_month = data.get_revenue_this_month()
-    revenue_year = data.get_revenue_this_year()
-    pending = data.get_pending_amount()
-    sent_not_accepted = data.get_sent_not_accepted()
+    total_invoices = service.get_total_invoices()
+    total_clients = service.get_total_clients()
+    total_revenue = service.get_total_revenue()
+    revenue_month = service.get_revenue_this_month()
+    revenue_year = service.get_revenue_this_year()
+    pending = service.get_pending_amount()
+    sent_not_accepted = service.get_sent_not_accepted()
 
     # Create metrics text
     content = Text()
@@ -226,12 +63,12 @@ def create_overview_panel(data: DashboardData) -> Panel:
     )
 
 
-def create_status_table(data: DashboardData) -> Table:
+def create_status_table(service: DashboardService) -> Table:
     """
     Create table with invoice status distribution.
 
     Args:
-        data: DashboardData instance
+        service: DashboardService instance
 
     Returns:
         Rich Table
@@ -240,7 +77,7 @@ def create_status_table(data: DashboardData) -> Table:
     table.add_column("Stato", style="cyan", no_wrap=True)
     table.add_column("Numero", justify="right", style="green")
 
-    status_data = data.get_invoices_by_status()
+    status_data = service.get_invoices_by_status()
     status_emoji = {
         "bozza": "📝",
         "da_inviare": "📤",
@@ -261,12 +98,12 @@ def create_status_table(data: DashboardData) -> Table:
     return table
 
 
-def create_monthly_revenue_table(data: DashboardData, months: int = 6) -> Table:
+def create_monthly_revenue_table(service: DashboardService, months: int = 6) -> Table:
     """
     Create table with monthly revenue.
 
     Args:
-        data: DashboardData instance
+        service: DashboardService instance
         months: Number of months to display
 
     Returns:
@@ -278,7 +115,7 @@ def create_monthly_revenue_table(data: DashboardData, months: int = 6) -> Table:
     table.add_column("Mese", style="cyan", no_wrap=True)
     table.add_column("Fatturato", justify="right", style="green")
 
-    monthly_data = data.get_monthly_revenue(months)
+    monthly_data = service.get_monthly_revenue(months)
 
     for month_name, revenue in monthly_data:
         table.add_row(month_name, f"€{revenue:,.2f}")
@@ -291,12 +128,12 @@ def create_monthly_revenue_table(data: DashboardData, months: int = 6) -> Table:
     return table
 
 
-def create_top_clients_table(data: DashboardData, limit: int = 5) -> Table:
+def create_top_clients_table(service: DashboardService, limit: int = 5) -> Table:
     """
     Create table with top clients.
 
     Args:
-        data: DashboardData instance
+        service: DashboardService instance
         limit: Number of clients to display
 
     Returns:
@@ -307,7 +144,7 @@ def create_top_clients_table(data: DashboardData, limit: int = 5) -> Table:
     table.add_column("Fatture", justify="right", style="yellow")
     table.add_column("Fatturato", justify="right", style="green")
 
-    top_clients = data.get_top_clients(limit)
+    top_clients = service.get_top_clients(limit)
 
     for name, count, revenue in top_clients:
         # Truncate long names
@@ -317,12 +154,12 @@ def create_top_clients_table(data: DashboardData, limit: int = 5) -> Table:
     return table
 
 
-def create_recent_invoices_table(data: DashboardData, limit: int = 5) -> Table:
+def create_recent_invoices_table(service: DashboardService, limit: int = 5) -> Table:
     """
     Create table with recent invoices.
 
     Args:
-        data: DashboardData instance
+        service: DashboardService instance
         limit: Number of invoices to display
 
     Returns:
@@ -335,7 +172,7 @@ def create_recent_invoices_table(data: DashboardData, limit: int = 5) -> Table:
     table.add_column("Importo", justify="right", style="green")
     table.add_column("Stato", style="magenta")
 
-    recent = data.get_recent_invoices(limit)
+    recent = service.get_recent_invoices(limit)
 
     status_emoji = {
         StatoFattura.BOZZA: "📝",
@@ -368,9 +205,9 @@ def create_recent_invoices_table(data: DashboardData, limit: int = 5) -> Table:
     return table
 
 
-def create_payment_stats_panel(data: DashboardData) -> Panel:
+def create_payment_stats_panel(service: DashboardService) -> Panel:
     """Create panel with payment tracking statistics."""
-    stats = data.get_payment_stats()
+    stats = service.get_payment_stats()
 
     total = stats["unmatched"] + stats["matched"] + stats["ignored"]
 
@@ -395,11 +232,11 @@ def create_payment_stats_panel(data: DashboardData) -> Panel:
 
 
 def create_payment_due_panel(
-    data: DashboardData, window_days: int = 30, max_upcoming: int = 10
+    service: DashboardService, window_days: int = 30, max_upcoming: int = 10
 ) -> Panel:
     """Create panel summarizing outstanding payments."""
 
-    summary = data.get_payment_due_summary(window_days, max_upcoming)
+    summary = service.get_payment_due_summary(window_days, max_upcoming)
 
     if not (summary.overdue or summary.due_soon or summary.upcoming):
         message = Align.center(Text("✅ Nessun pagamento pendente", style="green bold"))
@@ -425,7 +262,7 @@ def create_payment_due_panel(
     table.add_column("Totale", justify="right")
     table.add_column("Stato", style="magenta")
 
-    def _fmt_money(value: Decimal) -> str:
+    def _fmt_money(value) -> str:
         return f"€{value:,.2f}"
 
     def _fmt_days(delta: int) -> str:
@@ -495,7 +332,8 @@ def show_dashboard(refresh: bool = False) -> None:
     Args:
         refresh: If True, will refresh continuously
     """
-    data = DashboardData()
+    db = get_session()
+    service = DashboardService(db)
 
     try:
         # Clear console
@@ -521,7 +359,7 @@ def show_dashboard(refresh: bool = False) -> None:
         )
 
         # Left side: Overview panel
-        layout["left"].update(create_overview_panel(data))
+        layout["left"].update(create_overview_panel(service))
 
         # Right side: Split into top, mid, and bottom
         layout["right"].split_column(
@@ -533,19 +371,19 @@ def show_dashboard(refresh: bool = False) -> None:
 
         # Top right: Status and Monthly Revenue
         layout["top"].split_row(
-            Layout(create_status_table(data)),
-            Layout(create_monthly_revenue_table(data)),
+            Layout(create_status_table(service)),
+            Layout(create_monthly_revenue_table(service)),
         )
 
-        layout["mid"].update(create_payment_due_panel(data))
+        layout["mid"].update(create_payment_due_panel(service))
 
         # Payment stats
-        layout["payment_stats"].update(create_payment_stats_panel(data))
+        layout["payment_stats"].update(create_payment_stats_panel(service))
 
         # Bottom right: Top Clients and Recent Invoices
         layout["bottom"].split_row(
-            Layout(create_top_clients_table(data)),
-            Layout(create_recent_invoices_table(data)),
+            Layout(create_top_clients_table(service)),
+            Layout(create_recent_invoices_table(service)),
         )
 
         # Print the layout
@@ -556,4 +394,4 @@ def show_dashboard(refresh: bool = False) -> None:
         input()
 
     finally:
-        data.close()
+        db.close()
