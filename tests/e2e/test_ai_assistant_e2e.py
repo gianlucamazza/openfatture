@@ -2,7 +2,6 @@
 """Script per testare l'AI assistant end-to-end."""
 
 import asyncio
-from datetime import date
 
 from dotenv import load_dotenv
 
@@ -33,13 +32,15 @@ async def test_ai_assistant() -> None:
         provider = create_provider()
         agent = ChatAgent(provider=provider)
         print(f"   ✅ AI provider creato: {provider.__class__.__name__}")
-        print(f"   ✅ Chat agent inizializzato")
+        print("   ✅ Chat agent inizializzato")
     except Exception as e:
         print(f"   ❌ Errore inizializzazione: {e}")
         return
 
+    from typing import Any
+
     # Test queries
-    test_cases = [
+    test_cases: list[dict[str, Any]] = [
         {
             "name": "Lista fatture recenti",
             "query": "dimmi le ultime fatture emesse",
@@ -57,7 +58,7 @@ async def test_ai_assistant() -> None:
         },
     ]
 
-    results = []
+    results: list[dict[str, Any]] = []
 
     for idx, test_case in enumerate(test_cases, 1):
         print(f"\n{idx + 1}️⃣  Test: {test_case['name']}")
@@ -66,7 +67,7 @@ async def test_ai_assistant() -> None:
         try:
             # Create context
             context = ChatContext(
-                user_input=test_case["query"],
+                user_input=str(test_case["query"]),
                 conversation_history=ConversationHistory(),
                 enable_tools=True,
                 enable_rag=True,
@@ -77,7 +78,7 @@ async def test_ai_assistant() -> None:
 
             # Check for errors
             if "400" in response.content or "Invalid schema" in response.content:
-                print(f"   ❌ ERRORE 400: Schema OpenAI invalido")
+                print("   ❌ ERRORE 400: Schema OpenAI invalido")
                 results.append({"test": test_case["name"], "status": "FAIL", "error": "400"})
                 continue
 
@@ -95,22 +96,26 @@ async def test_ai_assistant() -> None:
             )
 
             if expected_tools_called or tools_used:
-                print(f"   ✅ Tool calling funzionante")
+                print("   ✅ Tool calling funzionante")
                 status = "PASS"
             else:
-                print(f"   ⚠️  Nessun tool chiamato (potrebbe essere intenzionale)")
+                print("   ⚠️  Nessun tool chiamato (potrebbe essere intenzionale)")
                 status = "PARTIAL"
 
             # Print response preview
-            preview = response.content[:200] + "..." if len(response.content) > 200 else response.content
+            preview = (
+                response.content[:200] + "..." if len(response.content) > 200 else response.content
+            )
             print(f"\n   💬 Risposta AI: {preview}")
 
-            results.append({
-                "test": test_case["name"],
-                "status": status,
-                "tools_used": tools_used,
-                "response_length": len(response.content),
-            })
+            results.append(
+                {
+                    "test": test_case["name"],
+                    "status": status,
+                    "tools_used": tools_used,
+                    "response_length": len(response.content),
+                }
+            )
 
         except Exception as e:
             print(f"   ❌ ERRORE: {e}")
@@ -135,7 +140,7 @@ async def test_ai_assistant() -> None:
             "PASS": "✅",
             "PARTIAL": "⚠️ ",
             "FAIL": "❌",
-        }.get(result["status"], "❓")
+        }.get(str(result["status"]), "❓")
 
         print(f"\n{status_icon} {result['test']}")
         if result["status"] == "PASS" or result["status"] == "PARTIAL":

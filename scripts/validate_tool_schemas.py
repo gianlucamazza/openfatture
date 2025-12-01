@@ -2,6 +2,7 @@
 """Script per validare gli schemi di tutti i tool OpenAI."""
 
 import json
+
 from openfatture.ai.tools.registry import get_tool_registry
 
 # Inizializza registry e carica tutti i tool
@@ -40,7 +41,9 @@ for tool in all_tools:
 
             # Deve essere un object con type, properties, required
             if params.get("type") != "object":
-                errors.append(f"❌ {tool_name}: parameters.type deve essere 'object', trovato '{params.get('type')}'")
+                errors.append(
+                    f"❌ {tool_name}: parameters.type deve essere 'object', trovato '{params.get('type')}'"
+                )
 
             if "properties" not in params:
                 errors.append(f"❌ {tool_name}: parameters.properties mancante")
@@ -58,18 +61,26 @@ for tool in all_tools:
                 # Validazione 5: ARRAY deve avere items
                 if param_type == "array":
                     if "items" not in param_schema:
-                        errors.append(f"❌ {tool_name}.{param_name}: Parametro ARRAY senza campo 'items' (BLOCKER per OpenAI)")
+                        errors.append(
+                            f"❌ {tool_name}.{param_name}: Parametro ARRAY senza campo 'items' (BLOCKER per OpenAI)"
+                        )
                     else:
                         # Verifica che items sia un dict valido
                         items = param_schema["items"]
                         if not isinstance(items, dict):
-                            errors.append(f"❌ {tool_name}.{param_name}: Campo 'items' deve essere un object, trovato {type(items)}")
+                            errors.append(
+                                f"❌ {tool_name}.{param_name}: Campo 'items' deve essere un object, trovato {type(items)}"
+                            )
                         elif "type" not in items:
-                            warnings.append(f"⚠️  {tool_name}.{param_name}: items senza campo 'type' (raccomandato)")
+                            warnings.append(
+                                f"⚠️  {tool_name}.{param_name}: items senza campo 'type' (raccomandato)"
+                            )
 
                 # Validazione 6: description raccomandata
                 if "description" not in param_schema:
-                    warnings.append(f"⚠️  {tool_name}.{param_name}: Manca 'description' (raccomandato)")
+                    warnings.append(
+                        f"⚠️  {tool_name}.{param_name}: Manca 'description' (raccomandato)"
+                    )
 
         # Validazione 7: description non vuota
         if not openai_schema.get("description"):
@@ -93,7 +104,7 @@ if errors:
     for error in errors:
         print(f"  {error}")
 else:
-    print(f"\n✅ Nessun errore critico!")
+    print("\n✅ Nessun errore critico!")
 
 if warnings:
     print(f"\n⚠️  WARNING ({len(warnings)}):")
@@ -103,7 +114,7 @@ if warnings:
     if len(warnings) > 10:
         print(f"  ... e altri {len(warnings) - 10} warning")
 else:
-    print(f"\n✅ Nessun warning!")
+    print("\n✅ Nessun warning!")
 
 print("\n" + "=" * 80)
 

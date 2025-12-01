@@ -37,13 +37,11 @@ import asyncio
 import threading
 from collections.abc import Coroutine
 from contextlib import contextmanager
-from typing import Any, TypeVar
+from typing import Any
 
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-T = TypeVar("T")
 
 # Thread-local storage for event loop detection
 _thread_local = threading.local()
@@ -71,7 +69,7 @@ def is_async_context() -> bool:
         return False
 
 
-def run_async(
+def run_async[T](
     coro: Coroutine[Any, Any, T],
     *,
     debug: bool = False,
@@ -150,7 +148,7 @@ def run_async(
         raise
 
 
-def _run_in_thread(coro: Coroutine[Any, Any, T]) -> T:
+def _run_in_thread[T](coro: Coroutine[Any, Any, T]) -> T:
     """Run coroutine in a new thread with its own event loop.
 
     This is used when we detect a nested loop but nest_asyncio is not available.
@@ -178,7 +176,7 @@ def _run_in_thread(coro: Coroutine[Any, Any, T]) -> T:
         return future.result()
 
 
-def run_with_lifespan(
+def run_with_lifespan[T](
     coro: Coroutine[Any, Any, T],
     *,
     debug: bool = False,
@@ -219,7 +217,7 @@ def run_with_lifespan(
     """
     from openfatture.cli.lifespan import run_sync_with_lifespan
 
-    return run_sync_with_lifespan(coro, debug=debug)
+    return run_sync_with_lifespan(coro)
 
 
 @contextmanager
@@ -245,7 +243,7 @@ def async_context():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    def executor(coro: Coroutine[Any, Any, T]) -> T:
+    def executor[T](coro: Coroutine[Any, Any, T]) -> T:
         """Execute coroutine in the context's event loop."""
         return loop.run_until_complete(coro)
 
@@ -302,7 +300,7 @@ class AsyncRunner:
             self._loop.set_debug(self.debug)
         return self._loop
 
-    def run(self, coro: Coroutine[Any, Any, T]) -> T:
+    def run[T](self, coro: Coroutine[Any, Any, T]) -> T:
         """Run a coroutine.
 
         Args:
@@ -343,7 +341,7 @@ class AsyncRunner:
 # Convenience functions for common patterns
 
 
-def run_async_safe(
+def run_async_safe[T](
     coro: Coroutine[Any, Any, T],
     default: T | None = None,
 ) -> T | None:
@@ -378,7 +376,7 @@ def run_async_safe(
         return default
 
 
-def run_async_timeout(
+def run_async_timeout[T](
     coro: Coroutine[Any, Any, T],
     timeout: float,
     default: T | None = None,

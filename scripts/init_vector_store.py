@@ -36,7 +36,7 @@ async def main() -> None:
 
     # Get RAG config
     config = get_rag_config()
-    print(f"\n2️⃣  Configurazione RAG:")
+    print("\n2️⃣  Configurazione RAG:")
     print(f"   • Provider: {config.embedding_provider}")
     print(f"   • Model: {config.embedding_model}")
     print(f"   • Collection: {config.collection_name}")
@@ -44,14 +44,12 @@ async def main() -> None:
     print(f"   • Persist Directory: {config.persist_directory}")
 
     # Create embeddings strategy (requires API key for OpenAI)
-    print(f"\n3️⃣  Creazione embedding strategy...")
+    print("\n3️⃣  Creazione embedding strategy...")
     try:
         # Get API key from environment
         api_key = None
         if config.embedding_provider == "openai":
-            api_key = os.getenv("OPENAI_API_KEY") or os.getenv(
-                "OPENFATTURE_AI_OPENAI_API_KEY"
-            )
+            api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENFATTURE_AI_OPENAI_API_KEY")
             if not api_key:
                 raise ValueError(
                     "OPENAI_API_KEY non trovato. Verifica che sia configurato nel .env"
@@ -65,7 +63,7 @@ async def main() -> None:
         sys.exit(1)
 
     # Initialize vector stores
-    print(f"\n4️⃣  Inizializzazione vector stores...")
+    print("\n4️⃣  Inizializzazione vector stores...")
 
     # Invoice vector store
     invoice_vector_store = VectorStore(config, embeddings)
@@ -77,27 +75,25 @@ async def main() -> None:
     print(f"   ✅ Knowledge vector store: {kb_vector_store.count()} documenti")
 
     # Index invoices
-    print(f"\n5️⃣  Indicizzazione fatture...")
+    print("\n5️⃣  Indicizzazione fatture...")
     invoice_indexer = InvoiceIndexer(invoice_vector_store)
     try:
         invoice_count = await invoice_indexer.index_all_invoices(batch_size=100)
         print(f"   ✅ Fatture indicizzate: {invoice_count}")
-        print(
-            f"   📊 Totale documenti invoice collection: {invoice_vector_store.count()}"
-        )
+        print(f"   📊 Totale documenti invoice collection: {invoice_vector_store.count()}")
     except Exception as e:
         print(f"   ❌ Errore indicizzazione fatture: {e}")
         # Continue with knowledge base even if invoices fail
 
     # Index knowledge base
-    print(f"\n6️⃣  Indicizzazione knowledge base...")
+    print("\n6️⃣  Indicizzazione knowledge base...")
     kb_indexer = KnowledgeIndexer(
         config=kb_config,
         vector_store=kb_vector_store,
         base_path=Path(".").resolve(),
     )
 
-    print(f"   📚 Knowledge sources disponibili:")
+    print("   📚 Knowledge sources disponibili:")
     for source in kb_indexer.sources:
         status = "✅ enabled" if source.enabled else "⏸️  disabled"
         print(f"      • {source.id}: {source.description} ({status})")
