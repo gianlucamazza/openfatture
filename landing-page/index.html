@@ -22,7 +22,20 @@
       <header class="site-header">
         <div class="container">
           <a href="#" class="logo">
-            <span class="logo-icon">⚡</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="logo-icon"
+            >
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
             <span class="logo-text">OpenFatture</span>
           </a>
           <nav class="main-nav">
@@ -41,7 +54,7 @@
       <main>
         <section class="hero">
           <div class="container">
-            <div class="hero-content">
+            <div class="hero-content animate-on-scroll">
               <h1 class="hero-title">
                 Invoice Management <br />
                 <span class="text-gradient">Reimagined for Developers</span>
@@ -62,7 +75,7 @@
                 >
               </div>
             </div>
-            <div class="hero-visual">
+            <div class="hero-visual animate-on-scroll delay-200">
               <div class="terminal-window">
                 <div class="terminal-header">
                   <span class="dot red"></span>
@@ -90,12 +103,58 @@
           </div>
         </section>
 
+        <section id="get-started" class="installation animate-on-scroll">
+          <div class="container">
+            <h2 class="section-title">Get Started in Seconds</h2>
+            <div class="install-box">
+              <div class="install-command">
+                <span class="prompt">$</span> pip install openfatture
+              </div>
+              <button class="copy-btn" aria-label="Copy command">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path
+                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+            <p class="install-note">Requires Python 3.8+</p>
+          </div>
+        </section>
+
         <section id="features" class="features">
           <div class="container">
-            <h2 class="section-title">Why OpenFatture?</h2>
-            <div class="features-grid">
+            <h2 class="section-title">System Capabilities</h2>
+            <div class="features-grid animate-on-scroll">
               <div class="feature-card">
-                <div class="feature-icon">🚀</div>
+                <div class="feature-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polygon
+                      points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+                    ></polygon>
+                  </svg>
+                </div>
                 <h3>Blazing Fast</h3>
                 <p>
                   Built with performance in mind. Manage thousands of invoices
@@ -103,7 +162,29 @@
                 </p>
               </div>
               <div class="feature-card">
-                <div class="feature-icon">🔒</div>
+                <div class="feature-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect
+                      x="3"
+                      y="11"
+                      width="18"
+                      height="11"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
                 <h3>Secure by Default</h3>
                 <p>
                   Your data stays with you. Local-first architecture ensures
@@ -111,7 +192,22 @@
                 </p>
               </div>
               <div class="feature-card">
-                <div class="feature-icon">🛠️</div>
+                <div class="feature-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="4 17 10 11 4 5"></polyline>
+                    <line x1="12" y1="19" x2="20" y2="19"></line>
+                  </svg>
+                </div>
                 <h3>CLI Power</h3>
                 <p>
                   Automate your workflow with our robust Command Line Interface.
@@ -119,7 +215,29 @@
                 </p>
               </div>
               <div class="feature-card">
-                <div class="feature-icon">🎨</div>
+                <div class="feature-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <line x1="4" y1="21" x2="4" y2="14"></line>
+                    <line x1="4" y1="10" x2="4" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12" y2="3"></line>
+                    <line x1="20" y1="21" x2="20" y2="16"></line>
+                    <line x1="20" y1="12" x2="20" y2="3"></line>
+                    <line x1="1" y1="14" x2="7" y2="14"></line>
+                    <line x1="9" y1="8" x2="15" y2="8"></line>
+                    <line x1="17" y1="16" x2="23" y2="16"></line>
+                  </svg>
+                </div>
                 <h3>Customizable</h3>
                 <p>
                   Tailor templates and workflows to match your brand identity
@@ -133,13 +251,31 @@
 
       <footer class="site-footer">
         <div class="container">
-          <div class="footer-content">
-            <p>&copy; 2024 Venere Labs. All rights reserved.</p>
-            <div class="footer-links">
-              <a href="#">Privacy</a>
-              <a href="#">Terms</a>
-              <a href="https://github.com/venerelabs/openfatture">GitHub</a>
+          <div class="footer-grid">
+            <div class="footer-col">
+              <h4>OpenFatture</h4>
+              <p>The professional invoice management solution for developers.</p>
             </div>
+            <div class="footer-col">
+              <h4>Resources</h4>
+              <a href="#">Documentation</a>
+              <a href="#">API Reference</a>
+              <a href="#">CLI Guide</a>
+            </div>
+            <div class="footer-col">
+              <h4>Community</h4>
+              <a href="https://github.com/venerelabs/openfatture">GitHub</a>
+              <a href="#">Discord</a>
+              <a href="#">Twitter</a>
+            </div>
+            <div class="footer-col">
+              <h4>Legal</h4>
+              <a href="#">Privacy Policy</a>
+              <a href="#">Terms of Service</a>
+            </div>
+          </div>
+          <div class="footer-bottom">
+            <p>&copy; 2024 Venere Labs. All rights reserved.</p>
           </div>
         </div>
       </footer>
