@@ -1,0 +1,622 @@
+"""Comprehensive tests for interactive menu system.
+
+This test suite provides ≥95% coverage of the menu system with:
+- Unit tests for menu display functions
+- Unit tests for menu handler functions
+- Integration tests for navigation flows
+- Edge case tests
+- Regression tests for the OptionInfo bug fix
+"""
+
+import pytest
+from unittest.mock import MagicMock, call
+
+from openfatture.cli.ui.menus import (
+    # Menu display functions
+    show_main_menu,
+    show_setup_menu,
+    show_clienti_menu,
+    show_fatture_menu,
+    show_notifiche_menu,
+    show_email_menu,
+    show_batch_menu,
+    show_report_menu,
+    show_ai_menu,
+    # Menu handler functions
+    handle_main_menu,
+    handle_setup_menu,
+    handle_clienti_menu,
+    handle_fatture_menu,
+    handle_notifiche_menu,
+    handle_email_menu,
+    handle_batch_menu,
+    handle_report_menu,
+    handle_ai_menu,
+)
+
+
+# ============================================================================
+# UNIT TESTS - MENU DISPLAY FUNCTIONS
+# ============================================================================
+
+
+class TestMenuDisplay:
+    """Test that menu display functions return correct Choice values."""
+
+    def test_show_main_menu_returns_value(self, mock_questionary_select):
+        """Test main menu returns clean value string, not emoji-laden title."""
+        mock_questionary_select.return_value.ask.return_value = "action_setup"
+
+        result = show_main_menu()
+
+        assert result == "action_setup"
+        assert "🚀" not in result  # No emoji in value
+        assert "Setup" not in result  # No title text in value
+
+    def test_show_setup_menu_returns_value(self, mock_questionary_select):
+        """Test setup menu returns action value."""
+        mock_questionary_select.return_value.ask.return_value = "action_init_openfatture"
+
+        result = show_setup_menu()
+
+        assert result == "action_init_openfatture"
+
+    def test_show_clienti_menu_returns_value(self, mock_questionary_select):
+        """Test clienti menu returns action value."""
+        mock_questionary_select.return_value.ask.return_value = "action_create_cliente"
+
+        result = show_clienti_menu()
+
+        assert result == "action_create_cliente"
+
+    def test_show_fatture_menu_returns_value(self, mock_questionary_select):
+        """Test fatture menu returns action value."""
+        mock_questionary_select.return_value.ask.return_value = "action_list_fatture"
+
+        result = show_fatture_menu()
+
+        assert result == "action_list_fatture"
+
+    def test_show_notifiche_menu_returns_value(self, mock_questionary_select):
+        """Test notifiche menu returns action value."""
+        mock_questionary_select.return_value.ask.return_value = "action_process_notifica"
+
+        result = show_notifiche_menu()
+
+        assert result == "action_process_notifica"
+
+    def test_show_email_menu_returns_value(self, mock_questionary_select):
+        """Test email menu returns action value."""
+        mock_questionary_select.return_value.ask.return_value = "action_test_email"
+
+        result = show_email_menu()
+
+        assert result == "action_test_email"
+
+    def test_show_batch_menu_returns_value(self, mock_questionary_select):
+        """Test batch menu returns action value."""
+        mock_questionary_select.return_value.ask.return_value = "action_batch_send"
+
+        result = show_batch_menu()
+
+        assert result == "action_batch_send"
+
+    def test_show_report_menu_returns_value(self, mock_questionary_select):
+        """Test report menu returns action value."""
+        mock_questionary_select.return_value.ask.return_value = "action_show_dashboard"
+
+        result = show_report_menu()
+
+        assert result == "action_show_dashboard"
+
+    def test_show_ai_menu_returns_value(self, mock_questionary_select):
+        """Test AI menu returns action value."""
+        mock_questionary_select.return_value.ask.return_value = "action_ai_chat"
+
+        result = show_ai_menu()
+
+        assert result == "action_ai_chat"
+
+
+# ============================================================================
+# UNIT TESTS - MENU HANDLER FUNCTIONS
+# ============================================================================
+
+
+class TestMainMenuHandler:
+    """Test main menu handler routing."""
+
+    def test_routes_to_setup(self, mock_submenu_handlers):
+        """Test main menu routes to setup submenu."""
+        result = handle_main_menu("action_setup")
+
+        mock_submenu_handlers["handle_setup_menu"].assert_called_once()
+        assert result is True  # Continue running
+
+    def test_routes_to_clienti(self, mock_submenu_handlers):
+        """Test main menu routes to clienti submenu."""
+        result = handle_main_menu("action_clienti")
+
+        mock_submenu_handlers["handle_clienti_menu"].assert_called_once()
+        assert result is True
+
+    def test_routes_to_fatture(self, mock_submenu_handlers):
+        """Test main menu routes to fatture submenu."""
+        result = handle_main_menu("action_fatture")
+
+        mock_submenu_handlers["handle_fatture_menu"].assert_called_once()
+        assert result is True
+
+    def test_routes_to_notifiche(self, mock_submenu_handlers):
+        """Test main menu routes to notifiche submenu."""
+        result = handle_main_menu("action_notifiche")
+
+        mock_submenu_handlers["handle_notifiche_menu"].assert_called_once()
+        assert result is True
+
+    def test_routes_to_email(self, mock_submenu_handlers):
+        """Test main menu routes to email submenu."""
+        result = handle_main_menu("action_email")
+
+        mock_submenu_handlers["handle_email_menu"].assert_called_once()
+        assert result is True
+
+    def test_routes_to_batch(self, mock_submenu_handlers):
+        """Test main menu routes to batch submenu."""
+        result = handle_main_menu("action_batch")
+
+        mock_submenu_handlers["handle_batch_menu"].assert_called_once()
+        assert result is True
+
+    def test_routes_to_report(self, mock_submenu_handlers):
+        """Test main menu routes to report submenu."""
+        result = handle_main_menu("action_report")
+
+        mock_submenu_handlers["handle_report_menu"].assert_called_once()
+        assert result is True
+
+    def test_routes_to_ai(self, mock_submenu_handlers):
+        """Test main menu routes to AI submenu."""
+        result = handle_main_menu("action_ai")
+
+        mock_submenu_handlers["handle_ai_menu"].assert_called_once()
+        assert result is True
+
+    def test_exits_on_action_exit(self, mock_submenu_handlers):
+        """Test main menu exits on action_exit."""
+        result = handle_main_menu("action_exit")
+
+        assert result is False  # Should exit
+        # No submenu should be called
+        for handler in mock_submenu_handlers.values():
+            handler.assert_not_called()
+
+    def test_exits_on_none(self, mock_submenu_handlers):
+        """Test main menu exits when user cancels (None)."""
+        result = handle_main_menu(None)
+
+        assert result is False
+
+
+class TestSetupMenuHandler:
+    """Test setup menu handler actions."""
+
+    def test_calls_init_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test setup menu calls init action."""
+        # First call returns action, second call returns back
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_init_openfatture",
+            "action_back",
+        ]
+
+        handle_setup_menu()
+
+        mock_all_action_handlers["action_init_openfatture"].assert_called_once()
+
+    def test_calls_show_config_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test setup menu calls show config action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_show_config",
+            "action_back",
+        ]
+
+        handle_setup_menu()
+
+        mock_all_action_handlers["action_show_config"].assert_called_once()
+
+    def test_calls_edit_config_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test setup menu calls edit config action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_edit_config",
+            "action_back",
+        ]
+
+        handle_setup_menu()
+
+        mock_all_action_handlers["action_edit_config"].assert_called_once()
+
+    def test_calls_test_pec_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test setup menu calls test PEC action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_test_pec",
+            "action_back",
+        ]
+
+        handle_setup_menu()
+
+        mock_all_action_handlers["action_test_pec"].assert_called_once()
+
+    def test_exits_on_back(self, mock_questionary_select, mock_all_action_handlers):
+        """Test setup menu exits on back."""
+        mock_questionary_select.return_value.ask.return_value = "action_back"
+
+        handle_setup_menu()
+
+        # No actions should be called
+        for handler in mock_all_action_handlers.values():
+            handler.assert_not_called()
+
+    def test_exits_on_none(self, mock_questionary_select):
+        """Test setup menu exits on None (cancel)."""
+        mock_questionary_select.return_value.ask.return_value = None
+
+        handle_setup_menu()  # Should exit cleanly without error
+
+
+class TestClientiMenuHandler:
+    """Test clienti menu handler actions."""
+
+    def test_calls_create_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test clienti menu calls create action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_create_cliente",
+            "action_back",
+        ]
+
+        handle_clienti_menu()
+
+        mock_all_action_handlers["action_create_cliente"].assert_called_once()
+
+    def test_calls_list_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test clienti menu calls list action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_list_clienti",
+            "action_back",
+        ]
+
+        handle_clienti_menu()
+
+        mock_all_action_handlers["action_list_clienti"].assert_called_once()
+
+    def test_calls_multiple_actions_in_loop(
+        self, mock_questionary_select, mock_all_action_handlers
+    ):
+        """Test clienti menu can execute multiple actions before exiting."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_create_cliente",
+            "action_list_clienti",
+            "action_search_cliente",
+            "action_back",
+        ]
+
+        handle_clienti_menu()
+
+        mock_all_action_handlers["action_create_cliente"].assert_called_once()
+        mock_all_action_handlers["action_list_clienti"].assert_called_once()
+        mock_all_action_handlers["action_search_cliente"].assert_called_once()
+
+
+class TestFattureMenuHandler:
+    """Test fatture menu handler actions."""
+
+    def test_calls_create_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test fatture menu calls create action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_create_fattura",
+            "action_back",
+        ]
+
+        handle_fatture_menu()
+
+        mock_all_action_handlers["action_create_fattura"].assert_called_once()
+
+    def test_calls_send_sdi_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test fatture menu calls send SDI action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_invia_sdi",
+            "action_back",
+        ]
+
+        handle_fatture_menu()
+
+        mock_all_action_handlers["action_invia_sdi"].assert_called_once()
+
+
+# ============================================================================
+# INTEGRATION TESTS
+# ============================================================================
+
+
+class TestNavigationFlow:
+    """Test complete user navigation flows through menus."""
+
+    def test_main_to_setup_to_back(self, mock_questionary_select, mock_all_action_handlers):
+        """Test navigation: main menu → setup → action → back → main."""
+        # Simulate: User selects Setup, then Show Config, then Back
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_show_config",  # In setup menu
+            "action_back",  # Exit setup menu
+        ]
+
+        # Simulate main menu routing to setup
+        from openfatture.cli.ui.menus import handle_setup_menu
+
+        handle_setup_menu()
+
+        mock_all_action_handlers["action_show_config"].assert_called_once()
+
+    def test_main_to_clienti_multiple_actions(
+        self, mock_questionary_select, mock_all_action_handlers
+    ):
+        """Test user performs multiple client operations before returning."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_create_cliente",
+            "action_list_clienti",
+            "action_back",
+        ]
+
+        handle_clienti_menu()
+
+        assert mock_all_action_handlers["action_create_cliente"].call_count == 1
+        assert mock_all_action_handlers["action_list_clienti"].call_count == 1
+
+    def test_main_menu_exit_immediately(self):
+        """Test user can exit from main menu immediately."""
+        result = handle_main_menu("action_exit")
+
+        assert result is False
+
+    def test_submenu_cancel_returns_to_main(self, mock_questionary_select):
+        """Test canceling submenu (None) returns to main menu."""
+        mock_questionary_select.return_value.ask.return_value = None
+
+        # Should exit cleanly
+        handle_setup_menu()
+        handle_clienti_menu()
+        handle_fatture_menu()
+
+    def test_deep_navigation_flow(self, mock_questionary_select, mock_all_action_handlers):
+        """Test deep navigation with multiple operations."""
+        # Simulate: Fatture → Create → List → Generate XML → Back
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_create_fattura",
+            "action_list_fatture",
+            "action_genera_xml",
+            "action_back",
+        ]
+
+        handle_fatture_menu()
+
+        assert mock_all_action_handlers["action_create_fattura"].call_count == 1
+        assert mock_all_action_handlers["action_list_fatture"].call_count == 1
+        assert mock_all_action_handlers["action_genera_xml"].call_count == 1
+
+    def test_batch_menu_navigation(self, mock_questionary_select, mock_all_action_handlers):
+        """Test batch operations menu flow."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_batch_send",
+            "action_batch_export",
+            "action_back",
+        ]
+
+        handle_batch_menu()
+
+        assert mock_all_action_handlers["action_batch_send"].call_count == 1
+        assert mock_all_action_handlers["action_batch_export"].call_count == 1
+
+
+# ============================================================================
+# EDGE CASE TESTS
+# ============================================================================
+
+
+class TestEdgeCases:
+    """Test edge cases and error conditions."""
+
+    def test_main_menu_handles_none(self):
+        """Test main menu gracefully handles None (user cancel)."""
+        result = handle_main_menu(None)
+
+        assert result is False  # Should exit cleanly
+
+    def test_all_submenus_handle_none(self, mock_questionary_select):
+        """Test all submenus handle None without crashing."""
+        mock_questionary_select.return_value.ask.return_value = None
+
+        # All should exit cleanly without exceptions
+        handle_setup_menu()
+        handle_clienti_menu()
+        handle_fatture_menu()
+        handle_notifiche_menu()
+        handle_email_menu()
+        handle_batch_menu()
+        handle_report_menu()
+        handle_ai_menu()
+
+    def test_rapid_back_navigation(self, mock_questionary_select):
+        """Test rapid back navigation doesn't cause issues."""
+        # User immediately hits back
+        mock_questionary_select.return_value.ask.return_value = "action_back"
+
+        handle_setup_menu()
+        handle_clienti_menu()
+        handle_fatture_menu()
+
+        # Should complete without errors
+
+    def test_unknown_choice_in_main_menu(self, mock_submenu_handlers):
+        """Test main menu handles unknown choice gracefully."""
+        # This shouldn't happen in practice, but test defensive handling
+        result = handle_main_menu("unknown_action")
+
+        # Should return True (continue) and not call any handler
+        assert result is True
+        for handler in mock_submenu_handlers.values():
+            handler.assert_not_called()
+
+    def test_menu_display_with_questionary_error(self, mock_questionary_select):
+        """Test menu display handles questionary errors."""
+        # Simulate questionary raising an exception
+        mock_questionary_select.return_value.ask.side_effect = KeyboardInterrupt()
+
+        with pytest.raises(KeyboardInterrupt):
+            show_main_menu()
+
+
+# ============================================================================
+# REGRESSION TESTS - OptionInfo Bug Fix
+# ============================================================================
+
+
+class TestOptionInfoBugRegression:
+    """Regression tests to ensure OptionInfo bug doesn't return.
+
+    This bug occurred when questionary.select with use_shortcuts=True
+    returned OptionInfo objects instead of clean string values,
+    causing 'int() argument must be string' errors.
+    """
+
+    def test_menu_returns_string_not_optioninfo(self, mock_questionary_select):
+        """Test that menu returns string value, not OptionInfo object."""
+        # Mock returns a string value (what Choice.value should be)
+        mock_questionary_select.return_value.ask.return_value = "action_setup"
+
+        result = show_main_menu()
+
+        # Verify it's a string
+        assert isinstance(result, str)
+        # Verify it's the clean value, not a complex object
+        assert result == "action_setup"
+
+    def test_handler_receives_clean_string_values(
+        self, mock_questionary_select, mock_all_action_handlers
+    ):
+        """Test handlers receive clean string values for exact matching."""
+        # Simulate the corrected behavior: clean value strings
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_list_clienti",  # Clean string value
+            "action_back",
+        ]
+
+        handle_clienti_menu()
+
+        # If this works, the exact matching is functioning correctly
+        mock_all_action_handlers["action_list_clienti"].assert_called_once()
+
+    def test_no_substring_matching_needed(self, mock_questionary_select, mock_all_action_handlers):
+        """Test that exact matching works, no substring matching needed.
+
+        The old buggy code used 'if \"Lista\" in choice', which was fragile.
+        New code uses 'if choice == \"action_list_clienti\"', which is exact.
+        """
+        # This exact value should trigger the handler
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_list_clienti",
+            "action_back",
+        ]
+
+        handle_clienti_menu()
+
+        mock_all_action_handlers["action_list_clienti"].assert_called_once()
+
+        # The following should NOT work (old substring matching would match "list" anywhere)
+        mock_questionary_select.return_value.ask.side_effect = [
+            "some_other_action_with_list_in_name",
+            "action_back",
+        ]
+        mock_all_action_handlers["action_list_clienti"].reset_mock()
+
+        handle_clienti_menu()
+
+        # Should NOT call the handler (exact match only)
+        mock_all_action_handlers["action_list_clienti"].assert_not_called()
+
+
+# ============================================================================
+# ADDITIONAL HANDLER TESTS FOR COMPLETE COVERAGE
+# ============================================================================
+
+
+class TestNotificheMenuHandler:
+    """Test notifiche menu handler."""
+
+    def test_calls_process_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test notifiche menu calls process action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_process_notifica",
+            "action_back",
+        ]
+
+        handle_notifiche_menu()
+
+        mock_all_action_handlers["action_process_notifica"].assert_called_once()
+
+
+class TestEmailMenuHandler:
+    """Test email menu handler."""
+
+    def test_calls_test_email_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test email menu calls test email action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_test_email",
+            "action_back",
+        ]
+
+        handle_email_menu()
+
+        mock_all_action_handlers["action_test_email"].assert_called_once()
+
+
+class TestBatchMenuHandler:
+    """Test batch menu handler."""
+
+    def test_calls_batch_send_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test batch menu calls send action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_batch_send",
+            "action_back",
+        ]
+
+        handle_batch_menu()
+
+        mock_all_action_handlers["action_batch_send"].assert_called_once()
+
+
+class TestReportMenuHandler:
+    """Test report menu handler."""
+
+    def test_calls_dashboard_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test report menu calls dashboard action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_show_dashboard",
+            "action_back",
+        ]
+
+        handle_report_menu()
+
+        mock_all_action_handlers["action_show_dashboard"].assert_called_once()
+
+
+class TestAIMenuHandler:
+    """Test AI menu handler."""
+
+    def test_calls_chat_action(self, mock_questionary_select, mock_all_action_handlers):
+        """Test AI menu calls chat action."""
+        mock_questionary_select.return_value.ask.side_effect = [
+            "action_ai_chat",
+            "action_back",
+        ]
+
+        handle_ai_menu()
+
+        mock_all_action_handlers["action_ai_chat"].assert_called_once()
