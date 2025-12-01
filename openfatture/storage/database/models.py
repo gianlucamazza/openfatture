@@ -239,6 +239,9 @@ class Prodotto(IntPKMixin, Base):
     # Note
     note: Mapped[str | None] = mapped_column(Text)
 
+    # Relationships
+    righe: Mapped[list[RigaFattura]] = relationship("RigaFattura", back_populates="prodotto")
+
     def __repr__(self) -> str:
         return f"<Prodotto(id={self.id}, codice='{self.codice}', descrizione='{self.descrizione}')>"
 
@@ -320,6 +323,11 @@ class RigaFattura(IntPKMixin, Base):
 
     fattura_id: Mapped[int] = mapped_column(ForeignKey("fatture.id"), nullable=False)
     fattura: Mapped[Fattura] = relationship(back_populates="righe")
+
+    prodotto_id: Mapped[int | None] = mapped_column(
+        ForeignKey("prodotti.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    prodotto: Mapped[Prodotto | None] = relationship("Prodotto", back_populates="righe")
 
     # Riga
     numero_riga: Mapped[int] = mapped_column(Integer, nullable=False)
