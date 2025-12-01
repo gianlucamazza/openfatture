@@ -4,13 +4,15 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from openfatture.storage.database.models import FeedbackType, PredictionType
 
 
 class FeedbackCreate(BaseModel):
     """Create user feedback."""
+
+    model_config = ConfigDict(use_enum_values=False)
 
     session_id: str | None = None
     message_id: str | None = None
@@ -27,12 +29,11 @@ class FeedbackCreate(BaseModel):
 
     # Removed automatic validation - handled in application code
 
-    class Config:
-        use_enum_values = False
-
 
 class FeedbackResponse(BaseModel):
     """User feedback response."""
+
+    model_config = ConfigDict(from_attributes=True, use_enum_values=False)
 
     id: int
     session_id: str | None
@@ -47,13 +48,11 @@ class FeedbackResponse(BaseModel):
     metadata: dict[str, Any] | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-        use_enum_values = False
-
 
 class ModelPredictionFeedbackCreate(BaseModel):
     """Create ML prediction feedback."""
+
+    model_config = ConfigDict(use_enum_values=False)
 
     prediction_type: PredictionType
     entity_type: str = Field(..., description="Entity type (invoice, client, etc.)")
@@ -65,12 +64,11 @@ class ModelPredictionFeedbackCreate(BaseModel):
     user_comment: str | None = None
     model_version: str | None = None
 
-    class Config:
-        use_enum_values = False
-
 
 class ModelPredictionFeedbackResponse(BaseModel):
     """ML prediction feedback response."""
+
+    model_config = ConfigDict(from_attributes=True, use_enum_values=False)
 
     id: int
     prediction_type: PredictionType
@@ -85,10 +83,6 @@ class ModelPredictionFeedbackResponse(BaseModel):
     created_at: datetime
     processed: bool
     processed_at: datetime | None
-
-    class Config:
-        from_attributes = True
-        use_enum_values = False
 
 
 class FeedbackStats(BaseModel):
