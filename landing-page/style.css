@@ -260,7 +260,7 @@ body {
 
 /* Features Section */
 .features {
-  padding: 6rem 0;
+  padding: 8rem 0;
   background-color: var(--color-surface);
 }
 
@@ -273,7 +273,7 @@ body {
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2rem;
+  gap: 3rem;
 }
 
 .feature-card {
@@ -281,7 +281,7 @@ body {
   backdrop-filter: blur(5px);
   padding: 2rem;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   transition: all 0.2s ease;
 }
 
@@ -445,7 +445,7 @@ body {
 
 /* AI Core Section */
 .ai-core {
-  padding: 8rem 0;
+  padding: 10rem 0;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
   position: relative;
   overflow: hidden;
@@ -496,7 +496,7 @@ body {
 .ai-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
+  gap: 3rem;
   position: relative;
   z-index: 1;
 }
@@ -504,7 +504,7 @@ body {
 .ai-card {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 12px;
   padding: 2rem;
   transition: all 0.3s ease;
@@ -541,7 +541,7 @@ body {
 
 /* Advanced Integrations Section */
 .integrations {
-  padding: 6rem 0;
+  padding: 8rem 0;
   background-color: var(--color-bg);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -549,13 +549,13 @@ body {
 .integrations-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+  gap: 3rem;
   margin-top: 3rem;
 }
 
 .integration-card {
   padding: 2rem;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   transition: all 0.2s ease;
   background-color: rgba(255, 255, 255, 0.01);
