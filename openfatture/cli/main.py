@@ -104,6 +104,13 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+def is_interactive() -> bool:
+    """Check if the session is interactive."""
+    import sys
+
+    return sys.stdin.isatty()
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
@@ -113,7 +120,7 @@ def main(
         "-v",
         callback=version_callback,
         is_eager=True,
-        help="Show version and exit",
+        help="Show the version and exit.",
     ),
     interactive_mode: bool = typer.Option(
         False,
@@ -134,6 +141,23 @@ def main(
     A modern, CLI-first tool for Italian freelancers to create and manage
     FatturaPA electronic invoices with AI-powered workflows.
     """
+    # Check for configuration existence (First Run)
+    from openfatture.utils.config import dirs
+
+    config_path = dirs.user_config_dir / "config.toml"
+
+    if not config_path.exists() and not ctx.invoked_subcommand == "init":
+        # Only run wizard if not explicitly running 'init' (which might be used for manual setup)
+        # and if we are in an interactive terminal
+        if is_interactive():
+            from .wizard import run_setup_wizard
+
+            run_setup_wizard()
+            # Reload settings after wizard
+            from openfatture.utils.config import reload_settings
+
+            reload_settings()
+
     # Initialize dynamic logging configuration
     settings = get_settings()
     configure_dynamic_logging(settings.debug_config)

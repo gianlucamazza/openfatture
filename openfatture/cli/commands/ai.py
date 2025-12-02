@@ -13,8 +13,6 @@ from rich.json import JSON
 from rich.panel import Panel
 from rich.table import Table
 
-from openfatture.utils.async_bridge import run_async
-
 from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.agents.compliance import ComplianceChecker
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
@@ -29,6 +27,7 @@ from openfatture.ai.rag.knowledge_indexer import KnowledgeIndexer
 from openfatture.ai.voice import VoiceAssistant, create_voice_provider
 from openfatture.cli.lifespan import get_event_bus, run_sync_with_lifespan
 from openfatture.core.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
+from openfatture.utils.async_bridge import run_async
 from openfatture.utils.config import get_settings
 from openfatture.utils.logging import get_logger
 
@@ -407,7 +406,6 @@ def retrain_trigger(
     console.print("\n[bold blue]🔄 Manual Model Retraining[/bold blue]\n")
 
     # Run async retraining
-    import asyncio
 
     with console.status("[bold green]Triggering retraining..."):
         result = run_async(scheduler.trigger_manual_retraining("cash_flow", force=force))
@@ -719,7 +717,6 @@ def auto_update_start() -> None:
     Example:
         openfatture ai auto-update start
     """
-    import asyncio
 
     from openfatture.ai.rag.auto_update import get_auto_indexing_service
 
@@ -743,7 +740,6 @@ def auto_update_stop() -> None:
     Example:
         openfatture ai auto-update stop
     """
-    import asyncio
 
     from openfatture.ai.rag.auto_update import get_auto_indexing_service
 
@@ -822,7 +818,6 @@ def auto_update_manual(
         openfatture ai auto-update manual invoice 1 2 3
         openfatture ai auto-update manual client 123
     """
-    import asyncio
 
     from openfatture.ai.rag.auto_update import get_auto_indexing_service
 
@@ -2267,9 +2262,11 @@ async def _run_chat(
                     if stream:
                         console.print("[dim]Assistant:[/dim] ", end="")
                         full_response = ""
-                        async for chunk in agent.execute_stream(context):
-                            console.print(chunk, end="")
-                            full_response += chunk
+                        async for event in agent.execute_stream(context):
+                            if event.is_content():
+                                text = event.get_text()
+                                console.print(text, end="")
+                                full_response += text
                         console.print()  # New line
                         # Add assistant response to history
                         conversation_history.append({"role": "assistant", "content": full_response})

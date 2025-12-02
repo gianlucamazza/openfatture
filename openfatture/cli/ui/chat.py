@@ -1,17 +1,19 @@
 """Interactive chat UI for AI assistant."""
 
-import asyncio
 from typing import cast
 
 import questionary
 from rich.console import Console
 from rich.live import Live
+from rich.panel import Panel
+from rich.table import Table
 
 from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.context.enrichment import ContextManager
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.message import Message
 from openfatture.ai.feedback import FeedbackService
+from openfatture.ai.feedback.models import FeedbackCreate, FeedbackType
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.session import ChatSession, SessionManager
@@ -56,7 +58,7 @@ class InteractiveChatUI:
         """
         # Initialize renderer
         self.renderer = ChatRenderer(console)
-        
+
         # Initialize context manager
         self.context_manager = ContextManager()
 
@@ -115,6 +117,7 @@ class InteractiveChatUI:
 
     def _create_mock_session(self):
         """Create a minimal mock session."""
+
         class MockMetadata:
             def __init__(self):
                 self.message_count = 0
@@ -157,7 +160,7 @@ class InteractiveChatUI:
             # Show welcome
             self.renderer.show_welcome(
                 self.provider.provider_name if self.provider else "N/A",
-                self.provider.model if self.provider else "N/A"
+                self.provider.model if self.provider else "N/A",
             )
 
             # Chat loop
@@ -265,11 +268,11 @@ class InteractiveChatUI:
         # Check if streaming is enabled
         if self.agent is None:
             raise RuntimeError("Agent not initialized. Call _initialize_agent() first.")
-        
+
         if self.agent.config.streaming_enabled:
             # Start Live display with thinking message
             thinking_content = self.renderer.create_thinking_panel()
-            
+
             with Live(thinking_content, console=console, refresh_per_second=4) as live:
                 # Build context while showing thinking
                 context = await self._build_context(user_input)
@@ -307,20 +310,22 @@ class InteractiveChatUI:
                     content_acc.add(chunk)
 
                     rendered_content = content_acc.get_text()
-                    live.update(self.renderer.create_live_content(
-                        rendered_content, 
-                        progress_acc.get_chunks()
-                    ))
+                    live.update(
+                        self.renderer.create_live_content(
+                            rendered_content, progress_acc.get_chunks()
+                        )
+                    )
 
                 elif event.type == StreamEventType.TOOL_START:
                     # Tool started - show progress
                     if isinstance(event.data, dict):
                         tool_name = event.data.get("tool_name", "unknown")
                         progress_acc.add(f"🔧 Avvio {tool_name}...")
-                        live.update(self.renderer.create_live_content(
-                            content_acc.get_text(), 
-                            progress_acc.get_chunks()
-                        ))
+                        live.update(
+                            self.renderer.create_live_content(
+                                content_acc.get_text(), progress_acc.get_chunks()
+                            )
+                        )
 
                 elif event.type == StreamEventType.TOOL_RESULT:
                     # Tool succeeded - show result
@@ -331,10 +336,11 @@ class InteractiveChatUI:
                         if len(result) > 200:
                             result = result[:200] + "..."
                         progress_acc.add(f"✅ {tool_name}: {result}")
-                        live.update(self.renderer.create_live_content(
-                            content_acc.get_text(), 
-                            progress_acc.get_chunks()
-                        ))
+                        live.update(
+                            self.renderer.create_live_content(
+                                content_acc.get_text(), progress_acc.get_chunks()
+                            )
+                        )
 
                 elif event.type == StreamEventType.TOOL_ERROR:
                     # Tool failed - show error
@@ -342,10 +348,11 @@ class InteractiveChatUI:
                         tool_name = event.data.get("tool_name", "unknown")
                         error = event.data.get("error", "Errore sconosciuto")
                         progress_acc.add(f"❌ {tool_name}: {error}")
-                        live.update(self.renderer.create_live_content(
-                            content_acc.get_text(), 
-                            progress_acc.get_chunks()
-                        ))
+                        live.update(
+                            self.renderer.create_live_content(
+                                content_acc.get_text(), progress_acc.get_chunks()
+                            )
+                        )
 
                 elif event.type == StreamEventType.METRICS:
                     # Metrics event - show summary
@@ -356,22 +363,24 @@ class InteractiveChatUI:
                         progress_acc.add(
                             f"📊 Completato: {successful} OK, {failed} errori ({exec_time:.1f}s)"
                         )
-                        live.update(self.renderer.create_live_content(
-                            content_acc.get_text(), 
-                            progress_acc.get_chunks()
-                        ))
+                        live.update(
+                            self.renderer.create_live_content(
+                                content_acc.get_text(), progress_acc.get_chunks()
+                            )
+                        )
 
             # Final display in proper bubble format via Live
             if len(content_acc) > 0:
                 final_content = content_acc.get_text()
                 # Use renderer to create final panel
+                from datetime import datetime
+
                 from rich.markdown import Markdown
                 from rich.panel import Panel
-                from datetime import datetime
-                
+
                 timestamp = datetime.now().strftime("%H:%M")
                 md = Markdown(final_content)
-                
+
                 live.update(
                     Panel(
                         md,
@@ -499,7 +508,9 @@ class InteractiveChatUI:
         cleaned_input = user_input.strip()
         if self.agent and self.agent.config.rag_enabled and len(cleaned_input) >= 4:
             try:
-                context = cast(ChatContext, await self.context_manager.enrich_with_rag(context, cleaned_input))
+                context = cast(
+                    ChatContext, await self.context_manager.enrich_with_rag(context, cleaned_input)
+                )
             except Exception as exc:  # pragma: no cover - defensive logging
                 logger.warning(
                     "rag_enrichment_skipped",
@@ -536,6 +547,7 @@ class InteractiveChatUI:
                 # Display expansion preview
                 console.print("\n[dim]🔧 Custom command expanded:[/dim]")
                 from rich.panel import Panel
+
                 preview = expanded[:200] + "..." if len(expanded) > 200 else expanded
                 console.print(Panel(preview, border_style="blue", padding=(0, 1)))
                 console.print()
@@ -588,6 +600,7 @@ Use /custom to see available custom commands
 """
 
         from rich.panel import Panel
+
         console.print(Panel(help_text, title="Help", border_style="blue"))
         return None
 
@@ -616,6 +629,7 @@ Use /custom to see available custom commands
     async def _export_session(self) -> None:
         """Export session to file."""
         # Export
+        format_type = "markdown"  # Default format
         output_path = self.session_manager.export_session(
             self.session.id,
             format=format_type,
@@ -711,8 +725,6 @@ Use /custom to see available custom commands
                 logger.debug("session_auto_saved", session_id=self.session.id)
         except Exception as e:
             logger.warning("session_auto_save_failed", error=str(e))
-
-
 
     async def _submit_feedback(self) -> None:
         """Submit detailed feedback via command."""

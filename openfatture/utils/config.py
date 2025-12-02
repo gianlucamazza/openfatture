@@ -2,8 +2,17 @@
 
 from pathlib import Path
 
+from platformdirs import PlatformDirs
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
+
+# Initialize platform directories
+dirs = PlatformDirs("openfatture", "venerelabs")
 
 
 class DebugConfig(BaseSettings):
@@ -74,7 +83,7 @@ class DebugConfig(BaseSettings):
         description="Enable logging to file in addition to console",
     )
     log_file_path: Path = Field(
-        default=Path.home() / ".openfatture" / "logs" / "debug.log",
+        default=Path(dirs.user_log_dir) / "debug.log",
         description="Path to debug log file",
     )
     log_file_max_size_mb: int = Field(
@@ -112,7 +121,25 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        toml_file=Path(dirs.user_config_dir) / "config.toml",
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            init_settings,
+            TomlConfigSettingsSource(settings_cls),
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+        )
 
     # Application
     app_name: str = "OpenFatture"
@@ -126,9 +153,9 @@ class Settings(BaseSettings):
     )
 
     # Paths
-    data_dir: Path = Field(default=Path.home() / ".openfatture" / "data")
-    archivio_dir: Path = Field(default=Path.home() / ".openfatture" / "archivio")
-    certificates_dir: Path = Field(default=Path.home() / ".openfatture" / "certificates")
+    data_dir: Path = Field(default=Path(dirs.user_data_dir))
+    archivio_dir: Path = Field(default=Path(dirs.user_data_dir) / "archivio")
+    certificates_dir: Path = Field(default=Path(dirs.user_config_dir) / "certificates")
 
     # Cedente Prestatore (Your company data)
     cedente_denominazione: str = Field(default="", description="Your company name")
@@ -220,7 +247,7 @@ class Settings(BaseSettings):
         description="Enable AI chat assistant",
     )
     ai_chat_sessions_dir: Path = Field(
-        default=Path.home() / ".openfatture" / "ai" / "sessions",
+        default=Path(dirs.user_data_dir) / "ai" / "sessions",
         description="Directory for chat session storage",
     )
     ai_chat_auto_save: bool = Field(
@@ -305,7 +332,7 @@ class Settings(BaseSettings):
     )
 
     # Vector Store (for AI)
-    vector_store_path: Path = Field(default=Path.home() / ".openfatture" / "vector_store")
+    vector_store_path: Path = Field(default=Path(dirs.user_data_dir) / "vector_store")
 
     # Payment module
     payment_event_listeners: str | None = Field(
@@ -437,7 +464,7 @@ class Settings(BaseSettings):
     # Plugin system configuration
     plugins_enabled: bool = Field(default=True, description="Enable plugin system")
     plugins_dir: Path = Field(
-        default=Path.home() / ".openfatture" / "plugins", description="Directory for user plugins"
+        default=Path(dirs.user_data_dir) / "plugins", description="Directory for user plugins"
     )
     plugins_auto_discover: bool = Field(
         default=True, description="Automatically discover and load plugins on startup"

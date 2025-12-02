@@ -18,6 +18,7 @@ from openfatture.cli.ui.helpers import (
 )
 from openfatture.cli.ui.menu_builder import MenuBuilder
 from openfatture.cli.ui.progress import process_with_progress
+from openfatture.utils.async_bridge import run_async
 from openfatture.utils.logging import get_logger
 
 console = Console()
@@ -93,13 +94,13 @@ def handle_main_menu(choice: str) -> bool:
 
 def handle_setup_menu() -> None:
     """Handle setup menu loop."""
-    MenuBuilder("Setup & Configurazione") \
-        .add_option("🚀 Inizializza OpenFatture", "action_init_openfatture", action_init_openfatture) \
-        .add_option("👁️  Mostra configurazione", "action_show_config", action_show_config) \
-        .add_option("✏️  Modifica configurazione", "action_edit_config", action_edit_config) \
-        .add_option("📧 Test PEC", "action_test_pec", action_test_pec) \
-        .add_back_option() \
-        .run()
+    MenuBuilder("Setup & Configurazione").add_option(
+        "🚀 Inizializza OpenFatture", "action_init_openfatture", action_init_openfatture
+    ).add_option("👁️  Mostra configurazione", "action_show_config", action_show_config).add_option(
+        "✏️  Modifica configurazione", "action_edit_config", action_edit_config
+    ).add_option(
+        "📧 Test PEC", "action_test_pec", action_test_pec
+    ).add_back_option().run()
 
 
 # ============================================================================
@@ -109,14 +110,15 @@ def handle_setup_menu() -> None:
 
 def handle_clienti_menu() -> None:
     """Handle clients menu loop."""
-    MenuBuilder("Gestione Clienti") \
-        .add_option("➕ Crea nuovo cliente", "action_create_cliente", action_create_cliente) \
-        .add_option("📋 Lista tutti i clienti", "action_list_clienti", action_list_clienti) \
-        .add_option("🔍 Cerca cliente", "action_search_cliente", action_search_cliente) \
-        .add_option("✏️  Modifica cliente", "action_edit_cliente", action_edit_cliente) \
-        .add_option("🗑️  Elimina cliente", "action_delete_cliente", action_delete_cliente) \
-        .add_back_option() \
-        .run()
+    MenuBuilder("Gestione Clienti").add_option(
+        "➕ Crea nuovo cliente", "action_create_cliente", action_create_cliente
+    ).add_option("📋 Lista tutti i clienti", "action_list_clienti", action_list_clienti).add_option(
+        "🔍 Cerca cliente", "action_search_cliente", action_search_cliente
+    ).add_option(
+        "✏️  Modifica cliente", "action_edit_cliente", action_edit_cliente
+    ).add_option(
+        "🗑️  Elimina cliente", "action_delete_cliente", action_delete_cliente
+    ).add_back_option().run()
 
 
 # ============================================================================
@@ -126,16 +128,19 @@ def handle_clienti_menu() -> None:
 
 def handle_fatture_menu() -> None:
     """Handle invoices menu loop."""
-    MenuBuilder("Gestione Fatture") \
-        .add_option("➕ Crea nuova fattura (wizard)", "action_create_fattura", action_create_fattura) \
-        .add_option("📋 Lista fatture", "action_list_fatture", action_list_fatture) \
-        .add_option("🔍 Cerca fattura", "action_search_fattura", action_search_fattura) \
-        .add_option("👁️  Mostra dettagli fattura", "action_show_fattura", action_show_fattura) \
-        .add_option("📄 Genera XML", "action_genera_xml", action_genera_xml) \
-        .add_option("📤 Invia a SDI", "action_invia_sdi", action_invia_sdi) \
-        .add_option("🗑️  Elimina fattura", "action_delete_fattura", action_delete_fattura) \
-        .add_back_option() \
-        .run()
+    MenuBuilder("Gestione Fatture").add_option(
+        "➕ Crea nuova fattura (wizard)", "action_create_fattura", action_create_fattura
+    ).add_option("📋 Lista fatture", "action_list_fatture", action_list_fatture).add_option(
+        "🔍 Cerca fattura", "action_search_fattura", action_search_fattura
+    ).add_option(
+        "👁️  Mostra dettagli fattura", "action_show_fattura", action_show_fattura
+    ).add_option(
+        "📄 Genera XML", "action_genera_xml", action_genera_xml
+    ).add_option(
+        "📤 Invia a SDI", "action_invia_sdi", action_invia_sdi
+    ).add_option(
+        "🗑️  Elimina fattura", "action_delete_fattura", action_delete_fattura
+    ).add_back_option().run()
 
 
 # ============================================================================
@@ -145,55 +150,61 @@ def handle_fatture_menu() -> None:
 
 def handle_notifiche_menu() -> None:
     """Handle notifications menu loop."""
-    MenuBuilder("Notifiche SDI") \
-        .add_option("📬 Processa notifica da file", "action_process_notifica", action_process_notifica) \
-        .add_option("📋 Lista tutte le notifiche", "action_list_notifiche", action_list_notifiche) \
-        .add_option("👁️  Mostra dettagli notifica", "action_show_notifica", action_show_notifica) \
-        .add_back_option() \
-        .run()
+    MenuBuilder("Notifiche SDI").add_option(
+        "📬 Processa notifica da file", "action_process_notifica", action_process_notifica
+    ).add_option(
+        "📋 Lista tutte le notifiche", "action_list_notifiche", action_list_notifiche
+    ).add_option(
+        "👁️  Mostra dettagli notifica", "action_show_notifica", action_show_notifica
+    ).add_back_option().run()
 
 
 def handle_email_menu() -> None:
     """Handle email menu loop."""
-    MenuBuilder("Email & Templates") \
-        .add_option("📧 Invia email di test", "action_test_email", action_test_email) \
-        .add_option("👁️  Anteprima template", "action_preview_template", action_preview_template) \
-        .add_option("ℹ️  Info templates", "action_email_info", action_email_info) \
-        .add_back_option() \
-        .run()
+    MenuBuilder("Email & Templates").add_option(
+        "📧 Invia email di test", "action_test_email", action_test_email
+    ).add_option(
+        "👁️  Anteprima template", "action_preview_template", action_preview_template
+    ).add_option(
+        "ℹ️  Info templates", "action_email_info", action_email_info
+    ).add_back_option().run()
 
 
 def handle_batch_menu() -> None:
     """Handle batch operations menu loop."""
-    MenuBuilder("Operazioni Batch") \
-        .add_option("📤 Invia multiple fatture a SDI", "action_batch_send", action_batch_send) \
-        .add_option("📥 Importa fatture da CSV", "action_batch_import", action_batch_import) \
-        .add_option("💾 Esporta fatture selezionate", "action_batch_export", action_batch_export) \
-        .add_option("🗑️  Elimina fatture multiple", "action_batch_delete", action_batch_delete) \
-        .add_option("📜 Storico operazioni", "action_batch_history", action_batch_history) \
-        .add_back_option() \
-        .run()
+    MenuBuilder("Operazioni Batch").add_option(
+        "📤 Invia multiple fatture a SDI", "action_batch_send", action_batch_send
+    ).add_option(
+        "📥 Importa fatture da CSV", "action_batch_import", action_batch_import
+    ).add_option(
+        "💾 Esporta fatture selezionate", "action_batch_export", action_batch_export
+    ).add_option(
+        "🗑️  Elimina fatture multiple", "action_batch_delete", action_batch_delete
+    ).add_option(
+        "📜 Storico operazioni", "action_batch_history", action_batch_history
+    ).add_back_option().run()
 
 
 def handle_report_menu() -> None:
     """Handle reports menu loop."""
-    MenuBuilder("Report & Statistiche") \
-        .add_option("📊 Dashboard Interattiva", "action_show_dashboard", action_show_dashboard) \
-        .add_option("📈 Report mensile", "action_report_mensile", action_report_mensile) \
-        .add_option("📅 Report annuale", "action_report_annuale", action_report_annuale) \
-        .add_option("👤 Report per cliente", "action_report_cliente", action_report_cliente) \
-        .add_option("📋 Export Excel", "action_export_excel", action_export_excel) \
-        .add_back_option() \
-        .run()
+    MenuBuilder("Report & Statistiche").add_option(
+        "📊 Dashboard Interattiva", "action_show_dashboard", action_show_dashboard
+    ).add_option("📈 Report mensile", "action_report_mensile", action_report_mensile).add_option(
+        "📅 Report annuale", "action_report_annuale", action_report_annuale
+    ).add_option(
+        "👤 Report per cliente", "action_report_cliente", action_report_cliente
+    ).add_option(
+        "📋 Export Excel", "action_export_excel", action_export_excel
+    ).add_back_option().run()
 
 
 def handle_ai_menu() -> None:
     """Handle AI menu loop."""
-    MenuBuilder("AI Assistant") \
-        .add_option("💬 Chat con assistente AI", "action_ai_chat", action_ai_chat) \
-        .add_option("💡 Suggerimenti fattura", "action_ai_suggestions", action_ai_suggestions) \
-        .add_back_option() \
-        .run()
+    MenuBuilder("AI Assistant").add_option(
+        "💬 Chat con assistente AI", "action_ai_chat", action_ai_chat
+    ).add_option(
+        "💡 Suggerimenti fattura", "action_ai_suggestions", action_ai_suggestions
+    ).add_back_option().run()
 
 
 # ============================================================================
@@ -631,40 +642,23 @@ def action_show_dashboard() -> None:
 
 def action_report_mensile() -> None:
     """Generate monthly report."""
-    from openfatture.cli.commands.report import report_mensile
-
-    try:
-        report_mensile()
-        press_any_key()
-    except Exception as e:
-        console.print(f"[red]Errore: {e}[/red]")
-        press_any_key()
+    # from openfatture.cli.commands.report import report_mensile
+    console.print("[yellow]Report mensile non ancora implementato[/yellow]")
+    press_any_key()
 
 
 def action_report_annuale() -> None:
     """Generate annual report."""
-    from openfatture.cli.commands.report import report_annuale
-
-    try:
-        report_annuale()
-        press_any_key()
-    except Exception as e:
-        console.print(f"[red]Errore: {e}[/red]")
-        press_any_key()
+    # from openfatture.cli.commands.report import report_annuale
+    console.print("[yellow]Report annuale non ancora implementato[/yellow]")
+    press_any_key()
 
 
 def action_report_cliente() -> None:
     """Generate client report."""
-    from openfatture.cli.commands.report import report_cliente
-
-    try:
-        cliente = select_cliente(message="Seleziona cliente per report:")
-        if cliente:
-            report_cliente(cliente.id)
-            press_any_key()
-    except Exception as e:
-        console.print(f"[red]Errore: {e}[/red]")
-        press_any_key()
+    # from openfatture.cli.commands.report import report_cliente
+    console.print("[yellow]Report cliente non ancora implementato[/yellow]")
+    press_any_key()
 
 
 def action_export_excel() -> None:
@@ -675,9 +669,9 @@ def action_export_excel() -> None:
 
 def action_ai_chat() -> None:
     """Start AI chat."""
+
     from openfatture.cli.ui.chat import InteractiveChatUI
     from openfatture.storage.database import init_db
-    import asyncio
 
     try:
         # Initialize database before starting chat
@@ -693,7 +687,8 @@ def action_ai_chat() -> None:
             )
 
         # Run async chat
-        run_async(start_interactive_chat())
+        chat_ui = InteractiveChatUI()
+        run_async(chat_ui.start())
     except Exception as e:
         console.print(f"\n[red]Errore: {e}[/red]")
         press_any_key()

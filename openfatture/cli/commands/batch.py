@@ -6,14 +6,13 @@ from typing import cast
 import typer
 from rich.console import Console
 from rich.table import Table
-from sqlalchemy.orm import Session
 
 from openfatture.cli.lifespan import get_event_bus
 from openfatture.core.batch.invoice_processor import InvoiceBatchProcessor
 from openfatture.core.events import BatchImportCompletedEvent, BatchImportStartedEvent
 from openfatture.storage.database.base import init_db
-from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.storage.session import db_session
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
 
@@ -61,7 +60,8 @@ def import_invoices(
     if dry_run:
         console.print("[yellow]⚠ Dry run mode - no data will be saved[/yellow]\n")
 
-    db = _get_session()
+    ctx = db_session()
+    db = ctx.__enter__()
     settings = get_settings()
 
     # Publish BatchImportStartedEvent
@@ -172,7 +172,7 @@ def import_invoices(
                 )
             )
 
-        db.close()
+        ctx.__exit__(None, None, None)
 
 
 @app.command("export")
@@ -193,7 +193,8 @@ def export_invoices(
 
     console.print("\n[bold blue]📦 Batch Export Invoices[/bold blue]\n")
 
-    db = _get_session()
+    ctx = db_session()
+    db = ctx.__enter__()
 
     # Publish BatchImportStartedEvent
     event_bus = get_event_bus()
@@ -280,7 +281,7 @@ def export_invoices(
                 )
             )
 
-        db.close()
+        ctx.__exit__(None, None, None)
 
 
 @app.command("history")

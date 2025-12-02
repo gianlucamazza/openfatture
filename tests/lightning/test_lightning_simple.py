@@ -2,12 +2,6 @@
 """Simple test script for Lightning Network integration."""
 
 import asyncio
-import os
-import sys
-
-# Add the project root to Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-
 from decimal import Decimal
 
 
