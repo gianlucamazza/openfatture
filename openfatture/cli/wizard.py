@@ -7,6 +7,11 @@ from rich.console import Console
 from rich.panel import Panel
 
 from openfatture.utils.config import Settings, dirs
+from openfatture.utils.validators import (
+    validate_codice_fiscale,
+    validate_partita_iva,
+    validate_pec_email,
+)
 
 console = Console()
 
@@ -25,8 +30,16 @@ def run_setup_wizard() -> None:
     # Company Information
     console.print("\n[bold]🏢 Company Information[/bold]")
     cedente_denominazione = questionary.text("Company Name / Denominazione:").ask()
-    cedente_partita_iva = questionary.text("VAT Number / Partita IVA:").ask()
-    cedente_codice_fiscale = questionary.text("Tax Code / Codice Fiscale:").ask()
+
+    cedente_partita_iva = questionary.text(
+        "VAT Number / Partita IVA:",
+        validate=lambda text: validate_partita_iva(text) or "Invalid Partita IVA",
+    ).ask()
+
+    cedente_codice_fiscale = questionary.text(
+        "Tax Code / Codice Fiscale:",
+        validate=lambda text: validate_codice_fiscale(text) or "Invalid Codice Fiscale",
+    ).ask()
 
     cedente_indirizzo = questionary.text("Address / Indirizzo:").ask()
     cedente_cap = questionary.text("ZIP Code / CAP:").ask()
@@ -35,8 +48,26 @@ def run_setup_wizard() -> None:
 
     # PEC
     console.print("\n[bold]📧 PEC Configuration[/bold]")
-    pec_address = questionary.text("Your PEC Address:").ask()
+    pec_address = questionary.text(
+        "Your PEC Address:",
+        validate=lambda text: validate_pec_email(text) or "Invalid email format",
+    ).ask()
     pec_password = questionary.password("PEC Password:").ask()
+
+    # Email & Notifications
+    console.print("\n[bold]📬 Email & Notifications[/bold]")
+    notification_email = questionary.text(
+        "Notification Email (optional):",
+        validate=lambda text: (
+            True if not text else (validate_pec_email(text) or "Invalid email format")
+        ),
+    ).ask()
+
+    notification_enabled = True
+    if notification_email:
+        notification_enabled = questionary.confirm(
+            "Enable email notifications?", default=True
+        ).ask()
 
     # AI Configuration
     console.print("\n[bold]🤖 AI Configuration[/bold]")
@@ -63,6 +94,8 @@ def run_setup_wizard() -> None:
             cedente_provincia=cedente_provincia,
             pec_address=pec_address,
             pec_password=pec_password,
+            notification_email=notification_email or None,
+            notification_enabled=notification_enabled,
             ai_provider=ai_provider,
             ai_api_key=ai_api_key,
         )

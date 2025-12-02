@@ -167,20 +167,68 @@ def set_config(
     """
     Set a configuration value.
 
-    Note: This command updates the .env file. For complex changes,
-    edit .env directly.
+    Updates the config.toml file.
     """
-    # Simple implementation: append to .env
-    # In production, use proper .env parser like python-dotenv
-    env_file = ".env"
+
+    from openfatture.cli.wizard import save_config
+    from openfatture.utils.config import dirs
 
     try:
-        with open(env_file, "a") as f:
-            env_key = key.upper().replace(".", "_")
-            f.write(f'\n{env_key}="{value}"\n')
+        settings = get_settings()
+
+        # Handle nested keys (e.g., debug_config.enable_debug_logging)
+        if "." in key:
+            parts = key.split(".")
+            target = settings
+            for part in parts[:-1]:
+                if not hasattr(target, part):
+                    console.print(f"[red]Invalid configuration key: {key}[/red]")
+                    raise typer.Exit(1)
+                target = getattr(target, part)
+
+            last_key = parts[-1]
+            if not hasattr(target, last_key):
+                console.print(f"[red]Invalid configuration key: {key}[/red]")
+                raise typer.Exit(1)
+
+            # Basic type conversion
+            current_value = getattr(target, last_key)
+            new_value: Any
+            if isinstance(current_value, bool):
+                new_value = value.lower() == "true"
+            elif isinstance(current_value, int):
+                new_value = int(value)
+            elif isinstance(current_value, float):
+                new_value = float(value)
+            else:
+                new_value = value
+
+            setattr(target, last_key, new_value)
+        else:
+            if not hasattr(settings, key):
+                console.print(f"[red]Invalid configuration key: {key}[/red]")
+                raise typer.Exit(1)
+
+            # Basic type conversion
+            current_value = getattr(settings, key)
+            new_val: Any
+            if isinstance(current_value, bool):
+                new_val = value.lower() == "true"
+            elif isinstance(current_value, int):
+                new_val = int(value)
+            elif isinstance(current_value, float):
+                new_val = float(value)
+            else:
+                new_val = value
+
+            setattr(settings, key, new_val)
+
+        # Save to TOML
+        config_path = dirs.user_config_dir / "config.toml"
+        save_config(settings, config_path)
 
         console.print(f"[green]✓ Set {key} = {value}[/green]")
-        console.print("[yellow]Note: Restart CLI or run 'config reload' to apply[/yellow]")
+        console.print(f"[dim]Saved to {config_path}[/dim]")
 
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
