@@ -1,0 +1,1060 @@
+{
+  "metadata": {
+    "project": "OpenFatture",
+    "version": "1.0",
+    "extraction_date": "2024-12-02",
+    "total_strings": 345,
+    "source_files": [
+      "openfatture/cli/commands/fattura.py",
+      "openfatture/cli/commands/cliente.py",
+      "openfatture/cli/commands/ai.py",
+      "openfatture/cli/main.py"
+    ]
+  },
+  "fattura": {
+    "file": "openfatture/cli/commands/fattura.py",
+    "help_strings": [
+      {
+        "id": "fattura.help.cliente_id",
+        "text": "Client ID",
+        "line": 41,
+        "context": "typer.Option",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.help.filter_status",
+        "text": "Filter by status",
+        "line": 212,
+        "context": "typer.Option",
+        "command": "list"
+      },
+      {
+        "id": "fattura.help.filter_anno",
+        "text": "Filter by year",
+        "line": 213,
+        "context": "typer.Option",
+        "command": "list"
+      },
+      {
+        "id": "fattura.help.limit",
+        "text": "Max results",
+        "line": 214,
+        "context": "typer.Option",
+        "command": "list"
+      },
+      {
+        "id": "fattura.help.fattura_id_1",
+        "text": "Invoice ID",
+        "line": 270,
+        "context": "typer.Argument",
+        "command": "show"
+      },
+      {
+        "id": "fattura.help.fattura_id_2",
+        "text": "Invoice ID",
+        "line": 348,
+        "context": "typer.Argument",
+        "command": "delete"
+      },
+      {
+        "id": "fattura.help.force",
+        "text": "Skip confirmation",
+        "line": 349,
+        "context": "typer.Option",
+        "command": "delete"
+      },
+      {
+        "id": "fattura.help.fattura_id_3",
+        "text": "Invoice ID",
+        "line": 399,
+        "context": "typer.Argument",
+        "command": "xml"
+      },
+      {
+        "id": "fattura.help.output",
+        "text": "Output path",
+        "line": 400,
+        "context": "typer.Option",
+        "command": "xml"
+      },
+      {
+        "id": "fattura.help.no_validate",
+        "text": "Skip XSD validation",
+        "line": 401,
+        "context": "typer.Option",
+        "command": "xml"
+      },
+      {
+        "id": "fattura.help.fattura_id_4",
+        "text": "Invoice ID",
+        "line": 491,
+        "context": "typer.Argument",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.help.pec",
+        "text": "Send via PEC",
+        "line": 492,
+        "context": "typer.Option",
+        "command": "invia"
+      }
+    ],
+    "console_strings": [
+      {
+        "id": "fattura.console.create_title",
+        "text": "[bold blue]🧾 Create New Invoice[/bold blue]",
+        "line": 56,
+        "type": "panel_title",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.console.no_clients",
+        "text": "[red]No clients found. Add one first with 'cliente add'[/red]",
+        "line": 64,
+        "type": "error",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.console.available_clients",
+        "text": "[cyan]Available clients:[/cyan]",
+        "line": 67,
+        "type": "header",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.console.client_selected",
+        "text": "[green]✓ Client: {client_name}[/green]",
+        "line": 78,
+        "type": "success",
+        "command": "crea",
+        "variables": ["client_name"]
+      },
+      {
+        "id": "fattura.console.add_line_items",
+        "text": "[bold]Add line items[/bold]",
+        "line": 107,
+        "type": "section_header",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.console.empty_description_hint",
+        "text": "[dim]Enter empty description to finish[/dim]",
+        "line": 108,
+        "type": "hint",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.console.item_added",
+        "text": "[green]✓ Added: {description} - €{total}[/green]",
+        "line": 146,
+        "type": "success",
+        "command": "crea",
+        "variables": ["description", "total"]
+      },
+      {
+        "id": "fattura.console.no_items",
+        "text": "[yellow]No items added. Invoice creation cancelled.[/yellow]",
+        "line": 150,
+        "type": "warning",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.console.created_success",
+        "text": "[bold green]✓ Invoice created successfully![/bold green]",
+        "line": 188,
+        "type": "success",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.console.no_invoices",
+        "text": "[yellow]No invoices found[/yellow]",
+        "line": 236,
+        "type": "info",
+        "command": "list"
+      },
+      {
+        "id": "fattura.console.invalid_status",
+        "text": "[red]Invalid status: {status}[/red]",
+        "line": 227,
+        "type": "error",
+        "command": "list",
+        "variables": ["status"]
+      },
+      {
+        "id": "fattura.console.invoice_not_found_1",
+        "text": "[red]Invoice {invoice_id} not found[/red]",
+        "line": 279,
+        "type": "error",
+        "command": "show",
+        "variables": ["invoice_id"]
+      },
+      {
+        "id": "fattura.console.invoice_header",
+        "text": "[bold blue]Invoice {invoice_number}[/bold blue]",
+        "line": 283,
+        "type": "panel_title",
+        "command": "show",
+        "variables": ["invoice_number"]
+      },
+      {
+        "id": "fattura.console.line_items_header",
+        "text": "[bold]Line Items:[/bold]",
+        "line": 301,
+        "type": "section_header",
+        "command": "show"
+      },
+      {
+        "id": "fattura.console.totals_header",
+        "text": "[bold]Totals:[/bold]",
+        "line": 323,
+        "type": "section_header",
+        "command": "show"
+      },
+      {
+        "id": "fattura.console.invoice_not_found_2",
+        "text": "[red]Invoice {invoice_id} not found[/red]",
+        "line": 419,
+        "type": "error",
+        "command": "xml",
+        "variables": ["invoice_id"]
+      },
+      {
+        "id": "fattura.console.xml_generation_title",
+        "text": "[bold blue]🔧 Generating FatturaPA XML[/bold blue]",
+        "line": 406,
+        "type": "panel_title",
+        "command": "xml"
+      },
+      {
+        "id": "fattura.console.generating_xml",
+        "text": "Generating XML for invoice {invoice_number}...",
+        "line": 433,
+        "type": "status",
+        "command": "xml",
+        "variables": ["invoice_number"]
+      },
+      {
+        "id": "fattura.console.xml_error",
+        "text": "[red]❌ Error: {error}[/red]",
+        "line": 439,
+        "type": "error",
+        "command": "xml",
+        "variables": ["error"]
+      },
+      {
+        "id": "fattura.console.xsd_hint",
+        "text": "[yellow]Hint: Download the XSD schema from:[/yellow]",
+        "line": 441,
+        "type": "hint",
+        "command": "xml"
+      },
+      {
+        "id": "fattura.console.xml_saved",
+        "text": "[green]✓ XML saved to: {path}[/green]",
+        "line": 457,
+        "type": "success",
+        "command": "xml",
+        "variables": ["path"]
+      },
+      {
+        "id": "fattura.console.xml_generated",
+        "text": "[green]✓ XML generated successfully![/green]",
+        "line": 461,
+        "type": "success",
+        "command": "xml"
+      },
+      {
+        "id": "fattura.console.xml_preview",
+        "text": "[dim]Preview (first 500 chars):[/dim]",
+        "line": 471,
+        "type": "section_header",
+        "command": "xml"
+      },
+      {
+        "id": "fattura.console.send_title",
+        "text": "[bold blue]📤 Sending Invoice to SDI[/bold blue]",
+        "line": 506,
+        "type": "panel_title",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.step_1_xml",
+        "text": "[cyan]1. Generating XML...[/cyan]",
+        "line": 516,
+        "type": "step",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.xml_generated_step",
+        "text": "[green]✓ XML generated[/green]",
+        "line": 529,
+        "type": "success",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.step_2_signature",
+        "text": "[cyan]2. Digital signature...[/cyan]",
+        "line": 532,
+        "type": "step",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.signature_not_implemented",
+        "text": "[yellow]⚠ Digital signature not yet implemented[/yellow]",
+        "line": 533,
+        "type": "warning",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.manual_signing",
+        "text": "[dim]For now, you can sign manually with external tools.[/dim]",
+        "line": 534,
+        "type": "info",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.step_3_send",
+        "text": "[cyan]3. Sending via PEC with professional email template...[/cyan]",
+        "line": 537,
+        "type": "step",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.xml_gen_failed",
+        "text": "[red]❌ XML generation failed: {error}[/red]",
+        "line": 526,
+        "type": "error",
+        "command": "invia",
+        "variables": ["error"]
+      },
+      {
+        "id": "fattura.console.sent_successfully",
+        "text": "[green]✓ Invoice sent to SDI via PEC with professional template[/green]",
+        "line": 556,
+        "type": "success",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.send_complete",
+        "text": "[bold green]✓ Invoice {invoice_number} sent successfully![/bold green]",
+        "line": 575,
+        "type": "success",
+        "command": "invia",
+        "variables": ["invoice_number"]
+      },
+      {
+        "id": "fattura.console.professional_email_header",
+        "text": "[dim]📧 Professional email sent to SDI with:[/dim]",
+        "line": 577,
+        "type": "info",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.email_format",
+        "text": "• HTML + plain text format",
+        "line": 578,
+        "type": "list_item",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.email_branding",
+        "text": "• Company branding ({color})",
+        "line": 579,
+        "type": "list_item",
+        "command": "invia",
+        "variables": ["color"]
+      },
+      {
+        "id": "fattura.console.email_language",
+        "text": "• Language: {locale}",
+        "line": 580,
+        "type": "list_item",
+        "command": "invia",
+        "variables": ["locale"]
+      },
+      {
+        "id": "fattura.console.notifications_header",
+        "text": "[dim]📬 Automatic notifications:[/dim]",
+        "line": 581,
+        "type": "info",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.notification_email",
+        "text": "• SDI responses will be emailed to: {email}",
+        "line": 584,
+        "type": "list_item",
+        "command": "invia",
+        "variables": ["email"]
+      },
+      {
+        "id": "fattura.console.process_notifications",
+        "text": "• Process notifications with: [cyan]openfatture notifiche process <file>[/cyan]",
+        "line": 587,
+        "type": "list_item",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.enable_notification",
+        "text": "• Enable with: NOTIFICATION_EMAIL in .env",
+        "line": 590,
+        "type": "list_item",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.monitor_pec",
+        "text": "[dim]Monitor your PEC inbox for SDI notifications.[/dim]",
+        "line": 591,
+        "type": "info",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.send_failed",
+        "text": "[red]❌ Failed to send: {error}[/red]",
+        "line": 594,
+        "type": "error",
+        "command": "invia",
+        "variables": ["error"]
+      },
+      {
+        "id": "fattura.console.manual_steps",
+        "text": "[yellow]Manual steps:[/yellow]",
+        "line": 599,
+        "type": "section_header",
+        "command": "invia"
+      },
+      {
+        "id": "fattura.console.manual_step_1",
+        "text": "1. XML saved at: {path}",
+        "line": 600,
+        "type": "list_item",
+        "command": "invia",
+        "variables": ["path"]
+      },
+      {
+        "id": "fattura.console.manual_step_2",
+        "text": "2. Sign if needed, then send to: {address}",
+        "line": 601,
+        "type": "list_item",
+        "command": "invia",
+        "variables": ["address"]
+      }
+    ],
+    "prompts": [
+      {
+        "id": "fattura.prompt.select_client",
+        "text": "Select client ID",
+        "line": 71,
+        "type": "int_prompt",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.invoice_number",
+        "text": "Invoice number",
+        "line": 91,
+        "type": "string_prompt",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.issue_date",
+        "text": "Issue date (YYYY-MM-DD)",
+        "line": 92,
+        "type": "string_prompt",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.item_description",
+        "text": "Item {num} description",
+        "line": 115,
+        "type": "string_prompt",
+        "command": "crea",
+        "variables": ["num"]
+      },
+      {
+        "id": "fattura.prompt.quantity",
+        "text": "Quantity",
+        "line": 119,
+        "type": "float_prompt",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.unit_price",
+        "text": "Unit price (€)",
+        "line": 120,
+        "type": "float_prompt",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.vat_rate",
+        "text": "VAT rate (%)",
+        "line": 121,
+        "type": "float_prompt",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.ritenuta",
+        "text": "Apply ritenuta d'acconto (withholding tax)?",
+        "line": 160,
+        "type": "confirm",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.ritenuta_rate",
+        "text": "Ritenuta rate (%)",
+        "line": 161,
+        "type": "float_prompt",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.bollo",
+        "text": "Add bollo (€2.00)?",
+        "line": 168,
+        "type": "confirm",
+        "command": "crea"
+      },
+      {
+        "id": "fattura.prompt.delete_confirm",
+        "text": "Delete invoice {invoice_number}?",
+        "line": 371,
+        "type": "confirm",
+        "command": "delete",
+        "variables": ["invoice_number"]
+      },
+      {
+        "id": "fattura.prompt.send_confirm",
+        "text": "Send invoice to SDI now?",
+        "line": 539,
+        "type": "confirm",
+        "command": "invia"
+      }
+    ],
+    "tables": [
+      {
+        "id": "fattura.table.invoice_summary",
+        "title": "Invoice {number}/{year}",
+        "columns": ["Field", "Value"],
+        "line": 190,
+        "command": "crea"
+      },
+      {
+        "id": "fattura.table.invoices_list",
+        "title": "Invoices ({count})",
+        "columns": ["ID", "Number", "Date", "Client", "Total", "Status"],
+        "line": 239,
+        "command": "list"
+      },
+      {
+        "id": "fattura.table.invoice_details",
+        "title": "Invoice {number}/{year}",
+        "columns": ["Field", "Value"],
+        "line": 190,
+        "command": "show"
+      },
+      {
+        "id": "fattura.table.line_items",
+        "title": "Line Items",
+        "columns": ["#", "Description", "Qty", "Price", "VAT%", "Total"],
+        "line": 302,
+        "command": "show"
+      },
+      {
+        "id": "fattura.table.totals",
+        "title": "Totals",
+        "columns": ["Label", "Amount"],
+        "line": 324,
+        "command": "show"
+      }
+    ]
+  },
+  "cliente": {
+    "file": "openfatture/cli/commands/cliente.py",
+    "help_strings": [
+      {
+        "id": "cliente.help.name",
+        "text": "Client name/company name (omit to be prompted in --interactive mode)",
+        "line": 34,
+        "context": "typer.Argument",
+        "command": "add"
+      },
+      {
+        "id": "cliente.help.piva",
+        "text": "Partita IVA",
+        "line": 36,
+        "context": "typer.Option",
+        "command": "add"
+      },
+      {
+        "id": "cliente.help.cf",
+        "text": "Codice Fiscale",
+        "line": 37,
+        "context": "typer.Option",
+        "command": "add"
+      },
+      {
+        "id": "cliente.help.sdi",
+        "text": "SDI code",
+        "line": 38,
+        "context": "typer.Option",
+        "command": "add"
+      },
+      {
+        "id": "cliente.help.pec",
+        "text": "PEC address",
+        "line": 39,
+        "context": "typer.Option",
+        "command": "add"
+      },
+      {
+        "id": "cliente.help.interactive",
+        "text": "Interactive mode",
+        "line": 40,
+        "context": "typer.Option",
+        "command": "add"
+      },
+      {
+        "id": "cliente.help.limit",
+        "text": "Max number of results",
+        "line": 179,
+        "context": "typer.Option",
+        "command": "list"
+      },
+      {
+        "id": "cliente.help.cliente_id",
+        "text": "Client ID",
+        "line": 214,
+        "context": "typer.Argument",
+        "command": "show"
+      },
+      {
+        "id": "cliente.help.force",
+        "text": "Skip confirmation",
+        "line": 260,
+        "context": "typer.Option",
+        "command": "delete"
+      }
+    ],
+    "console_strings": [
+      {
+        "id": "cliente.console.invalid_piva",
+        "text": "[yellow]Warning: Invalid Partita IVA, skipping[/yellow]",
+        "line": 73,
+        "type": "warning"
+      },
+      {
+        "id": "cliente.console.invalid_cf",
+        "text": "[yellow]Warning: Invalid Codice Fiscale, skipping[/yellow]",
+        "line": 79,
+        "type": "warning"
+      },
+      {
+        "id": "cliente.console.name_required",
+        "text": "[red]Error: Client name is required[/red]",
+        "line": 106,
+        "type": "error"
+      },
+      {
+        "id": "cliente.console.added_success",
+        "text": "[green]✓ Client added successfully (ID: {id})[/green]",
+        "line": 158,
+        "type": "success",
+        "variables": ["id"]
+      },
+      {
+        "id": "cliente.console.no_clients",
+        "text": "[yellow]No clients found. Add one with 'cliente add'[/yellow]",
+        "line": 188,
+        "type": "info"
+      },
+      {
+        "id": "cliente.console.not_found",
+        "text": "[red]Client with ID {id} not found[/red]",
+        "line": 223,
+        "type": "error",
+        "variables": ["id"]
+      },
+      {
+        "id": "cliente.console.has_invoices",
+        "text": "[yellow]Warning: This client has {count} invoices[/yellow]",
+        "line": 275,
+        "type": "warning",
+        "variables": ["count"]
+      },
+      {
+        "id": "cliente.console.cancelled",
+        "text": "Cancelled.",
+        "line": 278,
+        "type": "info"
+      },
+      {
+        "id": "cliente.console.deleted",
+        "text": "[green]✓ Client '{name}' deleted[/green]",
+        "line": 307,
+        "type": "success",
+        "variables": ["name"]
+      }
+    ],
+    "prompts": [
+      {
+        "id": "cliente.prompt.company_name",
+        "text": "Client name/Company",
+        "line": 66,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.piva",
+        "text": "Partita IVA (optional)",
+        "line": 69,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.cf",
+        "text": "Codice Fiscale (optional)",
+        "line": 75,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.address",
+        "text": "Address (Via/Piazza)",
+        "line": 82,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.civic",
+        "text": "Civic number (optional)",
+        "line": 83,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.cap",
+        "text": "CAP",
+        "line": 84,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.city",
+        "text": "City",
+        "line": 85,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.province",
+        "text": "Province (2 letters)",
+        "line": 86,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.sdi",
+        "text": "SDI Code (7 chars, or 0000000 for PEC)",
+        "line": 89,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.pec",
+        "text": "PEC address (if SDI is 0000000)",
+        "line": 93,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.email",
+        "text": "Regular email (optional)",
+        "line": 97,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.phone",
+        "text": "Phone (optional)",
+        "line": 98,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.notes",
+        "text": "Notes (optional)",
+        "line": 99,
+        "type": "string_prompt"
+      },
+      {
+        "id": "cliente.prompt.delete_confirm",
+        "text": "Delete client '{name}'?",
+        "line": 282,
+        "type": "confirm",
+        "variables": ["name"]
+      }
+    ],
+    "tables": [
+      {
+        "id": "cliente.table.client_info",
+        "title": "Client: {name}",
+        "columns": ["Field", "Value"],
+        "line": 161
+      },
+      {
+        "id": "cliente.table.clients_list",
+        "title": "Clients ({count})",
+        "columns": ["ID", "Name", "P.IVA", "SDI/PEC", "Invoices"],
+        "line": 191
+      },
+      {
+        "id": "cliente.table.client_details",
+        "title": "Client Details: {name}",
+        "columns": ["Field", "Value"],
+        "line": 226
+      }
+    ]
+  },
+  "ai_summary": {
+    "file": "openfatture/cli/commands/ai.py",
+    "note": "This file is very large (2400+ lines). Extracting main commands and their key strings.",
+    "commands": [
+      {
+        "name": "describe",
+        "description": "Generate detailed invoice descriptions",
+        "key_strings": [
+          "Service description to expand",
+          "Hours worked",
+          "Hourly rate (€)",
+          "Project name",
+          "Technologies used (comma-separated)",
+          "[bold blue]🤖 AI Invoice Description Generator[/bold blue]",
+          "[bold]📄 Professional Description[/bold]",
+          "[bold cyan]📦 Deliverables:[/bold cyan]",
+          "[bold cyan]🔧 Technical Skills:[/bold cyan]"
+        ]
+      },
+      {
+        "name": "suggest-vat",
+        "description": "Suggest appropriate VAT rate and fiscal treatment",
+        "key_strings": [
+          "Service/product description",
+          "Client is Public Administration",
+          "Foreign client",
+          "Client country code (IT, FR, US, etc.)",
+          "[bold blue]🧾 AI Tax Advisor - Suggerimento Fiscale[/bold blue]",
+          "[bold]📊 Trattamento Fiscale[/bold]",
+          "[bold cyan]📋 Spiegazione:[/bold cyan]",
+          "[bold cyan]📜 Riferimento normativo:[/bold cyan]"
+        ]
+      },
+      {
+        "name": "forecast",
+        "description": "AI/ML cash flow forecasting",
+        "key_strings": [
+          "Months to forecast",
+          "Filter by client ID",
+          "Force model retraining",
+          "[bold blue]💰 AI Cash Flow Forecasting[/bold blue]",
+          "[bold]📊 Cash Flow Summary[/bold]",
+          "Monthly Forecast",
+          "[bold]🤖 AI Insights[/bold]"
+        ]
+      },
+      {
+        "name": "check",
+        "description": "Check invoice compliance",
+        "key_strings": [
+          "Invoice ID to check",
+          "Check level: basic, standard, advanced",
+          "[bold]Compliance Status[/bold]",
+          "[red]❌ Errors (Must Fix):[/red]",
+          "[bold yellow]⚠️  Warnings:[/bold yellow]",
+          "[bold]Next Steps:[/bold]"
+        ]
+      },
+      {
+        "name": "create-invoice",
+        "description": "Create complete invoice with AI workflow",
+        "key_strings": [
+          "Service description",
+          "Client ID",
+          "Invoice amount (€)",
+          "Require human approval at each step",
+          "Confidence threshold for auto-approval (0.0-1.0)",
+          "[bold green]✅ Invoice created successfully![/bold green]"
+        ]
+      },
+      {
+        "name": "chat",
+        "description": "Interactive AI chat assistant",
+        "key_strings": [
+          "Message to send (interactive if not provided)",
+          "Enable streaming responses",
+          "[bold blue]🤖 OpenFatture AI Assistant[/bold blue]",
+          "Type your questions about invoices, taxes, or business. Type 'exit' to quit.",
+          "You:",
+          "Assistant:"
+        ]
+      },
+      {
+        "name": "voice-chat",
+        "description": "Voice-based chat with AI assistant",
+        "key_strings": [
+          "Recording duration in seconds",
+          "Audio sample rate (Hz)",
+          "Number of audio channels",
+          "Interactive mode (press Enter to record)",
+          "[bold blue]🎤 Voice Chat Assistant[/bold blue]",
+          "[bold yellow]⚠️  Voice features are not enabled in settings.[/bold yellow]"
+        ]
+      },
+      {
+        "name": "rag status",
+        "description": "Show knowledge base status",
+        "key_strings": [
+          "Knowledge Base Sources",
+          "Vector Store",
+          "Collection:",
+          "Documenti indicizzati:",
+          "Percorso:"
+        ]
+      },
+      {
+        "name": "feedback stats",
+        "description": "Show user feedback and prediction feedback statistics",
+        "key_strings": [
+          "📊 User Feedback Statistics",
+          "🤖 ML Prediction Feedback Statistics",
+          "By Type:",
+          "By Agent:",
+          "By Prediction Type:",
+          "By Model Version:"
+        ]
+      },
+      {
+        "name": "retrain status",
+        "description": "Show retraining scheduler status",
+        "key_strings": [
+          "🔄 Retraining Scheduler Status",
+          "Enabled:",
+          "Running:",
+          "Feedback Status:",
+          "Time Status:",
+          "Active Triggers:"
+        ]
+      },
+      {
+        "name": "status",
+        "description": "Show comprehensive self-learning system status",
+        "key_strings": [
+          "🤖 Self-Learning System Dashboard",
+          "═══ RAG Auto-Update ═══",
+          "═══ ML Model Retraining ═══",
+          "═══ Feedback Collection ═══"
+        ]
+      }
+    ],
+    "total_strings": 200
+  },
+  "main_help_strings": [
+    {
+      "id": "main.help.version",
+      "text": "Show the version and exit.",
+      "line": 123
+    },
+    {
+      "id": "main.help.interactive",
+      "text": "Launch interactive mode with menus",
+      "line": 129
+    },
+    {
+      "id": "main.help.format",
+      "text": "Output format: rich, json, markdown, stream-json, html",
+      "line": 135
+    }
+  ],
+  "main_command_groups": [
+    {
+      "name": "interactive",
+      "help": "🎯 Interactive mode with menus",
+      "line": 186
+    },
+    {
+      "name": "init",
+      "help": "🚀 Initialize OpenFatture",
+      "line": 187
+    },
+    {
+      "name": "config",
+      "help": "⚙️  Manage configuration",
+      "line": 188
+    },
+    {
+      "name": "cliente",
+      "help": "👤 Manage clients",
+      "line": 189
+    },
+    {
+      "name": "fattura",
+      "help": "🧾 Manage invoices",
+      "line": 190
+    },
+    {
+      "name": "preventivo",
+      "help": "📋 Manage quotes/estimates",
+      "line": 191
+    },
+    {
+      "name": "pec",
+      "help": "📧 PEC configuration and testing",
+      "line": 192
+    },
+    {
+      "name": "email",
+      "help": "📧 Email templates & testing",
+      "line": 193
+    },
+    {
+      "name": "notifiche",
+      "help": "📬 SDI notifications",
+      "line": 194
+    },
+    {
+      "name": "batch",
+      "help": "📦 Batch operations",
+      "line": 195
+    },
+    {
+      "name": "ai",
+      "help": "🤖 AI-powered assistance",
+      "line": 196
+    },
+    {
+      "name": "lightning",
+      "help": "⚡ Lightning Network payments",
+      "line": 197
+    },
+    {
+      "name": "media",
+      "help": "🎬 Media automation & VHS generation",
+      "line": 198
+    },
+    {
+      "name": "hooks",
+      "help": "🪝 Manage lifecycle hooks",
+      "line": 199
+    },
+    {
+      "name": "events",
+      "help": "📜 View event history & audit log",
+      "line": 200
+    },
+    {
+      "name": "report",
+      "help": "📊 Generate reports",
+      "line": 201
+    },
+    {
+      "name": "web-scraper",
+      "help": "🕷️ Regulatory web scraping",
+      "line": 202
+    },
+    {
+      "name": "plugin",
+      "help": "🔌 Manage plugins",
+      "line": 203
+    },
+    {
+      "name": "payment",
+      "help": "💰 Payment tracking & reconciliation",
+      "line": 204
+    }
+  ]
+}

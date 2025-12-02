@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from fluent.runtime import FluentBundle, FluentLocalization, FluentResourceLoader
+from fluent.runtime import FluentBundle, FluentLocalization, FluentResource, FluentResourceLoader
 
 from openfatture.utils.config import get_settings
 
@@ -66,7 +66,10 @@ def _load_bundle(locale: str) -> FluentBundle:
     for ftl_file in ftl_files:
         try:
             with open(ftl_file, encoding="utf-8") as f:
-                bundle.add_resource(f.read())
+                content = f.read()
+                # FluentResource() parses the content automatically
+                resource = FluentResource(content)
+                bundle.add_resource(resource)
             logger.debug(f"Loaded {ftl_file.name} for locale {locale}")
         except Exception as e:
             logger.error(f"Failed to load {ftl_file}: {e}")
@@ -86,8 +89,9 @@ def _load_localization(locales: list[str]) -> FluentLocalization:
     """
     locales_dir = get_locales_dir()
 
-    # Create resource loader
-    loader = FluentResourceLoader(str(locales_dir) + "/{locale}")
+    # Create resource loader with correct path template
+    # FluentResourceLoader expects: /path/to/locales/{locale}/{resource_id}.ftl
+    loader = FluentResourceLoader(str(locales_dir / "{locale}"))
 
     # Get all .ftl file names from the first locale
     first_locale_dir = locales_dir / locales[0]
@@ -95,6 +99,7 @@ def _load_localization(locales: list[str]) -> FluentLocalization:
         logger.warning(f"Locale directory not found: {first_locale_dir}, using fallback")
         first_locale_dir = locales_dir / FALLBACK_LOCALE
 
+    # resource_ids should be the file names without .ftl extension
     resource_ids = [f.stem for f in sorted(first_locale_dir.glob("*.ftl"))]
 
     # Create FluentLocalization with fallback chain
@@ -206,7 +211,7 @@ def reload_translations() -> None:
 def format_value(
     locale: str, message_id: str, variables: dict[str, Any] | None = None
 ) -> str | None:
-    """Format a message using FluentLocalization.
+    """Format a message using FluentBundle.
 
     Args:
         locale: Language code
@@ -216,11 +221,23 @@ def format_value(
     Returns:
         Formatted message or None if not found
     """
-    l10n = get_localization(locale)
+    bundle = get_bundle(locale)
     variables = variables or {}
 
     try:
-        return l10n.format_value(message_id, variables)
+        # Get message from bundle
+        message = bundle.get_message(message_id)
+        if message is None:
+            return None
+
+        # Format the message pattern
+        # format_pattern() returns tuple (formatted_string, errors)
+        if message.value:
+            formatted, errors = bundle.format_pattern(message.value, variables)
+            if errors:
+                logger.warning(f"Formatting errors for {message_id}: {errors}")
+            return formatted
+        return None
     except Exception as e:
         logger.warning(f"Failed to format message {message_id}: {e}")
         return None

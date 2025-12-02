@@ -1,0 +1,341 @@
+================================================================================
+                    OPENFATTURE i18n STRINGS REFERENCE
+                           Quick Lookup Table
+================================================================================
+
+This file provides a quick reference for all 345+ translatable strings
+organized by category and command.
+
+================================================================================
+FATTURA.PY (71 STRINGS)
+================================================================================
+
+HELP STRINGS (12)
+-----------------
+Client ID                                (line 41, --cliente)
+Filter by status                         (line 212, --stato)
+Filter by year                           (line 213, --anno)
+Max results                              (line 214, --limit)
+Invoice ID                               (line 270, ARGUMENT show)
+Invoice ID                               (line 348, ARGUMENT delete)
+Skip confirmation                        (line 349, --force)
+Invoice ID                               (line 399, ARGUMENT xml)
+Output path                              (line 400, --output)
+Skip XSD validation                      (line 401, --no-validate)
+Invoice ID                               (line 491, ARGUMENT invia)
+Send via PEC                             (line 492, --pec)
+
+CONSOLE STRINGS (42)
+--------------------
+[bold blue]🧾 Create New Invoice[/bold blue]                    (56)
+[red]No clients found. Add one first with 'cliente add'[/red]  (64)
+[cyan]Available clients:[/cyan]                                 (67)
+[green]✓ Client: {name}[/green]                                 (78)
+[bold]Add line items[/bold]                                      (107)
+[dim]Enter empty description to finish[/dim]                    (108)
+[green]✓ Added: {desc} - €{total}[/green]                       (146)
+[yellow]No items added. Invoice creation cancelled.[/yellow]   (150)
+[bold green]✓ Invoice created successfully![/bold green]       (188)
+[yellow]No invoices found[/yellow]                              (236)
+[red]Invalid status: {status}[/red]                             (227)
+[red]Invoice {id} not found[/red]                               (279, 419)
+[bold blue]Invoice {number}/{year}[/bold blue]                  (283)
+[bold]Line Items:[/bold]                                         (301)
+[bold]Totals:[/bold]                                             (323)
+[bold blue]🔧 Generating FatturaPA XML[/bold blue]             (406)
+Generating XML for invoice {number}/{year}...                   (433)
+[red]❌ Error: {error}[/red]                                     (439)
+[yellow]Hint: Download the XSD schema from:[/yellow]           (441)
+[green]✓ XML saved to: {path}[/green]                           (457)
+[green]✓ XML generated successfully![/green]                    (461)
+Path: {path}                                                     (462)
+[dim]Preview (first 500 chars):[/dim]                           (471)
+[bold blue]📤 Sending Invoice to SDI[/bold blue]               (506)
+[cyan]1. Generating XML...[/cyan]                               (516)
+[green]✓ XML generated[/green]                                   (529)
+[cyan]2. Digital signature...[/cyan]                            (532)
+[yellow]⚠ Digital signature not yet implemented[/yellow]      (533)
+[dim]For now, you can sign manually with external tools.[/dim]  (534)
+[cyan]3. Sending via PEC with professional email template...[/cyan] (537)
+[red]❌ XML generation failed: {error}[/red]                    (526)
+[green]✓ Invoice sent to SDI via PEC with professional template[/green] (556)
+[bold green]✓ Invoice {number} sent successfully![/bold green] (575)
+[dim]📧 Professional email sent to SDI with:[/dim]             (577)
+• HTML + plain text format                                       (578)
+• Company branding ({color})                                     (579)
+• Language: {locale}                                             (580)
+[dim]📬 Automatic notifications:[/dim]                          (581)
+• SDI responses will be emailed to: {email}                     (584)
+• Process notifications with: openfatture notifiche process     (587)
+• Enable with: NOTIFICATION_EMAIL in .env                       (590)
+[dim]Monitor your PEC inbox for SDI notifications.[/dim]       (591)
+[red]❌ Failed to send: {error}[/red]                           (594)
+[yellow]Manual steps:[/yellow]                                  (599)
+1. XML saved at: {path}                                          (600)
+2. Sign if needed, then send to: {address}                      (601)
+
+PROMPTS (12)
+------------
+Select client ID                                                 (71)
+Invoice number                                                   (91)
+Issue date (YYYY-MM-DD)                                          (92)
+Item {num} description                                           (115)
+Quantity                                                         (119)
+Unit price (€)                                                   (120)
+VAT rate (%)                                                     (121)
+Apply ritenuta d'acconto (withholding tax)?                      (160)
+Ritenuta rate (%)                                                (161)
+Add bollo (€2.00)?                                               (168)
+Delete invoice {number}/{year}?                                  (371)
+Send invoice to SDI now?                                         (539)
+
+TABLES (5)
+----------
+Invoice {number}/{year}                                          (190, title)
+Invoices ({count})                                               (239, title)
+Field, Value                                                     (columns)
+ID, Number, Date, Client, Total, Status                          (columns)
+#, Description, Qty, Price, VAT%, Total                          (columns)
+Imponibile, IVA, Ritenuta, Bollo, TOTALE                         (rows)
+
+================================================================================
+CLIENTE.PY (34 STRINGS)
+================================================================================
+
+HELP STRINGS (9)
+----------------
+Client name/company name (omit to be prompted in --interactive mode) (34)
+Partita IVA                                                      (36)
+Codice Fiscale                                                   (37)
+SDI code                                                         (38)
+PEC address                                                      (39)
+Interactive mode                                                 (40)
+Max number of results                                            (179)
+Client ID                                                        (214)
+Skip confirmation                                                (260)
+
+CONSOLE STRINGS (9)
+-------------------
+[yellow]Warning: Invalid Partita IVA, skipping[/yellow]        (73)
+[yellow]Warning: Invalid Codice Fiscale, skipping[/yellow]    (79)
+[red]Error: Client name is required[/red]                       (106)
+[green]✓ Client added successfully (ID: {id})[/green]          (158)
+[yellow]No clients found. Add one with 'cliente add'[/yellow] (188)
+[red]Client with ID {id} not found[/red]                        (223, 269)
+[yellow]Warning: This client has {count} invoices[/yellow]    (275)
+Cancelled.                                                       (278)
+[green]✓ Client '{name}' deleted[/green]                        (307)
+
+PROMPTS (13)
+------------
+Client name/Company                                              (66)
+Partita IVA (optional)                                           (69)
+Codice Fiscale (optional)                                        (75)
+Address (Via/Piazza)                                             (82)
+Civic number (optional)                                          (83)
+CAP                                                              (84)
+City                                                             (85)
+Province (2 letters)                                             (86)
+SDI Code (7 chars, or 0000000 for PEC)                           (89)
+PEC address (if SDI is 0000000)                                  (93)
+Regular email (optional)                                         (97)
+Phone (optional)                                                 (98)
+Notes (optional)                                                 (99)
+Delete client '{name}'?                                          (282)
+
+TABLES (3)
+----------
+Client: {name}                                                   (161, title)
+Clients ({count})                                                (191, title)
+Client Details: {name}                                           (226, title)
+ID, Name, P.IVA, SDI/PEC, Invoices                              (columns)
+Field, Value                                                     (columns)
+Partita IVA, Codice Fiscale, SDI Code, PEC, Email, Phone        (rows)
+
+================================================================================
+AI.PY (135+ STRINGS - MAIN COMMANDS)
+================================================================================
+
+HELP STRINGS (35)
+-----------------
+Manage RAG knowledge base                                        (38)
+Manage user feedback and ML predictions                         (39)
+Manage automatic ML model retraining                            (40)
+Manage RAG auto-update on data changes                          (41)
+Source ID defined in manifest (repeatable option)               (71)
+Semantic query to execute on knowledge base                     (80)
+Maximum number of results to show                               (81)
+Limit search to a single source                                 (83)
+Number of days to analyze                                        (211)
+Output file path                                                (298)
+Number of days to export                                        (299)
+Number of patterns to show                                      (319)
+Confidence threshold for low-confidence predictions             (321)
+Force retraining even if triggers not met                       (390)
+Number of versions to show                                      (529)
+Version ID to rollback to                                       (587)
+Skip confirmation                                               (588)
+Entity type to reindex (invoice, client)                        (809)
+Entity IDs to reindex (space-separated)                         (810)
+Service description to expand                                   (1020)
+Hours worked                                                    (1021)
+Hourly rate (€)                                                 (1022)
+Project name                                                    (1023)
+Technologies used (comma-separated)                             (1025)
+Output as JSON (deprecated, use --format json)                  (1028)
+Service/product description                                     (1286)
+Client is Public Administration                                (1287)
+Foreign client                                                  (1288)
+Client country code (IT, FR, US, etc.)                          (1290)
+Service category                                                (1292)
+Amount in EUR                                                   (1293)
+ATECO code                                                       (1294)
+Months to forecast                                              (1535)
+Filter by client ID                                             (1536)
+Force model retraining                                          (1537)
+
+KEY CONSOLE STRINGS (60+)
+-------------------------
+[bold blue]📊 User Feedback Statistics[/bold blue]              (219)
+[bold blue]🤖 ML Prediction Feedback Statistics[/bold blue]    (251)
+[bold cyan]By Type:[/bold cyan]                                  (238)
+[bold cyan]By Agent:[/bold cyan]                                (245)
+[bold cyan]By Prediction Type:[/bold cyan]                      (270)
+[bold cyan]By Model Version:[/bold cyan]                        (277)
+[yellow]Nessun risultato trovato.[/yellow]                      (185)
+[bold blue]🔄 Manual Model Retraining[/bold blue]              (406)
+[bold green]✅ {message}[/bold green]                            (415)
+[bold]New Model Metrics:[/bold]                                  (425)
+[bold red]❌ {message}[/bold red]                                (438)
+[bold blue]🔄 Retraining Scheduler Status[/bold blue]          (459)
+[bold yellow]⚠️  Retraining Triggers Met[/bold yellow]         (494)
+[bold green]✅ No Retraining Needed[/bold green]                (496)
+[bold]Feedback Status:[/bold]                                    (500)
+[bold]Time Status:[/bold]                                        (509)
+[bold yellow]Active Triggers:[/bold yellow]                     (521)
+[bold blue]📦 Model Version History[/bold blue]                (544)
+[dim]No model versions found.[/dim]                             (547)
+[bold blue]🔄 Model Rollback[/bold blue]                       (603)
+[bold red]❌ Version '{id}' not found[/bold red]               (609)
+[bold blue]🔄 RAG Auto-Update Service Status[/bold blue]      (663)
+[bold]Configuration:[/bold]                                      (682)
+[bold]Queue Statistics:[/bold]                                   (693)
+[bold]Tracker Statistics:[/bold]                                (704)
+[bold blue]🔄 Starting RAG Auto-Update Service[/bold blue]    (725)
+[bold green]✅ Service started successfully[/bold green]       (730)
+[bold blue]🔄 Stopping RAG Auto-Update Service[/bold blue]    (748)
+[bold yellow]⏸️  Service stopped[/bold yellow]                 (753)
+[bold blue]📊 RAG Auto-Update Queue Statistics[/bold blue]    (770)
+[bold blue]🔄 Manual Reindexing[/bold blue]                   (826)
+[bold green]✅ Reindexing completed[/bold green]               (834)
+[bold blue]🤖 Self-Learning System Dashboard[/bold blue]      (879)
+[bold cyan]═══ RAG Auto-Update ═══[/bold cyan]                (882)
+[bold cyan]═══ ML Model Retraining ═══[/bold cyan]            (924)
+[bold cyan]═══ Feedback Collection ═══[/bold cyan]            (972)
+[bold blue]🤖 AI Invoice Description Generator[/bold blue]    (1064)
+[bold green]Generating description with AI...[/bold green]    (1120)
+[bold red]❌ Error:[/bold red]                                   (1132)
+[bold]📄 Professional Description[/bold]                        (1222)
+[bold cyan]📦 Deliverables:[/bold cyan]                         (1229)
+[bold cyan]🔧 Technical Skills:[/bold cyan]                     (1235)
+[bold blue]🧾 AI Tax Advisor - Suggerimento Fiscale[/bold blue] (1337)
+[bold green]Analizzando trattamento fiscale...[/bold green]    (1393)
+[bold red]❌ Errore:[/bold red]                                  (1402)
+[bold]📊 Trattamento Fiscale[/bold]                            (1496)
+[bold cyan]📋 Spiegazione:[/bold cyan]                          (1502)
+[bold cyan]📜 Riferimento normativo:[/bold cyan]               (1506)
+[bold cyan]📝 Nota per fattura:[/bold cyan]                    (1511)
+[bold cyan]💡 Raccomandazioni:[/bold cyan]                     (1516)
+[bold blue]💰 AI Cash Flow Forecasting[/bold blue]            (1572)
+[bold]📊 Cash Flow Summary[/bold]                               (1667)
+Monthly Forecast                                                (1674)
+[bold cyan]💡 Recommendations:[/bold cyan]                      (1709)
+[bold blue]🔍 Compliance Check (Level: {level})[/bold blue]  (1777)
+[bold green]Analyzing invoice...[/bold green]                  (1799)
+[bold]Compliance Status[/bold]                                  (1861)
+[red]❌ Errors (Must Fix):[/red]                                (1918)
+[bold yellow]⚠️  Warnings:[/bold yellow]                        (1930)
+[bold blue]ℹ️  Informational:[/bold blue]                      (1940)
+[bold cyan]💡 Recommendations:[/bold cyan]                      (1949)
+[bold]Next Steps:[/bold]                                         (1956)
+[bold green]✅ Invoice is ready for SDI submission![/bold green] (1962)
+[bold blue]🤖 OpenFatture AI Assistant[/bold blue]            (2237)
+Type your questions about invoices, taxes, or business. Type 'exit' to quit. (2239)
+[dim]Goodbye! 👋[/dim]                                          (2250, 2290)
+[bold blue]🎤 Voice Chat Assistant[/bold blue]                (2408)
+[bold yellow]⚠️  Voice features are not enabled in settings.[/bold yellow] (2396)
+[bold red]❌ Error:[/bold red]                                   (2402)
+
+================================================================================
+MAIN.PY (4 STRINGS)
+================================================================================
+
+HELP STRINGS (3)
+----------------
+Show the version and exit.                                      (123)
+Launch interactive mode with menus                              (129)
+Output format: rich, json, markdown, stream-json, html         (135)
+
+COMMAND GROUP HELP (18)
+-----------------------
+🎯 Interactive mode with menus                                  (186)
+🚀 Initialize OpenFatture                                      (187)
+⚙️  Manage configuration                                        (188)
+👤 Manage clients                                               (189)
+🧾 Manage invoices                                              (190)
+📋 Manage quotes/estimates                                      (191)
+📧 PEC configuration and testing                                (192)
+📧 Email templates & testing                                    (193)
+📬 SDI notifications                                            (194)
+📦 Batch operations                                             (195)
+🤖 AI-powered assistance                                        (196)
+⚡ Lightning Network payments                                   (197)
+🎬 Media automation & VHS generation                            (198)
+🪝 Manage lifecycle hooks                                       (199)
+📜 View event history & audit log                               (200)
+📊 Generate reports                                             (201)
+🕷️ Regulatory web scraping                                     (202)
+🔌 Manage plugins                                               (203)
+💰 Payment tracking & reconciliation                            (204)
+
+================================================================================
+SUMMARY STATISTICS
+================================================================================
+
+Total Extracted Strings:      345+
+
+By File:
+  fattura.py:                 71 strings
+  cliente.py:                 34 strings
+  ai.py:                      135+ strings
+  main.py:                    22 strings
+
+By Category:
+  Help strings:               59
+  Console output:             180+
+  Prompts:                    60
+  Table titles/columns:       46
+
+Status: All strings have line numbers and command context.
+
+Files Created:
+  1. I18N_STRINGS_EXTRACTION.md          (Detailed extraction with context)
+  2. I18N_STRINGS_STRUCTURED.json        (Machine-parseable JSON format)
+  3. I18N_MIGRATION_GUIDE.md             (Implementation guide)
+  4. I18N_REFERENCE_QUICK.txt            (This file - quick reference)
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Review I18N_STRINGS_EXTRACTION.md for complete context
+2. Review I18N_MIGRATION_GUIDE.md for implementation approach
+3. Create Fluent (.ftl) files in openfatture/locales/{locale}/cli/
+4. Implement FluentManager and translator functions
+5. Update CLI commands to use translations
+6. Write unit and integration tests
+7. Deploy in phases: fattura → cliente → main → ai
+
+Estimated effort: 40-50 hours over 3-4 weeks
+
+================================================================================

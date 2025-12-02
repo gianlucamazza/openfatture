@@ -221,7 +221,15 @@ class Settings(BaseSettings):
     # Localization
     locale: str = Field(
         default="it",
-        description="Default locale for emails and UI (it, en)",
+        description="Default locale for emails and UI (it, en, es, fr, de)",
+    )
+    supported_locales: list[str] = Field(
+        default=["it", "en", "es", "fr", "de"],
+        description="List of supported locales",
+    )
+    fallback_locale: str = Field(
+        default="it",
+        description="Fallback locale when requested locale is unavailable",
     )
 
     # AI Configuration

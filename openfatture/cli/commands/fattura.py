@@ -15,6 +15,7 @@ from openfatture.core.events import (
     InvoiceSentEvent,
     InvoiceValidatedEvent,
 )
+from openfatture.i18n import _
 from openfatture.storage.database.base import init_db
 from openfatture.storage.database.models import (
     Cliente,
@@ -38,7 +39,7 @@ def ensure_db() -> None:
 
 @app.command("crea")
 def crea_fattura(
-    cliente_id: int | None = typer.Option(None, "--cliente", help="Client ID"),
+    cliente_id: int | None = typer.Option(None, "--cliente", help=_("cli-fattura-help-cliente-id")),
 ) -> None:
     """
     Create a new invoice (interactive wizard).
@@ -53,7 +54,7 @@ def crea_fattura(
     """
     ensure_db()
 
-    console.print("\n[bold blue]🧾 Create New Invoice[/bold blue]\n")
+    console.print(f"\n{_('cli-fattura-create-title')}\n")
 
     with db_session() as db:
         # Select client
@@ -61,21 +62,23 @@ def crea_fattura(
             clienti = db.query(Cliente).order_by(Cliente.denominazione).all()
 
             if not clienti:
-                console.print("[red]No clients found. Add one first with 'cliente add'[/red]")
+                console.print(_("cli-fattura-no-clients-error"))
                 raise typer.Exit(1)
 
-            console.print("[cyan]Available clients:[/cyan]")
+            console.print(_("cli-fattura-available-clients"))
             for i, c in enumerate(clienti[:10], 1):
                 console.print(f"  {c.id}. {c.denominazione} ({c.partita_iva or 'N/A'})")
 
-            cliente_id = IntPrompt.ask("\nSelect client ID", default=clienti[0].id)
+            cliente_id = IntPrompt.ask(
+                f"\n{_('cli-fattura-prompt-select-client')}", default=clienti[0].id
+            )
 
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
         if not cliente:
-            console.print(f"[red]Client {cliente_id} not found[/red]")
+            console.print(_("cli-fattura-invalid-client-error"))
             raise typer.Exit(1)
 
-        console.print(f"[green]✓ Client: {cliente.denominazione}[/green]\n")
+        console.print(f"{_('cli-fattura-client-selected', client_name=cliente.denominazione)}\n")
 
         # Invoice details
         anno = date.today().year
@@ -104,21 +107,23 @@ def crea_fattura(
         db.add(fattura)
         db.flush()  # Get ID without committing
 
-        console.print("\n[bold]Add line items[/bold]")
-        console.print("[dim]Enter empty description to finish[/dim]\n")
+        console.print(f"\n{_('cli-fattura-add-lines-title')}")
+        console.print(f"[dim]{_('cli-fattura-line-description-prompt')} to finish[/dim]\n")
 
         riga_num = 1
         totale_imponibile = Decimal("0")
         totale_iva = Decimal("0")
 
         while True:
-            descrizione = Prompt.ask(f"Item {riga_num} description", default="")
+            descrizione = Prompt.ask(
+                f"Item {riga_num} {_('cli-fattura-line-description-prompt').lower()}", default=""
+            )
             if not descrizione:
                 break
 
-            quantita = FloatPrompt.ask("Quantity", default=1.0)
-            prezzo = FloatPrompt.ask("Unit price (€)", default=100.0)
-            aliquota_iva = FloatPrompt.ask("VAT rate (%)", default=22.0)
+            quantita = FloatPrompt.ask(_("cli-fattura-line-quantity-prompt"), default=1.0)
+            prezzo = FloatPrompt.ask(_("cli-fattura-line-unit-price-prompt"), default=100.0)
+            aliquota_iva = FloatPrompt.ask(_("cli-fattura-line-vat-rate-prompt"), default=22.0)
 
             # Calculate
             imponibile = Decimal(str(quantita)) * Decimal(str(prezzo))
@@ -143,7 +148,9 @@ def crea_fattura(
             totale_imponibile += imponibile
             totale_iva += iva
 
-            console.print(f"  [green]✓ Added: {descrizione[:40]} - €{totale:.2f}[/green]")
+            console.print(
+                _("cli-fattura-line-added", description=descrizione[:40], amount=f"{totale:.2f}")
+            )
             riga_num += 1
 
         if riga_num == 1:
@@ -185,9 +192,10 @@ def crea_fattura(
             )
 
         # Summary
-        console.print("\n[bold green]✓ Invoice created successfully![/bold green]\n")
+        console.print(f"\n{_('cli-fattura-created-success')}\n")
+        console.print(_("cli-fattura-created-number", numero=numero, anno=anno))
 
-        table = Table(title=f"Invoice {numero}/{anno}")
+        table = Table(title=_("cli-fattura-show-title", numero=numero, anno=anno))
         table.add_column("Field", style="cyan", width=20)
         table.add_column("Value", style="white", justify="right")
 
@@ -209,9 +217,9 @@ def crea_fattura(
 
 @app.command("list")
 def list_fatture(
-    stato: str | None = typer.Option(None, "--stato", help="Filter by status"),
-    anno: int | None = typer.Option(None, "--anno", help="Filter by year"),
-    limit: int = typer.Option(50, "--limit", "-l", help="Max results"),
+    stato: str | None = typer.Option(None, "--stato", help=_("cli-fattura-help-filter-status")),
+    anno: int | None = typer.Option(None, "--anno", help=_("cli-fattura-help-filter-anno")),
+    limit: int = typer.Option(50, "--limit", "-l", help=_("cli-fattura-help-limit")),
 ) -> None:
     """List invoices."""
     ensure_db()
@@ -224,7 +232,7 @@ def list_fatture(
                 stato_enum = StatoFattura(stato.lower())
                 query = query.filter(Fattura.stato == stato_enum)
             except ValueError:
-                console.print(f"[red]Invalid status: {stato}[/red]")
+                console.print(_("cli-fattura-invalid-status", status=stato))
                 return
 
         if anno:
@@ -233,16 +241,16 @@ def list_fatture(
         fatture = query.limit(limit).all()
 
         if not fatture:
-            console.print("[yellow]No invoices found[/yellow]")
+            console.print(_("cli-fattura-list-empty"))
             return
 
-        table = Table(title=f"Invoices ({len(fatture)})", show_lines=False)
-        table.add_column("ID", style="cyan", width=6)
-        table.add_column("Number", style="white", width=12)
-        table.add_column("Date", style="white", width=12)
-        table.add_column("Client", style="bold white")
-        table.add_column("Total", style="green", justify="right", width=12)
-        table.add_column("Status", style="yellow", width=15)
+        table = Table(title=_("cli-fattura-table-title-list", count=len(fatture)), show_lines=False)
+        table.add_column(_("cli-fattura-table-id"), style="cyan", width=6)
+        table.add_column(_("cli-fattura-table-number"), style="white", width=12)
+        table.add_column(_("cli-fattura-table-date"), style="white", width=12)
+        table.add_column(_("cli-fattura-table-client"), style="bold white")
+        table.add_column(_("cli-fattura-table-total"), style="green", justify="right", width=12)
+        table.add_column(_("cli-fattura-table-status"), style="yellow", width=15)
 
         for f in fatture:
             status_color = {
@@ -267,7 +275,7 @@ def list_fatture(
 
 @app.command("show")
 def show_fattura(
-    fattura_id: int = typer.Argument(..., help="Invoice ID"),
+    fattura_id: int = typer.Argument(..., help=_("cli-fattura-help-invoice-id")),
 ) -> None:
     """Show invoice details."""
     ensure_db()
@@ -276,36 +284,38 @@ def show_fattura(
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
-            console.print(f"[red]Invoice {fattura_id} not found[/red]")
+            console.print(_("cli-fattura-invoice-not-found", invoice_id=fattura_id))
             raise typer.Exit(1)
 
         # Header
-        console.print(f"\n[bold blue]Invoice {fattura.numero}/{fattura.anno}[/bold blue]\n")
+        console.print(
+            f"\n{_('cli-fattura-show-title', numero=fattura.numero, anno=fattura.anno)}\n"
+        )
 
         # Info table
         info = Table(show_header=False, box=None)
-        info.add_column("Field", style="cyan", width=20)
-        info.add_column("Value", style="white")
+        info.add_column(_("cli-fattura-table-field"), style="cyan", width=20)
+        info.add_column(_("cli-fattura-table-value"), style="white")
 
-        info.add_row("Client", fattura.cliente.denominazione)
-        info.add_row("Date", fattura.data_emissione.isoformat())
-        info.add_row("Type", fattura.tipo_documento.value)
-        info.add_row("Status", fattura.stato.value)
+        info.add_row(_("cli-fattura-table-client"), fattura.cliente.denominazione)
+        info.add_row(_("cli-fattura-table-date"), fattura.data_emissione.isoformat())
+        info.add_row(_("cli-fattura-table-type"), fattura.tipo_documento.value)
+        info.add_row(_("cli-fattura-table-status"), fattura.stato.value)
 
         if fattura.numero_sdi:
-            info.add_row("SDI Number", fattura.numero_sdi)
+            info.add_row(_("cli-fattura-table-sdi-number"), fattura.numero_sdi)
 
         console.print(info)
 
         # Line items
-        console.print("\n[bold]Line Items:[/bold]")
+        console.print(f"\n{_('cli-fattura-line-items-header')}")
         items_table = Table(show_lines=True)
-        items_table.add_column("#", width=4, justify="right")
-        items_table.add_column("Description")
-        items_table.add_column("Qty", justify="right", width=8)
-        items_table.add_column("Price", justify="right", width=10)
-        items_table.add_column("VAT%", justify="right", width=8)
-        items_table.add_column("Total", justify="right", width=12)
+        items_table.add_column(_("cli-fattura-table-row-number"), width=4, justify="right")
+        items_table.add_column(_("cli-fattura-table-description"))
+        items_table.add_column(_("cli-fattura-table-qty"), justify="right", width=8)
+        items_table.add_column(_("cli-fattura-table-price"), justify="right", width=10)
+        items_table.add_column(_("cli-fattura-table-vat-percent"), justify="right", width=8)
+        items_table.add_column(_("cli-fattura-table-total"), justify="right", width=12)
 
         for riga in fattura.righe:
             items_table.add_row(
@@ -320,24 +330,26 @@ def show_fattura(
         console.print(items_table)
 
         # Totals
-        console.print("\n[bold]Totals:[/bold]")
+        console.print(f"\n{_('cli-fattura-totals-header')}")
         totals = Table(show_header=False, box=None)
         totals.add_column("", style="cyan", justify="right", width=30)
         totals.add_column("", style="white", justify="right", width=15)
 
-        totals.add_row("Imponibile", f"€{fattura.imponibile:.2f}")
-        totals.add_row("IVA", f"€{fattura.iva:.2f}")
+        totals.add_row(_("cli-fattura-table-imponibile"), f"€{fattura.imponibile:.2f}")
+        totals.add_row(_("cli-fattura-table-iva"), f"€{fattura.iva:.2f}")
 
         if fattura.ritenuta_acconto:
             totals.add_row(
-                f"Ritenuta ({fattura.aliquota_ritenuta}%)",
+                f"{_('cli-fattura-table-ritenuta')} ({fattura.aliquota_ritenuta}%)",
                 f"-€{fattura.ritenuta_acconto:.2f}",
             )
 
         if fattura.importo_bollo:
-            totals.add_row("Bollo", f"€{fattura.importo_bollo:.2f}")
+            totals.add_row(_("cli-fattura-table-bollo"), f"€{fattura.importo_bollo:.2f}")
 
-        totals.add_row("[bold]TOTALE[/bold]", f"[bold]€{fattura.totale:.2f}[/bold]")
+        totals.add_row(
+            f"[bold]{_('cli-fattura-table-totale')}[/bold]", f"[bold]€{fattura.totale:.2f}[/bold]"
+        )
 
         console.print(totals)
         console.print()
@@ -345,8 +357,8 @@ def show_fattura(
 
 @app.command("delete")
 def delete_fattura(
-    fattura_id: int = typer.Argument(..., help="Invoice ID"),
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
+    fattura_id: int = typer.Argument(..., help=_("cli-fattura-help-invoice-id")),
+    force: bool = typer.Option(False, "--force", "-f", help=_("cli-fattura-help-force")),
 ) -> None:
     """Delete an invoice."""
     ensure_db()
@@ -355,7 +367,7 @@ def delete_fattura(
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
-            console.print(f"[red]Invoice {fattura_id} not found[/red]")
+            console.print(_("cli-fattura-invoice-not-found", invoice_id=fattura_id))
             raise typer.Exit(1)
 
         # Prevent deletion of sent invoices
@@ -364,13 +376,13 @@ def delete_fattura(
             StatoFattura.ACCETTATA,
             StatoFattura.CONSEGNATA,
         ]:
-            console.print(f"[red]Cannot delete invoice in status '{fattura.stato.value}'[/red]")
+            console.print(_("cli-fattura-delete-status-restriction", status=fattura.stato.value))
             raise typer.Exit(1)
 
         if not force and not Confirm.ask(
-            f"Delete invoice {fattura.numero}/{fattura.anno}?", default=False
+            _("cli-fattura-delete-confirm", numero=fattura.numero, anno=fattura.anno), default=False
         ):
-            console.print("Cancelled.")
+            console.print(_("cli-fattura-cancelled"))
             return
 
         # Store info before deletion
@@ -391,19 +403,21 @@ def delete_fattura(
                 )
             )
 
-        console.print(f"[green]✓ Invoice {invoice_number} deleted[/green]")
+        console.print(_("cli-fattura-delete-success", numero=fattura.numero, anno=fattura.anno))
 
 
 @app.command("xml")
 def genera_xml(
-    fattura_id: int = typer.Argument(..., help="Invoice ID"),
-    output: str | None = typer.Option(None, "--output", "-o", help="Output path"),
-    no_validate: bool = typer.Option(False, "--no-validate", help="Skip XSD validation"),
+    fattura_id: int = typer.Argument(..., help=_("cli-fattura-help-invoice-id")),
+    output: str | None = typer.Option(None, "--output", "-o", help=_("cli-fattura-help-output")),
+    no_validate: bool = typer.Option(
+        False, "--no-validate", help=_("cli-fattura-help-no-validate")
+    ),
 ) -> None:
     """Generate FatturaPA XML for an invoice."""
     ensure_db()
 
-    console.print("\n[bold blue]🔧 Generating FatturaPA XML[/bold blue]\n")
+    console.print(f"\n{_('cli-fattura-xml-generation-title')}\n")
 
     # Track validation status for event publishing
     validation_status = "failed"
@@ -416,7 +430,7 @@ def genera_xml(
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
-            console.print(f"[red]Invoice {fattura_id} not found[/red]")
+            console.print(_("cli-fattura-invoice-not-found", invoice_id=fattura_id))
             raise typer.Exit(1)
 
         # Store for event publishing
@@ -430,19 +444,21 @@ def genera_xml(
         service = InvoiceService(settings)
 
         # Generate XML
-        console.print(f"Generating XML for invoice {fattura.numero}/{fattura.anno}...")
+        console.print(_("cli-fattura-generating-xml", numero=fattura.numero, anno=fattura.anno))
 
         xml_content, error = service.generate_xml(fattura, validate=not no_validate)
 
         if error:
             issues.append(error)
-            console.print(f"\n[red]❌ Error: {error}[/red]")
+            console.print(_("cli-fattura-xml-generation-error", error=error))
             if "XSD schema not found" in error:
+                console.print(f"\n{_('cli-fattura-xml-schema-hint')}")
+                console.print(_("cli-fattura-xml-schema-url"))
                 console.print(
-                    "\n[yellow]Hint: Download the XSD schema from:[/yellow]\n"
-                    "https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.2.2/"
-                    "Schema_del_file_xml_FatturaPA_v1.2.2.xsd\n"
-                    f"And save it to: {settings.data_dir / 'schemas' / 'FatturaPA_v1.2.2.xsd'}"
+                    _(
+                        "cli-fattura-xml-schema-save-path",
+                        path=str(settings.data_dir / "schemas" / "FatturaPA_v1.2.2.xsd"),
+                    )
                 )
             raise typer.Exit(1)
 
@@ -454,12 +470,12 @@ def genera_xml(
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(xml_content, encoding="utf-8")
             xml_path_str = str(output_path.absolute())
-            console.print(f"\n[green]✓ XML saved to: {xml_path_str}[/green]")
+            console.print(_("cli-fattura-xml-saved", path=xml_path_str))
         else:
             xml_path = service.get_xml_path(fattura)
             xml_path_str = str(xml_path.absolute())
-            console.print("\n[green]✓ XML generated successfully![/green]")
-            console.print(f"Path: {xml_path_str}")
+            console.print(f"\n{_('cli-fattura-xml-generated')}")
+            console.print(_("cli-fattura-xml-path", path=xml_path_str))
 
         # Update database
         db.commit()
@@ -468,7 +484,7 @@ def genera_xml(
         validation_status = "passed"
 
         # Preview
-        console.print("\n[dim]Preview (first 500 chars):[/dim]")
+        console.print(f"\n{_('cli-fattura-xml-preview')}")
         console.print(f"[dim]{xml_content[:500]}...[/dim]")
 
     # Publish InvoiceValidatedEvent
@@ -488,8 +504,8 @@ def genera_xml(
 
 @app.command("invia")
 def invia_fattura(
-    fattura_id: int = typer.Argument(..., help="Invoice ID"),
-    pec: bool = typer.Option(True, "--pec", help="Send via PEC"),
+    fattura_id: int = typer.Argument(..., help=_("cli-fattura-help-invoice-id")),
+    pec: bool = typer.Option(True, "--pec", help=_("cli-fattura-help-pec")),
 ) -> None:
     """
     Send invoice to SDI via PEC.
@@ -503,17 +519,17 @@ def invia_fattura(
     """
     ensure_db()
 
-    console.print("\n[bold blue]📤 Sending Invoice to SDI[/bold blue]\n")
+    console.print(f"\n{_('cli-fattura-send-title')}\n")
 
     with db_session() as db:
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
         if not fattura:
-            console.print(f"[red]Invoice {fattura_id} not found[/red]")
+            console.print(_("cli-fattura-invoice-not-found", invoice_id=fattura_id))
             raise typer.Exit(1)
 
         # Step 1: Generate XML
-        console.print("[cyan]1. Generating XML...[/cyan]")
+        console.print(_("cli-fattura-send-step1-xml"))
 
         from openfatture.core.fatture.service import InvoiceService
 
@@ -523,23 +539,21 @@ def invia_fattura(
         xml_content, error = service.generate_xml(fattura, validate=True)
 
         if error:
-            console.print(f"[red]❌ XML generation failed: {error}[/red]")
+            console.print(_("cli-fattura-send-xml-failed", error=error))
             raise typer.Exit(1)
 
-        console.print("[green]✓ XML generated[/green]")
+        console.print(_("cli-fattura-send-xml-success"))
 
         # Step 2: Digital signature (placeholder)
-        console.print("\n[cyan]2. Digital signature...[/cyan]")
-        console.print("[yellow]⚠ Digital signature not yet implemented[/yellow]")
-        console.print("[dim]For now, you can sign manually with external tools.[/dim]")
+        console.print(f"\n{_('cli-fattura-send-step2-signature')}")
+        console.print(_("cli-fattura-send-signature-not-implemented"))
+        console.print(_("cli-fattura-send-signature-manual-hint"))
 
         # Step 3: Send via PEC
-        console.print("\n[cyan]3. Sending via PEC with professional email template...[/cyan]")
+        console.print(f"\n{_('cli-fattura-send-step3-pec')}")
 
-        if not Confirm.ask("Send invoice to SDI now?", default=False):
-            console.print(
-                "\n[yellow]Cancelled. Use 'openfatture fattura invia' later to send.[/yellow]"
-            )
+        if not Confirm.ask(_("cli-fattura-send-confirm"), default=False):
+            console.print(f"\n{_('cli-fattura-send-cancelled')}")
             db.commit()
             return
 
@@ -553,7 +567,7 @@ def invia_fattura(
         success, error = sender.send_invoice_to_sdi(fattura, xml_path, signed=False)
 
         if success:
-            console.print("[green]✓ Invoice sent to SDI via PEC with professional template[/green]")
+            console.print(_("cli-fattura-sent-successfully"))
 
             db.commit()
 
@@ -572,31 +586,35 @@ def invia_fattura(
                 )
 
             console.print(
-                f"\n[bold green]✓ Invoice {fattura.numero}/{fattura.anno} sent successfully![/bold green]"
+                f"\n{_('cli-fattura-sent-success-message', numero=fattura.numero, anno=fattura.anno)}"
             )
-            console.print("\n[dim]📧 Professional email sent to SDI with:[/dim]")
-            console.print("  • HTML + plain text format")
-            console.print(f"  • Company branding ({settings.email_primary_color})")
-            console.print(f"  • Language: {settings.locale.upper()}")
-            console.print("\n[dim]📬 Automatic notifications:[/dim]")
+            console.print(f"\n{_('cli-fattura-sent-email-details')}")
+            console.print(f"  {_('cli-fattura-sent-email-format')}")
+            console.print(
+                f"  {_('cli-fattura-sent-email-branding', color=settings.email_primary_color)}"
+            )
+            console.print(
+                f"  {_('cli-fattura-sent-email-language', language=settings.locale.upper())}"
+            )
+            console.print(f"\n{_('cli-fattura-sent-notifications-header')}")
             if settings.notification_enabled and settings.notification_email:
                 console.print(
-                    f"  • SDI responses will be emailed to: {settings.notification_email}"
+                    f"  {_('cli-fattura-sent-notifications-enabled', email=settings.notification_email)}"
                 )
-                console.print(
-                    "  • Process notifications with: [cyan]openfatture notifiche process <file>[/cyan]"
-                )
+                console.print(f"  {_('cli-fattura-sent-notifications-process-cmd')}")
             else:
-                console.print("  • Enable with: NOTIFICATION_EMAIL in .env")
-            console.print("\n[dim]Monitor your PEC inbox for SDI notifications.[/dim]")
+                console.print(f"  {_('cli-fattura-sent-notifications-disabled')}")
+            console.print(f"\n{_('cli-fattura-sent-monitor-pec')}")
 
         else:
-            console.print(f"[red]❌ Failed to send: {error}[/red]")
+            console.print(_("cli-fattura-send-failed", error=error))
 
             # Still save the XML
             db.commit()
 
-            console.print("\n[yellow]Manual steps:[/yellow]")
-            console.print(f"  1. XML saved at: {xml_path}")
-            console.print(f"  2. Sign if needed, then send to: {settings.sdi_pec_address}")
+            console.print(f"\n{_('cli-fattura-send-manual-steps')}")
+            console.print(f"  {_('cli-fattura-send-manual-step1', path=xml_path)}")
+            console.print(
+                f"  {_('cli-fattura-send-manual-step2', sdi_address=settings.sdi_pec_address)}"
+            )
             raise typer.Exit(1)

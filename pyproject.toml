@@ -88,7 +88,7 @@ dependencies = [
     "sounddevice>=0.4.6",  # Audio recording and playback
     "numpy>=1.26.0",  # Required by sounddevice
     # Internationalization (i18n)
-    "fluent.runtime>=0.4.0",  # Mozilla Fluent for advanced i18n
+    "fluent-runtime>=0.4.0",  # Mozilla Fluent for advanced i18n
     "babel>=2.14.0",  # Locale data, date/number formatting
 ]
 
