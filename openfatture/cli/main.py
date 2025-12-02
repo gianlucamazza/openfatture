@@ -142,9 +142,11 @@ def main(
     FatturaPA electronic invoices with AI-powered workflows.
     """
     # Check for configuration existence (First Run)
+    from pathlib import Path
+
     from openfatture.utils.config import dirs
 
-    config_path = dirs.user_config_dir / "config.toml"
+    config_path = Path(dirs.user_config_dir) / "config.toml"
 
     if not config_path.exists() and not ctx.invoked_subcommand == "init":
         # Only run wizard if not explicitly running 'init' (which might be used for manual setup)
