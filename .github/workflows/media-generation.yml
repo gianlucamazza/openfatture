@@ -37,15 +37,15 @@ jobs:
     environment: media-automation
 
     steps:
-       - name: Record start time
-         id: start_time
-         run: echo "time=$(date -u +"%Y-%m-%dT%H:%M:%S")" >> $GITHUB_OUTPUT
+      - name: Record start time
+        id: start_time
+        run: echo "time=$(date -u +"%Y-%m-%dT%H:%M:%S")" >> $GITHUB_OUTPUT
 
-       - name: Checkout repository
-         uses: actions/checkout@v4
-         with:
-           lfs: true
-           fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
 
       - name: Setup Git LFS
         run: |
@@ -319,40 +319,40 @@ jobs:
             echo "✓ Successfully triggered optimization workflow"
            fi
 
-       - name: Collect run metrics
-         if: always()  # Run even if previous steps failed
-         run: |
-           echo "📊 Collecting run metrics..."
+      - name: Collect run metrics
+        if: always()  # Run even if previous steps failed
+        run: |
+          echo "📊 Collecting run metrics..."
 
-           # Calculate run duration
-           START_TIME="${{ steps.start_time.outputs.time }}"
-           END_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
-           DURATION=$(($(date -d "$END_TIME" +%s) - $(date -d "$START_TIME" +%s)))
+          # Calculate run duration
+          START_TIME="${{ steps.start_time.outputs.time }}"
+          END_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
+          DURATION=$(($(date -d "$END_TIME" +%s) - $(date -d "$START_TIME" +%s)))
 
-           # Determine success status
-           if [ "${{ steps.validate_videos.outputs.validated }}" = "true" ]; then
-             SUCCESS_FLAG="--success"
-           else
-             SUCCESS_FLAG=""
-           fi
+          # Determine success status
+          if [ "${{ steps.validate_videos.outputs.validated }}" = "true" ]; then
+            SUCCESS_FLAG="--success"
+          else
+            SUCCESS_FLAG=""
+          fi
 
-           # Collect metrics
-           python scripts/collect_media_metrics.py \
-             --run-id "${{ github.run_id }}" \
-             --scenario "${{ github.event.inputs.scenario || 'all' }}" \
-             --duration-seconds $DURATION \
-             --cost-usd 0.036 \
-             --tokens-used 2000 \
-             --video-size-mb 15.0 \
-             $SUCCESS_FLAG \
-             --provider "${{ steps.verify_ai.outputs.provider }}" \
-             --workflow-type generation \
-             --git-commit "${{ github.sha }}" \
-             --timestamp "${{ steps.start_time.outputs.time }}"
+          # Collect metrics
+          python scripts/collect_media_metrics.py \
+            --run-id "${{ github.run_id }}" \
+            --scenario "${{ github.event.inputs.scenario || 'all' }}" \
+            --duration-seconds $DURATION \
+            --cost-usd 0.036 \
+            --tokens-used 2000 \
+            --video-size-mb 15.0 \
+            $SUCCESS_FLAG \
+            --provider "${{ steps.verify_ai.outputs.provider }}" \
+            --workflow-type generation \
+            --git-commit "${{ github.sha }}" \
+            --timestamp "${{ steps.start_time.outputs.time }}"
 
-           echo "✓ Metrics collected for run ${{ github.run_id }}"
+          echo "✓ Metrics collected for run ${{ github.run_id }}"
 
-       - name: Generate cost and usage summary
+      - name: Generate cost and usage summary
         run: |
           PROVIDER="${{ steps.verify_ai.outputs.provider }}"
 
