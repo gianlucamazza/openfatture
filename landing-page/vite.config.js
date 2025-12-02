@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/openfatture/', // Assuming project name is openfatture for GitHub Pages
+  base: '/', // Changed to root for custom domain
   build: {
     outDir: 'dist',
   },
