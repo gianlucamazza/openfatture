@@ -7,13 +7,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from openfatture.i18n import _
 from openfatture.payment.application.services.payment_overview import (
     PaymentDueEntry,
     collect_payment_due_summary,
 )
 from openfatture.storage.database.base import init_db
-from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, StatoFattura, StatoPagamento
+from openfatture.storage.session import db_session
 from openfatture.utils.config import get_settings
 
 app = typer.Typer(no_args_is_help=True)
@@ -26,11 +27,12 @@ def ensure_db() -> None:
     init_db(str(settings.database_url))
 
 
-
 @app.command("iva")
 def report_iva(
-    anno: int = typer.Option(date.today().year, "--anno", help="Year"),
-    trimestre: str | None = typer.Option(None, "--trimestre", help="Quarter (Q1-Q4)"),
+    anno: int = typer.Option(date.today().year, "--anno", help=_("cli-report-iva-help-anno")),
+    trimestre: str | None = typer.Option(
+        None, "--trimestre", help=_("cli-report-iva-help-trimestre")
+    ),
 ) -> None:
     """
     Generate VAT report.
@@ -40,7 +42,7 @@ def report_iva(
     """
     ensure_db()
 
-    console.print(f"\n[bold blue]📊 VAT Report - {anno}[/bold blue]")
+    console.print(_("cli-report-iva-title", anno=anno))
 
     if trimestre:
         quarter_months = {
@@ -51,14 +53,21 @@ def report_iva(
         }
 
         if trimestre.upper() not in quarter_months:
-            console.print("[red]Invalid quarter. Use Q1, Q2, Q3, or Q4[/red]")
+            console.print(_("cli-report-iva-error-invalid-quarter"))
             return
 
         mese_inizio, mese_fine = quarter_months[trimestre.upper()]
-        console.print(f"[cyan]Quarter: {trimestre.upper()} ({mese_inizio}-{mese_fine})[/cyan]\n")
+        console.print(
+            _(
+                "cli-report-iva-quarter",
+                trimestre=trimestre.upper(),
+                mese_inizio=mese_inizio,
+                mese_fine=mese_fine,
+            )
+        )
     else:
         mese_inizio, mese_fine = 1, 12
-        console.print("[cyan]Full year[/cyan]\n")
+        console.print(_("cli-report-iva-full-year"))
 
     with db_session() as db:
         # Query invoices
@@ -80,7 +89,7 @@ def report_iva(
         fatture = query.all()
 
         if not fatture:
-            console.print("[yellow]No invoices found for the selected period[/yellow]")
+            console.print(_("cli-report-no-invoices"))
             return
 
         # Calculate totals
@@ -89,19 +98,23 @@ def report_iva(
         totale_fatturato = sum(f.totale for f in fatture)
 
         # Summary table
-        table = Table(title="VAT Summary", show_lines=True)
-        table.add_column("Metric", style="cyan", width=25)
-        table.add_column("Amount", style="white", justify="right", width=15)
+        table = Table(title=_("cli-report-iva-summary-title"), show_lines=True)
+        table.add_column(_("cli-report-iva-column-metric"), style="cyan", width=25)
+        table.add_column(
+            _("cli-report-iva-column-amount"), style="white", justify="right", width=15
+        )
 
-        table.add_row("Number of invoices", str(len(fatture)))
-        table.add_row("Total imponibile", f"€{totale_imponibile:,.2f}")
-        table.add_row("Total VAT", f"€{totale_iva:,.2f}")
-        table.add_row("[bold]Total revenue[/bold]", f"[bold]€{totale_fatturato:,.2f}[/bold]")
+        table.add_row(_("cli-report-iva-label-num-invoices"), str(len(fatture)))
+        table.add_row(_("cli-report-iva-label-imponibile"), f"€{totale_imponibile:,.2f}")
+        table.add_row(_("cli-report-iva-label-total-vat"), f"€{totale_iva:,.2f}")
+        table.add_row(
+            _("cli-report-iva-label-total-revenue-bold"), f"[bold]€{totale_fatturato:,.2f}[/bold]"
+        )
 
         console.print(table)
 
         # By VAT rate
-        console.print("\n[bold]Breakdown by VAT rate:[/bold]")
+        console.print(_("cli-report-iva-breakdown-title"))
 
         from collections import defaultdict
         from decimal import Decimal
@@ -117,9 +130,9 @@ def report_iva(
                 by_aliquota[aliquota]["iva"] += riga.iva
 
         aliquote_table = Table()
-        aliquote_table.add_column("VAT Rate", style="cyan", width=15)
-        aliquote_table.add_column("Imponibile", justify="right", width=15)
-        aliquote_table.add_column("VAT", justify="right", width=15)
+        aliquote_table.add_column(_("cli-report-iva-column-vat-rate"), style="cyan", width=15)
+        aliquote_table.add_column(_("cli-report-iva-column-imponibile"), justify="right", width=15)
+        aliquote_table.add_column(_("cli-report-iva-column-vat"), justify="right", width=15)
 
         for aliquota in sorted(by_aliquota.keys()):
             data = by_aliquota[aliquota]
@@ -135,7 +148,7 @@ def report_iva(
 
 @app.command("clienti")
 def report_clienti(
-    anno: int = typer.Option(date.today().year, "--anno", help="Year"),
+    anno: int = typer.Option(date.today().year, "--anno", help=_("cli-report-clienti-help-anno")),
 ) -> None:
     """
     Generate client revenue report.
@@ -145,7 +158,7 @@ def report_clienti(
     """
     ensure_db()
 
-    console.print(f"\n[bold blue]📊 Client Revenue Report - {anno}[/bold blue]\n")
+    console.print(_("cli-report-clienti-title", anno=anno))
 
     with db_session() as db:
         from sqlalchemy import func
@@ -165,14 +178,16 @@ def report_clienti(
         )
 
         if not results:
-            console.print("[yellow]No invoices found for the selected year[/yellow]")
+            console.print(_("cli-report-no-invoices-year"))
             return
 
-        table = Table(title=f"Top Clients - {anno}", show_lines=False)
-        table.add_column("Rank", style="dim", width=6, justify="right")
-        table.add_column("Client", style="cyan")
-        table.add_column("Invoices", justify="right", width=10)
-        table.add_column("Revenue", style="green", justify="right", width=15)
+        table = Table(title=_("cli-report-clienti-table-title", anno=anno), show_lines=False)
+        table.add_column(_("cli-report-clienti-column-rank"), style="dim", width=6, justify="right")
+        table.add_column(_("cli-report-clienti-column-client"), style="cyan")
+        table.add_column(_("cli-report-clienti-column-invoices"), justify="right", width=10)
+        table.add_column(
+            _("cli-report-clienti-column-revenue"), style="green", justify="right", width=15
+        )
 
         for i, (cliente_id, num_fatture, totale) in enumerate(results, 1):
             from openfatture.storage.database.models import Cliente
@@ -193,7 +208,7 @@ def report_clienti(
 
         # Total
         totale_generale = sum(r[2] for r in results)
-        console.print(f"\n[bold]Total revenue: €{totale_generale:,.2f}[/bold]\n")
+        console.print(_("cli-report-clienti-total-revenue", totale=f"€{totale_generale:,.2f}"))
 
 
 @app.command("scadenze")
@@ -203,7 +218,7 @@ def report_scadenze(
         "--finestra",
         "-f",
         min=1,
-        help='Numero di giorni considerati "in scadenza" (default: 14).',
+        help=_("cli-report-scadenze-help-finestra"),
     ),
 ) -> None:
     """
@@ -214,7 +229,7 @@ def report_scadenze(
     """
     ensure_db()
 
-    console.print("\n[bold blue]📅 Payment Due Dates Overview[/bold blue]\n")
+    console.print(_("cli-report-scadenze-title"))
 
     with db_session() as db:
         summary = collect_payment_due_summary(db, window_days=finestra, max_upcoming=20)
@@ -222,17 +237,17 @@ def report_scadenze(
         has_entries = any(summary.overdue or summary.due_soon or summary.upcoming)
 
         if not has_entries:
-            console.print("[green]✅ No outstanding payments. All invoices are settled![/green]\n")
+            console.print(_("cli-report-scadenze-no-outstanding"))
             return
 
         section_config = [
-            ("overdue", "[red]🔥 Scaduti[/red]", "red"),
+            ("overdue", _("cli-report-scadenze-section-overdue"), "red"),
             (
                 "due_soon",
-                f"[yellow]⏰ In scadenza (<= {finestra} giorni)[/yellow]",
+                _("cli-report-scadenze-section-due-soon", finestra=finestra),
                 "yellow",
             ),
-            ("upcoming", "[cyan]📆 Prossimi pagamenti[/cyan]", "cyan"),
+            ("upcoming", _("cli-report-scadenze-section-upcoming"), "cyan"),
         ]
 
         def _format_money(amount: Decimal) -> str:
@@ -247,9 +262,9 @@ def report_scadenze(
 
         def _label_for(entry: PaymentDueEntry) -> str:
             mapping = {
-                StatoPagamento.SCADUTO: "Scaduto",
-                StatoPagamento.PAGATO_PARZIALE: "Parziale",
-                StatoPagamento.DA_PAGARE: "Da pagare",
+                StatoPagamento.SCADUTO: _("cli-report-scadenze-status-overdue"),
+                StatoPagamento.PAGATO_PARZIALE: _("cli-report-scadenze-status-partial"),
+                StatoPagamento.DA_PAGARE: _("cli-report-scadenze-status-due"),
             }
             return mapping.get(entry.status, entry.status.value.replace("_", " ").title())
 
@@ -265,14 +280,18 @@ def report_scadenze(
                 show_lines=False,
                 box=None,
             )
-            table.add_column("Fattura", style="cyan", no_wrap=True, min_width=10)
-            table.add_column("Cliente", style="white", no_wrap=True, min_width=18)
-            table.add_column("Scadenza", justify="center")
-            table.add_column("Δ giorni", justify="right")
-            table.add_column("Residuo", justify="right")
-            table.add_column("Pagato", justify="right")
-            table.add_column("Totale", justify="right")
-            table.add_column("Stato", justify="left")
+            table.add_column(
+                _("cli-report-scadenze-column-invoice"), style="cyan", no_wrap=True, min_width=10
+            )
+            table.add_column(
+                _("cli-report-scadenze-column-client"), style="white", no_wrap=True, min_width=18
+            )
+            table.add_column(_("cli-report-scadenze-column-due-date"), justify="center")
+            table.add_column(_("cli-report-scadenze-column-days-delta"), justify="right")
+            table.add_column(_("cli-report-scadenze-column-residual"), justify="right")
+            table.add_column(_("cli-report-scadenze-column-paid"), justify="right")
+            table.add_column(_("cli-report-scadenze-column-total"), justify="right")
+            table.add_column(_("cli-report-scadenze-column-status"), justify="left")
 
             for item in rows:
                 residual_display = f"[bold {color}]{_format_money(item.residual)}[/bold {color}]"
@@ -293,15 +312,21 @@ def report_scadenze(
 
             total_residual = sum(item.residual for item in rows)
             console.print(
-                f"[bold {color}]Totale residuo: {_format_money(total_residual)} • Pagamenti: {len(rows)}[/]",
+                _(
+                    "cli-report-scadenze-section-total",
+                    color=color,
+                    totale=_format_money(total_residual),
+                    count=len(rows),
+                ),
             )
             console.print()
 
         if summary.hidden_upcoming > 0:
-            console.print(
-                f"[dim]… {summary.hidden_upcoming} ulteriori pagamenti futuri non mostrati. Usa --finestra o esporta dati dal modulo payment per maggiori dettagli.[/dim]\n"
-            )
+            console.print(_("cli-report-scadenze-hidden-upcoming", count=summary.hidden_upcoming))
 
         console.print(
-            f"[bold]Totale residuo complessivo: {_format_money(summary.total_outstanding)}[/bold]\n"
+            _(
+                "cli-report-scadenze-total-outstanding",
+                totale=_format_money(summary.total_outstanding),
+            )
         )

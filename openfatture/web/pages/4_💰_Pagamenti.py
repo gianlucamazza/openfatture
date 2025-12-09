@@ -6,50 +6,60 @@ Manage bank accounts, import statements, and reconcile payments through web inte
 import pandas as pd
 import streamlit as st
 
+from openfatture.i18n import get_translator
 from openfatture.web.services.payment_service import StreamlitPaymentService
 
-st.set_page_config(page_title="Pagamenti - OpenFatture", page_icon="💰", layout="wide")
+# Initialize translator
+t = get_translator()
+
+st.set_page_config(
+    page_title=t("page-payments-page-title"),
+    page_icon="💰",
+    layout="wide",
+)
 
 # Title
-st.title("💰 Tracking & Riconciliazione Pagamenti")
+st.title(t("page-payments-title"))
 
 # Initialize service
 payment_service = StreamlitPaymentService()
 
 # Sidebar filters and actions
-st.sidebar.subheader("🔍 Filtri")
+st.sidebar.subheader(t("page-payments-filter-title"))
 
 # Account filter
 accounts = payment_service.get_bank_accounts()
 if accounts:
-    account_options = ["Tutti"] + [f"{acc['name']} ({acc['iban'][-4:]})" for acc in accounts]
+    account_options = [t("page-payments-filter-all-accounts")] + [
+        f"{acc['name']} ({acc['iban'][-4:]})" for acc in accounts
+    ]
     selected_account_display = st.sidebar.selectbox(
-        "Conto Bancario",
+        t("page-payments-filter-bank-account"),
         options=account_options,
         index=0,
     )
 
     # Extract account ID from selection
     selected_account_id = None
-    if selected_account_display != "Tutti":
+    if selected_account_display != t("page-payments-filter-all-accounts"):
         for acc in accounts:
             if f"{acc['name']} ({acc['iban'][-4:]})" == selected_account_display:
                 selected_account_id = acc["id"]
                 break
 else:
     selected_account_id = None
-    st.sidebar.info("Nessun conto bancario configurato")
+    st.sidebar.info(t("page-payments-no-accounts-configured"))
 
 # Status filter
 status_options = ["all", "unmatched", "matched", "ignored"]
 status_labels = {
-    "all": "Tutti",
-    "unmatched": "Da Riconciliare",
-    "matched": "Riconciliati",
-    "ignored": "Ignorati",
+    "all": t("page-payments-status-all"),
+    "unmatched": t("page-payments-status-unmatched"),
+    "matched": t("page-payments-status-matched"),
+    "ignored": t("page-payments-status-ignored"),
 }
 selected_status = st.sidebar.selectbox(
-    "Stato",
+    t("page-payments-filter-status"),
     options=list(status_labels.keys()),
     format_func=lambda x: status_labels[x],
     index=0,
@@ -59,24 +69,28 @@ selected_status = st.sidebar.selectbox(
 col_import, col_refresh = st.sidebar.columns(2)
 
 with col_import:
-    if st.button("📥 Import", use_container_width=True, help="Importa estratto conto"):
+    if st.button(
+        t("page-payments-action-import"),
+        use_container_width=True,
+        help=t("page-payments-action-import-help"),
+    ):
         st.session_state.show_import_form = True
 
 with col_refresh:
-    if st.button("🔄 Aggiorna", use_container_width=True):
+    if st.button(t("page-payments-action-refresh"), use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
 # Import form
 if st.session_state.get("show_import_form", False):
-    with st.expander("📥 Importa Estratto Conto", expanded=True):
+    with st.expander(t("page-payments-import-title"), expanded=True):
         # Account selection
         if accounts:
             account_options = [""] + [f"{acc['name']} ({acc['iban'][-4:]})" for acc in accounts]
             selected_account_display = st.selectbox(
-                "Seleziona conto bancario *",
+                t("page-payments-import-select-account"),
                 options=account_options,
-                help="Scegli il conto dove importare le transazioni",
+                help=t("page-payments-import-select-account-help"),
             )
 
             selected_account_id = None
@@ -86,14 +100,14 @@ if st.session_state.get("show_import_form", False):
                         selected_account_id = acc["id"]
                         break
         else:
-            st.error("Nessun conto bancario configurato. Creane uno prima di importare.")
+            st.error(t("page-payments-import-no-account-error"))
             selected_account_id = None
 
         # File upload
         uploaded_file = st.file_uploader(
-            "Seleziona file estratto conto",
+            t("page-payments-import-file-label"),
             type=["ofx", "qfx", "csv", "qif"],
-            help="Supporta formati: OFX, QFX, CSV, QIF",
+            help=t("page-payments-import-file-help"),
         )
 
         # Bank preset for CSV files
@@ -101,33 +115,41 @@ if st.session_state.get("show_import_form", False):
         if uploaded_file and uploaded_file.name.lower().endswith(".csv"):
             bank_options = ["", "intesa", "unicredit", "revolut", "n26", "fineco", "bancoposta"]
             bank_preset = st.selectbox(
-                "Banca (per CSV)",
+                t("page-payments-import-bank-preset"),
                 options=bank_options,
-                help="Seleziona la banca per il parsing corretto del CSV",
+                help=t("page-payments-import-bank-preset-help"),
             )
 
         # Import options
         col1, col2 = st.columns(2)
         with col1:
             auto_match = st.checkbox(
-                "Auto-match pagamenti",
+                t("page-payments-import-auto-match"),
                 value=True,
-                help="Tenta automaticamente di abbinare le transazioni alle fatture",
+                help=t("page-payments-import-auto-match-help"),
             )
         with col2:
             confidence_threshold = st.slider(
-                "Soglia confidenza", 0.5, 1.0, 0.85, help="Minima confidenza per auto-matching"
+                t("page-payments-import-confidence"),
+                0.5,
+                1.0,
+                0.85,
+                help=t("page-payments-import-confidence-help"),
             )
 
         # Import button
         import_disabled = not (selected_account_id and uploaded_file)
-        if st.button("🚀 Importa Transazioni", disabled=import_disabled, use_container_width=True):
+        if st.button(
+            t("page-payments-import-button"),
+            disabled=import_disabled,
+            use_container_width=True,
+        ):
             if not selected_account_id:
-                st.error("Seleziona un conto bancario")
+                st.error(t("page-payments-import-error-no-account"))
             elif not uploaded_file:
-                st.error("Seleziona un file da importare")
+                st.error(t("page-payments-import-error-no-file"))
             else:
-                with st.spinner("Importando transazioni..."):
+                with st.spinner(t("page-payments-import-importing")):
                     # Read file content
                     file_content = uploaded_file.read()
 
@@ -145,24 +167,40 @@ if st.session_state.get("show_import_form", False):
                         # Show details
                         col1, col2, col3 = st.columns(3)
                         with col1:
-                            st.metric("Transazioni Importate", result["transactions_imported"])
+                            st.metric(
+                                t("page-payments-import-metric-imported"),
+                                result["transactions_imported"],
+                            )
                         with col2:
-                            st.metric("Errori", len(result.get("errors", [])))
+                            st.metric(
+                                t("page-payments-import-metric-errors"),
+                                len(result.get("errors", [])),
+                            )
                         with col3:
-                            st.metric("Duplicati", result.get("duplicates", 0))
+                            st.metric(
+                                t("page-payments-import-metric-duplicates"),
+                                result.get("duplicates", 0),
+                            )
 
                         if result.get("format_detected"):
-                            st.info(f"📄 Formato rilevato: {result['format_detected']}")
+                            st.info(
+                                t(
+                                    "page-payments-import-format-detected",
+                                    {"format": result["format_detected"]},
+                                )
+                            )
 
                         # Show errors if any
                         if result.get("errors"):
-                            with st.expander("⚠️ Errori durante l'import", expanded=False):
+                            with st.expander(
+                                t("page-payments-import-errors-title"), expanded=False
+                            ):
                                 for error in result["errors"]:
                                     st.write(f"• {error}")
 
                         # Clear cache and refresh
                         st.cache_data.clear()
-                        st.success("🔄 Dati aggiornati!")
+                        st.success(t("page-payments-import-success-refresh"))
 
                     else:
                         st.error(f"❌ {result['message']}")
@@ -170,7 +208,7 @@ if st.session_state.get("show_import_form", False):
                             for error in result["errors"]:
                                 st.write(f"• {error}")
 
-        if st.button("❌ Chiudi"):
+        if st.button(t("page-payments-import-close")):
             st.session_state.show_import_form = False
             st.rerun()
 
@@ -178,7 +216,7 @@ if st.session_state.get("show_import_form", False):
 try:
     # Bank accounts overview
     if accounts:
-        st.subheader("🏦 Conti Bancari")
+        st.subheader(t("page-payments-accounts-title"))
 
         # Display accounts in a grid
         cols = st.columns(min(len(accounts), 3))
@@ -187,29 +225,29 @@ try:
                 with st.container(border=True):
                     st.subheader(f"🏦 {account['name']}")
                     st.metric(
-                        "Saldo Attuale",
+                        t("page-payments-accounts-current-balance"),
                         f"€{account['current_balance']:,.2f}",
                         delta=f"€{account['current_balance'] - account['opening_balance']:,.2f}",
                     )
-                    st.caption(f"IBAN: ...{account['iban'][-4:]}")
-                    st.caption(f"Banca: {account['bank_name']}")
+                    st.caption(t("page-payments-accounts-iban", {"last4": account["iban"][-4:]}))
+                    st.caption(t("page-payments-accounts-bank", {"name": account["bank_name"]}))
 
         st.markdown("---")
 
     # Payment statistics
-    st.subheader("📊 Statistiche Pagamenti")
+    st.subheader(t("page-payments-stats-title"))
     stats = payment_service.get_payment_stats()
 
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric("Conti Bancari", stats["total_accounts"])
+        st.metric(t("page-payments-stats-accounts"), stats["total_accounts"])
 
     with col2:
-        st.metric("Transazioni Totali", stats["total_transactions"])
+        st.metric(t("page-payments-stats-transactions"), stats["total_transactions"])
 
     with col3:
-        st.metric("Saldo Totale", f"€{stats['total_balance']:,.2f}")
+        st.metric(t("page-payments-stats-balance"), f"€{stats['total_balance']:,.2f}")
 
     with col4:
         matched_pct = (
@@ -217,27 +255,34 @@ try:
             if stats["total_transactions"] > 0
             else 0
         )
-        st.metric("Riconciliati", f"{matched_pct:.1f}%")
+        st.metric(t("page-payments-stats-reconciled"), f"{matched_pct:.1f}%")
 
     # Status distribution
     if stats["status_distribution"]:
-        st.subheader("📈 Distribuzione per Stato")
+        st.subheader(t("page-payments-stats-distribution-title"))
 
         status_data = []
         for status, count in stats["status_distribution"].items():
             if count > 0:
                 status_data.append(
-                    {"Stato": status_labels.get(status, status), "Transazioni": count}
+                    {
+                        t("page-payments-stats-distribution-status"): status_labels.get(
+                            status, status
+                        ),
+                        t("page-payments-stats-distribution-transactions"): count,
+                    }
                 )
 
         if status_data:
             status_df = pd.DataFrame(status_data)
-            st.bar_chart(status_df.set_index("Stato"), height=200)
+            st.bar_chart(
+                status_df.set_index(t("page-payments-stats-distribution-status")), height=200
+            )
 
     st.markdown("---")
 
     # Transactions list
-    st.subheader("📋 Transazioni")
+    st.subheader(t("page-payments-transactions-title"))
 
     # Get transactions
     transactions = payment_service.get_transactions(
@@ -252,25 +297,35 @@ try:
 
         # Rename columns for display
         column_names = {
-            "id": "ID",
-            "date": "Data",
-            "amount": "Importo",
-            "description": "Descrizione",
-            "reference": "Riferimento",
-            "status": "Stato",
-            "matched_payment_id": "Fattura",
+            "id": t("page-payments-table-col-id"),
+            "date": t("page-payments-table-col-date"),
+            "amount": t("page-payments-table-col-amount"),
+            "description": t("page-payments-table-col-description"),
+            "reference": t("page-payments-table-col-reference"),
+            "status": t("page-payments-table-col-status"),
+            "matched_payment_id": t("page-payments-table-col-invoice"),
         }
         df_display = df.rename(columns=column_names)
 
         # Format columns
-        df_display["Data"] = pd.to_datetime(df_display["Data"]).dt.strftime("%d/%m/%Y")
-        df_display["Importo"] = df_display["Importo"].apply(lambda x: f"€{x:,.2f}")
-        df_display["Stato"] = df_display["Stato"].apply(lambda x: status_labels.get(x, x))
+        date_col = t("page-payments-table-col-date")
+        amount_col = t("page-payments-table-col-amount")
+        status_col = t("page-payments-table-col-status")
+        actions_col = t("page-payments-table-col-actions")
+
+        df_display[date_col] = pd.to_datetime(df_display[date_col]).dt.strftime("%d/%m/%Y")
+        df_display[amount_col] = df_display[amount_col].apply(lambda x: f"€{x:,.2f}")
+        df_display[status_col] = df_display[status_col].apply(lambda x: status_labels.get(x, x))
 
         # Add action column
-        df_display["Azioni"] = ""
+        df_display[actions_col] = ""
 
         # Display transactions
+        id_col = t("page-payments-table-col-id")
+        desc_col = t("page-payments-table-col-description")
+        ref_col = t("page-payments-table-col-reference")
+        invoice_col = t("page-payments-table-col-invoice")
+
         for idx, row in df_display.iterrows():
             (
                 col_id,
@@ -284,61 +339,64 @@ try:
             ) = st.columns([0.5, 1, 1, 2, 1, 1, 1, 1])
 
             with col_id:
-                st.write(f"**{row['ID'][:8]}...**")  # Show first 8 chars of UUID
+                st.write(f"**{row[id_col][:8]}...**")  # Show first 8 chars of UUID
 
             with col_date:
-                st.write(row["Data"])
+                st.write(row[date_col])
 
             with col_amount:
                 amount_color = (
                     "green"
-                    if row["Importo"].startswith("€")
-                    and float(row["Importo"].replace("€", "").replace(",", "")) > 0
+                    if row[amount_col].startswith("€")
+                    and float(row[amount_col].replace("€", "").replace(",", "")) > 0
                     else "red"
                 )
                 st.markdown(
-                    f'<span style="color: {amount_color}">{row["Importo"]}</span>',
+                    f'<span style="color: {amount_color}">{row[amount_col]}</span>',
                     unsafe_allow_html=True,
                 )
 
             with col_desc:
                 # Truncate long descriptions
-                desc = row["Descrizione"]
+                desc = row[desc_col]
                 if len(desc) > 50:
                     desc = desc[:47] + "..."
                 st.write(desc)
 
             with col_ref:
-                st.write(row["Riferimento"] or "-")
+                st.write(row[ref_col] or "-")
 
             with col_status:
                 status_color = {
-                    "Da Riconciliare": "orange",
-                    "Riconciliati": "green",
-                    "Ignorati": "gray",
-                }.get(row["Stato"], "blue")
+                    t("page-payments-status-unmatched"): "orange",
+                    t("page-payments-status-matched"): "green",
+                    t("page-payments-status-ignored"): "gray",
+                }.get(row[status_col], "blue")
                 st.markdown(
-                    f'<span style="color: {status_color}">●</span> {row["Stato"]}',
+                    f'<span style="color: {status_color}">●</span> {row[status_col]}',
                     unsafe_allow_html=True,
                 )
 
             with col_invoice:
-                if pd.notna(row["Fattura"]) and row["Fattura"]:
-                    st.write(f"✅ {row['Fattura']}")
+                if pd.notna(row[invoice_col]) and row[invoice_col]:
+                    st.write(f"✅ {row[invoice_col]}")
                 else:
                     st.write("-")
 
             with col_actions:
-                tx_id = row["ID"]
-                if st.button("👁️", key=f"view_{tx_id}", help="Visualizza dettagli"):
+                tx_id = row[id_col]
+                if st.button("👁️", key=f"view_{tx_id}", help=t("page-payments-action-view-details")):
                     st.session_state.selected_transaction_id = tx_id
                     st.session_state.show_transaction_detail = True
 
-                if row["Stato"] == "Da Riconciliare":
-                    if st.button("🔗", key=f"match_{tx_id}", help="Riconcilia"):
+                if row[status_col] == t("page-payments-status-unmatched"):
+                    if st.button("🔗", key=f"match_{tx_id}", help=t("page-payments-action-match")):
                         st.session_state.selected_transaction_id = tx_id
                         st.session_state.show_match_form = True
-                elif row["Stato"] in ["Riconciliati", "Abbinati"]:
+                elif row[status_col] in [
+                    t("page-payments-status-matched"),
+                    t("page-payments-status-paired"),
+                ]:
                     st.write("✅")  # Already matched
 
             st.markdown("---")
@@ -346,46 +404,25 @@ try:
         # Summary
         total_amount = df["amount"].sum()
         st.info(
-            f"📊 **Totale visualizzato:** €{total_amount:,.2f} su {len(transactions)} transazioni"
+            t(
+                "page-payments-transactions-summary",
+                {"total": f"€{total_amount:,.2f}", "count": len(transactions)},
+            )
         )
 
     else:
         if selected_account_id or selected_status != "all":
-            st.info("🔍 Nessuna transazione trovata con i filtri selezionati")
+            st.info(t("page-payments-no-transactions-filtered"))
         else:
-            st.info("📭 Nessuna transazione presente")
+            st.info(t("page-payments-no-transactions"))
 
             # Quick setup guide
-            with st.expander("🚀 Come iniziare con i pagamenti", expanded=True):
-                st.markdown(
-                    """
-                    ### Primi Passi
-
-                    1. **Aggiungi un conto bancario**
-                       ```bash
-                       uv run openfatture payment account add "Conto Business" --iban IT123...
-                       ```
-
-                    2. **Importa un estratto conto**
-                       ```bash
-                       uv run openfatture payment import estratto.ofx --account 1
-                       ```
-
-                    3. **Riconcilia automaticamente**
-                       ```bash
-                       uv run openfatture payment match --auto-apply
-                       ```
-
-                    4. **Verifica riconciliazioni**
-                       ```bash
-                       uv run openfatture payment status
-                       ```
-                    """
-                )
+            with st.expander(t("page-payments-quickstart-title"), expanded=True):
+                st.markdown(t("page-payments-quickstart-content"))
 
 except Exception as e:
-    st.error(f"❌ Errore nel caricamento dei pagamenti: {e}")
-    st.info("💡 Verifica che il database sia inizializzato correttamente")
+    st.error(t("page-payments-error-loading", {"error": str(e)}))
+    st.info(t("page-payments-error-loading-hint"))
 
 # Transaction detail modal
 if st.session_state.get("show_transaction_detail", False):
@@ -393,30 +430,44 @@ if st.session_state.get("show_transaction_detail", False):
     if tx_id:
         transaction = payment_service.get_transaction_detail(tx_id)
         if transaction:
-            with st.expander(f"👁️ Dettagli Transazione {str(transaction.id)[:8]}...", expanded=True):
+            with st.expander(
+                t("page-payments-detail-title", {"id": str(transaction.id)[:8]}), expanded=True
+            ):
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.write(f"**ID:** {transaction.id}")
-                    st.write(f"**Data:** {transaction.date.strftime('%d/%m/%Y')}")
-                    st.write(f"**Importo:** €{transaction.amount:,.2f}")
-                    st.write(f"**Descrizione:** {transaction.description}")
+                    st.write(f"**{t('page-payments-detail-id')}:** {transaction.id}")
+                    st.write(
+                        f"**{t('page-payments-detail-date')}:** {transaction.date.strftime('%d/%m/%Y')}"
+                    )
+                    st.write(f"**{t('page-payments-detail-amount')}:** €{transaction.amount:,.2f}")
+                    st.write(
+                        f"**{t('page-payments-detail-description')}:** {transaction.description}"
+                    )
 
                 with col2:
-                    st.write(f"**Riferimento:** {transaction.reference or 'N/A'}")
-                    st.write(f"**Controparte:** {transaction.counterparty or 'N/A'}")
-                    st.write(f"**Stato:** {transaction.status.value}")
+                    st.write(
+                        f"**{t('page-payments-detail-reference')}:** {transaction.reference or 'N/A'}"
+                    )
+                    st.write(
+                        f"**{t('page-payments-detail-counterparty')}:** {transaction.counterparty or 'N/A'}"
+                    )
+                    st.write(f"**{t('page-payments-detail-status')}:** {transaction.status.value}")
                     if transaction.match_confidence:
-                        st.write(f"**Confidenza Match:** {transaction.match_confidence:.1%}")
+                        st.write(
+                            f"**{t('page-payments-detail-confidence')}:** {transaction.match_confidence:.1%}"
+                        )
 
                 if transaction.matched_payment_id:
-                    st.write(f"**Fattura Collegata:** {transaction.matched_payment_id}")
+                    st.write(
+                        f"**{t('page-payments-detail-linked-invoice')}:** {transaction.matched_payment_id}"
+                    )
 
-                if st.button("❌ Chiudi", key="close_detail"):
+                if st.button(t("page-payments-detail-close"), key="close_detail"):
                     st.session_state.show_transaction_detail = False
                     st.rerun()
         else:
-            st.error("Transazione non trovata")
+            st.error(t("page-payments-detail-not-found"))
             st.session_state.show_transaction_detail = False
 
 # Match transaction modal
@@ -426,25 +477,34 @@ if st.session_state.get("show_match_form", False):
         transaction = payment_service.get_transaction_detail(tx_id)
         if transaction:
             with st.expander(
-                f"🔗 Riconcilia Transazione €{transaction.amount:,.2f}", expanded=True
+                t("page-payments-match-title", {"amount": f"€{transaction.amount:,.2f}"}),
+                expanded=True,
             ):
                 # Transaction details
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.write(f"**Data:** {transaction.date.strftime('%d/%m/%Y')}")
-                    st.write(f"**Importo:** €{transaction.amount:,.2f}")
-                    st.write(f"**Descrizione:** {transaction.description}")
+                    st.write(
+                        f"**{t('page-payments-match-date')}:** {transaction.date.strftime('%d/%m/%Y')}"
+                    )
+                    st.write(f"**{t('page-payments-match-amount')}:** €{transaction.amount:,.2f}")
+                    st.write(
+                        f"**{t('page-payments-match-description')}:** {transaction.description}"
+                    )
 
                 with col2:
-                    st.write(f"**Riferimento:** {transaction.reference or 'N/A'}")
-                    st.write(f"**Controparte:** {transaction.counterparty or 'N/A'}")
-                    st.write(f"**Stato:** {transaction.status.value}")
+                    st.write(
+                        f"**{t('page-payments-match-reference')}:** {transaction.reference or 'N/A'}"
+                    )
+                    st.write(
+                        f"**{t('page-payments-match-counterparty')}:** {transaction.counterparty or 'N/A'}"
+                    )
+                    st.write(f"**{t('page-payments-match-status')}:** {transaction.status.value}")
 
                 # Get potential matches
                 potential_matches = payment_service.get_potential_matches(tx_id, limit=10)
 
                 if potential_matches:
-                    st.subheader("🎯 Abbinamenti Suggeriti")
+                    st.subheader(t("page-payments-match-suggestions-title"))
 
                     # Display matches
                     for match in potential_matches:
@@ -453,16 +513,20 @@ if st.session_state.get("show_match_form", False):
 
                             with col1:
                                 st.write(f"**{match['numero']}/{match['anno']}**")
-                                st.write(f"Cliente: {match['cliente']}")
+                                st.write(
+                                    t("page-payments-match-client", {"client": match["cliente"]})
+                                )
                                 st.write(f"€{match['totale']:,.2f}")
 
                             with col2:
                                 confidence = match.get("confidence", 0)
-                                st.metric("Confidenza", f"{confidence:.1%}")
+                                st.metric(t("page-payments-match-confidence"), f"{confidence:.1%}")
 
                             with col3:
                                 days_diff = match.get("days_difference", 0)
-                                st.write(f"±{abs(days_diff)} giorni")
+                                st.write(
+                                    t("page-payments-match-days-diff", {"days": abs(days_diff)})
+                                )
 
                             with col4:
                                 amount_diff = match.get("amount_difference", 0)
@@ -474,29 +538,41 @@ if st.session_state.get("show_match_form", False):
 
                             # Match button
                             match_key = f"match_{tx_id}_{match['id']}"
-                            if st.button("✅ Abbina", key=match_key, use_container_width=True):
-                                with st.spinner("Abbinando transazione..."):
+                            if st.button(
+                                t("page-payments-match-button"),
+                                key=match_key,
+                                use_container_width=True,
+                            ):
+                                with st.spinner(t("page-payments-match-matching")):
                                     result = payment_service.match_transaction(tx_id, match["id"])
                                     if result["success"]:
                                         st.success(
-                                            f"✅ Transazione abbinata a fattura {match['numero']}"
+                                            t(
+                                                "page-payments-match-success",
+                                                {"number": match["numero"]},
+                                            )
                                         )
                                         st.cache_data.clear()
                                         st.rerun()
                                     else:
-                                        st.error(f"❌ Errore: {result['message']}")
+                                        st.error(
+                                            t(
+                                                "page-payments-match-error",
+                                                {"error": result["message"]},
+                                            )
+                                        )
 
                 else:
-                    st.info("🔍 Nessun abbinamento automatico trovato")
+                    st.info(t("page-payments-match-no-suggestions"))
 
                 # Manual match option
                 st.divider()
-                st.subheader("🔍 Ricerca Manuale")
+                st.subheader(t("page-payments-match-manual-title"))
 
                 search_term = st.text_input(
-                    "Cerca fattura",
-                    placeholder="Numero fattura, cliente...",
-                    help="Inserisci numero fattura o nome cliente",
+                    t("page-payments-match-manual-search"),
+                    placeholder=t("page-payments-match-manual-placeholder"),
+                    help=t("page-payments-match-manual-help"),
                 )
 
                 if search_term:
@@ -505,7 +581,7 @@ if st.session_state.get("show_match_form", False):
                     )
 
                     if manual_matches:
-                        st.write("Risultati ricerca:")
+                        st.write(t("page-payments-match-manual-results"))
                         for match in manual_matches:
                             col1, col2, col3 = st.columns([2, 1, 1])
                             with col1:
@@ -516,29 +592,34 @@ if st.session_state.get("show_match_form", False):
                                 st.write(f"€{match['totale']:,.2f}")
                             with col3:
                                 match_key = f"manual_match_{tx_id}_{match['id']}"
-                                if st.button("Abbina", key=match_key):
-                                    with st.spinner("Abbinando..."):
+                                if st.button(t("page-payments-match-manual-button"), key=match_key):
+                                    with st.spinner(t("page-payments-match-matching")):
                                         result = payment_service.match_transaction(
                                             tx_id, match["id"]
                                         )
                                         if result["success"]:
-                                            st.success("✅ Abbinata!")
+                                            st.success(t("page-payments-match-manual-success"))
                                             st.cache_data.clear()
                                             st.rerun()
                                         else:
-                                            st.error(f"❌ {result['message']}")
+                                            st.error(
+                                                t(
+                                                    "page-payments-match-error",
+                                                    {"error": result["message"]},
+                                                )
+                                            )
                     else:
-                        st.write("Nessuna fattura trovata")
+                        st.write(t("page-payments-match-manual-no-results"))
 
-                if st.button("❌ Chiudi", key="close_match"):
+                if st.button(t("page-payments-match-close"), key="close_match"):
                     st.session_state.show_match_form = False
                     st.rerun()
         else:
-            st.error("Transazione non trovata")
+            st.error(t("page-payments-detail-not-found"))
             st.session_state.show_match_form = False
 
 # Quick stats
-st.markdown("### 📊 Statistiche Pagamenti")
+st.markdown(t("page-payments-quick-stats-title"))
 
 try:
     from openfatture.cli.ui.dashboard import DashboardData
@@ -550,21 +631,21 @@ try:
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric("🔍 Non Abbinati", payment_stats["unmatched"])
+        st.metric(t("page-payments-quick-stats-unmatched"), payment_stats["unmatched"])
 
     with col2:
-        st.metric("✅ Abbinati", payment_stats["matched"])
+        st.metric(t("page-payments-quick-stats-matched"), payment_stats["matched"])
 
     with col3:
-        st.metric("⏭️ Ignorati", payment_stats["ignored"])
+        st.metric(t("page-payments-quick-stats-ignored"), payment_stats["ignored"])
 
     with col4:
         total = sum(payment_stats.values())
-        st.metric("📊 Totale", total)
+        st.metric(t("page-payments-quick-stats-total"), total)
 
     # Payment due
     st.markdown("---")
-    st.markdown("### 💳 Scadenze Prossimi 30 Giorni")
+    st.markdown(t("page-payments-due-title"))
 
     payment_due = data.get_payment_due_summary(window_days=30, max_upcoming=10)
 
@@ -576,11 +657,11 @@ try:
         df = pd.DataFrame(
             [
                 {
-                    "Fattura": e.invoice_ref,
-                    "Cliente": e.client_name[:30],
-                    "Scadenza": e.due_date.strftime("%d/%m/%Y"),
-                    "Residuo": f"€{float(e.residual):,.2f}",
-                    "Stato": e.status.value.replace("_", " ").title(),
+                    t("page-payments-due-col-invoice"): e.invoice_ref,
+                    t("page-payments-due-col-client"): e.client_name[:30],
+                    t("page-payments-due-col-due-date"): e.due_date.strftime("%d/%m/%Y"),
+                    t("page-payments-due-col-residual"): f"€{float(e.residual):,.2f}",
+                    t("page-payments-due-col-status"): e.status.value.replace("_", " ").title(),
                 }
                 for e in all_entries
             ]
@@ -588,11 +669,14 @@ try:
 
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-        st.metric("💸 Totale Residuo", f"€{float(payment_due.total_outstanding):,.2f}")
+        st.metric(
+            t("page-payments-due-total-residual"),
+            f"€{float(payment_due.total_outstanding):,.2f}",
+        )
     else:
-        st.success("✅ Nessun pagamento in scadenza")
+        st.success(t("page-payments-due-no-payments"))
 
     data.close()
 
 except Exception as e:
-    st.error(f"Errore caricamento dati: {e}")
+    st.error(t("page-payments-quick-stats-error", {"error": str(e)}))

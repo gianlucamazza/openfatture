@@ -5,9 +5,13 @@ Create and manage Lightning invoices, monitor channels, and track payments.
 
 import streamlit as st
 
-st.set_page_config(page_title="Lightning - OpenFatture", page_icon="⚡", layout="wide")
+from openfatture.web.utils.i18n import get_translator
 
-st.title("⚡ Lightning Network Pagamenti")
+t = get_translator()
+
+st.set_page_config(page_title=t("page-lightning-page-title"), page_icon="⚡", layout="wide")
+
+st.title(t("page-lightning-title"))
 
 # Check if Lightning is enabled
 from openfatture.utils.config import get_settings
@@ -15,110 +19,46 @@ from openfatture.utils.config import get_settings
 settings = get_settings()
 
 if not settings.lightning_enabled:
-    st.warning(
-        """
-    ⚠️ **Lightning Network non abilitato**
-
-    Per utilizzare i pagamenti Lightning:
-
-    1. Abilita Lightning nelle impostazioni:
-       ```bash
-       uv run openfatture config set lightning_enabled true
-       ```
-
-    2. Configura la connessione LND:
-       ```bash
-       uv run openfatture config set lightning_host "localhost:10009"
-       uv run openfatture config set lightning_cert_path "/path/to/tls.cert"
-       uv run openfatture config set lightning_macaroon_path "/path/to/admin.macaroon"
-       ```
-
-    3. Riavvia l'applicazione
-    """
-    )
+    st.warning(t("page-lightning-not-enabled"))
     st.stop()
 
 # Main content
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.subheader("📋 Gestione Fatture Lightning")
-
-    st.info(
-        """
-    **🚧 Feature in sviluppo**
-
-    La gestione fatture Lightning via Web UI sarà disponibile a breve!
-
-    Per ora, crea fatture Lightning tramite CLI:
-
-    ```bash
-    # Crea fattura da fattura esistente
-    uv run openfatture lightning invoice create --fattura-id 123
-
-    # Crea fattura zero-amount
-    uv run openfatture lightning invoice create --amount 0 --description "Donazione"
-
-    # Lista fatture Lightning
-    uv run openfatture lightning invoice list
-    ```
-    """
-    )
+    st.subheader(t("page-lightning-invoices-title"))
+    st.info(t("page-lightning-invoices-info"))
 
 with col2:
-    st.subheader("📊 Stato Canali")
-
-    st.info(
-        """
-    **Monitoraggio Canali**
-
-    ```bash
-    # Stato canali
-    uv run openfatture lightning channels status
-
-    # Report liquidità
-    uv run openfatture lightning liquidity report
-
-    # Monitoraggio automatico
-    uv run openfatture lightning liquidity monitor --start
-    ```
-    """
-    )
+    st.subheader(t("page-lightning-channels-title"))
+    st.info(t("page-lightning-channels-info"))
 
 # Recent Lightning invoices section
-st.subheader("🕒 Fatture Lightning Recenti")
-
-st.info(
-    "Le fatture Lightning recenti verranno mostrate qui una volta implementata l'integrazione completa."
-)
+st.subheader(t("page-lightning-recent-title"))
+st.info(t("page-lightning-recent-info"))
 
 # Channel status section
-st.subheader("🔗 Stato Canali Lightning")
+st.subheader(t("page-lightning-status-title"))
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("Canali Attivi", "0", help="Canali Lightning attivi")
+    st.metric(t("page-lightning-metric-active"), "0", help=t("page-lightning-metric-active-help"))
 
 with col2:
-    st.metric("Capacità Totale", "0 SAT", help="Capacità totale canali")
+    st.metric(
+        t("page-lightning-metric-capacity"), "0 SAT", help=t("page-lightning-metric-capacity-help")
+    )
 
 with col3:
-    st.metric("Liquidità Inbound", "0%", help="Percentuale liquidità inbound")
+    st.metric(
+        t("page-lightning-metric-inbound"), "0%", help=t("page-lightning-metric-inbound-help")
+    )
 
-st.info(
-    """
-**Note tecniche:**
-
-- **LND**: Lightning Network Daemon connection required
-- **Rate Provider**: BTC/EUR conversion via CoinGecko/CoinMarketCap
-- **Sicurezza**: TLS + Macaroon authentication
-- **Webhook**: Real-time payment notifications support
-"""
-)
+st.info(t("page-lightning-technical-notes"))
 
 # Configuration section
-with st.expander("⚙️ Configurazione Lightning"):
+with st.expander(t("page-lightning-config-title")):
     st.code(
         f"""
 # Impostazioni correnti
@@ -140,14 +80,4 @@ lightning_liquidity_target_ratio: {settings.lightning_liquidity_target_ratio}
         language="yaml",
     )
 
-    st.info(
-        """
-    **Modifica configurazione:**
-
-    ```bash
-    uv run openfatture config set lightning_host "your-lnd-host:10009"
-    uv run openfatture config set lightning_cert_path "/path/to/tls.cert"
-    uv run openfatture config set lightning_macaroon_path "/path/to/admin.macaroon"
-    ```
-    """
-    )
+    st.info(t("page-lightning-config-info"))

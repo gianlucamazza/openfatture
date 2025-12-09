@@ -27,6 +27,7 @@ from openfatture.ai.rag.knowledge_indexer import KnowledgeIndexer
 from openfatture.ai.voice import VoiceAssistant, create_voice_provider
 from openfatture.cli.lifespan import get_event_bus, run_sync_with_lifespan
 from openfatture.core.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
+from openfatture.i18n import _
 from openfatture.utils.async_bridge import run_async
 from openfatture.utils.config import get_settings
 from openfatture.utils.logging import get_logger
@@ -1017,16 +1018,14 @@ def self_learning_status() -> None:
 @app.command("describe")
 def ai_describe(
     ctx: typer.Context,
-    text: str = typer.Argument(..., help="Service description to expand"),
-    hours: float | None = typer.Option(None, "--hours", "-h", help="Hours worked"),
-    rate: float | None = typer.Option(None, "--rate", "-r", help="Hourly rate (€)"),
-    project: str | None = typer.Option(None, "--project", "-p", help="Project name"),
+    text: str = typer.Argument(..., help=_("cli-ai-help-service-description")),
+    hours: float | None = typer.Option(None, "--hours", "-h", help=_("cli-ai-help-hours-worked")),
+    rate: float | None = typer.Option(None, "--rate", "-r", help=_("cli-ai-help-hourly-rate")),
+    project: str | None = typer.Option(None, "--project", "-p", help=_("cli-ai-help-project-name")),
     technologies: str | None = typer.Option(
-        None, "--tech", "-t", help="Technologies used (comma-separated)"
+        None, "--tech", "-t", help=_("cli-ai-help-technologies")
     ),
-    json_output: bool = typer.Option(
-        False, "--json", help="Output as JSON (deprecated, use --format json)"
-    ),
+    json_output: bool = typer.Option(False, "--json", help=_("cli-ai-help-json-output")),
 ) -> None:
     """
     Use AI to generate detailed invoice descriptions.
@@ -1061,7 +1060,7 @@ async def _run_invoice_assistant(
     format_type = get_format_from_context(ctx, json_output)
 
     if format_type == "rich":
-        console.print("\n[bold blue]🤖 AI Invoice Description Generator[/bold blue]\n")
+        console.print(f"\n{_('cli-ai-describe-title')}\n")
 
     # Track execution metrics
     start_time = time.time()
@@ -1117,7 +1116,7 @@ async def _run_invoice_assistant(
 
         # Create provider and agent
         if format_type == "rich":
-            with console.status("[bold green]Generating description with AI..."):
+            with console.status(_("cli-ai-describe-processing")):
                 provider = create_provider()
                 agent = InvoiceAssistantAgent(provider=provider)
                 response = await agent.execute(context)
@@ -1129,11 +1128,11 @@ async def _run_invoice_assistant(
         # Check for errors
         if response.status.value == "error":
             if format_type == "rich":
-                console.print(f"\n[bold red]❌ Error:[/bold red] {response.error}\n")
+                console.print(f"\n{_('cli-ai-describe-error', error=response.error)}\n")
             else:
                 from openfatture.cli.formatters.utils import render_error
 
-                render_error(response.error or "Unknown error", format_type, console)
+                render_error(response.error or _("cli-ai-error-unknown"), format_type, console)
             logger.error("ai_describe_failed", error=response.error)
             return
 
@@ -1160,7 +1159,7 @@ async def _run_invoice_assistant(
 
     except Exception as e:
         if format_type == "rich":
-            console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
+            console.print(f"\n{_('cli-ai-describe-error', error=str(e))}\n")
         else:
             from openfatture.cli.formatters.utils import render_error
 
@@ -1188,19 +1187,19 @@ def _display_input(context: InvoiceContext) -> None:
     table.add_column("Field", style="cyan")
     table.add_column("Value", style="white")
 
-    table.add_row("📝 Service:", context.servizio_base)
+    table.add_row(_("cli-ai-describe-input-service"), context.servizio_base)
 
     if context.ore_lavorate:
-        table.add_row("⏱️  Hours:", f"{context.ore_lavorate:.1f}h")
+        table.add_row(_("cli-ai-describe-input-hours"), f"{context.ore_lavorate:.1f}h")
 
     if context.tariffa_oraria:
-        table.add_row("💰 Rate:", f"€{context.tariffa_oraria:.2f}/h")
+        table.add_row(_("cli-ai-describe-input-rate"), f"€{context.tariffa_oraria:.2f}/h")
 
     if context.progetto:
-        table.add_row("📁 Project:", context.progetto)
+        table.add_row(_("cli-ai-describe-input-project"), context.progetto)
 
     if context.tecnologie:
-        table.add_row("🔧 Technologies:", ", ".join(context.tecnologie))
+        table.add_row(_("cli-ai-describe-input-technologies"), ", ".join(context.tecnologie))
 
     console.print(table)
     console.print()
@@ -1219,37 +1218,37 @@ def _display_result(response: AgentResponse) -> None:
         console.print(
             Panel(
                 data["descrizione_completa"],
-                title="[bold]📄 Professional Description[/bold]",
+                title=_("cli-ai-describe-result-panel-title"),
                 border_style="green",
             )
         )
 
         # Deliverables
         if data.get("deliverables"):
-            console.print("\n[bold cyan]📦 Deliverables:[/bold cyan]")
+            console.print(f"\n{_('cli-ai-describe-deliverables-title')}")
             for item in data["deliverables"]:
                 console.print(f"  • {item}")
 
         # Competenze
         if data.get("competenze"):
-            console.print("\n[bold cyan]🔧 Technical Skills:[/bold cyan]")
+            console.print(f"\n{_('cli-ai-describe-skills-title')}")
             for skill in data["competenze"]:
                 console.print(f"  • {skill}")
 
         # Duration
         if data.get("durata_ore"):
-            console.print(f"\n[bold cyan]⏱️  Duration:[/bold cyan] {data['durata_ore']}h")
+            console.print(f"\n{_('cli-ai-describe-duration-label')} {data['durata_ore']}h")
 
         # Notes
         if data.get("note"):
-            console.print(f"\n[bold cyan]📌 Notes:[/bold cyan] {data['note']}")
+            console.print(f"\n{_('cli-ai-describe-notes-label')} {data['note']}")
 
     else:
         # Fallback to plain text
         console.print(
             Panel(
                 response.content,
-                title="[bold]📄 Generated Description[/bold]",
+                title=_("cli-ai-describe-generated-title"),
                 border_style="green",
             )
         )
@@ -1264,15 +1263,15 @@ def _display_metrics(response: AgentResponse) -> None:
     metrics_table.add_column("Value", style="dim")
 
     metrics_table.add_row(
-        f"Provider: {response.provider}",
-        f"Model: {response.model}",
+        _("cli-ai-metrics-provider", provider=response.provider),
+        _("cli-ai-metrics-model", model=response.model),
     )
     metrics_table.add_row(
-        f"Tokens: {response.usage.total_tokens}",
-        f"Cost: ${response.usage.estimated_cost_usd:.4f}",
+        _("cli-ai-metrics-tokens", tokens=response.usage.total_tokens),
+        _("cli-ai-metrics-cost", cost=f"{response.usage.estimated_cost_usd:.4f}"),
     )
     metrics_table.add_row(
-        f"Latency: {response.latency_ms:.0f}ms",
+        _("cli-ai-metrics-latency", latency=f"{response.latency_ms:.0f}"),
         "",
     )
 
@@ -1283,18 +1282,16 @@ def _display_metrics(response: AgentResponse) -> None:
 @app.command("suggest-vat")
 def ai_suggest_vat(
     ctx: typer.Context,
-    description: str = typer.Argument(..., help="Service/product description"),
-    pa: bool = typer.Option(False, "--pa", help="Client is Public Administration"),
-    estero: bool = typer.Option(False, "--estero", help="Foreign client"),
-    paese: str | None = typer.Option(
-        None, "--paese", help="Client country code (IT, FR, US, etc.)"
+    description: str = typer.Argument(..., help=_("cli-ai-help-service-description")),
+    pa: bool = typer.Option(False, "--pa", help=_("cli-ai-help-client-pa")),
+    estero: bool = typer.Option(False, "--estero", help=_("cli-ai-help-client-foreign")),
+    paese: str | None = typer.Option(None, "--paese", help=_("cli-ai-help-country-code")),
+    categoria: str | None = typer.Option(
+        None, "--categoria", "-c", help=_("cli-ai-help-service-category")
     ),
-    categoria: str | None = typer.Option(None, "--categoria", "-c", help="Service category"),
-    importo: float | None = typer.Option(None, "--importo", "-i", help="Amount in EUR"),
-    ateco: str | None = typer.Option(None, "--ateco", help="ATECO code"),
-    json_output: bool = typer.Option(
-        False, "--json", help="Output as JSON (deprecated, use --format json)"
-    ),
+    importo: float | None = typer.Option(None, "--importo", "-i", help=_("cli-ai-help-amount-eur")),
+    ateco: str | None = typer.Option(None, "--ateco", help=_("cli-ai-help-ateco-code")),
+    json_output: bool = typer.Option(False, "--json", help=_("cli-ai-help-json-output")),
 ) -> None:
     """
     Use AI to suggest appropriate VAT rate and fiscal treatment.
@@ -1334,7 +1331,7 @@ async def _run_tax_advisor(
     format_type = get_format_from_context(ctx, json_output)
 
     if format_type == "rich":
-        console.print("\n[bold blue]🧾 AI Tax Advisor - Suggerimento Fiscale[/bold blue]\n")
+        console.print(f"\n{_('cli-ai-vat-title')}\n")
 
     # Track execution metrics
     start_time = time.time()
@@ -1390,7 +1387,7 @@ async def _run_tax_advisor(
         _display_tax_input(context)
 
         # Create provider and agent
-        with console.status("[bold green]Analizzando trattamento fiscale..."):
+        with console.status(_("cli-ai-vat-processing")):
             provider = create_provider()
             agent = TaxAdvisorAgent(provider=provider)
 
@@ -1399,7 +1396,7 @@ async def _run_tax_advisor(
 
         # Check for errors
         if response.status.value == "error":
-            console.print(f"\n[bold red]❌ Errore:[/bold red] {response.error}\n")
+            console.print(f"\n{_('cli-ai-vat-error', error=response.error)}\n")
             logger.error("ai_suggest_vat_failed", error=response.error)
             return
 
@@ -1424,7 +1421,7 @@ async def _run_tax_advisor(
         cost_usd = response.usage.estimated_cost_usd
 
     except Exception as e:
-        console.print(f"\n[bold red]❌ Errore:[/bold red] {e}\n")
+        console.print(f"\n{_('cli-ai-vat-error', error=str(e))}\n")
         logger.error("ai_suggest_vat_error", error=str(e), error_type=type(e).__name__)
         raise typer.Exit(1)
     finally:
@@ -1448,22 +1445,22 @@ def _display_tax_input(context: TaxContext) -> None:
     table.add_column("Field", style="cyan")
     table.add_column("Value", style="white")
 
-    table.add_row("📝 Servizio/Prodotto:", context.tipo_servizio)
+    table.add_row(_("cli-ai-vat-input-service"), context.tipo_servizio)
 
     if context.categoria_servizio:
-        table.add_row("📂 Categoria:", context.categoria_servizio)
+        table.add_row(_("cli-ai-vat-input-category"), context.categoria_servizio)
 
     if context.importo:
-        table.add_row("💰 Importo:", f"€{context.importo:.2f}")
+        table.add_row(_("cli-ai-vat-input-amount"), f"€{context.importo:.2f}")
 
     if context.cliente_pa:
-        table.add_row("🏛️  Cliente:", "Pubblica Amministrazione")
+        table.add_row(_("cli-ai-vat-input-client"), _("cli-ai-vat-client-pa"))
 
     if context.cliente_estero:
-        table.add_row("🌍 Cliente estero:", context.paese_cliente)
+        table.add_row(_("cli-ai-vat-input-foreign-client"), context.paese_cliente)
 
     if context.codice_ateco:
-        table.add_row("🔢 Codice ATECO:", context.codice_ateco)
+        table.add_row(_("cli-ai-vat-input-ateco"), context.codice_ateco)
 
     console.print(table)
     console.print()
@@ -1476,44 +1473,51 @@ def _display_tax_result(response: AgentResponse) -> None:
         data = response.metadata["parsed_model"]
 
         # Main tax info panel
-        tax_info = f"""[bold]Aliquota IVA:[/bold]    {data["aliquota_iva"]}%
-[bold]Reverse Charge:[/bold]  {"✓ SI" if data["reverse_charge"] else "✗ NO"}"""
+        yes_no = _("cli-ai-vat-yes") if data["reverse_charge"] else _("cli-ai-vat-no")
+        tax_info = f"""[bold]{_("cli-ai-vat-rate-label")}[/bold]    {data["aliquota_iva"]}%
+[bold]{_("cli-ai-vat-reverse-charge-label")}[/bold]  {yes_no}"""
 
         if data.get("codice_natura"):
-            tax_info += f"\n[bold]Natura IVA:[/bold]      {data['codice_natura']}"
+            tax_info += (
+                f"\n[bold]{_('cli-ai-vat-natura-label')}[/bold]      {data['codice_natura']}"
+            )
 
         if data.get("split_payment"):
-            tax_info += "\n[bold]Split Payment:[/bold]   ✓ SI"
+            tax_info += (
+                f"\n[bold]{_('cli-ai-vat-split-payment-label')}[/bold]   {_('cli-ai-vat-yes')}"
+            )
 
         if data.get("regime_speciale"):
-            tax_info += f"\n[bold]Regime Speciale:[/bold] {data['regime_speciale']}"
+            tax_info += (
+                f"\n[bold]{_('cli-ai-vat-special-regime-label')}[/bold] {data['regime_speciale']}"
+            )
 
-        tax_info += f"\n[bold]Confidence:[/bold]      {int(data['confidence'] * 100)}%"
+        tax_info += f"\n[bold]{_('cli-ai-vat-confidence-label')}[/bold]      {int(data['confidence'] * 100)}%"
 
         console.print(
             Panel(
                 tax_info,
-                title="[bold]📊 Trattamento Fiscale[/bold]",
+                title=_("cli-ai-vat-result-panel-title"),
                 border_style="green",
             )
         )
 
         # Spiegazione
-        console.print("\n[bold cyan]📋 Spiegazione:[/bold cyan]")
+        console.print(f"\n{_('cli-ai-vat-explanation-title')}")
         console.print(f"{data['spiegazione']}\n")
 
         # Riferimento normativo
-        console.print("[bold cyan]📜 Riferimento normativo:[/bold cyan]")
+        console.print(_("cli-ai-vat-legal-reference-title"))
         console.print(f"{data['riferimento_normativo']}\n")
 
         # Nota fattura
         if data.get("note_fattura"):
-            console.print("[bold cyan]📝 Nota per fattura:[/bold cyan]")
+            console.print(_("cli-ai-vat-invoice-note-title"))
             console.print(f'"{data["note_fattura"]}"\n')
 
         # Raccomandazioni
         if data.get("raccomandazioni") and len(data["raccomandazioni"]) > 0:
-            console.print("[bold cyan]💡 Raccomandazioni:[/bold cyan]")
+            console.print(_("cli-ai-vat-recommendations-title"))
             for racc in data["raccomandazioni"]:
                 console.print(f"  • {racc}")
             console.print()
@@ -1523,7 +1527,7 @@ def _display_tax_result(response: AgentResponse) -> None:
         console.print(
             Panel(
                 response.content,
-                title="[bold]📊 Suggerimento Fiscale[/bold]",
+                title=_("cli-ai-vat-suggestion-title"),
                 border_style="green",
             )
         )
@@ -2129,13 +2133,9 @@ async def _run_invoice_workflow(
 @app.command("chat")
 def ai_chat(
     ctx: typer.Context,
-    message: str | None = typer.Argument(
-        None, help="Message to send (interactive if not provided)"
-    ),
-    stream: bool = typer.Option(True, "--stream/--no-stream", help="Enable streaming responses"),
-    json_output: bool = typer.Option(
-        False, "--json", help="Output as JSON (deprecated, use --format json)"
-    ),
+    message: str | None = typer.Argument(None, help=_("cli-ai-help-chat-message")),
+    stream: bool = typer.Option(True, "--stream/--no-stream", help=_("cli-ai-help-stream")),
+    json_output: bool = typer.Option(False, "--json", help=_("cli-ai-help-json-output")),
 ) -> None:
     """
     Interactive AI chat assistant for invoice and tax questions.
@@ -2202,7 +2202,7 @@ async def _run_chat(
             # Single message mode - use formatters
             context = ChatContext(user_input=message)
             if stream and format_type == "rich":
-                console.print("[dim]Assistant:[/dim] ", end="")
+                console.print(f"{_('cli-ai-chat-assistant-label')} ", end="")
                 async for chunk in agent.execute_stream(context):
                     console.print(chunk, end="")
                 console.print()  # New line
@@ -2211,7 +2211,7 @@ async def _run_chat(
                 if json_output or format_type == "json":
                     console.print_json(data=response.model_dump())
                 elif format_type == "rich":
-                    console.print(f"[dim]Assistant:[/dim] {response.content}")
+                    console.print(f"{_('cli-ai-chat-assistant-label')} {response.content}")
                 else:
                     # Use formatter for other formats
                     render_response(response, format_type, console, show_metrics=False)
@@ -2234,20 +2234,18 @@ async def _run_chat(
                 )
 
             # Interactive mode
-            console.print("[bold blue]🤖 OpenFatture AI Assistant[/bold blue]")
-            console.print(
-                "Type your questions about invoices, taxes, or business. Type 'exit' to quit.\n"
-            )
+            console.print(_("cli-ai-chat-assistant-title"))
+            console.print(f"{_('cli-ai-chat-instructions')}\n")
 
             conversation_history = []
 
             while True:
                 try:
-                    user_input = console.input("[bold green]You:[/bold green] ").strip()
+                    user_input = console.input(f"{_('cli-ai-chat-user-prompt')} ").strip()
                     if not user_input:
                         continue
                     if user_input.lower() in ("exit", "quit", "q"):
-                        console.print("[dim]Goodbye! 👋[/dim]")
+                        console.print(_("cli-ai-chat-exit-message"))
                         break
 
                     # Add to history
@@ -2260,7 +2258,7 @@ async def _run_chat(
                     )
 
                     if stream:
-                        console.print("[dim]Assistant:[/dim] ", end="")
+                        console.print(f"{_('cli-ai-chat-assistant-label')} ", end="")
                         full_response = ""
                         async for event in agent.execute_stream(context):
                             if event.is_content():
@@ -2275,7 +2273,7 @@ async def _run_chat(
                         if json_output:
                             console.print_json(data=response.model_dump())
                         else:
-                            console.print(f"[dim]Assistant:[/dim] {response.content}")
+                            console.print(f"{_('cli-ai-chat-assistant-label')} {response.content}")
                         # Add to history
                         conversation_history.append(
                             {"role": "assistant", "content": response.content}
@@ -2284,10 +2282,10 @@ async def _run_chat(
                     console.print()  # Empty line between exchanges
 
                 except KeyboardInterrupt:
-                    console.print("\n[dim]Interrupted. Type 'exit' to quit.[/dim]")
+                    console.print(f"\n{_('cli-ai-chat-interrupted')}")
                     continue
                 except EOFError:
-                    console.print("\n[dim]Goodbye! 👋[/dim]")
+                    console.print(f"\n{_('cli-ai-chat-exit-message')}")
                     break
 
             # Interactive mode completed successfully
@@ -2295,7 +2293,7 @@ async def _run_chat(
 
     except Exception as e:
         logger.error("Chat execution failed", error=str(e))
-        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(_("cli-ai-chat-error", error=str(e)))
         raise typer.Exit(1)
     finally:
         # Publish AICommandCompletedEvent (only for single message mode or on exit from interactive)

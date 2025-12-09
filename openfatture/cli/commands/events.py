@@ -13,13 +13,14 @@ from rich.text import Text
 
 from openfatture.core.events.analytics import EventAnalytics
 from openfatture.core.events.repository import EventRepository
+from openfatture.i18n import _
 from openfatture.storage.database.base import init_db
 from openfatture.utils.config import get_settings
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-app = typer.Typer(help="View and analyze event history", no_args_is_help=True)
+app = typer.Typer(help=_("cli-events-help"), no_args_is_help=True)
 console = Console()
 
 
@@ -31,18 +32,22 @@ def ensure_db() -> None:
 
 @app.command("list")
 def list_events(
-    event_type: str | None = typer.Option(None, "--type", "-t", help="Filter by event type"),
-    entity_type: str | None = typer.Option(
-        None, "--entity", "-e", help="Filter by entity type (fattura, cliente, pagamento, etc.)"
+    event_type: str | None = typer.Option(
+        None, "--type", "-t", help=_("cli-events-list-help-type")
     ),
-    entity_id: int | None = typer.Option(None, "--entity-id", help="Filter by entity ID"),
+    entity_type: str | None = typer.Option(
+        None, "--entity", "-e", help=_("cli-events-list-help-entity")
+    ),
+    entity_id: int | None = typer.Option(
+        None, "--entity-id", help=_("cli-events-list-help-entity-id")
+    ),
     last_hours: int | None = typer.Option(
-        None, "--last-hours", "-h", help="Show events from last N hours"
+        None, "--last-hours", "-h", help=_("cli-events-list-help-last-hours")
     ),
     last_days: int | None = typer.Option(
-        None, "--last-days", "-d", help="Show events from last N days"
+        None, "--last-days", "-d", help=_("cli-events-list-help-last-days")
     ),
-    limit: int = typer.Option(50, "--limit", "-l", help="Maximum number of events to show"),
+    limit: int = typer.Option(50, "--limit", "-l", help=_("cli-events-list-help-limit")),
 ) -> None:
     """List recent events with optional filtering."""
     ensure_db()
@@ -66,15 +71,17 @@ def list_events(
         )
 
         if not events:
-            console.print("[yellow]No events found matching the criteria[/yellow]")
+            console.print(_("cli-events-no-events"))
             return
 
         # Create table
-        table = Table(title=f"Event History ({len(events)} events)", show_lines=False, expand=False)
-        table.add_column("Timestamp", style="cyan", width=19)
-        table.add_column("Event Type", style="bold white", width=25)
-        table.add_column("Entity", style="green", width=15)
-        table.add_column("Summary", style="white")
+        table = Table(
+            title=_("cli-events-list-title", count=len(events)), show_lines=False, expand=False
+        )
+        table.add_column(_("cli-events-column-timestamp"), style="cyan", width=19)
+        table.add_column(_("cli-events-column-event-type"), style="bold white", width=25)
+        table.add_column(_("cli-events-column-entity"), style="green", width=15)
+        table.add_column(_("cli-events-column-summary"), style="white")
 
         for event in events:
             # Format timestamp
@@ -113,7 +120,7 @@ def list_events(
             if start_date:
                 filter_info.append(f"since={start_date.strftime('%Y-%m-%d %H:%M')}")
 
-            console.print(f"\n[dim]Filters: {', '.join(filter_info)}[/dim]")
+            console.print(_("cli-events-filters-applied", filters=", ".join(filter_info)))
 
     finally:
         repo.close()
@@ -121,7 +128,7 @@ def list_events(
 
 @app.command("show")
 def show_event(
-    event_id: str = typer.Argument(..., help="Event ID (UUID)"),
+    event_id: str = typer.Argument(..., help=_("cli-events-show-help-event-id")),
 ) -> None:
     """
     Show detailed information about a specific event.
@@ -139,7 +146,7 @@ def show_event(
         event = repo.get_by_id(event_id)
 
         if not event:
-            console.print(f"[red]Event with ID '{event_id}' not found[/red]")
+            console.print(_("cli-events-show-not-found", event_id=event_id))
             raise typer.Exit(1)
 
         # Parse event data
@@ -169,23 +176,27 @@ def show_event(
                 metadata_formatted = event.metadata_json  # Show raw data
 
         # Create detailed view
-        details = f"""[bold cyan]Event ID:[/bold cyan] {event.event_id}
-[bold cyan]Event Type:[/bold cyan] {event.event_type}
-[bold cyan]Occurred At:[/bold cyan] {event.occurred_at.strftime("%Y-%m-%d %H:%M:%S")}
-[bold cyan]Published At:[/bold cyan] {event.published_at.strftime("%Y-%m-%d %H:%M:%S")}
+        details = f"""[bold cyan]{_("cli-events-show-label-event-id")}:[/bold cyan] {event.event_id}
+[bold cyan]{_("cli-events-show-label-event-type")}:[/bold cyan] {event.event_type}
+[bold cyan]{_("cli-events-show-label-occurred-at")}:[/bold cyan] {event.occurred_at.strftime("%Y-%m-%d %H:%M:%S")}
+[bold cyan]{_("cli-events-show-label-published-at")}:[/bold cyan] {event.published_at.strftime("%Y-%m-%d %H:%M:%S")}
 
-[bold cyan]Entity Type:[/bold cyan] {event.entity_type or "N/A"}
-[bold cyan]Entity ID:[/bold cyan] {event.entity_id or "N/A"}
-[bold cyan]User ID:[/bold cyan] {event.user_id or "N/A"}
+[bold cyan]{_("cli-events-show-label-entity-type")}:[/bold cyan] {event.entity_type or "N/A"}
+[bold cyan]{_("cli-events-show-label-entity-id")}:[/bold cyan] {event.entity_id or "N/A"}
+[bold cyan]{_("cli-events-show-label-user-id")}:[/bold cyan] {event.user_id or "N/A"}
 
-[bold cyan]Event Data:[/bold cyan]
+[bold cyan]{_("cli-events-show-label-event-data")}:[/bold cyan]
 {event_data_formatted}
 """
 
         if metadata_formatted:
-            details += f"\n[bold cyan]Metadata:[/bold cyan]\n{metadata_formatted}"
+            details += f"\n[bold cyan]{_('cli-events-show-label-metadata')}:[/bold cyan]\n{metadata_formatted}"
 
-        panel = Panel(details, title=f"Event Details: {event.event_type}", border_style="blue")
+        panel = Panel(
+            details,
+            title=_("cli-events-show-panel-title", event_type=event.event_type),
+            border_style="blue",
+        )
         console.print(panel)
 
     finally:
@@ -195,22 +206,24 @@ def show_event(
 @app.command("stats")
 def show_stats(
     last_hours: int | None = typer.Option(
-        None, "--last-hours", "-h", help="Stats for last N hours"
+        None, "--last-hours", "-h", help=_("cli-events-stats-help-last-hours")
     ),
-    last_days: int | None = typer.Option(None, "--last-days", "-d", help="Stats for last N days"),
+    last_days: int | None = typer.Option(
+        None, "--last-days", "-d", help=_("cli-events-stats-help-last-days")
+    ),
 ) -> None:
     """Show event statistics and summary."""
     ensure_db()
 
     # Calculate date range
     start_date = None
-    date_range_label = "All Time"
+    date_range_label = _("cli-events-stats-all-time")
     if last_hours:
         start_date = datetime.now() - timedelta(hours=last_hours)
-        date_range_label = f"Last {last_hours} hours"
+        date_range_label = _("cli-events-stats-last-hours", hours=last_hours)
     elif last_days:
         start_date = datetime.now() - timedelta(days=last_days)
-        date_range_label = f"Last {last_days} days"
+        date_range_label = _("cli-events-stats-last-days", days=last_days)
 
     # Get statistics
     repo = EventRepository()
@@ -218,15 +231,17 @@ def show_stats(
         stats = repo.get_stats(start_date=start_date)
 
         # Overall statistics
-        console.print(Panel(f"[bold]Event Statistics - {date_range_label}[/bold]", style="cyan"))
-        console.print(f"\n[bold]Total Events:[/bold] {stats['total_events']:,}\n")
+        console.print(
+            Panel(_("cli-events-stats-panel-title", range=date_range_label), style="cyan")
+        )
+        console.print(_("cli-events-stats-total", total=f"{stats['total_events']:,}"))
 
         # Events by type
         if stats["events_by_type"]:
-            type_table = Table(title="Events by Type", show_lines=False)
-            type_table.add_column("Event Type", style="cyan")
-            type_table.add_column("Count", justify="right", style="bold white")
-            type_table.add_column("Percentage", justify="right", style="green")
+            type_table = Table(title=_("cli-events-stats-table-by-type"), show_lines=False)
+            type_table.add_column(_("cli-events-column-event-type"), style="cyan")
+            type_table.add_column(_("cli-events-column-count"), justify="right", style="bold white")
+            type_table.add_column(_("cli-events-column-percentage"), justify="right", style="green")
 
             total = stats["total_events"]
             for event_type, count in sorted(
@@ -240,9 +255,11 @@ def show_stats(
 
         # Events by entity
         if stats["events_by_entity"]:
-            entity_table = Table(title="Events by Entity Type", show_lines=False)
-            entity_table.add_column("Entity Type", style="cyan")
-            entity_table.add_column("Count", justify="right", style="bold white")
+            entity_table = Table(title=_("cli-events-stats-table-by-entity"), show_lines=False)
+            entity_table.add_column(_("cli-events-column-entity-type"), style="cyan")
+            entity_table.add_column(
+                _("cli-events-column-count"), justify="right", style="bold white"
+            )
 
             for entity_type, count in sorted(
                 stats["events_by_entity"].items(), key=lambda x: x[1], reverse=True
@@ -255,14 +272,22 @@ def show_stats(
         # Most recent and oldest events
         if stats["most_recent_event"]:
             console.print(
-                f"[bold]Most Recent Event:[/bold] {stats['most_recent_event']['event_type']} "
-                f"at {stats['most_recent_event']['occurred_at'].strftime('%Y-%m-%d %H:%M:%S')}"
+                _(
+                    "cli-events-stats-most-recent",
+                    event_type=stats["most_recent_event"]["event_type"],
+                    timestamp=stats["most_recent_event"]["occurred_at"].strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
+                )
             )
 
         if stats["oldest_event"]:
             console.print(
-                f"[bold]Oldest Event:[/bold] {stats['oldest_event']['event_type']} "
-                f"at {stats['oldest_event']['occurred_at'].strftime('%Y-%m-%d %H:%M:%S')}"
+                _(
+                    "cli-events-stats-oldest",
+                    event_type=stats["oldest_event"]["event_type"],
+                    timestamp=stats["oldest_event"]["occurred_at"].strftime("%Y-%m-%d %H:%M:%S"),
+                )
             )
 
     finally:
@@ -271,8 +296,8 @@ def show_stats(
 
 @app.command("timeline")
 def show_timeline(
-    entity_type: str = typer.Argument(..., help="Entity type (invoice, client, etc.)"),
-    entity_id: int = typer.Argument(..., help="Entity ID"),
+    entity_type: str = typer.Argument(..., help=_("cli-events-timeline-help-entity-type")),
+    entity_id: int = typer.Argument(..., help=_("cli-events-timeline-help-entity-id")),
 ) -> None:
     """Show event timeline for a specific entity."""
     ensure_db()
@@ -282,13 +307,19 @@ def show_timeline(
         timeline = repo.get_timeline(entity_type, entity_id)
 
         if not timeline:
-            console.print(f"[yellow]No events found for {entity_type} with ID {entity_id}[/yellow]")
+            console.print(
+                _("cli-events-timeline-no-events", entity_type=entity_type, entity_id=entity_id)
+            )
             return
 
         # Create timeline visualization
         console.print(
             Panel(
-                f"[bold]Event Timeline: {entity_type.capitalize()} #{entity_id}[/bold]",
+                _(
+                    "cli-events-timeline-panel-title",
+                    entity_type=entity_type.capitalize(),
+                    entity_id=entity_id,
+                ),
                 style="cyan",
             )
         )
@@ -314,7 +345,7 @@ def show_timeline(
 
             console.print(event_text)
 
-        console.print(f"\n[dim]Total events: {len(timeline)}[/dim]")
+        console.print(_("cli-events-timeline-total", total=len(timeline)))
 
     finally:
         repo.close()
@@ -322,8 +353,8 @@ def show_timeline(
 
 @app.command("search")
 def search_events(
-    query: str = typer.Argument(..., help="Search query string"),
-    limit: int = typer.Option(50, "--limit", "-l", help="Maximum number of results"),
+    query: str = typer.Argument(..., help=_("cli-events-search-help-query")),
+    limit: int = typer.Option(50, "--limit", "-l", help=_("cli-events-search-help-limit")),
 ) -> None:
     """Search events by content in event data."""
     ensure_db()
@@ -333,14 +364,17 @@ def search_events(
         events = repo.search(query, limit=limit)
 
         if not events:
-            console.print(f"[yellow]No events found matching '{query}'[/yellow]")
+            console.print(_("cli-events-search-no-results", query=query))
             return
 
         # Create table
-        table = Table(title=f"Search Results: '{query}' ({len(events)} events)", show_lines=False)
-        table.add_column("Timestamp", style="cyan", width=19)
-        table.add_column("Event Type", style="bold white", width=25)
-        table.add_column("Match", style="yellow")
+        table = Table(
+            title=_("cli-events-search-results-title", query=query, count=len(events)),
+            show_lines=False,
+        )
+        table.add_column(_("cli-events-column-timestamp"), style="cyan", width=19)
+        table.add_column(_("cli-events-column-event-type"), style="bold white", width=25)
+        table.add_column(_("cli-events-column-match"), style="yellow")
 
         for event in events:
             timestamp = event.occurred_at.strftime("%Y-%m-%d %H:%M:%S")
@@ -394,13 +428,13 @@ def list_event_types() -> None:
         stats = repo.get_stats()
 
         if not stats["events_by_type"]:
-            console.print("[yellow]No events recorded yet[/yellow]")
+            console.print(_("cli-events-types-no-events"))
             return
 
-        table = Table(title="Available Event Types", show_lines=False)
+        table = Table(title=_("cli-events-types-table-title"), show_lines=False)
         table.add_column("#", style="dim", width=4)
-        table.add_column("Event Type", style="cyan")
-        table.add_column("Count", justify="right", style="white")
+        table.add_column(_("cli-events-column-event-type"), style="cyan")
+        table.add_column(_("cli-events-column-count"), justify="right", style="white")
 
         for i, (event_type, count) in enumerate(sorted(stats["events_by_type"].items()), start=1):
             table.add_row(str(i), event_type, f"{count:,}")
@@ -413,7 +447,7 @@ def list_event_types() -> None:
 
 @app.command("dashboard")
 def show_dashboard(
-    days: int = typer.Option(30, "--days", "-d", help="Number of days to analyze"),
+    days: int = typer.Option(30, "--days", "-d", help=_("cli-events-dashboard-help-days")),
 ) -> None:
     """Show comprehensive event analytics dashboard."""
     ensure_db()
@@ -427,7 +461,7 @@ def show_dashboard(
         console.print()
         console.print(
             Panel(
-                f"[bold]Event Analytics Dashboard - Last {days} Days[/bold]",
+                _("cli-events-dashboard-panel-title", days=days),
                 style="cyan",
                 expand=False,
             )
@@ -439,10 +473,15 @@ def show_dashboard(
         metrics_table.add_column(style="bold cyan")
         metrics_table.add_column(style="white")
 
-        metrics_table.add_row("Total Events", f"{summary['total_events']:,}")
-        metrics_table.add_row("Event Types", f"{summary['event_types_count']}")
         metrics_table.add_row(
-            "Events/Hour (24h)", f"{summary['velocity_24h']['events_per_hour']:.1f}"
+            _("cli-events-dashboard-metric-total"), f"{summary['total_events']:,}"
+        )
+        metrics_table.add_row(
+            _("cli-events-dashboard-metric-types"), f"{summary['event_types_count']}"
+        )
+        metrics_table.add_row(
+            _("cli-events-dashboard-metric-velocity"),
+            f"{summary['velocity_24h']['events_per_hour']:.1f}",
         )
 
         # Add trend indicator
@@ -458,7 +497,7 @@ def show_dashboard(
             else "red" if trends["trend"] == "decreasing" else "yellow"
         )
         metrics_table.add_row(
-            "Trend",
+            _("cli-events-dashboard-metric-trend"),
             f"[{trend_color}]{trend_icon} {trends['change']:+,} ({trends['change_percent']:+.1f}%)[/{trend_color}]",
         )
 
@@ -467,7 +506,7 @@ def show_dashboard(
 
         # Top Event Types with bar visualization
         if summary["top_event_types"]:
-            console.print("[bold]Top Event Types[/bold]")
+            console.print(_("cli-events-dashboard-section-top-types"))
             console.print()
 
             # Find max count for scaling
@@ -495,9 +534,13 @@ def show_dashboard(
 
         # Entity Activity
         if summary["entity_activity"]:
-            entity_table = Table(title="Entity Activity", show_lines=False)
-            entity_table.add_column("Entity Type", style="cyan")
-            entity_table.add_column("Events", justify="right", style="white")
+            entity_table = Table(
+                title=_("cli-events-dashboard-table-entity-activity"), show_lines=False
+            )
+            entity_table.add_column(_("cli-events-column-entity-type"), style="cyan")
+            entity_table.add_column(
+                _("cli-events-dashboard-column-events"), justify="right", style="white"
+            )
 
             for item in summary["entity_activity"]:
                 entity_table.add_row(item["entity_type"], f"{item['count']:,}")
@@ -509,8 +552,11 @@ def show_dashboard(
         if summary["most_recent_event"]:
             recent = summary["most_recent_event"]
             console.print(
-                f"[dim]Most Recent: {recent['event_type']} at "
-                f"{recent['occurred_at'].strftime('%Y-%m-%d %H:%M:%S')}[/dim]"
+                _(
+                    "cli-events-dashboard-most-recent",
+                    event_type=recent["event_type"],
+                    timestamp=recent["occurred_at"].strftime("%Y-%m-%d %H:%M:%S"),
+                )
             )
 
     finally:
@@ -519,8 +565,10 @@ def show_dashboard(
 
 @app.command("trends")
 def show_trends(
-    days: int = typer.Option(30, "--days", "-d", help="Number of days to analyze"),
-    event_type: str | None = typer.Option(None, "--type", "-t", help="Filter by event type"),
+    days: int = typer.Option(30, "--days", "-d", help=_("cli-events-trends-help-days")),
+    event_type: str | None = typer.Option(
+        None, "--type", "-t", help=_("cli-events-trends-help-type")
+    ),
 ) -> None:
     """Show event trends over time."""
     ensure_db()
@@ -531,16 +579,17 @@ def show_trends(
         daily = analytics.get_daily_activity(days=days, event_type=event_type)
 
         if not daily:
-            console.print("[yellow]No events found for the specified period[/yellow]")
+            console.print(_("cli-events-trends-no-events"))
             return
 
         # Header
-        title = f"Event Trends - Last {days} Days"
         if event_type:
-            title += f" ({event_type})"
+            title = _("cli-events-trends-panel-title-filtered", days=days, event_type=event_type)
+        else:
+            title = _("cli-events-trends-panel-title", days=days)
 
         console.print()
-        console.print(Panel(f"[bold]{title}[/bold]", style="cyan"))
+        console.print(Panel(title, style="cyan"))
         console.print()
 
         # Create simple bar chart
@@ -561,7 +610,7 @@ def show_trends(
         avg = total / len(daily) if daily else 0
 
         console.print()
-        console.print(f"[dim]Total: {total:,} events | Average: {avg:.1f} events/day[/dim]")
+        console.print(_("cli-events-trends-summary", total=f"{total:,}", avg=f"{avg:.1f}"))
 
     finally:
         analytics.close()

@@ -9,6 +9,7 @@ from typing import Any
 
 import streamlit as st
 
+from openfatture.i18n import get_translator
 from openfatture.web.services.ai_service import get_ai_service
 from openfatture.web.services.custom_commands_service import get_custom_commands_service
 from openfatture.web.services.feedback_service import get_feedback_service
@@ -19,6 +20,9 @@ from openfatture.web.utils.state import (
     clear_conversation_history,
     init_conversation_history,
 )
+
+# Initialize translator
+t = get_translator()
 
 
 async def retry_with_backoff(
@@ -61,8 +65,11 @@ async def retry_with_backoff(
             delay = min(delay * backoff_factor, max_delay)
 
             # Show retry message to user
-            retry_msg = (
-                f"🔄 Tentativo {attempt + 1}/{max_retries + 1} fallito. Riprovo tra {delay:.1f}s..."
+            retry_msg = t(
+                "page-ai-retry-message",
+                attempt=attempt + 1,
+                max_retries=max_retries + 1,
+                delay=delay,
             )
             st.warning(retry_msg)
 
@@ -91,23 +98,23 @@ def handle_chat_error(error: Exception, context: str = "chat") -> str:
 
     # Network/API errors
     if any(keyword in error_str for keyword in ["connection", "timeout", "network", "api"]):
-        return "🌐 Errore di connessione. Verifica la tua connessione internet e riprova."
+        return t("page-ai-error-connection")
 
     # Authentication errors
     elif any(keyword in error_str for keyword in ["auth", "token", "key", "unauthorized"]):
-        return "🔐 Errore di autenticazione. Verifica le tue credenziali AI."
+        return t("page-ai-error-auth")
 
     # Rate limiting
     elif any(keyword in error_str for keyword in ["rate", "limit", "quota"]):
-        return "⏱️ Limite di richieste raggiunto. Riprova tra qualche minuto."
+        return t("page-ai-error-rate-limit")
 
     # Model/service unavailable
     elif any(keyword in error_str for keyword in ["model", "service", "unavailable"]):
-        return "🚫 Servizio temporaneamente non disponibile. Riprova più tardi."
+        return t("page-ai-error-service-unavailable")
 
     # Generic error
     else:
-        return f"❌ Errore imprevisto: {str(error)[:100]}..."
+        return t("page-ai-error-generic", error=str(error)[:100])
 
 
 def handle_slash_command(
@@ -135,47 +142,12 @@ def handle_slash_command(
 
     # Handle built-in commands
     if command == "/help":
-        feedback = """
-**🤖 Comandi Disponibili:**
-
-**Built-in:**
-- `/help` - Mostra questo messaggio
-- `/tools` - Lista strumenti AI disponibili
-- `/stats` - Statistiche conversazione corrente
-- `/custom` - Lista comandi personalizzati
-- `/reload` - Ricarica comandi da disco
-- `/clear` - Cancella cronologia chat
-
-**Personalizzati:**
-Crea comandi in `~/.openfatture/commands/*.yaml`
-
-**Esempi:**
-- "Come creo una fattura?"
-- "Qual è l'aliquota IVA per il web design?"
-- "Mostra le fatture di questo mese"
-        """.strip()
+        feedback = t("page-ai-command-help-feedback")
         return None, feedback
 
     elif command == "/tools":
         # Show available AI tools
-        tools_info = """
-**🔧 Strumenti AI Disponibili:**
-
-**Ricerca e Consultazione:**
-- Ricerca fatture per cliente, data, importo
-- Statistiche fatturato e pagamenti
-- Consultazione normativa fiscale
-
-**Azioni Disponibili:**
-- Creazione descrizioni fatture professionali
-- Suggerimento aliquote IVA corrette
-- Analisi compliance fatturazione
-
-**Integrazione Dati:**
-- Accesso database clienti e prodotti
-- Cronologia pagamenti e scadenze
-- Report e analytics business
-        """.strip()
+        tools_info = t("page-ai-command-tools-feedback")
         return None, tools_info
 
     elif command == "/stats":
@@ -188,67 +160,65 @@ Crea comandi in `~/.openfatture/commands/*.yaml`
         total_chars = sum(len(msg["content"]) for msg in history)
         estimated_tokens = total_chars // 4  # Rough approximation
 
-        feedback = f"""
-**📊 Statistiche Conversazione:**
-
-- **Messaggi totali:** {total_messages}
-- **Tuo messaggi:** {user_messages}
-- **Risposte AI:** {assistant_messages}
-- **Caratteri totali:** {total_chars:,}
-- **Token stimati:** {estimated_tokens:,}
-
-**💡 Suggerimenti:**
-- Usa `/clear` per ricominciare da capo
-- Salva conversazioni importanti con 💾 Salva
-        """.strip()
+        feedback = t(
+            "page-ai-command-stats-feedback",
+            total_messages=total_messages,
+            user_messages=user_messages,
+            assistant_messages=assistant_messages,
+            total_chars=total_chars,
+            estimated_tokens=estimated_tokens,
+        )
         return None, feedback
 
     elif command == "/custom":
         commands = custom_commands_service.list_commands()
         if not commands:
-            feedback = "📝 **Nessun comando personalizzato trovato**\n\nCrea comandi in `~/.openfatture/commands/*.yaml`"
+            feedback = t("page-ai-command-custom-no-commands")
         else:
-            feedback = f"📝 **Comandi Personalizzati ({len(commands)}):**\n\n"
+            feedback = t("page-ai-command-custom-header", count=len(commands)) + "\n\n"
             for cmd in commands:
                 aliases = f" ({', '.join(cmd['aliases'])})" if cmd["aliases"] else ""
                 feedback += f"- `/{cmd['name']}`{aliases}: {cmd['description']}\n"
-            feedback += "\n💡 Usa `/help` per vedere tutti i comandi"
+            feedback += "\n" + t("page-ai-command-custom-footer")
         return None, feedback
 
     elif command == "/reload":
         try:
             result = custom_commands_service.reload_commands()
-            feedback = f"🔄 **Comandi ricaricati:** {result['old_count']} → {result['new_count']} ({result['added']} aggiunti, {result['removed']} rimossi)"
+            feedback = t(
+                "page-ai-command-reload-success",
+                old_count=result["old_count"],
+                new_count=result["new_count"],
+                added=result["added"],
+                removed=result["removed"],
+            )
         except Exception as e:
-            feedback = f"❌ **Errore ricarica:** {str(e)}"
+            feedback = t("page-ai-command-reload-error", error=str(e))
         return None, feedback
 
     elif command == "/clear":
         # This will be handled by the clear button, just show feedback
-        return None, "🗑️ **Cronologia cancellata**\n\nLa conversazione è stata azzerata."
+        return None, t("page-ai-command-clear-feedback")
 
     # Handle custom commands
     elif custom_commands_service.has_command(command):
         try:
             expanded = custom_commands_service.execute_command(command, args)
-            feedback = f"🔧 **Comando espanso:** `/{command}` → {len(expanded)} caratteri"
+            feedback = t("page-ai-command-custom-expanded", command=command, length=len(expanded))
             return expanded, feedback
         except ValueError as e:
-            return None, f"❌ **Errore comando:** {str(e)}"
+            return None, t("page-ai-command-custom-error", error=str(e))
 
     # Unknown command
     else:
-        return (
-            None,
-            f"❓ **Comando sconosciuto:** `{command}`\n\nUsa `/help` per vedere i comandi disponibili",
-        )
+        return (None, t("page-ai-command-unknown", command=command))
 
 
-st.set_page_config(page_title="AI Assistant - OpenFatture", page_icon="🤖", layout="wide")
+st.set_page_config(page_title=t("page-ai-page-title"), page_icon="🤖", layout="wide")
 
 # Title
-st.title("🤖 AI Assistant")
-st.markdown("### Assistente Intelligente per Fatturazione e Fisco")
+st.title(t("page-ai-title"))
+st.markdown(f"### {t('page-ai-subtitle')}")
 
 # Initialize services
 ai_service = get_ai_service()
@@ -259,40 +229,25 @@ voice_service = get_voice_service()
 
 # Check if AI is available
 if not ai_service.is_available():
-    st.error(
-        """
-        ⚠️ **AI non configurato**
-
-        Per abilitare l'AI Assistant:
-        1. Configura le credenziali nel file `.env`
-        2. Imposta `AI_PROVIDER` (openai/anthropic/ollama)
-        3. Imposta `AI_API_KEY` (se necessario)
-        4. Riavvia l'applicazione
-
-        Consulta `docs/CONFIGURATION.md` per i dettagli.
-        """
-    )
+    st.error(t("page-ai-not-configured"))
     st.stop()
 
 # Tab selection
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["💬 Chat Assistente", "📝 Genera Descrizione", "🧾 Suggerimento IVA", "🎤 Voice Chat"]
+    [
+        f"💬 {t('page-ai-tab-chat')}",
+        f"📝 {t('page-ai-tab-description')}",
+        f"🧾 {t('page-ai-tab-vat')}",
+        f"🎤 {t('page-ai-tab-voice')}",
+    ]
 )
 
 # =============================================================================
 # TAB 1: Chat Assistant
 # =============================================================================
 with tab1:
-    st.markdown("### 💬 Chat Interattivo")
-    st.markdown(
-        """
-        Chatta con l'assistente AI per:
-        - Domande su fatturazione e normativa
-        - Consigli fiscali e IVA
-        - Gestione pagamenti e scadenze
-        - Consulenza generale business
-        """
-    )
+    st.markdown(f"### 💬 {t('page-ai-chat-title')}")
+    st.markdown(t("page-ai-chat-description"))
 
     # Initialize conversation history
     history = init_conversation_history()
@@ -300,28 +255,39 @@ with tab1:
     # Action buttons
     col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
     with col2:
-        if st.button("💾 Salva", use_container_width=True, help="Salva conversazione"):
+        if st.button(
+            f"💾 {t('page-ai-chat-save')}",
+            use_container_width=True,
+            help=t("page-ai-chat-save-help"),
+        ):
             try:
                 session_id = session_service.save_session(
-                    {"title": f"Chat {len(history) // 2} messaggi", "messages": history}
+                    {
+                        "title": t("page-ai-chat-session-title", count=len(history) // 2),
+                        "messages": history,
+                    }
                 )
                 if session_id:
-                    st.success(f"✅ Salvata: {session_id[:8]}...")
+                    st.success(t("page-ai-chat-saved", session_id=session_id[:8]))
                     st.rerun()
                 else:
-                    st.error("❌ Errore salvataggio")
+                    st.error(t("page-ai-chat-save-error"))
             except Exception as e:
-                st.error(f"❌ Errore: {str(e)}")
+                st.error(t("page-ai-error-generic", error=str(e)))
     with col3:
-        if st.button("🔄 Reload", use_container_width=True, help="Ricarica comandi personalizzati"):
+        if st.button(
+            f"🔄 {t('page-ai-chat-reload')}",
+            use_container_width=True,
+            help=t("page-ai-chat-reload-help"),
+        ):
             try:
                 result = custom_commands_service.reload_commands()
-                st.success(f"✅ Ricaricati: {result['new_count']} comandi")
+                st.success(t("page-ai-chat-reloaded", count=result["new_count"]))
                 st.rerun()
             except Exception as e:
-                st.error(f"❌ Errore: {str(e)}")
+                st.error(t("page-ai-error-generic", error=str(e)))
     with col4:
-        if st.button("🗑️ Cancella", use_container_width=True):
+        if st.button(f"🗑️ {t('page-ai-chat-clear')}", use_container_width=True):
             clear_conversation_history()
             st.rerun()
 
@@ -343,11 +309,11 @@ with tab1:
                     st.markdown(content)
 
     # File upload section
-    with st.expander("📎 Allega File (Opzionale)", expanded=False):
+    with st.expander(t("page-ai-chat-file-upload-title"), expanded=False):
         uploaded_file = st.file_uploader(
-            "Carica un documento per discuterne con l'AI",
+            t("page-ai-chat-file-upload-label"),
             type=["pdf", "txt", "md", "png", "jpg", "jpeg"],
-            help="Supporta PDF, testo, immagini e altri documenti",
+            help=t("page-ai-chat-file-upload-help"),
             key="file_upload",
         )
 
@@ -357,7 +323,13 @@ with tab1:
                 "type": uploaded_file.type,
                 "size": uploaded_file.size,
             }
-            st.success(f"📄 File caricato: {file_details['name']} ({file_details['size']} bytes)")
+            st.success(
+                t(
+                    "page-ai-chat-file-uploaded",
+                    name=file_details["name"],
+                    size=file_details["size"],
+                )
+            )
 
             # Store file in session state for processing
             if "uploaded_files" not in st.session_state:
@@ -367,7 +339,7 @@ with tab1:
 
     # Show currently uploaded files
     if "uploaded_files" in st.session_state and st.session_state.uploaded_files:
-        st.markdown("### 📎 File Allegati")
+        st.markdown(f"### 📎 {t('page-ai-chat-files-attached')}")
         cols = st.columns([3, 1])
 
         with cols[0]:
@@ -381,43 +353,43 @@ with tab1:
                     )
 
         with cols[1]:
-            if st.button("🗑️ Cancella Tutti", use_container_width=True):
+            if st.button(f"🗑️ {t('page-ai-chat-files-clear-all')}", use_container_width=True):
                 st.session_state.uploaded_files = []
-                st.success("File cancellati!")
+                st.success(t("page-ai-chat-files-cleared"))
                 st.rerun()
 
     # Custom commands info
-    with st.expander("📝 Comandi Personalizzati", expanded=False):
+    with st.expander(t("page-ai-chat-custom-commands-title"), expanded=False):
         commands = custom_commands_service.list_commands()
         if not commands:
-            st.info(
-                "Nessun comando personalizzato trovato. Crea comandi in `~/.openfatture/commands/*.yaml`"
-            )
+            st.info(t("page-ai-chat-custom-commands-empty"))
         else:
-            st.markdown(f"**{len(commands)} comandi disponibili:**")
+            st.markdown(t("page-ai-chat-custom-commands-count", count=len(commands)))
             for cmd in commands:
                 aliases = f" ({', '.join(cmd['aliases'])})" if cmd["aliases"] else ""
                 with st.expander(f"🤖 /{cmd['name']}{aliases} - {cmd['category']}"):
-                    st.markdown(f"**Descrizione:** {cmd['description']}")
+                    st.markdown(
+                        t("page-ai-chat-custom-commands-description", desc=cmd["description"])
+                    )
                     if cmd["examples"]:
-                        st.markdown("**Esempi:**")
+                        st.markdown(f"**{t('page-ai-chat-custom-commands-examples')}:**")
                         for example in cmd["examples"]:
                             st.code(example)
                     if cmd["author"]:
-                        st.markdown(f"**Autore:** {cmd['author']}")
+                        st.markdown(t("page-ai-chat-custom-commands-author", author=cmd["author"]))
                     if cmd["version"]:
-                        st.markdown(f"**Versione:** {cmd['version']}")
+                        st.markdown(
+                            t("page-ai-chat-custom-commands-version", version=cmd["version"])
+                        )
 
     # Session management
-    with st.expander("💾 Sessioni Salvate", expanded=False):
+    with st.expander(t("page-ai-chat-sessions-title"), expanded=False):
         sessions = session_service.list_sessions()
 
         if not sessions:
-            st.info(
-                "Nessuna sessione salvata. Usa il pulsante 💾 Salva per salvare la conversazione corrente."
-            )
+            st.info(t("page-ai-chat-sessions-empty"))
         else:
-            st.markdown(f"**{len(sessions)} sessioni disponibili:**")
+            st.markdown(t("page-ai-chat-sessions-count", count=len(sessions)))
 
             # Session list with load/delete buttons
             for session in sorted(sessions, key=lambda x: x["updated_at"], reverse=True):
@@ -431,42 +403,50 @@ with tab1:
 
                 with col2:
                     if st.button(
-                        "📂 Carica", key=f"load_{session['id']}", use_container_width=True
+                        f"📂 {t('page-ai-chat-sessions-load')}",
+                        key=f"load_{session['id']}",
+                        use_container_width=True,
                     ):
                         try:
                             session_data = session_service.load_session(session["id"])
                             if session_data and session_data["messages"]:
                                 # Clear current history and load new one
                                 st.session_state.conversation_history = session_data["messages"]
-                                st.success(f"✅ Caricata sessione: {session['title']}")
+                                st.success(
+                                    t("page-ai-chat-sessions-loaded", title=session["title"])
+                                )
                                 st.rerun()
                             else:
-                                st.error("❌ Sessione vuota o corrotta")
+                                st.error(t("page-ai-chat-sessions-load-error-empty"))
                         except Exception as e:
-                            st.error(f"❌ Errore caricamento: {str(e)}")
+                            st.error(t("page-ai-chat-sessions-load-error", error=str(e)))
 
                 with col3:
                     if st.button(
-                        "📝 Rinomina", key=f"rename_{session['id']}", use_container_width=True
+                        f"📝 {t('page-ai-chat-sessions-rename')}",
+                        key=f"rename_{session['id']}",
+                        use_container_width=True,
                     ):
                         # This would need a text input - simplified for now
-                        st.info("Funzionalità rinomina da implementare")
+                        st.info(t("page-ai-chat-sessions-rename-todo"))
 
                 with col4:
                     if st.button(
-                        "🗑️ Elimina", key=f"delete_{session['id']}", use_container_width=True
+                        f"🗑️ {t('page-ai-chat-sessions-delete')}",
+                        key=f"delete_{session['id']}",
+                        use_container_width=True,
                     ):
                         try:
                             if session_service.delete_session(session["id"]):
-                                st.success("✅ Sessione eliminata")
+                                st.success(t("page-ai-chat-sessions-deleted"))
                                 st.rerun()
                             else:
-                                st.error("❌ Errore eliminazione")
+                                st.error(t("page-ai-chat-sessions-delete-error"))
                         except Exception as e:
-                            st.error(f"❌ Errore: {str(e)}")
+                            st.error(t("page-ai-error-generic", error=str(e)))
 
     # Chat input
-    user_input = st.chat_input("Scrivi il tuo messaggio o usa /comando...", key="chat_input")
+    user_input = st.chat_input(t("page-ai-chat-input-placeholder"), key="chat_input")
 
     if user_input:
         # Handle slash commands first
@@ -498,7 +478,7 @@ with tab1:
         # Prepare message content with file information
         message_content = final_input
         if attached_files:
-            file_info_parts = ["\n\n📎 File allegati:"]
+            file_info_parts = [f"\n\n📎 {t('page-ai-chat-files-attached')}:"]
 
             for file_data in attached_files:
                 file_name = file_data["details"]["name"]
@@ -510,24 +490,37 @@ with tab1:
                     try:
                         content = str(file_data["file"].read(), "utf-8")
                         preview = content[:200] + "..." if len(content) > 200 else content
-                        file_info_parts.append(f"- **{file_name}** (testo): {preview}")
+                        file_info_parts.append(
+                            t(
+                                "page-ai-chat-file-text-preview",
+                                name=file_name,
+                                preview=preview,
+                            )
+                        )
                     except Exception:
-                        file_info_parts.append(f"- **{file_name}** (testo, {file_size} bytes)")
+                        file_info_parts.append(
+                            t("page-ai-chat-file-text", name=file_name, size=file_size)
+                        )
                 elif file_type == "application/pdf":
                     file_info_parts.append(
-                        f"- **{file_name}** (PDF, {file_size} bytes) - Contenuto da analizzare"
+                        t("page-ai-chat-file-pdf", name=file_name, size=file_size)
                     )
                 elif file_type.startswith("image/"):
                     file_info_parts.append(
-                        f"- **{file_name}** (immagine {file_type.split('/')[1]}, {file_size} bytes) - Testo da estrarre via OCR"
+                        t(
+                            "page-ai-chat-file-image",
+                            name=file_name,
+                            format=file_type.split("/")[1],
+                            size=file_size,
+                        )
                     )
                 else:
-                    file_info_parts.append(f"- **{file_name}** ({file_type}, {file_size} bytes)")
+                    file_info_parts.append(
+                        t("page-ai-chat-file-other", name=file_name, type=file_type, size=file_size)
+                    )
 
             message_content += "\n".join(file_info_parts)
-            message_content += (
-                "\n\n💡 L'AI analizzerà questi file per fornire una risposta più precisa."
-            )
+            message_content += f"\n\n💡 {t('page-ai-chat-file-analysis-hint')}"
 
         # Add user message to history
         history.append({"role": "user", "content": message_content})
@@ -539,7 +532,7 @@ with tab1:
 
                 # Show file attachments
                 if attached_files:
-                    st.markdown("**Allegati:**")
+                    st.markdown(f"**{t('page-ai-chat-attachments')}:**")
                     for file_data in attached_files:
                         file_type = file_data["details"]["type"]
                         if file_type.startswith("image/"):
@@ -558,7 +551,7 @@ with tab1:
                 full_response = ""
 
                 # Stream response with retry logic
-                with st.spinner("Pensando..."):
+                with st.spinner(t("page-ai-chat-thinking")):
                     try:
 
                         async def stream_chat():
@@ -621,43 +614,48 @@ with tab1:
 
                             with feedback_col1:
                                 if st.button(
-                                    "👍 Buono", key=f"good_{len(history)}", use_container_width=True
+                                    f"👍 {t('page-ai-chat-feedback-good')}",
+                                    key=f"good_{len(history)}",
+                                    use_container_width=True,
                                 ):
                                     success = feedback_service.submit_feedback(
                                         agent_type="chat_agent",
                                         rating=5,
-                                        user_comment="Buona risposta",
+                                        user_comment=t("page-ai-chat-feedback-good-comment"),
                                         original_text=full_response,
                                     )
                                     if success:
-                                        st.success("✅ Grazie per il feedback!")
+                                        st.success(t("page-ai-chat-feedback-thanks"))
                                     else:
-                                        st.error("❌ Errore nell'invio del feedback")
+                                        st.error(t("page-ai-chat-feedback-error"))
 
                             with feedback_col2:
                                 if st.button(
-                                    "👎 Scarso", key=f"bad_{len(history)}", use_container_width=True
+                                    f"👎 {t('page-ai-chat-feedback-bad')}",
+                                    key=f"bad_{len(history)}",
+                                    use_container_width=True,
                                 ):
                                     success = feedback_service.submit_feedback(
                                         agent_type="chat_agent",
                                         rating=2,
-                                        user_comment="Risposta insoddisfacente",
+                                        user_comment=t("page-ai-chat-feedback-bad-comment"),
                                         original_text=full_response,
                                     )
                                     if success:
-                                        st.success("✅ Grazie per il feedback!")
+                                        st.success(t("page-ai-chat-feedback-thanks"))
                                     else:
-                                        st.error("❌ Errore nell'invio del feedback")
+                                        st.error(t("page-ai-chat-feedback-error"))
 
                             with feedback_col3:
-                                with st.popover("💬 Commento"):
+                                with st.popover(f"💬 {t('page-ai-chat-feedback-comment')}"):
                                     user_comment = st.text_area(
-                                        "Lascia un commento sulla risposta:",
+                                        t("page-ai-chat-feedback-comment-label"),
                                         height=100,
                                         key=f"comment_{len(history)}",
                                     )
                                     if st.button(
-                                        "Invia Commento", key=f"submit_comment_{len(history)}"
+                                        t("page-ai-chat-feedback-submit"),
+                                        key=f"submit_comment_{len(history)}",
                                     ):
                                         if user_comment.strip():
                                             success = feedback_service.submit_feedback(
@@ -667,11 +665,11 @@ with tab1:
                                                 original_text=full_response,
                                             )
                                             if success:
-                                                st.success("✅ Commento inviato!")
+                                                st.success(t("page-ai-chat-feedback-comment-sent"))
                                             else:
-                                                st.error("❌ Errore nell'invio del commento")
+                                                st.error(t("page-ai-chat-feedback-error"))
                                         else:
-                                            st.warning("Inserisci un commento")
+                                            st.warning(t("page-ai-chat-feedback-comment-empty"))
 
                     except Exception as e:
                         error_message = handle_chat_error(e, "chat_streaming")
@@ -679,10 +677,16 @@ with tab1:
                         response_placeholder.error(error_message)
 
                         # Show additional help for common errors
-                        if "connessione" in error_message.lower():
-                            st.info("💡 Suggerimento: Controlla la tua connessione internet")
-                        elif "autenticazione" in error_message.lower():
-                            st.info("💡 Suggerimento: Verifica le impostazioni AI nelle preferenze")
+                        if (
+                            "connessione" in error_message.lower()
+                            or "connection" in error_message.lower()
+                        ):
+                            st.info(t("page-ai-error-hint-connection"))
+                        elif (
+                            "autenticazione" in error_message.lower()
+                            or "auth" in error_message.lower()
+                        ):
+                            st.info(t("page-ai-error-hint-auth"))
 
         # Add assistant response to history
         history.append({"role": "assistant", "content": full_response})
@@ -693,62 +697,59 @@ with tab1:
 # TAB 2: Invoice Description Generator
 # =============================================================================
 with tab2:
-    st.markdown("### 📝 Genera Descrizione Fattura")
-    st.markdown(
-        """
-        Genera descrizioni professionali per le tue fatture usando l'AI.
-        Fornisci informazioni sul servizio e ottieni una descrizione dettagliata.
-        """
-    )
+    st.markdown(f"### 📝 {t('page-ai-desc-title')}")
+    st.markdown(t("page-ai-desc-description"))
 
     with st.form("description_form"):
         servizio = st.text_area(
-            "Servizio Fornito *",
-            placeholder="es. Consulenza sviluppo web app e-commerce",
-            help="Descrivi brevemente il servizio/prodotto",
+            t("page-ai-desc-service-label"),
+            placeholder=t("page-ai-desc-service-placeholder"),
+            help=t("page-ai-desc-service-help"),
         )
 
         col1, col2 = st.columns(2)
 
         with col1:
             ore = st.number_input(
-                "Ore Lavorate",
+                t("page-ai-desc-hours-label"),
                 min_value=0.0,
                 max_value=1000.0,
                 value=0.0,
                 step=0.5,
-                help="Numero ore (opzionale)",
+                help=t("page-ai-desc-hours-help"),
             )
 
             progetto = st.text_input(
-                "Nome Progetto",
-                placeholder="es. Progetto E-Commerce XYZ",
-                help="Nome del progetto (opzionale)",
+                t("page-ai-desc-project-label"),
+                placeholder=t("page-ai-desc-project-placeholder"),
+                help=t("page-ai-desc-project-help"),
             )
 
         with col2:
             tariffa = st.number_input(
-                "Tariffa Oraria (€)",
+                t("page-ai-desc-rate-label"),
                 min_value=0.0,
                 max_value=1000.0,
                 value=0.0,
                 step=5.0,
-                help="Tariffa oraria in euro (opzionale)",
+                help=t("page-ai-desc-rate-help"),
             )
 
             tecnologie = st.text_input(
-                "Tecnologie",
-                placeholder="Python, FastAPI, PostgreSQL",
-                help="Tecnologie usate, separate da virgola (opzionale)",
+                t("page-ai-desc-tech-label"),
+                placeholder=t("page-ai-desc-tech-placeholder"),
+                help=t("page-ai-desc-tech-help"),
             )
 
-        submitted = st.form_submit_button("✨ Genera Descrizione", use_container_width=True)
+        submitted = st.form_submit_button(
+            f"✨ {t('page-ai-desc-generate')}", use_container_width=True
+        )
 
     if submitted:
         if not servizio:
-            st.error("⚠️ Inserisci una descrizione del servizio")
+            st.error(t("page-ai-desc-error-empty"))
         else:
-            with st.spinner("🤖 Generando descrizione professionale..."):
+            with st.spinner(t("page-ai-desc-generating")):
                 try:
 
                     async def generate_description():
@@ -777,43 +778,46 @@ with tab2:
                     )
 
                     if response.status.value == "success":
-                        st.success("✅ Descrizione generata con successo!")
+                        st.success(t("page-ai-desc-success"))
 
                         # Display result
                         if response.metadata.get("is_structured"):
                             data = response.metadata["parsed_model"]
 
-                            st.markdown("#### 📄 Descrizione Professionale")
+                            st.markdown(f"#### 📄 {t('page-ai-desc-result-title')}")
                             st.info(data["descrizione_completa"])
 
                             if data.get("deliverables"):
-                                st.markdown("#### 📦 Deliverables")
+                                st.markdown(f"#### 📦 {t('page-ai-desc-deliverables')}")
                                 for item in data["deliverables"]:
                                     st.markdown(f"- {item}")
 
                             if data.get("competenze"):
-                                st.markdown("#### 🔧 Competenze Tecniche")
+                                st.markdown(f"#### 🔧 {t('page-ai-desc-skills')}")
                                 for skill in data["competenze"]:
                                     st.markdown(f"- {skill}")
 
                             if data.get("durata_ore"):
-                                st.markdown(f"**⏱️ Durata:** {data['durata_ore']} ore")
+                                st.markdown(t("page-ai-desc-duration", hours=data["durata_ore"]))
 
                             if data.get("note"):
-                                st.markdown(f"**📌 Note:** {data['note']}")
+                                st.markdown(t("page-ai-desc-notes", notes=data["note"]))
 
                         else:
-                            st.markdown("#### 📄 Descrizione Generata")
+                            st.markdown(f"#### 📄 {t('page-ai-desc-result-generated')}")
                             st.info(response.content)
 
                         # Metrics
                         col_m1, col_m2, col_m3 = st.columns(3)
                         with col_m1:
-                            st.metric("Provider", response.provider)
+                            st.metric(t("page-ai-metric-provider"), response.provider)
                         with col_m2:
-                            st.metric("Tokens", response.usage.total_tokens)
+                            st.metric(t("page-ai-metric-tokens"), response.usage.total_tokens)
                         with col_m3:
-                            st.metric("Costo", f"${response.usage.estimated_cost_usd:.4f}")
+                            st.metric(
+                                t("page-ai-metric-cost"),
+                                f"${response.usage.estimated_cost_usd:.4f}",
+                            )
 
                     else:
                         error_message = handle_chat_error(
@@ -826,87 +830,87 @@ with tab2:
                     st.error(error_message)
 
                     # Show additional help for common errors
-                    if "connessione" in error_message.lower():
-                        st.info("💡 Suggerimento: Controlla la tua connessione internet")
-                    elif "autenticazione" in error_message.lower():
-                        st.info("💡 Suggerimento: Verifica le impostazioni AI nelle preferenze")
+                    if (
+                        "connessione" in error_message.lower()
+                        or "connection" in error_message.lower()
+                    ):
+                        st.info(t("page-ai-error-hint-connection"))
+                    elif (
+                        "autenticazione" in error_message.lower() or "auth" in error_message.lower()
+                    ):
+                        st.info(t("page-ai-error-hint-auth"))
 
 # =============================================================================
 # TAB 3: VAT Suggestion
 # =============================================================================
 with tab3:
-    st.markdown("### 🧾 Suggerimento Aliquota IVA")
-    st.markdown(
-        """
-        Ottieni suggerimenti AI sull'aliquota IVA corretta e il trattamento fiscale
-        in base al tipo di servizio/prodotto e al cliente.
-        """
-    )
+    st.markdown(f"### 🧾 {t('page-ai-vat-title')}")
+    st.markdown(t("page-ai-vat-description"))
 
     with st.form("vat_form"):
         descrizione = st.text_area(
-            "Descrizione Servizio/Prodotto *",
-            placeholder="es. Consulenza informatica per sviluppo software gestionale",
-            help="Descrivi il servizio o prodotto da fatturare",
+            t("page-ai-vat-service-label"),
+            placeholder=t("page-ai-vat-service-placeholder"),
+            help=t("page-ai-vat-service-help"),
         )
 
         col1, col2 = st.columns(2)
 
         with col1:
             cliente_pa = st.checkbox(
-                "Cliente è Pubblica Amministrazione",
-                help="Spunta se il cliente è PA",
+                t("page-ai-vat-client-pa-label"),
+                help=t("page-ai-vat-client-pa-help"),
             )
 
             importo = st.number_input(
-                "Importo (€)",
+                t("page-ai-vat-amount-label"),
                 min_value=0.0,
                 value=0.0,
                 step=10.0,
-                help="Importo in euro (opzionale)",
+                help=t("page-ai-vat-amount-help"),
             )
 
         with col2:
             cliente_estero = st.checkbox(
-                "Cliente Estero",
-                help="Spunta se il cliente non è residente in Italia",
+                t("page-ai-vat-client-foreign-label"),
+                help=t("page-ai-vat-client-foreign-help"),
             )
 
             if cliente_estero:
                 paese = st.text_input(
-                    "Paese Cliente",
+                    t("page-ai-vat-country-label"),
                     value="",
                     max_chars=2,
-                    placeholder="IT, FR, US...",
-                    help="Codice ISO paese a 2 lettere",
+                    placeholder=t("page-ai-vat-country-placeholder"),
+                    help=t("page-ai-vat-country-help"),
                 )
             else:
                 paese = "IT"
 
         categoria = st.selectbox(
-            "Categoria Servizio",
+            t("page-ai-vat-category-label"),
             options=[
                 "",
-                "Consulenza",
-                "Sviluppo Software",
-                "Formazione",
-                "Design/Grafica",
-                "Marketing",
-                "Manutenzione",
-                "Altro",
+                t("page-ai-vat-category-consulting"),
+                t("page-ai-vat-category-software"),
+                t("page-ai-vat-category-training"),
+                t("page-ai-vat-category-design"),
+                t("page-ai-vat-category-marketing"),
+                t("page-ai-vat-category-maintenance"),
+                t("page-ai-vat-category-other"),
             ],
-            help="Categoria del servizio (opzionale)",
+            help=t("page-ai-vat-category-help"),
         )
 
         submitted_vat = st.form_submit_button(
-            "🧾 Ottieni Suggerimento IVA", use_container_width=True
+            f"🧾 {t('page-ai-vat-suggest')}", use_container_width=True
         )
 
     if submitted_vat:
         if not descrizione:
-            st.error("⚠️ Inserisci una descrizione del servizio/prodotto")
+            st.error(t("page-ai-vat-error-empty"))
         else:
-            with st.spinner("🤖 Analizzando trattamento fiscale..."):
+            with st.spinner(t("page-ai-vat-analyzing")):
                 try:
                     response = ai_service.suggest_vat(
                         description=descrizione,
@@ -918,126 +922,124 @@ with tab3:
                     )
 
                     if response.status.value == "success":
-                        st.success("✅ Analisi completata!")
+                        st.success(t("page-ai-vat-success"))
 
                         # Display result
                         if response.metadata.get("is_structured"):
                             data = response.metadata["parsed_model"]
 
                             # Main tax info
-                            st.markdown("#### 📊 Trattamento Fiscale")
+                            st.markdown(f"#### 📊 {t('page-ai-vat-treatment-title')}")
 
                             info_cols = st.columns(3)
 
                             with info_cols[0]:
-                                st.metric("Aliquota IVA", f"{data['aliquota_iva']}%")
+                                st.metric(
+                                    t("page-ai-vat-rate-metric"),
+                                    f"{data['aliquota_iva']}%",
+                                )
 
                             with info_cols[1]:
                                 st.metric(
-                                    "Reverse Charge",
-                                    "✓ SI" if data["reverse_charge"] else "✗ NO",
+                                    t("page-ai-vat-reverse-charge-metric"),
+                                    t("page-ai-yes") if data["reverse_charge"] else t("page-ai-no"),
                                 )
 
                             with info_cols[2]:
                                 confidence_pct = int(data["confidence"] * 100)
-                                st.metric("Confidence", f"{confidence_pct}%")
+                                st.metric(t("page-ai-vat-confidence-metric"), f"{confidence_pct}%")
 
                             if data.get("codice_natura"):
-                                st.info(f"**Codice Natura IVA:** {data['codice_natura']}")
+                                st.info(t("page-ai-vat-nature-code", code=data["codice_natura"]))
 
                             if data.get("split_payment"):
-                                st.warning("⚠️ **Split Payment** applicabile")
+                                st.warning(t("page-ai-vat-split-payment"))
 
                             if data.get("regime_speciale"):
-                                st.info(f"**Regime Speciale:** {data['regime_speciale']}")
+                                st.info(
+                                    t("page-ai-vat-special-regime", regime=data["regime_speciale"])
+                                )
 
                             # Explanation
-                            st.markdown("#### 📋 Spiegazione")
+                            st.markdown(f"#### 📋 {t('page-ai-vat-explanation-title')}")
                             st.markdown(data["spiegazione"])
 
                             # Legal reference
-                            st.markdown("#### 📜 Riferimento Normativo")
+                            st.markdown(f"#### 📜 {t('page-ai-vat-legal-reference-title')}")
                             st.markdown(data["riferimento_normativo"])
 
                             # Invoice notes
                             if data.get("note_fattura"):
-                                st.markdown("#### 📝 Nota per Fattura")
+                                st.markdown(f"#### 📝 {t('page-ai-vat-invoice-note-title')}")
                                 st.code(data["note_fattura"])
 
                             # Recommendations
                             if data.get("raccomandazioni") and len(data["raccomandazioni"]) > 0:
-                                st.markdown("#### 💡 Raccomandazioni")
+                                st.markdown(f"#### 💡 {t('page-ai-vat-recommendations-title')}")
                                 for racc in data["raccomandazioni"]:
                                     st.markdown(f"- {racc}")
 
                         else:
-                            st.markdown("#### 📊 Suggerimento")
+                            st.markdown(f"#### 📊 {t('page-ai-vat-suggestion-title')}")
                             st.info(response.content)
 
                         # Metrics
                         col_m1, col_m2, col_m3 = st.columns(3)
                         with col_m1:
-                            st.metric("Provider", response.provider)
+                            st.metric(t("page-ai-metric-provider"), response.provider)
                         with col_m2:
-                            st.metric("Tokens", response.usage.total_tokens)
+                            st.metric(t("page-ai-metric-tokens"), response.usage.total_tokens)
                         with col_m3:
-                            st.metric("Costo", f"${response.usage.estimated_cost_usd:.4f}")
+                            st.metric(
+                                t("page-ai-metric-cost"),
+                                f"${response.usage.estimated_cost_usd:.4f}",
+                            )
 
                     else:
-                        st.error(f"❌ Errore: {response.error}")
+                        st.error(t("page-ai-vat-error", error=response.error))
 
                 except Exception as e:
-                    st.error(f"❌ Errore durante analisi: {e}")
+                    st.error(t("page-ai-vat-error-generic", error=str(e)))
                     st.exception(e)
 
 # =============================================================================
 # TAB 4: Voice Chat
 # =============================================================================
 with tab4:
-    st.markdown("### 🎤 Chat Vocale con AI")
+    st.markdown(f"### 🎤 {t('page-ai-voice-title')}")
 
     # Check if voice is available
     if not voice_service.is_available():
-        st.warning(
-            """
-            ⚠️ **Voice Chat non configurato**
-
-            Per abilitare il Voice Chat:
-            1. Configura `OPENAI_API_KEY` nel file `.env`
-            2. Imposta `OPENFATTURE_VOICE_ENABLED=true`
-            3. Riavvia l'applicazione
-
-            Consulta la documentazione per i dettagli.
-            """
-        )
+        st.warning(t("page-ai-voice-not-configured"))
         st.stop()
 
-    st.markdown(
-        """
-        Parla con l'assistente AI usando la tua voce:
-        - 🎤 Registra la tua domanda
-        - 🤖 L'AI la trascrive e risponde
-        - 🔊 Ascolta la risposta vocale
-        - 💬 Supporta conversazioni con contesto
-        """
-    )
+    st.markdown(t("page-ai-voice-description"))
 
     # Voice configuration info
-    with st.expander("⚙️ Configurazione Voice", expanded=False):
+    with st.expander(t("page-ai-voice-config-title"), expanded=False):
         voice_config = voice_service.get_config()
 
         col_v1, col_v2, col_v3 = st.columns(3)
         with col_v1:
-            st.metric("Provider", voice_config.get("provider", "N/A"))
+            st.metric(t("page-ai-voice-config-provider"), voice_config.get("provider", "N/A"))
         with col_v2:
-            st.metric("STT Model", voice_config.get("stt_model", "N/A"))
+            st.metric(t("page-ai-voice-config-stt"), voice_config.get("stt_model", "N/A"))
         with col_v3:
-            st.metric("TTS Voice", voice_config.get("tts_voice", "N/A"))
+            st.metric(t("page-ai-voice-config-tts-voice"), voice_config.get("tts_voice", "N/A"))
 
-        st.markdown(f"**TTS Model:** {voice_config.get('tts_model', 'N/A')}")
-        st.markdown(f"**TTS Speed:** {voice_config.get('tts_speed', 1.0)}x")
-        st.markdown(f"**TTS Format:** {voice_config.get('tts_format', 'mp3')}")
-        st.markdown(f"**Streaming:** {'✓' if voice_config.get('streaming_enabled') else '✗'}")
+        st.markdown(t("page-ai-voice-config-tts-model", model=voice_config.get("tts_model", "N/A")))
+        st.markdown(t("page-ai-voice-config-tts-speed", speed=voice_config.get("tts_speed", 1.0)))
+        st.markdown(
+            t("page-ai-voice-config-tts-format", format=voice_config.get("tts_format", "mp3"))
+        )
+        st.markdown(
+            t(
+                "page-ai-voice-config-streaming",
+                enabled=(
+                    t("page-ai-yes") if voice_config.get("streaming_enabled") else t("page-ai-no")
+                ),
+            )
+        )
 
     # Initialize voice conversation history
     if "voice_conversation_history" not in st.session_state:
@@ -1048,24 +1050,26 @@ with tab4:
     # Action buttons
     voice_col1, voice_col2 = st.columns([4, 1])
     with voice_col2:
-        if st.button("🗑️ Cancella Voice", use_container_width=True):
+        if st.button(f"🗑️ {t('page-ai-voice-clear')}", use_container_width=True):
             st.session_state.voice_conversation_history = []
             st.rerun()
 
     # Display voice conversation history
     if voice_history:
-        st.markdown("### 📜 Cronologia Conversazione")
+        st.markdown(f"### 📜 {t('page-ai-voice-history-title')}")
         with st.container():
             for i, interaction in enumerate(voice_history):
                 # User message
                 with st.chat_message("user", avatar="🧑"):
-                    st.markdown(f"**Tu:** {interaction['transcription']}")
+                    st.markdown(t("page-ai-voice-user-message", text=interaction["transcription"]))
                     if interaction.get("language"):
-                        st.caption(f"Lingua rilevata: {interaction['language']}")
+                        st.caption(
+                            t("page-ai-voice-language-detected", lang=interaction["language"])
+                        )
 
                 # Assistant response
                 with st.chat_message("assistant", avatar="🤖"):
-                    st.markdown(f"**Assistente:** {interaction['response']}")
+                    st.markdown(t("page-ai-voice-assistant-message", text=interaction["response"]))
 
                     # Show audio if available
                     if interaction.get("audio_data"):
@@ -1076,37 +1080,48 @@ with tab4:
                         metrics = interaction["metrics"]
                         metric_cols = st.columns(4)
                         with metric_cols[0]:
-                            st.caption(f"STT: {metrics.get('stt_ms', 0):.0f}ms")
+                            st.caption(
+                                t("page-ai-voice-metric-stt", ms=f"{metrics.get('stt_ms', 0):.0f}")
+                            )
                         with metric_cols[1]:
-                            st.caption(f"LLM: {metrics.get('llm_ms', 0):.0f}ms")
+                            st.caption(
+                                t("page-ai-voice-metric-llm", ms=f"{metrics.get('llm_ms', 0):.0f}")
+                            )
                         with metric_cols[2]:
-                            st.caption(f"TTS: {metrics.get('tts_ms', 0):.0f}ms")
+                            st.caption(
+                                t("page-ai-voice-metric-tts", ms=f"{metrics.get('tts_ms', 0):.0f}")
+                            )
                         with metric_cols[3]:
-                            st.caption(f"Totale: {metrics.get('total_ms', 0):.0f}ms")
+                            st.caption(
+                                t(
+                                    "page-ai-voice-metric-total",
+                                    ms=f"{metrics.get('total_ms', 0):.0f}",
+                                )
+                            )
     else:
-        st.info("👋 Nessuna conversazione vocale ancora. Registra la tua prima domanda!")
+        st.info(t("page-ai-voice-history-empty"))
 
     st.markdown("---")
 
     # Audio input
-    st.markdown("### 🎙️ Registra la tua voce")
+    st.markdown(f"### 🎙️ {t('page-ai-voice-record-title')}")
 
     # Streamlit audio input (available from Streamlit 1.28+)
     audio_input = st.audio_input(
-        "Premi il pulsante per registrare",
+        t("page-ai-voice-record-label"),
         key="voice_chat_audio_input",
-        help="Parla chiaramente nel microfono. La registrazione si ferma automaticamente dopo il silenzio.",
+        help=t("page-ai-voice-record-help"),
     )
 
     if audio_input is not None:
-        st.success(f"✅ Audio registrato: {audio_input.size} bytes")
+        st.success(t("page-ai-voice-recorded", size=audio_input.size))
 
         # Show audio preview
         st.audio(audio_input, format="audio/wav")
 
         # Process audio button
-        if st.button("🚀 Invia e Processa", type="primary", use_container_width=True):
-            with st.spinner("🤖 Processando il tuo messaggio vocale..."):
+        if st.button(f"🚀 {t('page-ai-voice-process')}", type="primary", use_container_width=True):
+            with st.spinner(t("page-ai-voice-processing")):
                 try:
                     # Read audio bytes
                     audio_bytes = audio_input.read()
@@ -1144,27 +1159,29 @@ with tab4:
                     voice_history.append(interaction)
 
                     # Show success and results
-                    st.success("✅ Messaggio vocale processato con successo!")
+                    st.success(t("page-ai-voice-success"))
 
                     # Display results
                     result_col1, result_col2 = st.columns(2)
 
                     with result_col1:
-                        st.markdown("#### 📝 Trascrizione")
-                        st.info(f"**Tu:** {response.transcription.text}")
-                        st.caption(f"Lingua: {response.transcription.language}")
+                        st.markdown(f"#### 📝 {t('page-ai-voice-transcription-title')}")
+                        st.info(t("page-ai-voice-user-message", text=response.transcription.text))
+                        st.caption(
+                            t("page-ai-voice-language", lang=response.transcription.language)
+                        )
 
                     with result_col2:
-                        st.markdown("#### 🤖 Risposta AI")
-                        st.success(f"**Assistente:** {response.llm_response}")
+                        st.markdown(f"#### 🤖 {t('page-ai-voice-response-title')}")
+                        st.success(t("page-ai-voice-assistant-message", text=response.llm_response))
 
                     # Audio response
                     if response.synthesis:
-                        st.markdown("#### 🔊 Risposta Vocale")
+                        st.markdown(f"#### 🔊 {t('page-ai-voice-audio-response-title')}")
                         st.audio(response.synthesis.audio_data, format="audio/mp3")
 
                     # Metrics
-                    st.markdown("#### 📊 Metriche")
+                    st.markdown(f"#### 📊 {t('page-ai-voice-metrics-title')}")
                     metrics_cols = st.columns(4)
                     with metrics_cols[0]:
                         st.metric("STT", f"{response.stt_latency_ms:.0f}ms")
@@ -1173,11 +1190,14 @@ with tab4:
                     with metrics_cols[2]:
                         st.metric("TTS", f"{response.tts_latency_ms or 0:.0f}ms")
                     with metrics_cols[3]:
-                        st.metric("Totale", f"{response.total_latency_ms:.0f}ms")
+                        st.metric(
+                            t("page-ai-voice-metric-total-label"),
+                            f"{response.total_latency_ms:.0f}ms",
+                        )
 
                     # Additional info
                     if response.llm_metadata:
-                        with st.expander("ℹ️ Dettagli Tecnici"):
+                        with st.expander(t("page-ai-voice-tech-details")):
                             st.json(
                                 {
                                     "provider": response.llm_metadata.get("provider"),
@@ -1192,56 +1212,22 @@ with tab4:
 
                 except Exception as e:
                     error_msg = str(e)
-                    st.error(f"❌ Errore durante il processamento: {error_msg}")
+                    st.error(t("page-ai-voice-error", error=error_msg))
 
                     # Show additional help
                     if "connection" in error_msg.lower() or "timeout" in error_msg.lower():
-                        st.info("💡 Suggerimento: Verifica la tua connessione internet")
+                        st.info(t("page-ai-voice-error-hint-connection"))
                     elif "auth" in error_msg.lower() or "key" in error_msg.lower():
-                        st.info(
-                            "💡 Suggerimento: Verifica le impostazioni API nelle configurazioni"
-                        )
+                        st.info(t("page-ai-voice-error-hint-auth"))
                     elif "rate" in error_msg.lower() or "limit" in error_msg.lower():
-                        st.info(
-                            "💡 Suggerimento: Limite di richieste raggiunto. Riprova tra qualche minuto"
-                        )
+                        st.info(t("page-ai-voice-error-hint-rate"))
 
                     st.exception(e)
 
     # Help section
-    with st.expander("❓ Come funziona", expanded=False):
-        st.markdown(
-            """
-        **Workflow Voice Chat:**
-
-        1. **🎤 Registrazione**: Premi il pulsante e parla nel microfono
-        2. **📝 Trascrizione (STT)**: OpenAI Whisper converte la voce in testo
-        3. **🤖 Elaborazione (LLM)**: L'AI comprende e genera una risposta
-        4. **🔊 Sintesi (TTS)**: OpenAI TTS converte la risposta in audio
-        5. **▶️ Riproduzione**: Ascolta la risposta vocale
-
-        **Supporto Lingue:**
-        - Rilevamento automatico tra 100+ lingue
-        - Italiano, Inglese, Francese, Tedesco, Spagnolo e molte altre
-
-        **Costi Stimati:**
-        - STT (Whisper): ~$0.006 per minuto di audio
-        - TTS: ~$0.015 per 1.000 caratteri (tts-1) o ~$0.030 (tts-1-hd)
-        - LLM: Prezzo standard del modello configurato
-
-        **Requisiti:**
-        - Microfono funzionante
-        - Browser moderno (Chrome, Firefox, Safari, Edge)
-        - Connessione internet stabile
-        """
-        )
+    with st.expander(t("page-ai-voice-help-title"), expanded=False):
+        st.markdown(t("page-ai-voice-help-content"))
 
 # Info footer
 st.markdown("---")
-st.info(
-    """
-    **💡 Suggerimento:** L'AI Assistant è uno strumento di supporto. Le informazioni fornite
-    dovrebbero essere sempre verificate con un commercialista o consulente fiscale per garantire
-    la conformità alle normative vigenti.
-    """
-)
+st.info(t("page-ai-footer-disclaimer"))

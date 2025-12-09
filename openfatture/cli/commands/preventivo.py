@@ -9,6 +9,7 @@ from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
 
 from openfatture.core.preventivi.service import PreventivoService
+from openfatture.i18n import _
 from openfatture.storage.database.base import init_db
 from openfatture.storage.database.models import Cliente, StatoPreventivo, TipoDocumento
 from openfatture.storage.session import db_session
@@ -26,15 +27,15 @@ def ensure_db() -> None:
 
 @app.command("crea")
 def crea_preventivo(
-    cliente_id: int | None = typer.Option(None, "--cliente", help="Client ID"),
-    validita_giorni: int = typer.Option(30, "--validita", help="Validity period in days"),
+    cliente_id: int | None = typer.Option(None, "--cliente", help=_("cli-preventivo-cliente-help")),
+    validita_giorni: int = typer.Option(30, "--validita", help=_("cli-preventivo-validita-help")),
 ) -> None:
     """
     Create a new preventivo (quote/estimate).
     """
     ensure_db()
 
-    console.print("\n[bold blue]📋 Create New Preventivo (Quote)[/bold blue]\n")
+    console.print(f"\n{_('cli-preventivo-create-title')}\n")
 
     with db_session() as db:
         # Select client
@@ -42,38 +43,36 @@ def crea_preventivo(
             clienti = db.query(Cliente).order_by(Cliente.denominazione).all()
 
             if not clienti:
-                console.print(
-                    "[red]No clients found. Add one first with 'openfatture cliente add'[/red]"
-                )
+                console.print(_("cli-preventivo-no-clients"))
                 raise typer.Exit(1)
 
-            console.print("[cyan]Available clients:[/cyan]")
+            console.print(_("cli-preventivo-available-clients"))
             for i, c in enumerate(clienti[:10], 1):
                 console.print(f"  {c.id}. {c.denominazione} ({c.partita_iva or 'N/A'})")
 
-            cliente_id = IntPrompt.ask("\nSelect client ID", default=clienti[0].id)
+            cliente_id = IntPrompt.ask(_("cli-preventivo-client-id-prompt"), default=clienti[0].id)
 
         cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
         if not cliente:
-            console.print(f"[red]Client {cliente_id} not found[/red]")
+            console.print(_("cli-preventivo-client-not-found", id=cliente_id))
             raise typer.Exit(1)
 
         # At this point cliente_id is guaranteed to be int (not None)
         assert cliente_id is not None  # Type narrowing for mypy
 
-        console.print(f"[green]✓ Client: {cliente.denominazione}[/green]\n")
+        console.print(_("cli-preventivo-client-selected", name=cliente.denominazione))
 
         # Preventivo details
         data_emissione = date.today()
         data_scadenza = data_emissione + timedelta(days=validita_giorni)
 
         console.print(
-            f"[dim]Validity: {validita_giorni} days (expires: {data_scadenza.isoformat()})[/dim]\n"
+            _("cli-preventivo-validity-info", days=validita_giorni, date=data_scadenza.isoformat())
         )
 
         # Add line items
-        console.print("\n[bold]Add line items[/bold]")
-        console.print("[dim]Enter empty description to finish[/dim]\n")
+        console.print(_("cli-preventivo-add-items-title"))
+        console.print(_("cli-preventivo-add-items-hint"))
 
         righe = []
         riga_num = 1
@@ -81,14 +80,16 @@ def crea_preventivo(
         totale_iva = Decimal("0")
 
         while True:
-            descrizione = Prompt.ask(f"Item {riga_num} description", default="")
+            descrizione = Prompt.ask(
+                _("cli-preventivo-item-description-prompt", num=riga_num), default=""
+            )
             if not descrizione:
                 break
 
-            quantita = FloatPrompt.ask("Quantity", default=1.0)
-            prezzo = FloatPrompt.ask("Unit price (€)", default=100.0)
-            aliquota_iva = FloatPrompt.ask("VAT rate (%)", default=22.0)
-            unita_misura = Prompt.ask("Unit of measure", default="ore")
+            quantita = FloatPrompt.ask(_("cli-preventivo-item-quantity-prompt"), default=1.0)
+            prezzo = FloatPrompt.ask(_("cli-preventivo-item-price-prompt"), default=100.0)
+            aliquota_iva = FloatPrompt.ask(_("cli-preventivo-item-vat-prompt"), default=22.0)
+            unita_misura = Prompt.ask(_("cli-preventivo-item-unit-prompt"), default="ore")
 
             # Calculate
             imponibile = Decimal(str(quantita)) * Decimal(str(prezzo))
@@ -108,22 +109,24 @@ def crea_preventivo(
             totale_imponibile += imponibile
             totale_iva += iva
 
-            console.print(f"  [green]✓ Added: {descrizione[:40]} - €{totale:.2f}[/green]")
+            console.print(
+                _("cli-preventivo-item-added", description=descrizione[:40], total=f"{totale:.2f}")
+            )
             riga_num += 1
 
         if not righe:
-            console.print("[yellow]No items added. Preventivo creation cancelled.[/yellow]")
+            console.print(_("cli-preventivo-no-items"))
             return
 
         # Optional: notes and conditions
         note = None
         condizioni = None
 
-        if Confirm.ask("\nAdd notes?", default=False):
-            note = Prompt.ask("Notes")
+        if Confirm.ask(_("cli-preventivo-add-notes-prompt"), default=False):
+            note = Prompt.ask(_("cli-preventivo-notes-input"))
 
-        if Confirm.ask("Add terms and conditions?", default=False):
-            condizioni = Prompt.ask("Terms and conditions")
+        if Confirm.ask(_("cli-preventivo-add-conditions-prompt"), default=False):
+            condizioni = Prompt.ask(_("cli-preventivo-conditions-input"))
 
         # Create preventivo using service
         settings = get_settings()
@@ -139,37 +142,43 @@ def crea_preventivo(
         )
 
         if error or not preventivo:
-            console.print(f"\n[red]❌ Error: {error or 'Unknown error'}[/red]")
+            console.print(
+                _("cli-preventivo-error", error=error or _("cli-preventivo-unknown-error"))
+            )
             raise typer.Exit(1)
 
         # Summary
-        console.print("\n[bold green]✓ Preventivo created successfully![/bold green]\n")
+        console.print(_("cli-preventivo-created-success"))
 
-        table = Table(title=f"Preventivo {preventivo.numero}/{preventivo.anno}")
-        table.add_column("Field", style="cyan", width=20)
-        table.add_column("Value", style="white", justify="right")
+        table = Table(
+            title=_("cli-preventivo-table-title", numero=preventivo.numero, anno=preventivo.anno)
+        )
+        table.add_column(_("cli-preventivo-field-column"), style="cyan", width=20)
+        table.add_column(_("cli-preventivo-value-column"), style="white", justify="right")
 
-        table.add_row("Client", cliente.denominazione)
-        table.add_row("Issue date", preventivo.data_emissione.isoformat())
-        table.add_row("Expiration date", preventivo.data_scadenza.isoformat())
-        table.add_row("Line items", str(len(preventivo.righe)))
-        table.add_row("Imponibile", f"€{preventivo.imponibile:.2f}")
-        table.add_row("IVA", f"€{preventivo.iva:.2f}")
-        table.add_row("[bold]TOTALE[/bold]", f"[bold]€{preventivo.totale:.2f}[/bold]")
+        table.add_row(_("cli-preventivo-field-client"), cliente.denominazione)
+        table.add_row(_("cli-preventivo-field-issue-date"), preventivo.data_emissione.isoformat())
+        table.add_row(
+            _("cli-preventivo-field-expiration-date"), preventivo.data_scadenza.isoformat()
+        )
+        table.add_row(_("cli-preventivo-field-line-items"), str(len(preventivo.righe)))
+        table.add_row(_("cli-preventivo-field-imponibile"), f"€{preventivo.imponibile:.2f}")
+        table.add_row(_("cli-preventivo-field-iva"), f"€{preventivo.iva:.2f}")
+        table.add_row(_("cli-preventivo-field-totale"), f"[bold]€{preventivo.totale:.2f}[/bold]")
 
         console.print(table)
 
-        console.print(
-            f"\n[dim]Next: openfatture preventivo converti {preventivo.id} (to create invoice)[/dim]"
-        )
+        console.print(_("cli-preventivo-next-convert", id=preventivo.id))
 
 
 @app.command("lista")
 def list_preventivi(
-    stato: str | None = typer.Option(None, "--stato", help="Filter by status"),
-    anno: int | None = typer.Option(None, "--anno", help="Filter by year"),
-    cliente_id: int | None = typer.Option(None, "--cliente", help="Filter by client ID"),
-    limit: int = typer.Option(50, "--limit", "-l", help="Max results"),
+    stato: str | None = typer.Option(None, "--stato", help=_("cli-preventivo-list-stato-help")),
+    anno: int | None = typer.Option(None, "--anno", help=_("cli-preventivo-list-anno-help")),
+    cliente_id: int | None = typer.Option(
+        None, "--cliente", help=_("cli-preventivo-list-cliente-help")
+    ),
+    limit: int = typer.Option(50, "--limit", "-l", help=_("cli-preventivo-list-limit-help")),
 ) -> None:
     """List preventivi (quotes)."""
     ensure_db()
@@ -183,8 +192,13 @@ def list_preventivi(
             try:
                 stato_enum = StatoPreventivo(stato.lower())
             except ValueError:
-                console.print(f"[red]Invalid status: {stato}[/red]")
-                console.print(f"Valid: {', '.join([s.value for s in StatoPreventivo])}")
+                console.print(_("cli-preventivo-list-invalid-status", status=stato))
+                console.print(
+                    _(
+                        "cli-preventivo-list-valid-statuses",
+                        statuses=", ".join([s.value for s in StatoPreventivo]),
+                    )
+                )
                 raise typer.Exit(1)
 
         preventivi = service.list_preventivi(
@@ -192,17 +206,19 @@ def list_preventivi(
         )
 
         if not preventivi:
-            console.print("[yellow]No preventivi found[/yellow]")
+            console.print(_("cli-preventivo-list-no-results"))
             return
 
-        table = Table(title=f"Preventivi ({len(preventivi)})", show_lines=False)
-        table.add_column("ID", style="cyan", width=6)
-        table.add_column("Number", style="white", width=12)
-        table.add_column("Date", style="white", width=12)
-        table.add_column("Expiration", style="white", width=12)
-        table.add_column("Client", style="bold white")
-        table.add_column("Total", style="green", justify="right", width=12)
-        table.add_column("Status", style="yellow", width=15)
+        table = Table(title=_("cli-preventivo-list-title", count=len(preventivi)), show_lines=False)
+        table.add_column(_("cli-preventivo-list-col-id"), style="cyan", width=6)
+        table.add_column(_("cli-preventivo-list-col-number"), style="white", width=12)
+        table.add_column(_("cli-preventivo-list-col-date"), style="white", width=12)
+        table.add_column(_("cli-preventivo-list-col-expiration"), style="white", width=12)
+        table.add_column(_("cli-preventivo-list-col-client"), style="bold white")
+        table.add_column(
+            _("cli-preventivo-list-col-total"), style="green", justify="right", width=12
+        )
+        table.add_column(_("cli-preventivo-list-col-status"), style="yellow", width=15)
 
         for p in preventivi:
             status_color = {
@@ -236,7 +252,7 @@ def list_preventivi(
 
 @app.command("show")
 def show_preventivo(
-    preventivo_id: int = typer.Argument(..., help="Preventivo ID"),
+    preventivo_id: int = typer.Argument(..., help=_("cli-preventivo-show-id-help")),
 ) -> None:
     """Show preventivo details."""
     ensure_db()
@@ -248,24 +264,31 @@ def show_preventivo(
         preventivo = service.get_preventivo(db, preventivo_id)
 
         if not preventivo:
-            console.print(f"[red]Preventivo {preventivo_id} not found[/red]")
+            console.print(_("cli-preventivo-show-not-found", id=preventivo_id))
             raise typer.Exit(1)
 
         # Header
         console.print(
-            f"\n[bold blue]Preventivo {preventivo.numero}/{preventivo.anno}[/bold blue]\n"
+            _("cli-preventivo-show-header", numero=preventivo.numero, anno=preventivo.anno)
         )
 
         # Info table
         info = Table(show_header=False, box=None)
-        info.add_column("Field", style="cyan", width=20)
-        info.add_column("Value", style="white")
+        info.add_column(_("cli-preventivo-show-info-field"), style="cyan", width=20)
+        info.add_column(_("cli-preventivo-show-info-value"), style="white")
 
-        info.add_row("Client", preventivo.cliente.denominazione)
-        info.add_row("Issue date", preventivo.data_emissione.isoformat())
-        info.add_row("Expiration date", preventivo.data_scadenza.isoformat())
-        info.add_row("Validity", f"{preventivo.validita_giorni} days")
-        info.add_row("Status", preventivo.stato.value)
+        info.add_row(_("cli-preventivo-show-field-client"), preventivo.cliente.denominazione)
+        info.add_row(
+            _("cli-preventivo-show-field-issue-date"), preventivo.data_emissione.isoformat()
+        )
+        info.add_row(
+            _("cli-preventivo-show-field-expiration-date"), preventivo.data_scadenza.isoformat()
+        )
+        info.add_row(
+            _("cli-preventivo-show-field-validity"),
+            _("cli-preventivo-show-validity-days", days=preventivo.validita_giorni),
+        )
+        info.add_row(_("cli-preventivo-show-field-status"), preventivo.stato.value)
 
         # Check if expired
         is_expired = preventivo.data_scadenza < date.today()
@@ -273,19 +296,21 @@ def show_preventivo(
             StatoPreventivo.CONVERTITO,
             StatoPreventivo.SCADUTO,
         ]:
-            info.add_row("[red]⚠ WARNING[/red]", "[red]Expired![/red]")
+            info.add_row(
+                _("cli-preventivo-show-warning-label"), _("cli-preventivo-show-expired-warning")
+            )
 
         console.print(info)
 
         # Line items
-        console.print("\n[bold]Line Items:[/bold]")
+        console.print(_("cli-preventivo-show-items-title"))
         items_table = Table(show_lines=True)
-        items_table.add_column("#", width=4, justify="right")
-        items_table.add_column("Description")
-        items_table.add_column("Qty", justify="right", width=8)
-        items_table.add_column("Price", justify="right", width=10)
-        items_table.add_column("VAT%", justify="right", width=8)
-        items_table.add_column("Total", justify="right", width=12)
+        items_table.add_column(_("cli-preventivo-show-col-num"), width=4, justify="right")
+        items_table.add_column(_("cli-preventivo-show-col-description"))
+        items_table.add_column(_("cli-preventivo-show-col-qty"), justify="right", width=8)
+        items_table.add_column(_("cli-preventivo-show-col-price"), justify="right", width=10)
+        items_table.add_column(_("cli-preventivo-show-col-vat"), justify="right", width=8)
+        items_table.add_column(_("cli-preventivo-show-col-total"), justify="right", width=12)
 
         for riga in preventivo.righe:
             items_table.add_row(
@@ -300,24 +325,26 @@ def show_preventivo(
         console.print(items_table)
 
         # Totals
-        console.print("\n[bold]Totals:[/bold]")
+        console.print(_("cli-preventivo-show-totals-title"))
         totals = Table(show_header=False, box=None)
         totals.add_column("", style="cyan", justify="right", width=30)
         totals.add_column("", style="white", justify="right", width=15)
 
-        totals.add_row("Imponibile", f"€{preventivo.imponibile:.2f}")
-        totals.add_row("IVA", f"€{preventivo.iva:.2f}")
-        totals.add_row("[bold]TOTALE[/bold]", f"[bold]€{preventivo.totale:.2f}[/bold]")
+        totals.add_row(_("cli-preventivo-show-totals-imponibile"), f"€{preventivo.imponibile:.2f}")
+        totals.add_row(_("cli-preventivo-show-totals-iva"), f"€{preventivo.iva:.2f}")
+        totals.add_row(
+            _("cli-preventivo-show-totals-totale"), f"[bold]€{preventivo.totale:.2f}[/bold]"
+        )
 
         console.print(totals)
 
         # Notes and conditions
         if preventivo.note:
-            console.print("\n[bold]Notes:[/bold]")
+            console.print(_("cli-preventivo-show-notes-title"))
             console.print(f"[dim]{preventivo.note}[/dim]")
 
         if preventivo.condizioni:
-            console.print("\n[bold]Terms and Conditions:[/bold]")
+            console.print(_("cli-preventivo-show-conditions-title"))
             console.print(f"[dim]{preventivo.condizioni}[/dim]")
 
         console.print()
@@ -325,8 +352,8 @@ def show_preventivo(
 
 @app.command("delete")
 def delete_preventivo(
-    preventivo_id: int = typer.Argument(..., help="Preventivo ID"),
-    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
+    preventivo_id: int = typer.Argument(..., help=_("cli-preventivo-delete-id-help")),
+    force: bool = typer.Option(False, "--force", "-f", help=_("cli-preventivo-delete-force-help")),
 ) -> None:
     """Delete a preventivo."""
     ensure_db()
@@ -338,29 +365,32 @@ def delete_preventivo(
         preventivo = service.get_preventivo(db, preventivo_id)
 
         if not preventivo:
-            console.print(f"[red]Preventivo {preventivo_id} not found[/red]")
+            console.print(_("cli-preventivo-delete-not-found", id=preventivo_id))
             raise typer.Exit(1)
 
         if not force and not Confirm.ask(
-            f"Delete preventivo {preventivo.numero}/{preventivo.anno}?", default=False
+            _("cli-preventivo-delete-confirm", numero=preventivo.numero, anno=preventivo.anno),
+            default=False,
         ):
-            console.print("Cancelled.")
+            console.print(_("cli-preventivo-delete-cancelled"))
             return
 
         success, error = service.delete_preventivo(db, preventivo_id)
 
         if error:
-            console.print(f"[red]❌ Error: {error}[/red]")
+            console.print(_("cli-preventivo-delete-error", error=error))
             raise typer.Exit(1)
 
-        console.print(f"[green]✓ Preventivo {preventivo.numero}/{preventivo.anno} deleted[/green]")
+        console.print(
+            _("cli-preventivo-delete-success", numero=preventivo.numero, anno=preventivo.anno)
+        )
 
 
 @app.command("converti")
 def converti_preventivo(
-    preventivo_id: int = typer.Argument(..., help="Preventivo ID"),
+    preventivo_id: int = typer.Argument(..., help=_("cli-preventivo-convert-id-help")),
     tipo_documento: str = typer.Option(
-        "TD01", "--tipo", help="Invoice document type (TD01, TD06, etc.)"
+        "TD01", "--tipo", help=_("cli-preventivo-convert-tipo-help")
     ),
 ) -> None:
     """
@@ -368,7 +398,7 @@ def converti_preventivo(
     """
     ensure_db()
 
-    console.print("\n[bold blue]🔄 Converting Preventivo to Fattura[/bold blue]\n")
+    console.print(f"\n{_('cli-preventivo-convert-title')}\n")
 
     with db_session() as db:
         settings = get_settings()
@@ -378,64 +408,83 @@ def converti_preventivo(
         preventivo = service.get_preventivo(db, preventivo_id)
 
         if not preventivo:
-            console.print(f"[red]Preventivo {preventivo_id} not found[/red]")
+            console.print(_("cli-preventivo-convert-not-found", id=preventivo_id))
             raise typer.Exit(1)
 
         # Show preventivo summary
-        console.print(f"[cyan]Preventivo: {preventivo.numero}/{preventivo.anno}[/cyan]")
-        console.print(f"[cyan]Client: {preventivo.cliente.denominazione}[/cyan]")
-        console.print(f"[cyan]Total: €{preventivo.totale:.2f}[/cyan]\n")
+        console.print(
+            _(
+                "cli-preventivo-convert-summary-numero",
+                numero=preventivo.numero,
+                anno=preventivo.anno,
+            )
+        )
+        console.print(
+            _("cli-preventivo-convert-summary-client", client=preventivo.cliente.denominazione)
+        )
+        console.print(_("cli-preventivo-convert-summary-total", total=f"{preventivo.totale:.2f}"))
 
         # Parse tipo_documento
         try:
             tipo_doc_enum = TipoDocumento(tipo_documento.upper())
         except ValueError:
-            console.print(f"[red]Invalid document type: {tipo_documento}[/red]")
-            console.print("Valid: TD01, TD06, etc.")
+            console.print(_("cli-preventivo-convert-invalid-tipo", tipo=tipo_documento))
+            console.print(_("cli-preventivo-convert-valid-tipos"))
             raise typer.Exit(1)
 
         # Confirm
-        if not Confirm.ask("Convert to invoice?", default=True):
-            console.print("[yellow]Cancelled.[/yellow]")
+        if not Confirm.ask(_("cli-preventivo-convert-confirm"), default=True):
+            console.print(_("cli-preventivo-convert-cancelled"))
             return
 
         # Convert
         fattura, error = service.converti_a_fattura(db, preventivo_id, tipo_doc_enum)
 
         if error or not fattura:
-            console.print(f"\n[red]❌ Error: {error or 'Unknown error'}[/red]")
+            console.print(
+                _("cli-preventivo-convert-error", error=error or _("cli-preventivo-unknown-error"))
+            )
             raise typer.Exit(1)
 
         # Success
-        console.print("\n[bold green]✓ Preventivo converted successfully![/bold green]\n")
+        console.print(_("cli-preventivo-convert-success"))
 
-        table = Table(title=f"Invoice {fattura.numero}/{fattura.anno}")
-        table.add_column("Field", style="cyan", width=20)
-        table.add_column("Value", style="white", justify="right")
+        table = Table(
+            title=_(
+                "cli-preventivo-convert-invoice-title", numero=fattura.numero, anno=fattura.anno
+            )
+        )
+        table.add_column(_("cli-preventivo-convert-field-column"), style="cyan", width=20)
+        table.add_column(_("cli-preventivo-convert-value-column"), style="white", justify="right")
 
-        table.add_row("Client", fattura.cliente.denominazione)
-        table.add_row("Date", fattura.data_emissione.isoformat())
-        table.add_row("Document type", fattura.tipo_documento.value)
-        table.add_row("Line items", str(len(fattura.righe)))
-        table.add_row("Imponibile", f"€{fattura.imponibile:.2f}")
-        table.add_row("IVA", f"€{fattura.iva:.2f}")
-        table.add_row("[bold]TOTALE[/bold]", f"[bold]€{fattura.totale:.2f}[/bold]")
+        table.add_row(_("cli-preventivo-convert-field-client"), fattura.cliente.denominazione)
+        table.add_row(_("cli-preventivo-convert-field-date"), fattura.data_emissione.isoformat())
+        table.add_row(_("cli-preventivo-convert-field-doc-type"), fattura.tipo_documento.value)
+        table.add_row(_("cli-preventivo-convert-field-line-items"), str(len(fattura.righe)))
+        table.add_row(_("cli-preventivo-convert-field-imponibile"), f"€{fattura.imponibile:.2f}")
+        table.add_row(_("cli-preventivo-convert-field-iva"), f"€{fattura.iva:.2f}")
+        table.add_row(
+            _("cli-preventivo-convert-field-totale"), f"[bold]€{fattura.totale:.2f}[/bold]"
+        )
 
         console.print(table)
 
-        console.print(f"\n[dim]Invoice ID: {fattura.id}[/dim]")
+        console.print(_("cli-preventivo-convert-invoice-id", id=fattura.id))
         console.print(
-            f"[dim]Original preventivo: {preventivo.numero}/{preventivo.anno} (ID: {preventivo.id})[/dim]"
+            _(
+                "cli-preventivo-convert-original",
+                numero=preventivo.numero,
+                anno=preventivo.anno,
+                id=preventivo.id,
+            )
         )
-        console.print(f"\n[dim]Next: openfatture fattura invia {fattura.id} --pec[/dim]")
+        console.print(_("cli-preventivo-convert-next-send", id=fattura.id))
 
 
 @app.command("aggiorna-stato")
 def aggiorna_stato(
-    preventivo_id: int = typer.Argument(..., help="Preventivo ID"),
-    stato: str = typer.Argument(
-        ..., help="New status (bozza, inviato, accettato, rifiutato, scaduto)"
-    ),
+    preventivo_id: int = typer.Argument(..., help=_("cli-preventivo-update-status-id-help")),
+    stato: str = typer.Argument(..., help=_("cli-preventivo-update-status-stato-help")),
 ) -> None:
     """Update preventivo status."""
     ensure_db()
@@ -448,15 +497,20 @@ def aggiorna_stato(
         try:
             stato_enum = StatoPreventivo(stato.lower())
         except ValueError:
-            console.print(f"[red]Invalid status: {stato}[/red]")
-            console.print(f"Valid: {', '.join([s.value for s in StatoPreventivo])}")
+            console.print(_("cli-preventivo-update-status-invalid", status=stato))
+            console.print(
+                _(
+                    "cli-preventivo-update-status-valid",
+                    statuses=", ".join([s.value for s in StatoPreventivo]),
+                )
+            )
             raise typer.Exit(1)
 
         # Update
         success, error = service.update_stato(db, preventivo_id, stato_enum)
 
         if error:
-            console.print(f"[red]❌ Error: {error}[/red]")
+            console.print(_("cli-preventivo-update-status-error", error=error))
             raise typer.Exit(1)
 
-        console.print(f"[green]✓ Status updated to: {stato_enum.value}[/green]")
+        console.print(_("cli-preventivo-update-status-success", status=stato_enum.value))

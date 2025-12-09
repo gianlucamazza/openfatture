@@ -3,6 +3,7 @@
 import typer
 from rich.console import Console
 
+from openfatture.i18n import _
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
 
@@ -25,72 +26,74 @@ def test_pec() -> None:
 
     Note: This uses the new TemplatePECSender with HTML + text templates.
     """
-    console.print("\n[bold blue]🧪 Testing PEC Configuration[/bold blue]\n")
+    console.print(f"\n{_('cli-pec-test-title')}\n")
 
     settings = get_settings()
 
     # Check configuration
     if not settings.pec_address:
-        console.print("[red]❌ PEC address not configured[/red]")
-        console.print("Run: [cyan]openfatture init[/cyan] to configure")
+        console.print(_("cli-pec-error-no-address"))
+        console.print(_("cli-pec-error-no-address-hint"))
         raise typer.Exit(1)
 
     if not settings.pec_password:
-        console.print("[red]❌ PEC password not configured[/red]")
-        console.print("Set it in your .env file: PEC_PASSWORD=your_password")
+        console.print(_("cli-pec-error-no-password"))
+        console.print(_("cli-pec-error-no-password-hint"))
         raise typer.Exit(1)
 
-    console.print(f"[cyan]PEC Address:[/cyan] {settings.pec_address}")
-    console.print(f"[cyan]SMTP Server:[/cyan] {settings.pec_smtp_server}:{settings.pec_smtp_port}")
-    console.print("[cyan]Template:[/cyan] test/test_email.html + .txt")
-    console.print(f"[cyan]Locale:[/cyan] {settings.locale}\n")
+    console.print(f"{_('cli-pec-label-address')} {settings.pec_address}")
+    console.print(
+        f"{_('cli-pec-label-smtp-server')} {settings.pec_smtp_server}:{settings.pec_smtp_port}"
+    )
+    console.print(_("cli-pec-label-template"))
+    console.print(f"{_('cli-pec-label-locale')} {settings.locale}\n")
 
-    console.print("Sending test email with professional template...")
+    console.print(_("cli-pec-sending-test"))
 
     sender = PECSender(settings=settings, locale=settings.locale)
     success, error = sender.send_test_email()
 
     if success:
-        console.print("\n[bold green]✓ Test email sent successfully![/bold green]")
-        console.print(f"Check your PEC inbox: {settings.pec_address}")
-        console.print("\n[dim]The email includes:[/dim]")
-        console.print("  • Professional HTML + plain text")
-        console.print("  • Your company branding")
-        console.print(f"  • Language: {settings.locale.upper()}")
-        console.print("\n[dim]For more email testing:[/dim]")
-        console.print("  [cyan]openfatture email test[/cyan]  - Full email test")
-        console.print("  [cyan]openfatture email preview[/cyan] - Preview templates")
+        console.print(f"\n{_('cli-pec-test-success')}")
+        console.print(_("cli-pec-test-check-inbox", pec_address=settings.pec_address))
+        console.print(f"\n{_('cli-pec-test-email-includes')}")
+        console.print(_("cli-pec-test-feature-html"))
+        console.print(_("cli-pec-test-feature-branding"))
+        console.print(_("cli-pec-test-feature-language", language=settings.locale.upper()))
+        console.print(f"\n{_('cli-pec-test-more-testing')}")
+        console.print(_("cli-pec-test-cmd-email-test"))
+        console.print(_("cli-pec-test-cmd-email-preview"))
     else:
-        console.print(f"\n[red]❌ Test failed: {error}[/red]")
-        console.print("\n[yellow]Common issues:[/yellow]")
-        console.print("  • Wrong PEC credentials")
-        console.print("  • Incorrect SMTP server")
-        console.print("  • Firewall blocking port 465")
-        console.print("  • PEC mailbox full")
+        console.print(_("cli-pec-test-failed", error=error))
+        console.print(f"\n{_('cli-pec-test-common-issues')}")
+        console.print(_("cli-pec-issue-credentials"))
+        console.print(_("cli-pec-issue-smtp"))
+        console.print(_("cli-pec-issue-firewall"))
+        console.print(_("cli-pec-issue-mailbox"))
         raise typer.Exit(1)
 
 
 @app.command("info")
 def pec_info() -> None:
     """Show PEC configuration."""
-    console.print("\n[bold blue]📧 PEC Configuration[/bold blue]\n")
+    console.print(f"\n{_('cli-pec-info-title')}\n")
 
     settings = get_settings()
 
     from rich.table import Table
 
     table = Table(show_header=False)
-    table.add_column("Setting", style="cyan", width=20)
-    table.add_column("Value", style="white")
+    table.add_column(_("cli-pec-table-setting"), style="cyan", width=20)
+    table.add_column(_("cli-pec-table-value"), style="white")
 
-    table.add_row("PEC Address", settings.pec_address or "[red]Not set[/red]")
+    table.add_row(_("cli-pec-label-address"), settings.pec_address or _("cli-pec-not-set"))
     table.add_row(
-        "Password",
-        "[green]Set[/green]" if settings.pec_password else "[red]Not set[/red]",
+        _("cli-pec-label-password"),
+        _("cli-pec-password-set") if settings.pec_password else _("cli-pec-not-set"),
     )
-    table.add_row("SMTP Server", settings.pec_smtp_server)
-    table.add_row("SMTP Port", str(settings.pec_smtp_port))
-    table.add_row("SDI PEC", settings.sdi_pec_address)
+    table.add_row(_("cli-pec-label-smtp-server"), settings.pec_smtp_server)
+    table.add_row(_("cli-pec-label-smtp-port"), str(settings.pec_smtp_port))
+    table.add_row(_("cli-pec-label-sdi-pec"), settings.sdi_pec_address)
 
     console.print(table)
     console.print()

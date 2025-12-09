@@ -10,6 +10,7 @@ from rich.table import Table
 from openfatture.cli.lifespan import get_event_bus
 from openfatture.core.batch.invoice_processor import InvoiceBatchProcessor
 from openfatture.core.events import BatchImportCompletedEvent, BatchImportStartedEvent
+from openfatture.i18n import _
 from openfatture.storage.database.base import init_db
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.storage.session import db_session
@@ -28,9 +29,11 @@ def ensure_db() -> None:
 
 @app.command("import")
 def import_invoices(
-    csv_file: str = typer.Argument(..., help="Path to CSV file with invoices"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Validate without importing"),
-    send_summary: bool = typer.Option(True, "--summary/--no-summary", help="Send email summary"),
+    csv_file: str = typer.Argument(..., help=_("cli-batch-help-csv-file")),
+    dry_run: bool = typer.Option(False, "--dry-run", help=_("cli-batch-help-dry-run")),
+    send_summary: bool = typer.Option(
+        True, "--summary/--no-summary", help=_("cli-batch-help-send-summary")
+    ),
 ) -> None:
     """
     Import invoices from CSV file.
@@ -45,20 +48,20 @@ def import_invoices(
     """
     ensure_db()
 
-    console.print("\n[bold blue]📦 Batch Import Invoices[/bold blue]\n")
+    console.print(f"\n{_('cli-batch-import-title')}\n")
 
     file = Path(csv_file)
 
     if not file.exists():
-        console.print(f"[red]❌ File not found: {csv_file}[/red]")
+        console.print(_("cli-batch-file-not-found", file=csv_file))
         raise typer.Exit(1)
 
-    console.print(f"[cyan]File:[/cyan] {file.name}")
-    console.print(f"[cyan]Size:[/cyan] {file.stat().st_size} bytes")
-    console.print(f"[cyan]Mode:[/cyan] {'Dry run (validation only)' if dry_run else 'Import'}\n")
+    console.print(_("cli-batch-file-info-name", name=file.name))
+    console.print(_("cli-batch-file-info-size", size=file.stat().st_size))
+    console.print(_("cli-batch-mode-dry-run" if dry_run else "cli-batch-mode-import"))
 
     if dry_run:
-        console.print("[yellow]⚠ Dry run mode - no data will be saved[/yellow]\n")
+        console.print(f"{_('cli-batch-warning-dry-run')}\n")
 
     ctx = db_session()
     db = ctx.__enter__()
@@ -96,46 +99,49 @@ def import_invoices(
         errors = result.errors or []
 
         # Show results
-        console.print("\n[bold]Import Results:[/bold]\n")
+        console.print(f"\n{_('cli-batch-results-title')}\n")
 
         table = Table(show_header=False, box=None)
-        table.add_column("Metric", style="cyan", width=25)
-        table.add_column("Value", style="white", justify="right")
+        table.add_column(_("cli-batch-metric-label"), style="cyan", width=25)
+        table.add_column(_("cli-batch-metric-value"), style="white", justify="right")
 
-        table.add_row("Total rows", str(result.total))
-        table.add_row("Processed", str(result.processed))
-        table.add_row("Succeeded", f"[green]{result.succeeded}[/green]")
-        table.add_row("Failed", f"[red]{result.failed}[/red]" if result.failed > 0 else "0")
-        table.add_row("Success rate", f"{result.success_rate:.1f}%")
+        table.add_row(_("cli-batch-metric-total"), str(result.total))
+        table.add_row(_("cli-batch-metric-processed"), str(result.processed))
+        table.add_row(_("cli-batch-metric-succeeded"), f"[green]{result.succeeded}[/green]")
+        table.add_row(
+            _("cli-batch-metric-failed"),
+            f"[red]{result.failed}[/red]" if result.failed > 0 else "0",
+        )
+        table.add_row(_("cli-batch-metric-success-rate"), f"{result.success_rate:.1f}%")
 
         if result.duration:
-            table.add_row("Duration", f"{result.duration:.2f}s")
+            table.add_row(_("cli-batch-metric-duration"), f"{result.duration:.2f}s")
 
         console.print(table)
 
         # Show errors
         if result.errors:
-            console.print("\n[bold red]Errors:[/bold red]")
+            console.print(f"\n{_('cli-batch-errors-title')}")
             for error in result.errors[:10]:
                 console.print(f"  • {error}")
 
             if len(result.errors) > 10:
-                console.print(f"  [dim]... and {len(result.errors) - 10} more errors[/dim]")
+                console.print(_("cli-batch-errors-more", count=len(result.errors) - 10))
 
         # Summary message
         if result.succeeded == result.total:
-            console.print("\n[bold green]✓ All invoices imported successfully![/bold green]")
+            console.print(f"\n{_('cli-batch-success-all')}")
         elif result.failed > 0:
-            console.print(f"\n[yellow]⚠ {result.failed} invoices failed to import[/yellow]")
+            console.print(_("cli-batch-warning-failed", count=result.failed))
 
         # Send email summary
         if send_summary and not dry_run and settings.notification_enabled:
             email_option = settings.notification_email
             if not email_option:
-                console.print("[yellow]Notification email not configured.[/yellow]")
+                console.print(_("cli-batch-email-not-configured"))
             else:
                 email = cast(str, email_option)
-                console.print("\n[dim]Sending email summary...[/dim]")
+                console.print(f"\n{_('cli-batch-email-sending')}")
 
                 sender = TemplatePECSender(settings=settings, locale=settings.locale)
                 success, summary_error = sender.send_batch_summary(
@@ -145,9 +151,9 @@ def import_invoices(
                 )
 
                 if success:
-                    console.print(f"[dim]📧 Summary sent to {email}[/dim]")
+                    console.print(_("cli-batch-email-sent", email=email))
                 else:
-                    console.print(f"[yellow]⚠ Failed to send summary: {summary_error}[/yellow]")
+                    console.print(_("cli-batch-email-failed", error=summary_error))
 
         console.print()
 
@@ -155,7 +161,7 @@ def import_invoices(
         db.rollback()
         if not errors:
             errors = [str(e)]
-        console.print(f"\n[red]❌ Error: {e}[/red]")
+        console.print(_("cli-batch-error-general", error=str(e)))
         raise typer.Exit(1)
     finally:
         # Publish BatchImportCompletedEvent
@@ -177,9 +183,9 @@ def import_invoices(
 
 @app.command("export")
 def export_invoices(
-    output_file: str = typer.Argument(..., help="Output CSV file path"),
-    anno: int | None = typer.Option(None, "--anno", help="Filter by year"),
-    stato: str | None = typer.Option(None, "--stato", help="Filter by status"),
+    output_file: str = typer.Argument(..., help=_("cli-batch-help-output-file")),
+    anno: int | None = typer.Option(None, "--anno", help=_("cli-batch-help-anno")),
+    stato: str | None = typer.Option(None, "--stato", help=_("cli-batch-help-stato")),
 ) -> None:
     """
     Export invoices to CSV file.
@@ -191,7 +197,7 @@ def export_invoices(
     """
     ensure_db()
 
-    console.print("\n[bold blue]📦 Batch Export Invoices[/bold blue]\n")
+    console.print(f"\n{_('cli-batch-export-title')}\n")
 
     ctx = db_session()
     db = ctx.__enter__()
@@ -221,24 +227,24 @@ def export_invoices(
 
         if anno:
             query = query.filter(Fattura.anno == anno)
-            console.print(f"[cyan]Filter:[/cyan] Year = {anno}")
+            console.print(_("cli-batch-filter-year", year=anno))
 
         if stato:
             try:
                 stato_enum = StatoFattura(stato.lower())
                 query = query.filter(Fattura.stato == stato_enum)
-                console.print(f"[cyan]Filter:[/cyan] Status = {stato_enum.value}")
+                console.print(_("cli-batch-filter-status", status=stato_enum.value))
             except ValueError:
-                console.print(f"[red]Invalid status: {stato}[/red]")
+                console.print(_("cli-batch-invalid-status", status=stato))
                 return
 
         fatture = query.all()
 
         if not fatture:
-            console.print("\n[yellow]No invoices found matching criteria[/yellow]")
+            console.print(f"\n{_('cli-batch-no-invoices')}")
             return
 
-        console.print(f"[cyan]Invoices:[/cyan] {len(fatture)}\n")
+        console.print(_("cli-batch-invoices-count", count=len(fatture)))
 
         # Export
         processor = InvoiceBatchProcessor(db_session=db)
@@ -253,18 +259,18 @@ def export_invoices(
         errors = result.errors or []
 
         if result.succeeded > 0:
-            console.print(f"[bold green]✓ Exported {result.succeeded} invoices![/bold green]")
-            console.print(f"[cyan]File:[/cyan] {output_path.absolute()}")
-            console.print(f"[cyan]Size:[/cyan] {output_path.stat().st_size} bytes\n")
+            console.print(_("cli-batch-export-success", count=result.succeeded))
+            console.print(_("cli-batch-export-file", path=str(output_path.absolute())))
+            console.print(_("cli-batch-export-size", size=output_path.stat().st_size))
         else:
-            console.print("[red]❌ Export failed[/red]")
+            console.print(_("cli-batch-export-failed"))
             for error in result.errors:
                 console.print(f"  • {error}")
 
     except Exception as e:
         if not errors:
             errors = [str(e)]
-        console.print(f"\n[red]❌ Error: {e}[/red]")
+        console.print(_("cli-batch-error-general", error=str(e)))
         raise typer.Exit(1)
     finally:
         # Publish BatchImportCompletedEvent
@@ -286,7 +292,7 @@ def export_invoices(
 
 @app.command("history")
 def batch_history(
-    limit: int = typer.Option(10, "--limit", "-l", help="Max results"),
+    limit: int = typer.Option(10, "--limit", "-l", help=_("cli-batch-help-limit")),
 ) -> None:
     """
     Show history of batch operations.
@@ -297,25 +303,25 @@ def batch_history(
         openfatture batch history
         openfatture batch history --limit 20
     """
-    console.print("\n[bold blue]📦 Batch Operations History[/bold blue]\n")
+    console.print(f"\n{_('cli-batch-history-title')}\n")
 
-    console.print("[yellow]⚠ History tracking not yet fully implemented[/yellow]")
-    console.print("[dim]In production, this will show:[/dim]")
-    console.print("  • Date/time of operation")
-    console.print("  • Type (import/export)")
-    console.print("  • Records processed")
-    console.print("  • Success/failure counts")
-    console.print("  • Error summaries\n")
+    console.print(_("cli-batch-history-not-implemented"))
+    console.print(_("cli-batch-history-will-show"))
+    console.print(_("cli-batch-history-feature-datetime"))
+    console.print(_("cli-batch-history-feature-type"))
+    console.print(_("cli-batch-history-feature-records"))
+    console.print(_("cli-batch-history-feature-counts"))
+    console.print(_("cli-batch-history-feature-errors"))
 
     # Placeholder example
-    console.print("[bold]Example history:[/bold]\n")
+    console.print(f"\n{_('cli-batch-history-example')}\n")
 
     table = Table(show_lines=False)
-    table.add_column("Date", style="cyan", width=20)
-    table.add_column("Type", style="white", width=10)
-    table.add_column("Records", justify="right", width=10)
-    table.add_column("Success", style="green", justify="right", width=10)
-    table.add_column("Failed", style="red", justify="right", width=10)
+    table.add_column(_("cli-batch-history-col-date"), style="cyan", width=20)
+    table.add_column(_("cli-batch-history-col-type"), style="white", width=10)
+    table.add_column(_("cli-batch-history-col-records"), justify="right", width=10)
+    table.add_column(_("cli-batch-history-col-success"), style="green", justify="right", width=10)
+    table.add_column(_("cli-batch-history-col-failed"), style="red", justify="right", width=10)
 
     table.add_row(
         "2025-10-09 14:30:22",
@@ -341,5 +347,5 @@ def batch_history(
 
     console.print(table)
 
-    console.print("\n[dim]To implement: Add BatchOperation model to database[/dim]")
+    console.print(f"\n{_('cli-batch-history-todo')}")
     console.print()

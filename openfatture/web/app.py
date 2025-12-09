@@ -10,25 +10,32 @@ from openfatture.core.events import initialize_event_system
 from openfatture.core.hooks import initialize_hook_system
 from openfatture.utils.config import get_settings
 from openfatture.utils.logging import configure_dynamic_logging
+from openfatture.web.utils.i18n import get_translator, init_i18n, render_language_selector
 from openfatture.web.utils.lifespan import set_event_bus, set_hook_bridge
 from openfatture.web.utils.state import init_state
 
+# Initialize i18n BEFORE any Streamlit commands
+init_i18n()
+
+# Get translator for page config (uses default language on first load)
+t = get_translator()
+
 # Page configuration MUST be first Streamlit command
 st.set_page_config(
-    page_title="OpenFatture - Fatturazione Elettronica",
+    page_title=t("web-app-title"),
     page_icon="🧾",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
         "Get Help": "https://github.com/gianlucamazza/openfatture",
         "Report a bug": "https://github.com/gianlucamazza/openfatture/issues",
-        "About": """
+        "About": f"""
         # OpenFatture 🧾
 
-        Open-source electronic invoicing for Italian freelancers.
+        {t("web-app-tagline")}
 
-        **Version:** 1.1.0
-        **License:** MIT
+        **{t("web-app-version", version="1.1.0")}**
+        **{t("web-app-license")}**
         **Repository:** https://github.com/gianlucamazza/openfatture
         """,
     },
@@ -49,13 +56,20 @@ set_hook_bridge(hook_bridge)
 
 def render_sidebar() -> None:
     """Render the sidebar with navigation and info."""
+    t = get_translator()
+
     with st.sidebar:
         st.image("https://via.placeholder.com/300x80/3366ff/ffffff?text=OpenFatture", width=250)
 
         st.markdown("---")
 
+        # Language selector
+        render_language_selector()
+
+        st.markdown("---")
+
         # Quick stats in sidebar
-        st.subheader("📊 Quick Stats")
+        st.subheader(t("web-sidebar-quick-stats"))
 
         try:
             from openfatture.cli.ui.dashboard import DashboardData
@@ -64,61 +78,63 @@ def render_sidebar() -> None:
 
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("Fatture", data.get_total_invoices())
-                st.metric("Clienti", data.get_total_clients())
+                st.metric(t("web-sidebar-invoices"), data.get_total_invoices())
+                st.metric(t("web-sidebar-clients"), data.get_total_clients())
             with col2:
                 total_rev = data.get_total_revenue()
-                st.metric("Fatturato", f"€{total_rev:,.0f}")
+                st.metric(t("web-sidebar-revenue"), f"€{total_rev:,.0f}")
                 pending = data.get_pending_amount()
-                st.metric("In Sospeso", f"€{pending:,.0f}")
+                st.metric(t("web-sidebar-pending"), f"€{pending:,.0f}")
 
             data.close()
 
         except Exception as e:
-            st.error(f"Errore caricamento stats: {e}")
+            st.error(t("web-sidebar-error-loading-stats", error=str(e)))
 
         st.markdown("---")
 
         # Settings info
-        st.subheader("⚙️ Configuration")
+        st.subheader(t("web-sidebar-configuration"))
         settings = get_settings()
-        st.text(f"Azienda: {settings.cedente_denominazione or 'N/A'}")
-        st.text(f"P.IVA: {settings.cedente_partita_iva or 'N/A'}")
-        st.text(f"Regime: {settings.cedente_regime_fiscale or 'N/A'}")
+        st.text(f"{t('web-sidebar-company')}: {settings.cedente_denominazione or 'N/A'}")
+        st.text(f"{t('web-sidebar-vat-number')}: {settings.cedente_partita_iva or 'N/A'}")
+        st.text(f"{t('web-sidebar-tax-regime')}: {settings.cedente_regime_fiscale or 'N/A'}")
 
         if settings.ai_chat_enabled:
-            st.success("🤖 AI Abilitato")
-            st.text(f"Provider: {settings.ai_provider}")
+            st.success(t("web-sidebar-ai-enabled"))
+            st.text(f"{t('web-sidebar-ai-provider')}: {settings.ai_provider}")
         else:
-            st.warning("AI Non Configurato")
+            st.warning(t("web-sidebar-ai-disabled"))
 
         st.markdown("---")
 
         # Advanced operations
-        st.subheader("🔧 Operazioni Avanzate")
-        if st.button("📦 Batch Operations", use_container_width=True):
+        st.subheader(t("web-sidebar-advanced-ops"))
+        if st.button(f"📦 {t('web-nav-batch')}", use_container_width=True):
             st.switch_page("pages/8_📦_Batch.py")
-        if st.button("📊 Reports", use_container_width=True):
+        if st.button(f"📊 {t('web-nav-reports')}", use_container_width=True):
             st.switch_page("pages/9_📊_Reports.py")
-        if st.button("🪝 Hooks", use_container_width=True):
+        if st.button(f"🪝 {t('web-nav-hooks')}", use_container_width=True):
             st.switch_page("pages/10_🪝_Hooks.py")
-        if st.button("📋 Events", use_container_width=True):
+        if st.button(f"📋 {t('web-nav-events')}", use_container_width=True):
             st.switch_page("pages/11_📋_Events.py")
 
 
 def render_home() -> None:
     """Render the home page content."""
-    # Header
-    st.title("🧾 OpenFatture - Fatturazione Elettronica")
-    st.markdown(
-        """
-        ### Benvenuto nella Web UI di OpenFatture
+    t = get_translator()
 
-        Sistema completo per la gestione delle fatture elettroniche italiane con:
-        - ✨ **Fatturazione FatturaPA** - Genera XML conformi, valida e invia a SDI
-        - 💰 **Riconciliazione Pagamenti** - Import bancari e matching intelligente
-        - 🤖 **AI Assistant** - Descrizioni intelligenti, consulenza fiscale, chat
-        - 📊 **Dashboard & Analytics** - Monitora il tuo business in tempo reale
+    # Header
+    st.title(t("page-home-title"))
+    st.markdown(
+        f"""
+        ### {t("page-home-welcome")}
+
+        {t("page-home-description")}
+        - ✨ **{t("page-home-feature-invoicing")}**
+        - 💰 **{t("page-home-feature-payments")}**
+        - 🤖 **{t("page-home-feature-ai")}**
+        - 📊 **{t("page-home-feature-batch")}**
         """
     )
 
@@ -128,117 +144,117 @@ def render_home() -> None:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.subheader("🧾 Fatture")
+        st.subheader(t("page-home-feature-grid-invoices-title"))
         st.markdown(
-            """
-            - Creazione guidata
-            - Gestione clienti
-            - Generazione XML
-            - Invio SDI via PEC
-            - Tracking notifiche
+            f"""
+            - {t("page-home-feature-grid-invoices-item-1")}
+            - {t("page-home-feature-grid-invoices-item-2")}
+            - {t("page-home-feature-grid-invoices-item-3")}
+            - {t("page-home-feature-grid-invoices-item-4")}
+            - {t("page-home-feature-grid-invoices-item-5")}
             """
         )
-        if st.button("📝 Vai alle Fatture", use_container_width=True):
+        if st.button(t("page-home-feature-grid-invoices-button"), use_container_width=True):
             st.switch_page("pages/2_🧾_Fatture.py")
 
     with col2:
-        st.subheader("💰 Pagamenti")
+        st.subheader(t("page-home-feature-grid-payments-title"))
         st.markdown(
-            """
-            - Import estratti conto
-            - Matching automatico
-            - Riconciliazione
-            - Reminder scadenze
-            - Audit trail
+            f"""
+            - {t("page-home-feature-grid-payments-item-1")}
+            - {t("page-home-feature-grid-payments-item-2")}
+            - {t("page-home-feature-grid-payments-item-3")}
+            - {t("page-home-feature-grid-payments-item-4")}
+            - {t("page-home-feature-grid-payments-item-5")}
             """
         )
-        if st.button("💳 Vai ai Pagamenti", use_container_width=True):
+        if st.button(t("page-home-feature-grid-payments-button"), use_container_width=True):
             st.switch_page("pages/4_💰_Pagamenti.py")
 
     with col3:
-        st.subheader("🤖 AI Assistant")
+        st.subheader(t("page-home-feature-grid-ai-title"))
         st.markdown(
-            """
-            - Chat interattivo
-            - Descrizioni automatiche
-            - Consulenza fiscale
-            - Cash flow forecast
-            - Compliance check
+            f"""
+            - {t("page-home-feature-grid-ai-item-1")}
+            - {t("page-home-feature-grid-ai-item-2")}
+            - {t("page-home-feature-grid-ai-item-3")}
+            - {t("page-home-feature-grid-ai-item-4")}
+            - {t("page-home-feature-grid-ai-item-5")}
             """
         )
-        if st.button("🚀 Prova l'AI", use_container_width=True):
+        if st.button(t("page-home-feature-grid-ai-button"), use_container_width=True):
             st.switch_page("pages/5_🤖_AI_Assistant.py")
 
     st.markdown("---")
 
     # Quick actions
-    st.subheader("⚡ Azioni Rapide")
+    st.subheader(t("page-home-quick-actions"))
 
     col_a, col_b, col_c, col_d = st.columns(4)
 
     with col_a:
-        if st.button("➕ Nuova Fattura", use_container_width=True):
+        if st.button(t("page-home-action-new-invoice"), use_container_width=True):
             st.switch_page("pages/2_🧾_Fatture.py")
 
     with col_b:
-        if st.button("👤 Nuovo Cliente", use_container_width=True):
+        if st.button(t("page-home-action-new-client"), use_container_width=True):
             st.switch_page("pages/3_👥_Clienti.py")
 
     with col_c:
-        if st.button("📊 Dashboard", use_container_width=True):
+        if st.button(t("page-home-action-dashboard"), use_container_width=True):
             st.switch_page("pages/1_📊_Dashboard.py")
 
     with col_d:
-        if st.button("📦 Batch Operations", use_container_width=True):
+        if st.button(t("page-home-action-batch"), use_container_width=True):
             st.switch_page("pages/8_📦_Batch.py")
 
     # Additional quick actions row
     st.markdown("---")
-    st.subheader("🔧 Strumenti Avanzati")
+    st.subheader(t("page-home-advanced-tools"))
 
     col_e, col_f, col_g = st.columns(3)
 
     with col_e:
-        if st.button("📊 Reports", use_container_width=True):
+        if st.button(t("page-home-advanced-reports"), use_container_width=True):
             st.switch_page("pages/9_📊_Reports.py")
 
     with col_f:
-        if st.button("🪝 Hooks", use_container_width=True):
+        if st.button(t("page-home-advanced-hooks"), use_container_width=True):
             st.switch_page("pages/10_🪝_Hooks.py")
 
     with col_g:
-        if st.button("📋 Events", use_container_width=True):
+        if st.button(t("page-home-advanced-events"), use_container_width=True):
             st.switch_page("pages/11_📋_Events.py")
 
     st.markdown("---")
 
     # Getting started
-    with st.expander("🚀 Getting Started", expanded=False):
+    with st.expander(t("page-home-getting-started"), expanded=False):
         st.markdown(
-            """
-            ### Primi Passi
+            f"""
+            ### {t("page-home-getting-started-title")}
 
-            1. **Configura l'ambiente**
-               - Assicurati che `.env` sia configurato correttamente
-               - Verifica i dati aziendali (P.IVA, regime fiscale)
-               - Configura credenziali PEC per invio SDI
+            **{t("page-home-step-1-title")}**
+               - {t("page-home-step-1-item-1")}
+               - {t("page-home-step-1-item-2")}
+               - {t("page-home-step-1-item-3")}
 
-            2. **Crea i primi clienti**
-               - Vai su "👥 Clienti" → "Aggiungi Cliente"
-               - Inserisci i dati fiscali (P.IVA, codice fiscale)
-               - Specifica SDI o PEC per ricezione fatture
+            **{t("page-home-step-2-title")}**
+               - {t("page-home-step-2-item-1")}
+               - {t("page-home-step-2-item-2")}
+               - {t("page-home-step-2-item-3")}
 
-            3. **Emetti la prima fattura**
-               - "🧾 Fatture" → "Nuova Fattura"
-               - Seleziona cliente e aggiungi righe
-               - Genera XML e invia a SDI
+            **{t("page-home-step-3-title")}**
+               - {t("page-home-step-3-item-1")}
+               - {t("page-home-step-3-item-2")}
+               - {t("page-home-step-3-item-3")}
 
-            4. **Esplora l'AI Assistant**
-               - Prova la chat per domande fiscali
-               - Genera descrizioni intelligenti
-               - Ottieni suggerimenti IVA automatici
+            **{t("page-home-step-4-title")}**
+               - {t("page-home-step-4-item-1")}
+               - {t("page-home-step-4-item-2")}
+               - {t("page-home-step-4-item-3")}
 
-            ### Documentazione
+            ### {t("page-home-docs-title")}
 
             - [README.md](https://github.com/gianlucamazza/openfatture)
             - [Guida Rapida](https://github.com/gianlucamazza/openfatture/blob/main/QUICKSTART.md)
@@ -250,9 +266,9 @@ def render_home() -> None:
     # Footer
     st.markdown("---")
     st.markdown(
-        """
+        f"""
         <div style='text-align: center; color: #666;'>
-        <p>OpenFatture v1.1.0 | MIT License | Made with ❤️ by freelancers, for freelancers</p>
+        <p>{t("page-home-footer-version", version="1.1.0")} | {t("page-home-footer-license")} | {t("page-home-footer-tagline")}</p>
         <p>
             <a href='https://github.com/gianlucamazza/openfatture' target='_blank'>GitHub</a> •
             <a href='https://github.com/gianlucamazza/openfatture/issues' target='_blank'>Issues</a> •<br>
@@ -278,11 +294,14 @@ def main() -> None:
         # Global error handling - Best Practices 2025
         from openfatture.web.utils.logging_config import log_error
 
+        # Get translator for error messages
+        t = get_translator()
+
         # Log the error
         log_error(e, "main_app", {"page": "home"})
 
         # Show user-friendly error message
-        st.error("🚨 Si è verificato un errore imprevisto. Riprova più tardi.")
+        st.error(t("web-error-unexpected"))
 
         # Show error details in development/debug mode
         from openfatture.utils.config import get_settings
@@ -293,10 +312,10 @@ def main() -> None:
         # Provide recovery options
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("🔄 Ricarica Pagina"):
+            if st.button(t("web-error-reload-page")):
                 st.rerun()
         with col2:
-            if st.button("🏥 Vai alla Dashboard Salute"):
+            if st.button(t("web-error-goto-health")):
                 st.switch_page("pages/12_🏥_Health.py")
 
 

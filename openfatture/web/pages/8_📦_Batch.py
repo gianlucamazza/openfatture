@@ -5,36 +5,39 @@ Import/export operations for bulk data management.
 
 import streamlit as st
 
+from openfatture.i18n import t
 from openfatture.web.services.batch_service import StreamlitBatchService
 
-st.set_page_config(page_title="Batch Operations - OpenFatture", page_icon="📦", layout="wide")
+st.set_page_config(page_title=t("page-batch-page-title"), page_icon="📦", layout="wide")
 
 # Title
-st.title("📦 Operazioni Batch")
-st.markdown("### Import/Export massivi di dati")
+st.title(t("page-batch-title"))
+st.markdown(f"### {t('page-batch-subtitle')}")
 
 # Initialize service
 batch_service = StreamlitBatchService()
 
 # Tabs for different operations
-tab_import, tab_export, tab_history = st.tabs(["📥 Import", "📤 Export", "📋 Cronologia"])
+tab_import, tab_export, tab_history = st.tabs(
+    [t("page-batch-tab-import"), t("page-batch-tab-export"), t("page-batch-tab-history")]
+)
 
 with tab_import:
-    st.subheader("📥 Import Dati")
+    st.subheader(t("page-batch-import-title"))
 
     # Import type selection
     import_type = st.radio(
-        "Tipo di dati da importare:",
-        ["Clienti", "Fatture"],
+        t("page-batch-import-type-label"),
+        [t("page-batch-import-type-clients"), t("page-batch-import-type-invoices")],
         horizontal=True,
-        help="Seleziona il tipo di dati da importare",
+        help=t("page-batch-import-type-help"),
     )
 
     # File upload
     uploaded_file = st.file_uploader(
-        f"Carica file CSV per {import_type.lower()}",
+        t("page-batch-import-upload-label", type=import_type.lower()),
         type=["csv"],
-        help=f"Il file CSV deve contenere i dati dei {import_type.lower()}",
+        help=t("page-batch-import-upload-help", type=import_type.lower()),
     )
 
     if uploaded_file is not None:
@@ -45,10 +48,10 @@ with tab_import:
         validation = batch_service.validate_csv_format(csv_content, import_type.lower())
 
         if validation["valid"]:
-            st.success(f"✅ File valido! {validation['row_count']} righe rilevate")
+            st.success(t("page-batch-import-valid-file", count=validation["row_count"]))
 
             # Show preview
-            with st.expander("👁️ Anteprima dati", expanded=True):
+            with st.expander(t("page-batch-import-preview"), expanded=True):
                 lines = csv_content.split("\n")[:6]  # First 5 lines + header
                 st.code("\n".join(lines), language="csv")
 
@@ -56,8 +59,10 @@ with tab_import:
             col1, col2 = st.columns(2)
 
             with col1:
-                if st.button("🔍 Convalida Solo", type="secondary", use_container_width=True):
-                    if import_type == "Clienti":
+                if st.button(
+                    t("page-batch-import-validate-only"), type="secondary", use_container_width=True
+                ):
+                    if import_type == t("page-batch-import-type-clients"):
                         result = batch_service.import_clients_from_csv(csv_content)
                         result["processed"] = 0  # Dry run
                         result["created"] = 0
@@ -66,141 +71,163 @@ with tab_import:
                         result = batch_service.import_invoices_from_csv(csv_content)
 
                     if result["success"]:
-                        st.success("✅ Convalida completata senza errori")
+                        st.success(t("page-batch-import-validate-complete"))
                     else:
-                        st.error("❌ Errori di convalida:")
+                        st.error(t("page-batch-import-validate-errors"))
                         for error in result["errors"][:5]:  # Show first 5 errors
                             st.write(f"• {error}")
 
             with col2:
                 confirm_import = st.button(
-                    f"📥 Importa {import_type}", type="primary", use_container_width=True
+                    t("page-batch-import-button", type=import_type),
+                    type="primary",
+                    use_container_width=True,
                 )
 
             if confirm_import:
-                with st.spinner(f"Importando {import_type.lower()}..."):
-                    if import_type == "Clienti":
+                with st.spinner(t("page-batch-import-importing", type=import_type.lower())):
+                    if import_type == t("page-batch-import-type-clients"):
                         result = batch_service.import_clients_from_csv(csv_content)
                     else:
                         result = batch_service.import_invoices_from_csv(csv_content)
 
                 # Show results
                 if result["success"]:
-                    st.success("✅ Import completato con successo!")
+                    st.success(t("page-batch-import-success"))
 
                     col_a, col_b, col_c = st.columns(3)
                     with col_a:
-                        st.metric("Processati", result["processed"])
+                        st.metric(t("page-batch-import-metric-processed"), result["processed"])
                     with col_b:
-                        st.metric("Creati", result["created"])
+                        st.metric(t("page-batch-import-metric-created"), result["created"])
                     with col_c:
-                        st.metric("Aggiornati", result["updated"])
+                        st.metric(t("page-batch-import-metric-updated"), result["updated"])
 
                     if result["errors"]:
-                        with st.expander("⚠️ Errori minori", expanded=False):
+                        with st.expander(t("page-batch-import-minor-errors"), expanded=False):
                             for error in result["errors"]:
                                 st.write(f"• {error}")
 
                 else:
-                    st.error("❌ Import fallito")
+                    st.error(t("page-batch-import-failed"))
                     for error in result["errors"]:
                         st.error(error)
 
         else:
-            st.error("❌ File CSV non valido:")
+            st.error(t("page-batch-import-invalid-file"))
             for error in validation["errors"]:
                 st.error(f"• {error}")
 
     # Template download
     st.markdown("---")
-    st.subheader("📋 Template CSV")
+    st.subheader(t("page-batch-import-template-title"))
 
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("📥 Scarica Template Clienti", use_container_width=True):
+        if st.button(t("page-batch-import-template-clients"), use_container_width=True):
             template = """denominazione,partita_iva,codice_fiscale,codice_destinatario,pec,indirizzo,cap,comune,provincia,telefono,email,note
 "Azienda SRL","12345678901","RSSMRA80A01H501U","ABC1234","cliente@pec.it","Via Roma 123","00100","Roma","RM","+39 123 456 789","cliente@email.com","Note cliente"
 """
             st.download_button(
-                label="Scarica CSV",
+                label=t("page-batch-import-download-csv"),
                 data=template,
                 file_name="template_clienti.csv",
                 mime="text/csv",
             )
 
     with col2:
-        if st.button("📥 Scarica Template Fatture", use_container_width=True):
+        if st.button(t("page-batch-import-template-invoices"), use_container_width=True):
             template = """numero,anno,data_emissione,cliente,descrizione,quantita,prezzo_unitario,aliquota_iva
 "001","2024","2024-01-15","Azienda SRL","Consulenza web","1","500.00","22.00"
 """
             st.download_button(
-                label="Scarica CSV",
+                label=t("page-batch-import-download-csv"),
                 data=template,
                 file_name="template_fatture.csv",
                 mime="text/csv",
             )
 
 with tab_export:
-    st.subheader("📤 Export Dati")
+    st.subheader(t("page-batch-export-title"))
 
     # Export type selection
-    export_type = st.radio("Tipo di dati da esportare:", ["Clienti", "Fatture"], horizontal=True)
+    export_type = st.radio(
+        t("page-batch-export-type-label"),
+        [t("page-batch-import-type-clients"), t("page-batch-import-type-invoices")],
+        horizontal=True,
+    )
 
     # Export options
     filters = {}
     include_lines = False
-    export_year: str | int = "Tutti"
+    export_year: str | int = t("page-batch-export-year-all")
 
-    if export_type == "Fatture":
+    if export_type == t("page-batch-import-type-invoices"):
         col1, col2 = st.columns(2)
 
         with col1:
             export_year = st.selectbox(
-                "Anno (opzionale)", ["Tutti"] + list(range(2020, 2026)), index=0
+                t("page-batch-export-year-label"),
+                [t("page-batch-export-year-all")] + list(range(2020, 2026)),
+                index=0,
             )
 
         with col2:
             include_lines = st.checkbox(
-                "Includi righe fattura", help="Esporta ogni riga fattura separatamente"
+                t("page-batch-export-include-lines"), help=t("page-batch-export-include-lines-help")
             )
 
-        if export_year != "Tutti":
+        if export_year != t("page-batch-export-year-all"):
             filters["anno"] = export_year
 
     # Export button
-    if st.button(f"📤 Esporta {export_type}", type="primary", use_container_width=True):
-        with st.spinner(f"Esportando {export_type.lower()}..."):
-            if export_type == "Clienti":
+    if st.button(
+        t("page-batch-export-button", type=export_type), type="primary", use_container_width=True
+    ):
+        with st.spinner(t("page-batch-export-exporting", type=export_type.lower())):
+            if export_type == t("page-batch-import-type-clients"):
                 success, csv_data, error = batch_service.export_clients_to_csv()
             else:
                 success, csv_data, error = batch_service.export_invoices_to_csv(
-                    filters=filters if export_type == "Fatture" else None,
-                    include_lines=include_lines if export_type == "Fatture" else False,
+                    filters=(
+                        filters if export_type == t("page-batch-import-type-invoices") else None
+                    ),
+                    include_lines=(
+                        include_lines
+                        if export_type == t("page-batch-import-type-invoices")
+                        else False
+                    ),
                 )
 
         if success:
-            st.success("✅ Export completato!")
+            st.success(t("page-batch-export-success"))
 
             # Show preview
             lines = csv_data.split("\n")[:6]
-            with st.expander("👁️ Anteprima", expanded=True):
+            with st.expander(t("page-batch-export-preview"), expanded=True):
                 st.code("\n".join(lines), language="csv")
 
             # Download button
+            year_suffix = (
+                export_year
+                if export_type == t("page-batch-import-type-invoices")
+                and export_year != t("page-batch-export-year-all")
+                else "tutti"
+            )
             st.download_button(
-                label=f"📥 Scarica {export_type}.csv",
+                label=t("page-batch-export-download", type=export_type),
                 data=csv_data,
-                file_name=f"{export_type.lower()}_{export_year if export_type == 'Fatture' and export_year != 'Tutti' else 'tutti'}.csv",
+                file_name=f"{export_type.lower()}_{year_suffix}.csv",
                 mime="text/csv",
                 use_container_width=True,
             )
 
         else:
-            st.error(f"❌ Export fallito: {error}")
+            st.error(t("page-batch-export-failed", error=error))
 
 with tab_history:
-    st.subheader("📋 Cronologia Operazioni Batch")
+    st.subheader(t("page-batch-history-title"))
 
     # Get batch history
     history = batch_service.get_batch_history()
@@ -216,26 +243,32 @@ with tab_history:
                     st.caption(item.get("timestamp", "N/A"))
 
                 with col2:
-                    st.write(f"📊 {item.get('records_processed', 0)} record")
+                    st.write(
+                        t("page-batch-history-records", count=item.get("records_processed", 0))
+                    )
 
                 with col3:
                     status = item.get("status", "unknown")
                     if status == "success":
-                        st.write("✅ Successo")
+                        st.write(t("page-batch-history-status-success"))
                     elif status == "partial":
-                        st.write("⚠️ Parziale")
+                        st.write(t("page-batch-history-status-partial"))
                     else:
-                        st.write("❌ Fallito")
+                        st.write(t("page-batch-history-status-failed"))
 
                 with col4:
-                    if st.button("👁️", key=f"history_{item.get('id', 'unknown')}", help="Dettagli"):
-                        st.write("Dettagli operazione:")
+                    if st.button(
+                        t("page-batch-history-details"),
+                        key=f"history_{item.get('id', 'unknown')}",
+                        help=t("page-batch-history-details-title"),
+                    ):
+                        st.write(t("page-batch-history-details-title"))
                         st.json(item)
     else:
-        st.info("📭 Nessuna operazione batch registrata")
+        st.info(t("page-batch-history-empty"))
 
         # Info about CLI batch operations
-        with st.expander("💡 Operazioni Batch Avanzate", expanded=False):
+        with st.expander(t("page-batch-history-cli-title"), expanded=False):
             st.markdown(
                 """
                 Per operazioni batch avanzate, utilizza la CLI:

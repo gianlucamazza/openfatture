@@ -6,10 +6,11 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from openfatture.i18n import _
 from openfatture.sdi.notifiche.processor import NotificationProcessor
 from openfatture.storage.database.base import init_db
-from openfatture.storage.session import db_session
 from openfatture.storage.database.models import LogSDI
+from openfatture.storage.session import db_session
 from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
 
@@ -23,11 +24,10 @@ def ensure_db() -> None:
     init_db(str(settings.database_url))
 
 
-
 @app.command("process")
 def process_notification(
-    file_path: str = typer.Argument(..., help="Path to SDI notification XML file"),
-    no_email: bool = typer.Option(False, "--no-email", help="Skip automatic email notification"),
+    file_path: str = typer.Argument(..., help=_("cli-notifiche-help-file-path")),
+    no_email: bool = typer.Option(False, "--no-email", help=_("cli-notifiche-help-no-email")),
 ) -> None:
     """
     Process SDI notification file and update invoice status.
@@ -40,16 +40,16 @@ def process_notification(
     """
     ensure_db()
 
-    console.print("\n[bold blue]📬 Processing SDI Notification[/bold blue]\n")
+    console.print(f"\n{_('cli-notifiche-process-title')}\n")
 
     file = Path(file_path)
 
     if not file.exists():
-        console.print(f"[red]❌ File not found: {file_path}[/red]")
+        console.print(_("cli-notifiche-file-not-found", file_path=file_path))
         raise typer.Exit(1)
 
-    console.print(f"[cyan]File:[/cyan] {file.name}")
-    console.print(f"[cyan]Size:[/cyan] {file.stat().st_size} bytes\n")
+    console.print(_("cli-notifiche-file-label", name=file.name))
+    console.print(_("cli-notifiche-size-label", size=file.stat().st_size))
 
     settings = get_settings()
     with db_session() as db:
@@ -57,7 +57,7 @@ def process_notification(
         email_sender = None
         if not no_email and settings.notification_enabled and settings.notification_email:
             email_sender = TemplatePECSender(settings=settings, locale=settings.locale)
-            console.print(f"[dim]📧 Auto-email enabled → {settings.notification_email}[/dim]\n")
+            console.print(_("cli-notifiche-auto-email-enabled", email=settings.notification_email))
 
         processor = NotificationProcessor(
             db_session=db,
@@ -65,47 +65,50 @@ def process_notification(
         )
 
         # Process notification
-        console.print("Processing notification...")
+        console.print(_("cli-notifiche-processing"))
 
         success, error, notification = processor.process_file(file)
 
         if not success or notification is None:
-            console.print(f"\n[red]❌ Error: {error}[/red]")
+            console.print(_("cli-notifiche-error", error=error))
             raise typer.Exit(1)
 
         # Success!
-        console.print("\n[bold green]✓ Notification processed successfully![/bold green]\n")
+        console.print(f"\n{_('cli-notifiche-success')}\n")
 
         # Show details
         table = Table(show_header=False, box=None)
-        table.add_column("Field", style="cyan", width=20)
-        table.add_column("Value", style="white")
+        table.add_column(_("cli-notifiche-table-field"), style="cyan", width=20)
+        table.add_column(_("cli-notifiche-table-value"), style="white")
 
-        table.add_row("Type", notification.tipo)
-        table.add_row("SDI ID", notification.identificativo_sdi)
-        table.add_row("File", notification.nome_file)
-        table.add_row("Date", notification.data_ricezione.strftime("%Y-%m-%d %H:%M:%S"))
+        table.add_row(_("cli-notifiche-label-type"), notification.tipo)
+        table.add_row(_("cli-notifiche-label-sdi-id"), notification.identificativo_sdi)
+        table.add_row(_("cli-notifiche-label-file"), notification.nome_file)
+        table.add_row(
+            _("cli-notifiche-label-date"), notification.data_ricezione.strftime("%Y-%m-%d %H:%M:%S")
+        )
 
         if notification.messaggio:
-            table.add_row("Message", notification.messaggio[:100])
+            table.add_row(_("cli-notifiche-label-message"), notification.messaggio[:100])
 
         if notification.lista_errori:
-            table.add_row("Errors", f"{len(notification.lista_errori)} error(s)")
+            table.add_row(
+                _("cli-notifiche-label-errors"),
+                _("cli-notifiche-errors-count", count=len(notification.lista_errori)),
+            )
 
         console.print(table)
 
         if email_sender and not no_email:
-            console.print(
-                f"\n[dim]📧 Email notification sent to {settings.notification_email}[/dim]"
-            )
+            console.print(_("cli-notifiche-email-sent", email=settings.notification_email))
 
         console.print()
 
 
 @app.command("list")
 def list_notifications(
-    tipo: str | None = typer.Option(None, "--tipo", help="Filter by type (AT, RC, NS, MC, NE)"),
-    limit: int = typer.Option(50, "--limit", "-l", help="Max results"),
+    tipo: str | None = typer.Option(None, "--tipo", help=_("cli-notifiche-help-tipo")),
+    limit: int = typer.Option(50, "--limit", "-l", help=_("cli-notifiche-help-limit")),
 ) -> None:
     """
     List all SDI notifications received.
@@ -117,7 +120,7 @@ def list_notifications(
     """
     ensure_db()
 
-    console.print("\n[bold blue]📬 SDI Notifications[/bold blue]\n")
+    console.print(f"\n{_('cli-notifiche-list-title')}\n")
 
     with db_session() as db:
         query = db.query(LogSDI).order_by(LogSDI.data_ricezione.desc())
@@ -128,18 +131,20 @@ def list_notifications(
         notifiche = query.limit(limit).all()
 
         if not notifiche:
-            console.print("[yellow]No notifications found[/yellow]")
-            console.print("\n[dim]Process notifications with:[/dim]")
-            console.print("  [cyan]openfatture notifiche process <file.xml>[/cyan]")
+            console.print(_("cli-notifiche-no-notifications"))
+            console.print(f"\n{_('cli-notifiche-process-hint')}")
+            console.print(_("cli-notifiche-process-cmd"))
             return
 
-        table = Table(title=f"Notifications ({len(notifiche)})", show_lines=False)
-        table.add_column("ID", style="cyan", width=6)
-        table.add_column("Type", style="white", width=8)
-        table.add_column("Date", style="white", width=12)
-        table.add_column("Invoice", style="bold white", width=15)
-        table.add_column("Client", style="white")
-        table.add_column("SDI ID", style="dim", width=15)
+        table = Table(
+            title=_("cli-notifiche-list-table-title", count=len(notifiche)), show_lines=False
+        )
+        table.add_column(_("cli-notifiche-column-id"), style="cyan", width=6)
+        table.add_column(_("cli-notifiche-column-type"), style="white", width=8)
+        table.add_column(_("cli-notifiche-column-date"), style="white", width=12)
+        table.add_column(_("cli-notifiche-column-invoice"), style="bold white", width=15)
+        table.add_column(_("cli-notifiche-column-client"), style="white")
+        table.add_column(_("cli-notifiche-column-sdi-id"), style="dim", width=15)
 
         for n in notifiche:
             # Color by type
@@ -170,7 +175,7 @@ def list_notifications(
 
 @app.command("show")
 def show_notification(
-    notification_id: int = typer.Argument(..., help="Notification ID"),
+    notification_id: int = typer.Argument(..., help=_("cli-notifiche-help-notification-id")),
 ) -> None:
     """
     Show detailed information about a notification.
@@ -184,7 +189,7 @@ def show_notification(
         notifica = db.query(LogSDI).filter(LogSDI.id == notification_id).first()
 
         if notifica is None:
-            console.print(f"[red]Notification {notification_id} not found[/red]")
+            console.print(_("cli-notifiche-not-found", notification_id=notification_id))
             raise typer.Exit(1)
 
         # Header
@@ -197,27 +202,29 @@ def show_notification(
         }.get(notifica.tipo_notifica, "📬")
 
         console.print(
-            f"\n[bold blue]{type_emoji} Notification {notifica.id}: {notifica.tipo_notifica}[/bold blue]\n"
+            f"\n{_('cli-notifiche-show-title', emoji=type_emoji, id=notifica.id, tipo=notifica.tipo_notifica)}\n"
         )
 
         # Details table
         table = Table(show_header=False, box=None)
-        table.add_column("Field", style="cyan", width=25)
-        table.add_column("Value", style="white")
+        table.add_column(_("cli-notifiche-table-field"), style="cyan", width=25)
+        table.add_column(_("cli-notifiche-table-value"), style="white")
 
-        table.add_row("Type", notifica.tipo_notifica)
-        table.add_row("Invoice", f"{notifica.fattura.numero}/{notifica.fattura.anno}")
-        table.add_row("Client", notifica.fattura.cliente.denominazione)
-        table.add_row("Invoice Status", notifica.fattura.stato.value)
+        table.add_row(_("cli-notifiche-label-type"), notifica.tipo_notifica)
+        table.add_row(
+            _("cli-notifiche-label-invoice"), f"{notifica.fattura.numero}/{notifica.fattura.anno}"
+        )
+        table.add_row(_("cli-notifiche-label-client"), notifica.fattura.cliente.denominazione)
+        table.add_row(_("cli-notifiche-label-invoice-status"), notifica.fattura.stato.value)
 
         if notifica.data_ricezione:
-            table.add_row("Received", notifica.data_ricezione.isoformat())
+            table.add_row(_("cli-notifiche-label-received"), notifica.data_ricezione.isoformat())
 
         if notifica.descrizione:
-            table.add_row("Description", notifica.descrizione)
+            table.add_row(_("cli-notifiche-label-description"), notifica.descrizione)
 
         if notifica.xml_path:
-            table.add_row("XML Path", notifica.xml_path)
+            table.add_row(_("cli-notifiche-label-xml-path"), notifica.xml_path)
 
         console.print(table)
         console.print()

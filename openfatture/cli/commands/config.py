@@ -6,14 +6,17 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from openfatture.i18n import _
 from openfatture.utils.config import get_settings, reload_settings
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 
-def _format_value(value: Any, fallback: str = "[red]Not set[/red]") -> str:
+def _format_value(value: Any, fallback: str | None = None) -> str:
     """Return a safe string representation for configuration values."""
+    if fallback is None:
+        fallback = _("cli-config-not-set")
     if value is None:
         return fallback
     if isinstance(value, str):
@@ -37,117 +40,164 @@ def show_config() -> None:
     """
     settings = get_settings()
 
-    table = Table(title="OpenFatture Configuration", show_header=True)
-    table.add_column("Setting", style="cyan", no_wrap=True)
-    table.add_column("Value", style="white")
+    table = Table(title=_("cli-config-show-title"), show_header=True)
+    table.add_column(_("cli-config-column-setting"), style="cyan", no_wrap=True)
+    table.add_column(_("cli-config-column-value"), style="white")
 
     # Application
     table.add_section()
-    table.add_row("App Version", _format_value(getattr(settings, "app_version", None)))
-    table.add_row("Debug Mode", str(getattr(settings, "debug", False)))
+    table.add_row(
+        _("cli-config-label-app-version"), _format_value(getattr(settings, "app_version", None))
+    )
+    table.add_row(_("cli-config-label-debug-mode"), str(getattr(settings, "debug", False)))
 
     # Database
     table.add_section()
-    table.add_row("Database URL", _format_value(getattr(settings, "database_url", None)))
+    table.add_row(
+        _("cli-config-label-database-url"), _format_value(getattr(settings, "database_url", None))
+    )
 
     # Paths
     table.add_section()
-    table.add_row("Data Directory", _format_value(getattr(settings, "data_dir", None)))
-    table.add_row("Archive Directory", _format_value(getattr(settings, "archivio_dir", None)))
     table.add_row(
-        "Certificates Directory", _format_value(getattr(settings, "certificates_dir", None))
+        _("cli-config-label-data-dir"), _format_value(getattr(settings, "data_dir", None))
+    )
+    table.add_row(
+        _("cli-config-label-archive-dir"), _format_value(getattr(settings, "archivio_dir", None))
+    )
+    table.add_row(
+        _("cli-config-label-certificates-dir"),
+        _format_value(getattr(settings, "certificates_dir", None)),
     )
 
     # Company Data
     table.add_section()
-    table.add_row("Company Name", _format_value(getattr(settings, "cedente_denominazione", None)))
-    table.add_row("Partita IVA", _format_value(getattr(settings, "cedente_partita_iva", None)))
     table.add_row(
-        "Codice Fiscale", _format_value(getattr(settings, "cedente_codice_fiscale", None))
+        _("cli-config-label-company-name"),
+        _format_value(getattr(settings, "cedente_denominazione", None)),
     )
-    table.add_row("Tax Regime", _format_value(getattr(settings, "cedente_regime_fiscale", None)))
+    table.add_row(
+        _("cli-config-label-partita-iva"),
+        _format_value(getattr(settings, "cedente_partita_iva", None)),
+    )
+    table.add_row(
+        _("cli-config-label-codice-fiscale"),
+        _format_value(getattr(settings, "cedente_codice_fiscale", None)),
+    )
+    table.add_row(
+        _("cli-config-label-tax-regime"),
+        _format_value(getattr(settings, "cedente_regime_fiscale", None)),
+    )
 
     # PEC
     table.add_section()
-    table.add_row("PEC Address", _format_value(getattr(settings, "pec_address", None)))
-    table.add_row("PEC SMTP Server", _format_value(getattr(settings, "pec_smtp_server", None)))
-    table.add_row("SDI PEC Address", _format_value(getattr(settings, "sdi_pec_address", None)))
+    table.add_row(
+        _("cli-config-label-pec-address"), _format_value(getattr(settings, "pec_address", None))
+    )
+    table.add_row(
+        _("cli-config-label-pec-smtp-server"),
+        _format_value(getattr(settings, "pec_smtp_server", None)),
+    )
+    table.add_row(
+        _("cli-config-label-sdi-pec-address"),
+        _format_value(getattr(settings, "sdi_pec_address", None)),
+    )
 
     # Email Templates & Notifications
     table.add_section()
     table.add_row(
-        "Notification Email",
-        _format_value(getattr(settings, "notification_email", None), "[yellow]Not set[/yellow]"),
-    )
-    table.add_row(
-        "Notifications Enabled",
-        (
-            "[green]Yes[/green]"
-            if getattr(settings, "notification_enabled", False)
-            else "[red]No[/red]"
+        _("cli-config-label-notification-email"),
+        _format_value(
+            getattr(settings, "notification_email", None), _("cli-config-not-set-optional")
         ),
     )
-    table.add_row("Locale", _format_value(getattr(settings, "locale", None)))
     table.add_row(
-        "Email Logo URL",
-        _format_value(getattr(settings, "email_logo_url", None), "[dim]Not set[/dim]"),
+        _("cli-config-label-notifications-enabled"),
+        (
+            _("cli-config-yes")
+            if getattr(settings, "notification_enabled", False)
+            else _("cli-config-no")
+        ),
     )
-    table.add_row("Primary Color", _format_value(getattr(settings, "email_primary_color", None)))
+    table.add_row(_("cli-config-label-locale"), _format_value(getattr(settings, "locale", None)))
     table.add_row(
-        "Secondary Color", _format_value(getattr(settings, "email_secondary_color", None))
+        _("cli-config-label-email-logo-url"),
+        _format_value(getattr(settings, "email_logo_url", None), _("cli-config-not-set-optional")),
     )
     table.add_row(
-        "Email Footer",
-        _format_value(getattr(settings, "email_footer_text", None), "[dim]Auto-generated[/dim]"),
+        _("cli-config-label-primary-color"),
+        _format_value(getattr(settings, "email_primary_color", None)),
+    )
+    table.add_row(
+        _("cli-config-label-secondary-color"),
+        _format_value(getattr(settings, "email_secondary_color", None)),
+    )
+    table.add_row(
+        _("cli-config-label-email-footer"),
+        _format_value(getattr(settings, "email_footer_text", None), _("cli-config-auto-generated")),
     )
 
     # AI Configuration (expanded)
     table.add_section()
     ai_provider = getattr(settings, "ai_provider", None)
-    table.add_row("AI Provider", _format_value(ai_provider))
-    table.add_row("AI Model", _format_value(getattr(settings, "ai_model", None)))
+    table.add_row(_("cli-config-label-ai-provider"), _format_value(ai_provider))
+    table.add_row(
+        _("cli-config-label-ai-model"), _format_value(getattr(settings, "ai_model", None))
+    )
 
     # Show base URL for ollama
     if ai_provider == "ollama":
         base_url = getattr(settings, "ai_base_url", "http://localhost:11434")
-        table.add_row("AI Base URL", _format_value(base_url))
+        table.add_row(_("cli-config-label-ai-base-url"), _format_value(base_url))
 
     table.add_row(
-        "AI API Key",
+        _("cli-config-label-ai-api-key"),
         (
-            "[green]Set[/green]"
+            _("cli-config-set")
             if getattr(settings, "ai_api_key", None)
-            else "[yellow]Not set[/yellow]"
+            else _("cli-config-not-set-optional")
         ),
     )
 
     # AI Chat
     chat_enabled = getattr(settings, "ai_chat_enabled", True)
     table.add_row(
-        "Chat Enabled",
-        "[green]Yes[/green]" if chat_enabled else "[red]No[/red]",
+        _("cli-config-label-chat-enabled"),
+        _("cli-config-yes") if chat_enabled else _("cli-config-no"),
     )
-    table.add_row("Chat Auto-Save", str(getattr(settings, "ai_chat_auto_save", True)))
-    table.add_row("Max Messages/Session", str(getattr(settings, "ai_chat_max_messages", 100)))
-    table.add_row("Max Tokens/Session", str(getattr(settings, "ai_chat_max_tokens", 8000)))
+    table.add_row(
+        _("cli-config-label-chat-auto-save"), str(getattr(settings, "ai_chat_auto_save", True))
+    )
+    table.add_row(
+        _("cli-config-label-max-messages"), str(getattr(settings, "ai_chat_max_messages", 100))
+    )
+    table.add_row(
+        _("cli-config-label-max-tokens"), str(getattr(settings, "ai_chat_max_tokens", 8000))
+    )
 
     # AI Tools
     tools_enabled = getattr(settings, "ai_tools_enabled", True)
     table.add_row(
-        "Tools Enabled",
-        "[green]Yes[/green]" if tools_enabled else "[red]No[/red]",
+        _("cli-config-label-tools-enabled"),
+        _("cli-config-yes") if tools_enabled else _("cli-config-no"),
     )
 
     enabled_tools = getattr(settings, "ai_enabled_tools", "all")
     if isinstance(enabled_tools, str):
         if enabled_tools.lower() == "all":
-            table.add_row("Enabled Tools", "all")
+            table.add_row(_("cli-config-label-enabled-tools"), _("cli-config-all-tools"))
         else:
             tool_names = [tool.strip() for tool in enabled_tools.split(",") if tool.strip()]
             if tool_names:
-                table.add_row("Enabled Tools", f"{len(tool_names)} tools")
+                table.add_row(
+                    _("cli-config-label-enabled-tools"),
+                    _("cli-config-tools-count", count=len(tool_names)),
+                )
     elif isinstance(enabled_tools, list | tuple | set):
-        table.add_row("Enabled Tools", f"{len(enabled_tools)} tools")
+        table.add_row(
+            _("cli-config-label-enabled-tools"),
+            _("cli-config-tools-count", count=len(enabled_tools)),
+        )
 
     console.print(table)
 
@@ -156,13 +206,13 @@ def show_config() -> None:
 def reload_config() -> None:
     """Reload configuration from .env file."""
     reload_settings()
-    console.print("[green]✓ Configuration reloaded[/green]")
+    console.print(_("cli-config-reload-success"))
 
 
 @app.command("set")
 def set_config(
-    key: str = typer.Argument(..., help="Configuration key (e.g., pec.address)"),
-    value: str = typer.Argument(..., help="Configuration value"),
+    key: str = typer.Argument(..., help=_("cli-config-help-key")),
+    value: str = typer.Argument(..., help=_("cli-config-help-value")),
 ) -> None:
     """
     Set a configuration value.
@@ -182,13 +232,13 @@ def set_config(
             target = settings
             for part in parts[:-1]:
                 if not hasattr(target, part):
-                    console.print(f"[red]Invalid configuration key: {key}[/red]")
+                    console.print(_("cli-config-invalid-key", key=key))
                     raise typer.Exit(1)
                 target = getattr(target, part)
 
             last_key = parts[-1]
             if not hasattr(target, last_key):
-                console.print(f"[red]Invalid configuration key: {key}[/red]")
+                console.print(_("cli-config-invalid-key", key=key))
                 raise typer.Exit(1)
 
             # Basic type conversion
@@ -206,7 +256,7 @@ def set_config(
             setattr(target, last_key, new_value)
         else:
             if not hasattr(settings, key):
-                console.print(f"[red]Invalid configuration key: {key}[/red]")
+                console.print(_("cli-config-invalid-key", key=key))
                 raise typer.Exit(1)
 
             # Basic type conversion
@@ -227,9 +277,9 @@ def set_config(
         config_path = dirs.user_config_dir / "config.toml"
         save_config(settings, config_path)
 
-        console.print(f"[green]✓ Set {key} = {value}[/green]")
-        console.print(f"[dim]Saved to {config_path}[/dim]")
+        console.print(_("cli-config-set-success", key=key, value=value))
+        console.print(_("cli-config-saved-to", path=config_path))
 
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        console.print(_("cli-config-error", error=str(e)))
         raise typer.Exit(1)

@@ -1,6 +1,5 @@
 """Lightning Network payment management commands."""
 
-from openfatture.utils.async_bridge import run_async
 from datetime import datetime
 from pathlib import Path
 
@@ -8,14 +7,15 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-app = typer.Typer(
-    name="lightning", help="⚡ Lightning Network payment management", no_args_is_help=True
-)
+from openfatture.i18n import _
+from openfatture.utils.async_bridge import run_async
+
+app = typer.Typer(name="lightning", help=_("cli-lightning-help"), no_args_is_help=True)
 console = Console()
 
 # Sub-commands for compliance
-report_app = typer.Typer(name="report", help="📊 Generate compliance reports", no_args_is_help=True)
-aml_app = typer.Typer(name="aml", help="🔍 Anti-Money Laundering management", no_args_is_help=True)
+report_app = typer.Typer(name="report", help=_("cli-lightning-report-help"), no_args_is_help=True)
+aml_app = typer.Typer(name="aml", help=_("cli-lightning-aml-help"), no_args_is_help=True)
 
 app.add_typer(report_app)
 app.add_typer(aml_app)
@@ -28,24 +28,36 @@ def lightning_status():
 
     settings = get_settings()
 
-    typer.echo("⚡ Lightning Network Status")
+    console.print(_("cli-lightning-status-title"))
 
     if not settings.lightning_enabled:
-        typer.echo("Status: ❌ Disabled")
-        typer.echo("Set lightning_enabled=true in .env to enable Lightning payments")
-        typer.echo("Use 'openfatture config set lightning_enabled true' to enable")
+        console.print(_("cli-lightning-status-disabled"))
+        console.print(_("cli-lightning-status-disabled-hint-env"))
+        console.print(_("cli-lightning-status-disabled-hint-cmd"))
         return
 
-    typer.echo("Status: ✅ Enabled")
-    typer.echo(f"Host: {settings.lightning_host}")
-    typer.echo(f"Timeout: {settings.lightning_timeout_seconds}s")
-    typer.echo(f"Max retries: {settings.lightning_max_retries}")
-    typer.echo(
-        f"BTC Provider: {'CoinGecko' if settings.lightning_coingecko_enabled else 'CoinMarketCap' if settings.lightning_cmc_enabled else 'Fallback'}"
+    console.print(_("cli-lightning-status-enabled"))
+    console.print(_("cli-lightning-status-host", host=settings.lightning_host))
+    console.print(_("cli-lightning-status-timeout", timeout=settings.lightning_timeout_seconds))
+    console.print(_("cli-lightning-status-max-retries", max_retries=settings.lightning_max_retries))
+
+    btc_provider = (
+        _("cli-lightning-btc-provider-coingecko")
+        if settings.lightning_coingecko_enabled
+        else (
+            _("cli-lightning-btc-provider-cmc")
+            if settings.lightning_cmc_enabled
+            else _("cli-lightning-btc-provider-fallback")
+        )
     )
-    typer.echo(
-        f"Liquidity monitoring: {'Enabled' if settings.lightning_liquidity_enabled else 'Disabled'}"
+    console.print(_("cli-lightning-status-btc-provider", provider=btc_provider))
+
+    liquidity_status = (
+        _("cli-lightning-liquidity-enabled")
+        if settings.lightning_liquidity_enabled
+        else _("cli-lightning-liquidity-disabled")
     )
+    console.print(_("cli-lightning-status-liquidity", status=liquidity_status))
 
 
 @app.command("invoice")
@@ -54,13 +66,11 @@ def create_invoice():
     from openfatture.utils.config import get_settings
 
     if not get_settings().lightning_enabled:
-        typer.echo(
-            "❌ Lightning is disabled. Enable with: openfatture config set lightning_enabled true"
-        )
+        console.print(_("cli-lightning-disabled-error"))
         return
 
-    typer.echo("⚡ Lightning Invoice Creation")
-    typer.echo("Feature not yet available - Lightning integration in development")
+    console.print(_("cli-lightning-invoice-title"))
+    console.print(_("cli-lightning-invoice-not-available"))
 
 
 @app.command("channels")
@@ -69,13 +79,11 @@ def list_channels():
     from openfatture.utils.config import get_settings
 
     if not get_settings().lightning_enabled:
-        typer.echo(
-            "❌ Lightning is disabled. Enable with: openfatture config set lightning_enabled true"
-        )
+        console.print(_("cli-lightning-disabled-error"))
         return
 
-    typer.echo("⚡ Lightning Channels")
-    typer.echo("No channels configured - Lightning integration in development")
+    console.print(_("cli-lightning-channels-title"))
+    console.print(_("cli-lightning-channels-not-available"))
 
 
 @app.command("liquidity")
@@ -84,13 +92,11 @@ def check_liquidity():
     from openfatture.utils.config import get_settings
 
     if not get_settings().lightning_enabled:
-        typer.echo(
-            "❌ Lightning is disabled. Enable with: openfatture config set lightning_enabled true"
-        )
+        console.print(_("cli-lightning-disabled-error"))
         return
 
-    typer.echo("⚡ Channel Liquidity")
-    typer.echo("Liquidity monitoring not available - Lightning integration in development")
+    console.print(_("cli-lightning-liquidity-title"))
+    console.print(_("cli-lightning-liquidity-not-available"))
 
 
 # ============================================================================
@@ -101,9 +107,11 @@ def check_liquidity():
 @app.command("compliance-check")
 def compliance_check(
     tax_year: int = typer.Option(
-        datetime.now().year, "--tax-year", "-y", help="Tax year to check (default: current year)"
+        datetime.now().year, "--tax-year", "-y", help=_("cli-lightning-compliance-opt-tax-year")
     ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed information"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help=_("cli-lightning-compliance-opt-verbose")
+    ),
 ):
     """🔍 Run comprehensive compliance check for Italian tax and AML regulations.
 
@@ -128,97 +136,124 @@ def compliance_check(
         invoice_repo = LightningInvoiceRepository(session=session)
         compliance_service = create_compliance_report_service(invoice_repository=invoice_repo)
 
-        console.print(f"\n[bold cyan]🔍 Lightning Compliance Check - {tax_year}[/bold cyan]\n")
+        console.print(_("cli-lightning-compliance-title", year=tax_year))
 
         # 1. Tax Year Summary
         summary = run_async(compliance_service.generate_tax_year_summary(tax_year))
 
-        console.print("[bold]📊 Tax Year Summary[/bold]")
+        console.print(_("cli-lightning-compliance-summary-title"))
         table = Table(show_header=False, box=None, padding=(0, 2))
-        table.add_row("Number of payments:", f"[cyan]{summary.num_payments}[/cyan]")
-        table.add_row("Total revenue (EUR):", f"[green]{summary.total_revenue_eur:,.2f} €[/green]")
         table.add_row(
-            "Total capital gains (EUR):",
+            _("cli-lightning-compliance-summary-payments"), f"[cyan]{summary.num_payments}[/cyan]"
+        )
+        table.add_row(
+            _("cli-lightning-compliance-summary-revenue"),
+            f"[green]{summary.total_revenue_eur:,.2f} €[/green]",
+        )
+        table.add_row(
+            _("cli-lightning-compliance-summary-gains"),
             f"[yellow]{summary.total_capital_gains_eur:,.2f} €[/yellow]",
         )
         table.add_row(
-            "Estimated tax owed (EUR):", f"[red]{summary.total_tax_owed_eur:,.2f} €[/red]"
+            _("cli-lightning-compliance-summary-tax"),
+            f"[red]{summary.total_tax_owed_eur:,.2f} €[/red]",
         )
         console.print(table)
         console.print()
 
         # 2. AML Compliance
-        console.print("[bold]🛡️ AML Compliance (Threshold: 5,000 EUR)[/bold]")
+        console.print(_("cli-lightning-compliance-aml-title"))
         aml_table = Table(show_header=False, box=None, padding=(0, 2))
-        aml_table.add_row("Total over threshold:", f"[cyan]{summary.num_aml_alerts}[/cyan]")
-        aml_table.add_row("Verified:", f"[green]{summary.num_aml_verified}[/green]")
+        aml_table.add_row(
+            _("cli-lightning-compliance-aml-total"), f"[cyan]{summary.num_aml_alerts}[/cyan]"
+        )
+        aml_table.add_row(
+            _("cli-lightning-compliance-aml-verified"), f"[green]{summary.num_aml_verified}[/green]"
+        )
         unverified = summary.num_aml_alerts - summary.num_aml_verified
-        status = "✅ OK" if unverified == 0 else f"⚠️  {unverified} REQUIRE VERIFICATION"
-        aml_table.add_row("Unverified:", f"[{'green' if unverified == 0 else 'red'}]{status}[/]")
+        status = (
+            _("cli-lightning-compliance-aml-status-ok")
+            if unverified == 0
+            else _("cli-lightning-compliance-aml-status-require", count=unverified)
+        )
+        aml_table.add_row(
+            _("cli-lightning-compliance-aml-unverified"),
+            f"[{'green' if unverified == 0 else 'red'}]{status}[/]",
+        )
         console.print(aml_table)
         console.print()
 
         # 3. Quadro RW Check
         quadro_rw_invoices = invoice_repo.find_requiring_quadro_rw(tax_year)
-        console.print("[bold]📋 Quadro RW Declaration (Mandatory from 2025)[/bold]")
+        console.print(_("cli-lightning-compliance-quadro-title"))
         quadro_table = Table(show_header=False, box=None, padding=(0, 2))
         quadro_table.add_row(
-            "Invoices requiring declaration:", f"[cyan]{len(quadro_rw_invoices)}[/cyan]"
+            _("cli-lightning-compliance-quadro-count"), f"[cyan]{len(quadro_rw_invoices)}[/cyan]"
         )
         if len(quadro_rw_invoices) > 0:
             quadro_table.add_row(
-                "Action required:",
-                "[yellow]⚠️  Declare all crypto holdings in Quadro RW[/yellow]",
+                _("cli-lightning-compliance-action-required"),
+                _("cli-lightning-compliance-quadro-action"),
             )
         else:
-            quadro_table.add_row("Status:", "[green]✅ No declarations required[/green]")
+            quadro_table.add_row(
+                _("cli-lightning-compliance-status"), _("cli-lightning-compliance-quadro-status-ok")
+            )
         console.print(quadro_table)
         console.print()
 
         # 4. Missing Tax Data
         missing_data = invoice_repo.find_with_missing_tax_data()
-        console.print("[bold]⚠️  Data Quality[/bold]")
+        console.print(_("cli-lightning-compliance-data-quality-title"))
         missing_table = Table(show_header=False, box=None, padding=(0, 2))
         missing_table.add_row(
-            "Invoices with missing tax data:",
+            _("cli-lightning-compliance-data-quality-missing"),
             f"[{'red' if missing_data else 'green'}]{len(missing_data)}[/]",
         )
         if missing_data:
             missing_table.add_row(
-                "Action required:",
-                "[red]❌ Add BTC/EUR rate and EUR amount for tax compliance[/red]",
+                _("cli-lightning-compliance-action-required"),
+                _("cli-lightning-compliance-data-quality-action"),
             )
         else:
-            missing_table.add_row("Status:", "[green]✅ All settled invoices have tax data[/green]")
+            missing_table.add_row(
+                _("cli-lightning-compliance-status"),
+                _("cli-lightning-compliance-data-quality-status-ok"),
+            )
         console.print(missing_table)
         console.print()
 
         # Overall Status
         issues = []
         if unverified > 0:
-            issues.append(f"{unverified} unverified AML payment(s)")
+            issues.append(_("cli-lightning-compliance-issue-aml", count=unverified))
         if len(missing_data) > 0:
-            issues.append(f"{len(missing_data)} invoice(s) missing tax data")
+            issues.append(_("cli-lightning-compliance-issue-missing-data", count=len(missing_data)))
 
         if issues:
-            console.print(f"[bold red]❌ Compliance Issues Found: {', '.join(issues)}[/bold red]\n")
+            console.print(_("cli-lightning-compliance-issues-found", issues=", ".join(issues)))
             raise typer.Exit(code=1)
         else:
-            console.print("[bold green]✅ All Compliance Checks Passed[/bold green]\n")
+            console.print(_("cli-lightning-compliance-passed"))
 
         # Verbose output
         if verbose and unverified > 0:
-            console.print("[bold]Unverified AML Payments:[/bold]")
+            console.print(_("cli-lightning-compliance-verbose-title"))
             unverified_payments = invoice_repo.find_unverified_aml_payments(5000.0)
             for inv in unverified_payments:
+                settled_date = inv.settled_at.strftime("%Y-%m-%d") if inv.settled_at else "N/A"
                 console.print(
-                    f"  • {inv.payment_hash[:8]}... - {inv.eur_amount_declared:,.2f} EUR - "
-                    f"Settled: {inv.settled_at.strftime('%Y-%m-%d') if inv.settled_at else 'N/A'}"
+                    _(
+                        "cli-lightning-compliance-verbose-item",
+                        hash=inv.payment_hash[:8],
+                        amount=f"{inv.eur_amount_declared:,.2f}",
+                        date=settled_date,
+                    )
                 )
             console.print()
 
     except Exception as e:
-        console.print(f"[bold red]❌ Error running compliance check: {e}[/bold red]")
+        console.print(_("cli-lightning-compliance-error", error=str(e)))
         raise typer.Exit(code=1)
     finally:
         session.close()
@@ -231,10 +266,14 @@ def compliance_check(
 
 @report_app.command("quadro-rw")
 def generate_quadro_rw_report(
-    tax_year: int = typer.Option(..., "--tax-year", "-y", help="Tax year for report"),
-    output_format: str = typer.Option("json", "--format", "-f", help="Output format: json or csv"),
+    tax_year: int = typer.Option(
+        ..., "--tax-year", "-y", help=_("cli-lightning-report-opt-tax-year")
+    ),
+    output_format: str = typer.Option(
+        "json", "--format", "-f", help=_("cli-lightning-report-opt-format")
+    ),
     output_file: Path = typer.Option(
-        None, "--output", "-o", help="Output file path (optional, prints to stdout if not provided)"
+        None, "--output", "-o", help=_("cli-lightning-report-opt-output")
     ),
 ):
     """📋 Generate Quadro RW declaration report.
@@ -255,7 +294,7 @@ def generate_quadro_rw_report(
     from openfatture.storage.database.base import get_session
 
     if output_format not in ["json", "csv"]:
-        console.print("[bold red]❌ Invalid format. Use 'json' or 'csv'[/bold red]")
+        console.print(_("cli-lightning-report-invalid-format"))
         raise typer.Exit(code=1)
 
     try:
@@ -264,7 +303,7 @@ def generate_quadro_rw_report(
         compliance_service = create_compliance_report_service(invoice_repository=invoice_repo)
 
         console.print(
-            f"\n[bold cyan]📋 Generating Quadro RW Report - {tax_year} ({output_format.upper()})[/bold cyan]\n"
+            _("cli-lightning-report-quadro-title", year=tax_year, format=output_format.upper())
         )
 
         # Safe to cast after validation
@@ -277,16 +316,16 @@ def generate_quadro_rw_report(
         if output_file:
             output_file.parent.mkdir(parents=True, exist_ok=True)
             output_file.write_text(report_content, encoding="utf-8")
-            console.print(f"[green]✅ Report saved to: {output_file}[/green]\n")
+            console.print(_("cli-lightning-report-saved", path=str(output_file)))
         else:
             console.print(report_content)
 
         # Show summary
         invoices = invoice_repo.find_requiring_quadro_rw(tax_year)
-        console.print(f"[cyan]📊 Total invoices in report: {len(invoices)}[/cyan]")
+        console.print(_("cli-lightning-report-summary", count=len(invoices)))
 
     except Exception as e:
-        console.print(f"[bold red]❌ Error generating Quadro RW report: {e}[/bold red]")
+        console.print(_("cli-lightning-report-quadro-error", error=str(e)))
         raise typer.Exit(code=1)
     finally:
         session.close()
@@ -294,10 +333,14 @@ def generate_quadro_rw_report(
 
 @report_app.command("capital-gains")
 def generate_capital_gains_report(
-    tax_year: int = typer.Option(..., "--tax-year", "-y", help="Tax year for report"),
-    output_format: str = typer.Option("csv", "--format", "-f", help="Output format: json or csv"),
+    tax_year: int = typer.Option(
+        ..., "--tax-year", "-y", help=_("cli-lightning-report-opt-tax-year")
+    ),
+    output_format: str = typer.Option(
+        "csv", "--format", "-f", help=_("cli-lightning-report-opt-format")
+    ),
     output_file: Path = typer.Option(
-        None, "--output", "-o", help="Output file path (optional, prints to stdout if not provided)"
+        None, "--output", "-o", help=_("cli-lightning-report-opt-output")
     ),
 ):
     """💰 Generate capital gains tax report.
@@ -322,7 +365,7 @@ def generate_capital_gains_report(
     from openfatture.storage.database.base import get_session
 
     if output_format not in ["json", "csv"]:
-        console.print("[bold red]❌ Invalid format. Use 'json' or 'csv'[/bold red]")
+        console.print(_("cli-lightning-report-invalid-format"))
         raise typer.Exit(code=1)
 
     try:
@@ -331,7 +374,7 @@ def generate_capital_gains_report(
         compliance_service = create_compliance_report_service(invoice_repository=invoice_repo)
 
         console.print(
-            f"\n[bold cyan]💰 Generating Capital Gains Report - {tax_year} ({output_format.upper()})[/bold cyan]\n"
+            _("cli-lightning-report-gains-title", year=tax_year, format=output_format.upper())
         )
 
         # Safe to cast after validation
@@ -344,7 +387,7 @@ def generate_capital_gains_report(
         if output_file:
             output_file.parent.mkdir(parents=True, exist_ok=True)
             output_file.write_text(report_content, encoding="utf-8")
-            console.print(f"[green]✅ Report saved to: {output_file}[/green]\n")
+            console.print(_("cli-lightning-report-saved", path=str(output_file)))
         else:
             console.print(report_content)
 
@@ -354,14 +397,20 @@ def generate_capital_gains_report(
             total_gains = sum(inv.capital_gain_eur for inv in invoices if inv.capital_gain_eur)
             tax_rate_float = 0.26 if tax_year <= 2025 else 0.33
             estimated_tax = total_gains * Decimal(str(tax_rate_float))
-            console.print(f"[cyan]📊 Total invoices with gains: {len(invoices)}[/cyan]")
-            console.print(f"[yellow]💰 Total capital gains: {total_gains:,.2f} EUR[/yellow]")
+            console.print(_("cli-lightning-report-gains-summary-count", count=len(invoices)))
             console.print(
-                f"[red]💸 Estimated tax ({int(tax_rate_float * 100)}%): {estimated_tax:,.2f} EUR[/red]"
+                _("cli-lightning-report-gains-summary-total", total=f"{total_gains:,.2f}")
+            )
+            console.print(
+                _(
+                    "cli-lightning-report-gains-summary-tax",
+                    rate=int(tax_rate_float * 100),
+                    tax=f"{estimated_tax:,.2f}",
+                )
             )
 
     except Exception as e:
-        console.print(f"[bold red]❌ Error generating capital gains report: {e}[/bold red]")
+        console.print(_("cli-lightning-report-gains-error", error=str(e)))
         raise typer.Exit(code=1)
     finally:
         session.close()
@@ -369,10 +418,14 @@ def generate_capital_gains_report(
 
 @report_app.command("aml")
 def generate_aml_report(
-    threshold: float = typer.Option(5000.0, "--threshold", "-t", help="AML threshold in EUR"),
-    output_format: str = typer.Option("json", "--format", "-f", help="Output format: json only"),
+    threshold: float = typer.Option(
+        5000.0, "--threshold", "-t", help=_("cli-lightning-aml-opt-threshold")
+    ),
+    output_format: str = typer.Option(
+        "json", "--format", "-f", help=_("cli-lightning-aml-opt-format")
+    ),
     output_file: Path = typer.Option(
-        None, "--output", "-o", help="Output file path (optional, prints to stdout if not provided)"
+        None, "--output", "-o", help=_("cli-lightning-report-opt-output")
     ),
 ):
     """🛡️ Generate Anti-Money Laundering compliance report.
@@ -398,9 +451,7 @@ def generate_aml_report(
         invoice_repo = LightningInvoiceRepository(session=session)
         compliance_service = create_compliance_report_service(invoice_repository=invoice_repo)
 
-        console.print(
-            f"\n[bold cyan]🛡️ Generating AML Compliance Report (Threshold: {threshold:,.2f} EUR)[/bold cyan]\n"
-        )
+        console.print(_("cli-lightning-aml-report-title", threshold=f"{threshold:,.2f}"))
 
         report = run_async(
             compliance_service.generate_aml_compliance_report(Decimal(str(threshold)))
@@ -429,30 +480,36 @@ def generate_aml_report(
         if output_file:
             output_file.parent.mkdir(parents=True, exist_ok=True)
             output_file.write_text(report_json, encoding="utf-8")
-            console.print(f"[green]✅ Report saved to: {output_file}[/green]\n")
+            console.print(_("cli-lightning-report-saved", path=str(output_file)))
         else:
             console.print(report_json)
 
         # Show summary
         console.print(
-            f"[cyan]📊 Total over threshold: {report.total_payments_over_threshold}[/cyan]"
+            _("cli-lightning-aml-report-summary-total", total=report.total_payments_over_threshold)
         )
-        console.print(f"[green]✅ Verified: {report.total_verified}[/green]")
         console.print(
-            f"[{'red' if report.total_pending_verification > 0 else 'green'}]{'⚠️ ' if report.total_pending_verification > 0 else '✅ '}Unverified: {report.total_pending_verification}[/]"
+            _("cli-lightning-aml-report-summary-verified", verified=report.total_verified)
         )
-        console.print(f"[yellow]📈 Compliance rate: {compliance_rate:.1f}%[/yellow]")
+        unverified_status = (
+            _("cli-lightning-aml-report-summary-unverified-ok")
+            if report.total_pending_verification == 0
+            else _(
+                "cli-lightning-aml-report-summary-unverified-warning",
+                count=report.total_pending_verification,
+            )
+        )
+        console.print(
+            f"[{'red' if report.total_pending_verification > 0 else 'green'}]{unverified_status}[/]"
+        )
+        console.print(_("cli-lightning-aml-report-summary-rate", rate=f"{compliance_rate:.1f}"))
 
         if report.total_pending_verification > 0:
-            console.print(
-                "\n[bold yellow]⚠️  Action Required: Verify unverified payments with AML process[/bold yellow]"
-            )
-            console.print(
-                "[dim]Use: openfatture lightning aml list-unverified to see details[/dim]\n"
-            )
+            console.print(_("cli-lightning-aml-report-action-required"))
+            console.print(_("cli-lightning-aml-report-action-hint"))
 
     except Exception as e:
-        console.print(f"[bold red]❌ Error generating AML report: {e}[/bold red]")
+        console.print(_("cli-lightning-aml-report-error", error=str(e)))
         raise typer.Exit(code=1)
     finally:
         session.close()
@@ -465,8 +522,10 @@ def generate_aml_report(
 
 @aml_app.command("list-unverified")
 def list_unverified_aml_payments(
-    threshold: float = typer.Option(5000.0, "--threshold", "-t", help="AML threshold in EUR"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed information"),
+    threshold: float = typer.Option(
+        5000.0, "--threshold", "-t", help=_("cli-lightning-aml-opt-threshold")
+    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help=_("cli-lightning-aml-opt-verbose")),
 ):
     """🔍 List all unverified AML payments exceeding threshold.
 
@@ -483,26 +542,24 @@ def list_unverified_aml_payments(
         session = get_session()
         invoice_repo = LightningInvoiceRepository(session=session)
 
-        console.print(
-            f"\n[bold cyan]🔍 Unverified AML Payments (Threshold: {threshold:,.2f} EUR)[/bold cyan]\n"
-        )
+        console.print(_("cli-lightning-aml-list-title", threshold=f"{threshold:,.2f}"))
 
         unverified = invoice_repo.find_unverified_aml_payments(threshold_eur=threshold)
 
         if not unverified:
-            console.print("[green]✅ No unverified payments found[/green]\n")
+            console.print(_("cli-lightning-aml-list-empty"))
             return
 
         # Create table
-        table = Table(title=f"Unverified Payments ({len(unverified)} total)")
-        table.add_column("Payment Hash", style="cyan")
-        table.add_column("Amount (EUR)", style="yellow", justify="right")
-        table.add_column("Settled At", style="white")
-        table.add_column("Fattura ID", style="magenta")
+        table = Table(title=_("cli-lightning-aml-list-table-title", count=len(unverified)))
+        table.add_column(_("cli-lightning-aml-list-col-hash"), style="cyan")
+        table.add_column(_("cli-lightning-aml-list-col-amount"), style="yellow", justify="right")
+        table.add_column(_("cli-lightning-aml-list-col-settled"), style="white")
+        table.add_column(_("cli-lightning-aml-list-col-fattura"), style="magenta")
 
         if verbose:
-            table.add_column("Client ID", style="blue")
-            table.add_column("Description", style="dim")
+            table.add_column(_("cli-lightning-aml-list-col-client"), style="blue")
+            table.add_column(_("cli-lightning-aml-list-col-description"), style="dim")
 
         for inv in unverified:
             row = [
@@ -532,15 +589,11 @@ def list_unverified_aml_payments(
         console.print()
 
         # Show warning
-        console.print(
-            "[bold yellow]⚠️  Action Required: These payments require client identity verification[/bold yellow]"
-        )
-        console.print(
-            "[dim]Use: openfatture lightning aml verify <payment-hash> --verified-by <email>[/dim]\n"
-        )
+        console.print(_("cli-lightning-aml-list-action-required"))
+        console.print(_("cli-lightning-aml-list-action-hint"))
 
     except Exception as e:
-        console.print(f"[bold red]❌ Error listing unverified payments: {e}[/bold red]")
+        console.print(_("cli-lightning-aml-list-error", error=str(e)))
         raise typer.Exit(code=1)
     finally:
         session.close()
@@ -548,10 +601,14 @@ def list_unverified_aml_payments(
 
 @aml_app.command("verify")
 def verify_aml_payment(
-    payment_hash: str = typer.Argument(..., help="Payment hash to verify"),
-    verified_by: str = typer.Option(..., "--verified-by", "-b", help="Email of person verifying"),
-    notes: str = typer.Option(None, "--notes", "-n", help="Verification notes (optional)"),
-    client_id: int = typer.Option(None, "--client-id", "-c", help="Client ID (optional)"),
+    payment_hash: str = typer.Argument(..., help=_("cli-lightning-aml-verify-arg-hash")),
+    verified_by: str = typer.Option(
+        ..., "--verified-by", "-b", help=_("cli-lightning-aml-verify-opt-by")
+    ),
+    notes: str = typer.Option(None, "--notes", "-n", help=_("cli-lightning-aml-verify-opt-notes")),
+    client_id: int = typer.Option(
+        None, "--client-id", "-c", help=_("cli-lightning-aml-verify-opt-client")
+    ),
 ):
     """✅ Mark an AML payment as verified.
 
@@ -572,14 +629,12 @@ def verify_aml_payment(
         session = get_session()
         invoice_repo = LightningInvoiceRepository(session=session)
 
-        console.print(
-            f"\n[bold cyan]✅ Verifying AML Payment: {payment_hash[:12]}...[/bold cyan]\n"
-        )
+        console.print(_("cli-lightning-aml-verify-title", hash=payment_hash[:12]))
 
         # Find invoice
         invoice = invoice_repo.find_by_payment_hash(payment_hash)
         if not invoice:
-            console.print(f"[bold red]❌ Invoice not found: {payment_hash}[/bold red]")
+            console.print(_("cli-lightning-aml-verify-not-found", hash=payment_hash))
             raise typer.Exit(code=1)
 
         # Check if already verified
@@ -590,15 +645,13 @@ def verify_aml_payment(
                 else "unknown date"
             )
             console.print(
-                f"[yellow]⚠️  Payment already verified on {verification_date_str}[/yellow]"
+                _("cli-lightning-aml-verify-already-verified", date=verification_date_str)
             )
             return
 
         # Check if exceeds threshold
         if not invoice.exceeds_aml_threshold:
-            console.print(
-                "[yellow]⚠️  Payment does not exceed AML threshold, but marking as verified anyway[/yellow]"
-            )
+            console.print(_("cli-lightning-aml-verify-below-threshold"))
 
         # Mark as verified
         invoice.mark_aml_verified()
@@ -615,13 +668,15 @@ def verify_aml_payment(
         event_bus = get_global_event_bus()
         event_bus.publish(event)
 
-        console.print("[green]✅ Payment verified successfully[/green]\n")
+        console.print(_("cli-lightning-aml-verify-success"))
 
         # Show summary
         table = Table(show_header=False, box=None, padding=(0, 2))
-        table.add_row("Payment Hash:", f"[cyan]{payment_hash[:16]}...[/cyan]")
         table.add_row(
-            "Amount (EUR):",
+            _("cli-lightning-aml-verify-label-hash"), f"[cyan]{payment_hash[:16]}...[/cyan]"
+        )
+        table.add_row(
+            _("cli-lightning-aml-verify-label-amount"),
             (
                 f"[yellow]{invoice.eur_amount_declared:,.2f} €[/yellow]"
                 if invoice.eur_amount_declared
@@ -629,16 +684,16 @@ def verify_aml_payment(
             ),
         )
         table.add_row(
-            "Settled At:",
+            _("cli-lightning-aml-verify-label-settled"),
             (
                 f"[white]{invoice.settled_at.strftime('%Y-%m-%d %H:%M')}[/white]"
                 if invoice.settled_at
                 else "[dim]N/A[/dim]"
             ),
         )
-        table.add_row("Verified By:", f"[green]{verified_by}[/green]")
+        table.add_row(_("cli-lightning-aml-verify-label-by"), f"[green]{verified_by}[/green]")
         table.add_row(
-            "Verified At:",
+            _("cli-lightning-aml-verify-label-at"),
             (
                 f"[green]{invoice.aml_verification_date.strftime('%Y-%m-%d %H:%M')}[/green]"
                 if invoice.aml_verification_date
@@ -646,13 +701,13 @@ def verify_aml_payment(
             ),
         )
         if notes:
-            table.add_row("Notes:", f"[dim]{notes}[/dim]")
+            table.add_row(_("cli-lightning-aml-verify-label-notes"), f"[dim]{notes}[/dim]")
 
         console.print(table)
         console.print()
 
     except Exception as e:
-        console.print(f"[bold red]❌ Error verifying payment: {e}[/bold red]")
+        console.print(_("cli-lightning-aml-verify-error", error=str(e)))
         raise typer.Exit(code=1)
     finally:
         session.close()

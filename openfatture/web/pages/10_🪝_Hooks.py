@@ -6,12 +6,15 @@ Manage automation hooks and workflow triggers.
 import streamlit as st
 
 from openfatture.web.services.hooks_service import StreamlitHooksService
+from openfatture.web.utils.i18n import get_translator
 
-st.set_page_config(page_title="Hooks & Automation - OpenFatture", page_icon="🪝", layout="wide")
+t = get_translator()
+
+st.set_page_config(page_title=t("page-hooks-page-title"), page_icon="🪝", layout="wide")
 
 # Title
-st.title("🪝 Hooks & Automation")
-st.markdown("### Gestione workflow automatizzati e trigger")
+st.title(t("page-hooks-title"))
+st.markdown(f"### {t('page-hooks-subtitle')}")
 
 # Initialize service
 hooks_service = StreamlitHooksService()
@@ -24,24 +27,29 @@ summary = hooks_service.get_hooks_summary()
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric("Hooks Totali", summary["total_hooks"])
+    st.metric(t("page-hooks-total-hooks"), summary["total_hooks"])
 
 with col2:
-    st.metric("Hooks Attivi", summary["enabled_hooks"])
+    st.metric(t("page-hooks-enabled-hooks"), summary["enabled_hooks"])
 
 with col3:
-    st.metric("Pre-hooks", summary["by_event_type"]["pre"])
+    st.metric(t("page-hooks-pre-hooks"), summary["by_event_type"]["pre"])
 
 with col4:
-    st.metric("Post-hooks", summary["by_event_type"]["post"])
+    st.metric(t("page-hooks-post-hooks"), summary["by_event_type"]["post"])
 
 # Tabs for different views
 tab_overview, tab_manage, tab_create, tab_test = st.tabs(
-    ["📊 Panoramica", "⚙️ Gestione", "➕ Crea Hook", "🧪 Test"]
+    [
+        t("page-hooks-tab-overview"),
+        t("page-hooks-tab-manage"),
+        t("page-hooks-tab-create"),
+        t("page-hooks-tab-test"),
+    ]
 )
 
 with tab_overview:
-    st.subheader("📊 Panoramica Hooks")
+    st.subheader(t("page-hooks-overview-title"))
 
     # Event type breakdown
     if hooks:
@@ -77,17 +85,17 @@ with tab_overview:
 
                     with col_d:
                         if hook["enabled"]:
-                            st.success("Attivo")
+                            st.success(t("page-hooks-active"))
                         else:
-                            st.warning("Disattivo")
+                            st.warning(t("page-hooks-inactive"))
     else:
-        st.info("🎣 Nessun hook trovato. Crea il tuo primo hook nella tab 'Crea Hook'!")
+        st.info(t("page-hooks-no-hooks-info"))
 
 with tab_manage:
-    st.subheader("⚙️ Gestione Hooks")
+    st.subheader(t("page-hooks-manage-title"))
 
     if hooks:
-        st.markdown("### Toggle Stato Hooks")
+        st.markdown(f"### {t('page-hooks-toggle-state-title')}")
 
         for hook in hooks:
             col1, col2, col3 = st.columns([3, 1, 2])
@@ -100,28 +108,32 @@ with tab_manage:
             with col2:
                 # Toggle switch
                 enabled = st.toggle(
-                    f"Attiva {hook['name']}",
+                    t("page-hooks-activate-label", name=hook["name"]),
                     value=hook["enabled"],
                     key=f"toggle_{hook['name']}",
-                    help=f"Abilita/disabilita l'hook {hook['name']}",
+                    help=t("page-hooks-toggle-help", name=hook["name"]),
                 )
 
                 # Update status if changed
                 if enabled != hook["enabled"]:
                     if hooks_service.toggle_hook_status(hook["name"], enabled):
                         if enabled:
-                            st.success(f"✅ Hook '{hook['name']}' attivato")
+                            st.success(t("page-hooks-activated-success", name=hook["name"]))
                         else:
-                            st.warning(f"⏸️ Hook '{hook['name']}' disattivato")
+                            st.warning(t("page-hooks-deactivated-success", name=hook["name"]))
                         st.rerun()
                     else:
-                        st.error("❌ Errore nell'aggiornamento dello stato del hook")
+                        st.error(t("page-hooks-update-error"))
 
             with col3:
                 if st.button(
-                    "👁️ Dettagli", key=f"details_{hook['name']}", help="Mostra dettagli hook"
+                    t("page-hooks-details-btn"),
+                    key=f"details_{hook['name']}",
+                    help=t("page-hooks-show-details-help"),
                 ):
-                    with st.expander(f"Dettagli {hook['name']}", expanded=True):
+                    with st.expander(
+                        t("page-hooks-details-title", name=hook["name"]), expanded=True
+                    ):
                         st.json(
                             {
                                 "name": hook["name"],
@@ -136,56 +148,60 @@ with tab_manage:
                             }
                         )
     else:
-        st.info("🎣 Nessun hook da gestire")
+        st.info(t("page-hooks-no-hooks-manage"))
 
 with tab_create:
-    st.subheader("➕ Crea Nuovo Hook")
+    st.subheader(t("page-hooks-create-title"))
 
     with st.form("create_hook_form"):
         col1, col2 = st.columns(2)
 
         with col1:
             hook_name = st.text_input(
-                "Nome Hook",
-                placeholder="es: post-invoice-send",
-                help="Nome del hook (usa prefissi pre-, post-, on-)",
+                t("page-hooks-hook-name-label"),
+                placeholder=t("page-hooks-hook-name-placeholder"),
+                help=t("page-hooks-hook-name-help"),
             )
 
             hook_type = st.selectbox(
-                "Tipo Script", ["bash", "python"], help="Tipo di script per l'hook"
+                t("page-hooks-script-type-label"),
+                ["bash", "python"],
+                help=t("page-hooks-script-type-help"),
             )
 
         with col2:
             description = st.text_input(
-                "Descrizione",
-                placeholder="Cosa fa questo hook...",
-                help="Breve descrizione del hook",
+                t("page-hooks-description-label"),
+                placeholder=t("page-hooks-description-placeholder"),
+                help=t("page-hooks-description-help"),
             )
 
             event_type = st.selectbox(
-                "Tipo Evento", ["pre", "post", "on"], help="Quando viene eseguito l'hook"
+                t("page-hooks-event-type-label"),
+                ["pre", "post", "on"],
+                help=t("page-hooks-event-type-help"),
             )
 
         # Preview template
         if hook_name and hook_type:
-            st.markdown("### 📋 Anteprima Template")
+            st.markdown(f"### {t('page-hooks-template-preview')}")
             template = hooks_service.get_hook_template(hook_type)
 
             # Customize template
             if description:
                 template = template.replace("Hook description here", description)
 
-            with st.expander("👁️ Codice Template", expanded=False):
+            with st.expander(t("page-hooks-template-code"), expanded=False):
                 st.code(template, language=hook_type)
 
         # Submit button
-        submitted = st.form_submit_button("🚀 Crea Hook", type="primary")
+        submitted = st.form_submit_button(t("page-hooks-create-hook-btn"), type="primary")
 
         if submitted:
             if not hook_name:
-                st.error("❌ Inserisci un nome per l'hook")
+                st.error(t("page-hooks-name-required-error"))
             elif not hook_name.startswith(f"{event_type}-"):
-                st.warning(f"💡 Suggerimento: il nome dovrebbe iniziare con '{event_type}-'")
+                st.warning(t("page-hooks-name-prefix-warning", prefix=event_type))
 
             else:
                 success, message = hooks_service.create_hook_from_template(
@@ -194,59 +210,73 @@ with tab_create:
 
                 if success:
                     st.success(f"✅ {message}")
-                    st.info("🔄 Ricarica la pagina per vedere il nuovo hook")
+                    st.info(t("page-hooks-reload-page-info"))
                 else:
                     st.error(f"❌ {message}")
 
 with tab_test:
-    st.subheader("🧪 Test Hooks")
+    st.subheader(t("page-hooks-test-title"))
 
     if hooks:
         # Hook selection
         hook_names = [hook["name"] for hook in hooks]
         selected_hook = st.selectbox(
-            "Seleziona Hook da Testare", hook_names, help="Scegli l'hook da validare"
+            t("page-hooks-select-hook-label"), hook_names, help=t("page-hooks-select-hook-help")
         )
 
         if selected_hook:
             hook_info = next(h for h in hooks if h["name"] == selected_hook)
 
-            st.markdown("### 📋 Informazioni Hook")
+            st.markdown(f"### {t('page-hooks-hook-info-title')}")
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.metric("Tipo Evento", hook_info["event_type"].upper())
+                st.metric(t("page-hooks-event-type-metric"), hook_info["event_type"].upper())
 
             with col2:
-                st.metric("Stato", "Attivo" if hook_info["enabled"] else "Disattivo")
+                st.metric(
+                    t("page-hooks-status-metric"),
+                    t("page-hooks-active") if hook_info["enabled"] else t("page-hooks-inactive"),
+                )
 
             with col3:
-                st.metric("Timeout", f"{hook_info['timeout']}s")
+                st.metric(t("page-hooks-timeout-metric"), f"{hook_info['timeout']}s")
 
             # Test button
-            if st.button("🧪 Valida Hook", type="primary", use_container_width=True):
-                with st.spinner("Validando hook..."):
+            if st.button(
+                t("page-hooks-validate-hook-btn"), type="primary", use_container_width=True
+            ):
+                with st.spinner(t("page-hooks-validating-spinner")):
                     result = hooks_service.test_hook_execution(selected_hook)
 
                 if result["success"]:
-                    st.success("✅ Hook validato con successo!")
+                    st.success(t("page-hooks-validation-success"))
 
                     if result["result"]:
                         col_a, col_b, col_c = st.columns(3)
                         with col_a:
-                            st.metric("Righe Codice", result["result"]["line_count"])
+                            st.metric(
+                                t("page-hooks-code-lines-metric"), result["result"]["line_count"]
+                            )
                         with col_b:
-                            st.metric("Dimensione", f"{result['result']['file_size']} bytes")
+                            st.metric(
+                                t("page-hooks-size-metric"),
+                                f"{result['result']['file_size']} bytes",
+                            )
                         with col_c:
-                            executable = "Sì" if result["result"]["is_executable"] else "No"
-                            st.metric("Eseguibile", executable)
+                            executable = (
+                                t("page-hooks-yes")
+                                if result["result"]["is_executable"]
+                                else t("page-hooks-no")
+                            )
+                            st.metric(t("page-hooks-executable-metric"), executable)
 
                         st.info(f"💡 {result['result']['message']}")
                 else:
-                    st.error(f"❌ Errore validazione: {result['error']}")
+                    st.error(t("page-hooks-validation-error", error=result["error"]))
 
             # Show hook content
-            if st.button("📄 Mostra Codice", use_container_width=True):
+            if st.button(t("page-hooks-show-code-btn"), use_container_width=True):
                 try:
                     hook_config = hooks_service.registry.get_hook(selected_hook)
                     if hook_config and hook_config.script_path.exists():
@@ -258,20 +288,18 @@ with tab_test:
                             ),
                         )
                     else:
-                        st.error("❌ File hook non trovato")
+                        st.error(t("page-hooks-file-not-found-error"))
                 except Exception as e:
-                    st.error(f"❌ Errore lettura file: {e}")
+                    st.error(t("page-hooks-file-read-error", error=str(e)))
     else:
-        st.info("🎣 Nessun hook disponibile per il test")
+        st.info(t("page-hooks-no-hooks-test"))
 
 # Footer info
 st.markdown("---")
 st.markdown(
-    """
+    f"""
     <div style='text-align: center; color: #666; font-size: 0.9em;'>
-    🪝 <strong>Hooks System:</strong> Automazione workflow basata su eventi •
-    📍 <strong>Directory:</strong> ~/.openfatture/hooks/ •
-    📚 <strong>Documentazione:</strong> Vedi CLI per esempi avanzati
+    {t("page-hooks-footer-info")}
     </div>
     """,
     unsafe_allow_html=True,
