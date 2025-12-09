@@ -170,6 +170,11 @@ class InteractiveChatUI:
                         # Get user input
                         user_input = await self._get_user_input()
 
+                        # Handle Ctrl+C (questionary returns None on KeyboardInterrupt)
+                        if user_input is None:
+                            console.print("\n[yellow]Uscita in corso...[/yellow]")
+                            break
+
                         if not user_input:
                             continue
 
