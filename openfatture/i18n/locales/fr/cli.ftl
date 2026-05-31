@@ -708,19 +708,16 @@ cli-events-dashboard-column-events = Événements
 ### Messages - Messages de Sortie
 cli-events-no-events = [yellow]Aucun événement trouvé correspondant aux critères[/yellow]
 cli-events-show-not-found = [red]Événement avec ID '{ $event_id }' non trouvé[/red]
-cli-events-filters-applied =
-    [dim]Filtres : { $filters }[/dim]
+cli-events-filters-applied = [dim]Filtres : { $filters }[/dim]
 cli-events-stats-all-time = Tout le Temps
 cli-events-stats-last-hours = { $hours } Dernières Heures
 cli-events-stats-last-days = { $days } Derniers Jours
-cli-events-stats-total =
-    [bold]Événements Totaux :[/bold] { $total }
+cli-events-stats-total = [bold]Événements Totaux :[/bold] { $total }
 
 cli-events-stats-most-recent = [bold]Événement le Plus Récent :[/bold] { $event_type } le { $timestamp }
 cli-events-stats-oldest = [bold]Événement le Plus Ancien :[/bold] { $event_type } le { $timestamp }
 cli-events-timeline-no-events = [yellow]Aucun événement trouvé pour { $entity_type } avec ID { $entity_id }[/yellow]
-cli-events-timeline-total =
-    [dim]Total des événements : { $total }[/dim]
+cli-events-timeline-total = [dim]Total des événements : { $total }[/dim]
 cli-events-search-no-results = [yellow]Aucun événement trouvé correspondant à '{ $query }'[/yellow]
 cli-events-types-no-events = [yellow]Aucun événement enregistré pour le moment[/yellow]
 cli-events-dashboard-most-recent = [dim]Plus Récent : { $event_type } le { $timestamp }[/dim]
@@ -771,9 +768,7 @@ cli-lightning-liquidity-not-available = Surveillance de liquidité non disponibl
 cli-lightning-compliance-opt-tax-year = Année fiscale à vérifier (par défaut : année en cours)
 cli-lightning-compliance-opt-verbose = Afficher les informations détaillées
 
-cli-lightning-compliance-title =
-
-    [bold cyan]Vérification de Conformité Lightning - { $year }[/bold cyan]
+cli-lightning-compliance-title = [bold cyan]Vérification de Conformité Lightning - { $year }[/bold cyan]
 
 cli-lightning-compliance-summary-title = [bold]Résumé de l'Année Fiscale[/bold]
 cli-lightning-compliance-summary-payments = Nombre de paiements :
@@ -822,16 +817,12 @@ cli-lightning-report-saved = [green]Rapport enregistré dans : { $path }[/green]
 cli-lightning-report-summary = [cyan]Total de factures dans le rapport : { $count }[/cyan]
 
 ### Quadro RW Report
-cli-lightning-report-quadro-title =
-
-    [bold cyan]Génération du Rapport Quadro RW - { $year } ({ $format })[/bold cyan]
+cli-lightning-report-quadro-title = [bold cyan]Génération du Rapport Quadro RW - { $year } ({ $format })[/bold cyan]
 
 cli-lightning-report-quadro-error = [bold red]Erreur lors de la génération du rapport Quadro RW : { $error }[/bold red]
 
 ### Capital Gains Report
-cli-lightning-report-gains-title =
-
-    [bold cyan]Génération du Rapport Plus-Values - { $year } ({ $format })[/bold cyan]
+cli-lightning-report-gains-title = [bold cyan]Génération du Rapport Plus-Values - { $year } ({ $format })[/bold cyan]
 
 cli-lightning-report-gains-summary-count = [cyan]Total de factures avec plus-values : { $count }[/cyan]
 cli-lightning-report-gains-summary-total = [yellow]Plus-values totales : { $total } EUR[/yellow]
@@ -843,9 +834,7 @@ cli-lightning-aml-opt-threshold = Seuil LCB en EUR
 cli-lightning-aml-opt-format = Format de sortie : json uniquement
 cli-lightning-aml-opt-verbose = Afficher les informations détaillées
 
-cli-lightning-aml-report-title =
-
-    [bold cyan]Génération du Rapport de Conformité LCB (Seuil : { $threshold } EUR)[/bold cyan]
+cli-lightning-aml-report-title = [bold cyan]Génération du Rapport de Conformité LCB (Seuil : { $threshold } EUR)[/bold cyan]
 
 cli-lightning-aml-report-summary-total = [cyan]Total au-dessus du seuil : { $total }[/cyan]
 cli-lightning-aml-report-summary-verified = [green]Vérifiés : { $verified }[/green]
@@ -853,17 +842,13 @@ cli-lightning-aml-report-summary-unverified-ok = Non vérifiés : 0
 cli-lightning-aml-report-summary-unverified-warning = Non vérifiés : { $count }
 cli-lightning-aml-report-summary-rate = [yellow]Taux de conformité : { $rate }%[/yellow]
 
-cli-lightning-aml-report-action-required =
-
-    [bold yellow]Action Requise : Vérifier les paiements non vérifiés avec le processus LCB[/bold yellow]
+cli-lightning-aml-report-action-required = [bold yellow]Action Requise : Vérifier les paiements non vérifiés avec le processus LCB[/bold yellow]
 cli-lightning-aml-report-action-hint = [dim]Utilisez : openfatture lightning aml list-unverified pour voir les détails[/dim]
 
 cli-lightning-aml-report-error = [bold red]Erreur lors de la génération du rapport LCB : { $error }[/bold red]
 
 ### AML List Unverified Command
-cli-lightning-aml-list-title =
-
-    [bold cyan]Paiements LCB Non Vérifiés (Seuil : { $threshold } EUR)[/bold cyan]
+cli-lightning-aml-list-title = [bold cyan]Paiements LCB Non Vérifiés (Seuil : { $threshold } EUR)[/bold cyan]
 
 cli-lightning-aml-list-empty = [green]Aucun paiement non vérifié trouvé[/green]
 
@@ -886,9 +871,7 @@ cli-lightning-aml-verify-opt-by = Email de la personne qui vérifie
 cli-lightning-aml-verify-opt-notes = Notes de vérification (optionnel)
 cli-lightning-aml-verify-opt-client = ID Client (optionnel)
 
-cli-lightning-aml-verify-title =
-
-    [bold cyan]Vérification du Paiement LCB : { $hash }...[/bold cyan]
+cli-lightning-aml-verify-title = [bold cyan]Vérification du Paiement LCB : { $hash }...[/bold cyan]
 
 cli-lightning-aml-verify-not-found = [bold red]Facture non trouvée : { $hash }[/bold red]
 cli-lightning-aml-verify-already-verified = [yellow]Paiement déjà vérifié le { $date }[/yellow]
@@ -915,34 +898,22 @@ cli-report-clienti-help-anno = Année
 cli-report-scadenze-help-finestra = Nombre de jours considérés comme "bientôt échus" (par défaut : 14)
 
 ### Titles and Headers - TVA Report
-cli-report-iva-title =
+cli-report-iva-title = [bold blue]Rapport TVA - { $anno }[/bold blue]
 
-    [bold blue]Rapport TVA - { $anno }[/bold blue]
+cli-report-iva-quarter = [cyan]Trimestre : { $trimestre } ({ $mese_inizio }-{ $mese_fine })[/cyan]
 
-cli-report-iva-quarter =
-
-    [cyan]Trimestre : { $trimestre } ({ $mese_inizio }-{ $mese_fine })[/cyan]
-
-cli-report-iva-full-year =
-
-    [cyan]Année complète[/cyan]
+cli-report-iva-full-year = [cyan]Année complète[/cyan]
 
 cli-report-iva-summary-title = Résumé TVA
-cli-report-iva-breakdown-title =
-
-    [bold]Répartition par taux de TVA :[/bold]
+cli-report-iva-breakdown-title = [bold]Répartition par taux de TVA :[/bold]
 
 ### Titles and Headers - Client Report
-cli-report-clienti-title =
-
-    [bold blue]Rapport de Chiffre d'Affaires Clients - { $anno }[/bold blue]
+cli-report-clienti-title = [bold blue]Rapport de Chiffre d'Affaires Clients - { $anno }[/bold blue]
 
 cli-report-clienti-table-title = Meilleurs Clients - { $anno }
 
 ### Titles and Headers - Due Dates Report
-cli-report-scadenze-title =
-
-    [bold blue]Aperçu des Dates d'Échéance[/bold blue]
+cli-report-scadenze-title = [bold blue]Aperçu des Dates d'Échéance[/bold blue]
 
 ### Table Columns - TVA Report
 cli-report-iva-column-metric = Métrique
@@ -981,22 +952,14 @@ cli-report-no-invoices-year = [yellow]Aucune facture trouvée pour l'année sél
 cli-report-iva-error-invalid-quarter = [red]Trimestre non valide. Utilisez Q1, Q2, Q3 ou Q4[/red]
 
 ### Messages - Client Report
-cli-report-clienti-total-revenue =
-
-    [bold]Chiffre d'affaires total : { $totale }[/bold]
+cli-report-clienti-total-revenue = [bold]Chiffre d'affaires total : { $totale }[/bold]
 
 ### Messages - Due Dates Report
-cli-report-scadenze-no-outstanding =
+cli-report-scadenze-no-outstanding = [green]Aucun paiement en attente. Toutes les factures sont réglées ![/green]
 
-    [green]Aucun paiement en attente. Toutes les factures sont réglées ![/green]
+cli-report-scadenze-hidden-upcoming = [dim]… { $count } paiements futurs supplémentaires non affichés. Utilisez --finestra ou exportez les données du module de paiement pour plus de détails.[/dim]
 
-cli-report-scadenze-hidden-upcoming =
-
-    [dim]… { $count } paiements futurs supplémentaires non affichés. Utilisez --finestra ou exportez les données du module de paiement pour plus de détails.[/dim]
-
-cli-report-scadenze-total-outstanding =
-
-    [bold]Solde total restant : { $totale }[/bold]
+cli-report-scadenze-total-outstanding = [bold]Solde total restant : { $totale }[/bold]
 
 ### Section Titles - Due Dates Report
 cli-report-scadenze-section-overdue = [red]En retard[/red]
@@ -1049,8 +1012,7 @@ cli-pec-test-more-testing = [dim]Pour plus de tests d'email :[/dim]
 cli-pec-test-cmd-email-test = [cyan]openfatture email test[/cyan]  - Test email complet
 cli-pec-test-cmd-email-preview = [cyan]openfatture email preview[/cyan] - Aperçu des modèles
 
-cli-pec-test-failed =
-    [red]Test échoué : { $error }[/red]
+cli-pec-test-failed = [red]Test échoué : { $error }[/red]
 cli-pec-test-common-issues = [yellow]Problèmes courants :[/yellow]
 cli-pec-issue-credentials = • Identifiants PEC incorrects
 cli-pec-issue-smtp = • Serveur SMTP incorrect
@@ -1105,16 +1067,13 @@ cli-notifiche-label-xml-path = Chemin XML
 cli-notifiche-file-not-found = [red]Fichier non trouvé : { $file_path }[/red]
 cli-notifiche-file-label = [cyan]Fichier :[/cyan] { $name }
 cli-notifiche-size-label = [cyan]Taille :[/cyan] { $size } octets
-cli-notifiche-auto-email-enabled =
-    [dim]Email automatique activé { $email }[/dim]
+cli-notifiche-auto-email-enabled = [dim]Email automatique activé { $email }[/dim]
 
 cli-notifiche-processing = Traitement de la notification...
-cli-notifiche-error =
-    [red]Erreur : { $error }[/red]
+cli-notifiche-error = [red]Erreur : { $error }[/red]
 cli-notifiche-success = [bold green]Notification traitée avec succès ![/bold green]
 cli-notifiche-errors-count = { $count } erreur(s)
-cli-notifiche-email-sent =
-    [dim]Notification par email envoyée à { $email }[/dim]
+cli-notifiche-email-sent = [dim]Notification par email envoyée à { $email }[/dim]
 
 cli-notifiche-no-notifications = [yellow]Aucune notification trouvée[/yellow]
 cli-notifiche-process-hint = [dim]Traitez les notifications avec :[/dim]
