@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
-from openfatture.ai.domain.context import PaymentInsightContext
-from openfatture.ai.domain.response import ResponseStatus
 from openfatture.payment.domain.value_objects import PaymentInsight
 
 if TYPE_CHECKING:
@@ -30,6 +28,10 @@ class TransactionInsightService:
         payments: list[Pagamento],
     ) -> PaymentInsight | None:
         """Analyze a bank transaction description/reference and return AI insight."""
+        # Imported lazily: keeps the payment service (and the payment CLI that
+        # imports it) from eagerly pulling the whole openfatture.ai stack.
+        from openfatture.ai.domain.context import PaymentInsightContext
+        from openfatture.ai.domain.response import ResponseStatus
 
         context = PaymentInsightContext(
             user_input=transaction.description or transaction.reference or "",

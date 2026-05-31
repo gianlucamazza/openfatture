@@ -7,9 +7,6 @@ import typer
 from rich.console import Console
 from sqlalchemy.orm import Session
 
-from ...ai.agents.payment_insight_agent import PaymentInsightAgent
-from ...ai.providers.base import ProviderError
-from ...ai.providers.factory import create_provider
 from ...storage.database import get_db
 from ...utils.async_bridge import run_async
 from ...utils.logging import get_logger
@@ -59,6 +56,12 @@ def _get_transaction_insight_service() -> TransactionInsightService | None:
         return _INSIGHT_SERVICE
 
     _INSIGHT_INITIALIZED = True
+
+    # Imported lazily: the payment CLI must not drag in the whole AI/providers
+    # stack (and its heavy transitive ML deps) just to run non-AI commands.
+    from ...ai.agents.payment_insight_agent import PaymentInsightAgent
+    from ...ai.providers.base import ProviderError
+    from ...ai.providers.factory import create_provider
 
     try:
         provider = create_provider()

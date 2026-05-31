@@ -11,8 +11,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
-from sentence_transformers import SentenceTransformer
-
 from openfatture.ai.rag.config import RAGConfig
 from openfatture.utils.logging import get_logger
 
@@ -243,7 +241,11 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
         self.model_name_str = model_name
         self.device = device
 
-        # Load model
+        # Load model. Imported lazily so that importing this module (and the
+        # whole AI/CLI stack that transitively reaches it) does not pull in
+        # sentence-transformers/torch/transformers, which costs ~20s.
+        from sentence_transformers import SentenceTransformer
+
         self.model = SentenceTransformer(model_name, device=device)
 
         logger.info(
