@@ -30,7 +30,7 @@ jobs:
           lfs: true
 
       - name: Download videos from generation workflow
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v21
         with:
           workflow: media-generation.yml
           run_id: ${{ github.event.client_payload.run_id || inputs.source_run_id }}
