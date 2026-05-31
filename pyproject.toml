@@ -252,6 +252,7 @@ markers = [
   "performance: performance benchmarks and load tests",
   "slow: slow tests that may take >5 seconds",
   "benchmark: pytest-benchmark tests (legacy marker)",
+  "real_db: test opts out of session mocking and uses the real in-memory database",
 ]
 
 [tool.coverage.run]

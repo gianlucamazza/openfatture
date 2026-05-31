@@ -104,11 +104,23 @@ def sample_workflow_state():
 
 
 @pytest.fixture(autouse=True)
-def mock_database():
-    """Mock database initialization."""
+def mock_database(request):
+    """Provide a mocked DB session at the real seam the workflow uses.
+
+    The workflow opens sessions via ``with db_session() as db:``; patch that
+    context manager so its ``__enter__`` yields a controllable mock session.
+
+    Tests marked ``@pytest.mark.real_db`` opt out: the node under test persists
+    a real Fattura (and relies on a real ``flush()`` to populate its id), so it
+    runs against the real in-memory database wired by the ``tests/ai`` autouse
+    fixture instead.
+    """
+    if request.node.get_closest_marker("real_db") is not None:
+        yield None
+        return
     with patch(
-        "openfatture.ai.orchestration.workflows.invoice_creation._get_session"
-    ) as mock_get_session:
+        "openfatture.ai.orchestration.workflows.invoice_creation.db_session"
+    ) as mock_db_session:
         mock_session = MagicMock()
         # Mock the query chain for statistics
         mock_query = MagicMock()
@@ -127,7 +139,8 @@ def mock_database():
         mock_result.fetchone.return_value = (5, 15000.50)
         mock_session.execute.return_value = mock_result
 
-        mock_get_session.return_value = mock_session
+        mock_db_session.return_value.__enter__.return_value = mock_session
+        mock_db_session.return_value.__exit__.return_value = False
         yield mock_session
 
 
@@ -172,10 +185,10 @@ class TestInvoiceCreationWorkflow:
 
         # Mock database session and queries
         with patch(
-            "openfatture.ai.orchestration.workflows.invoice_creation._get_session"
+            "openfatture.ai.orchestration.workflows.invoice_creation.db_session"
         ) as mock_get_session:
             mock_session = MagicMock()
-            mock_get_session.return_value = mock_session
+            mock_get_session.return_value.__enter__.return_value = mock_session
 
             # Mock year-to-date statistics query - simplified
             mock_session.execute.return_value.fetchone.return_value = (5, 15000.50)
@@ -220,11 +233,11 @@ class TestInvoiceCreationWorkflow:
 
         # Mock database query for client
         with patch(
-            "openfatture.ai.orchestration.workflows.invoice_creation._get_session"
+            "openfatture.ai.orchestration.workflows.invoice_creation.db_session"
         ) as mock_get_session:
             mock_session = MagicMock()
             mock_session.query.return_value.filter.return_value.first.return_value = real_client
-            mock_get_session.return_value = mock_session
+            mock_get_session.return_value.__enter__.return_value = mock_session
 
             # Set client_id in state to match real_client
             sample_workflow_state.client_id = real_client.id
@@ -256,11 +269,11 @@ class TestInvoiceCreationWorkflow:
 
         # Mock database query for client
         with patch(
-            "openfatture.ai.orchestration.workflows.invoice_creation._get_session"
+            "openfatture.ai.orchestration.workflows.invoice_creation.db_session"
         ) as mock_get_session:
             mock_session = MagicMock()
             mock_session.query.return_value.filter.return_value.first.return_value = real_client
-            mock_get_session.return_value = mock_session
+            mock_get_session.return_value.__enter__.return_value = mock_session
 
             # Set client_id in state to match real_client
             sample_workflow_state.client_id = real_client.id
@@ -305,8 +318,27 @@ class TestInvoiceCreationWorkflow:
         assert agent_result.confidence == 0.9
 
     @pytest.mark.asyncio
+    @pytest.mark.real_db
     async def test_compliance_check_node(self, mock_provider, sample_workflow_state):
-        """Test compliance check node."""
+        """Test compliance check node.
+
+        This node persists a Fattura and depends on a real ``flush()`` to assign
+        its id, so it runs against the real in-memory database (``real_db``) with
+        a seeded client rather than a mocked session.
+        """
+        from openfatture.storage.session import db_session
+
+        with db_session() as db:
+            cliente = Cliente(
+                denominazione="Test Client Srl",
+                partita_iva="12345678901",
+                codice_destinatario="ABCDEFGH",
+                nazione="IT",
+            )
+            db.add(cliente)
+            db.commit()
+            sample_workflow_state.client_id = cliente.id
+
         workflow = InvoiceCreationWorkflow(provider=mock_provider, enable_checkpointing=False)
 
         # Mock compliance checker
@@ -501,10 +533,10 @@ class TestInvoiceCreationWorkflow:
 
         # Mock database operations - simplified approach
         with patch(
-            "openfatture.ai.orchestration.workflows.invoice_creation._get_session"
+            "openfatture.ai.orchestration.workflows.invoice_creation.db_session"
         ) as mock_get_session:
             mock_session = MagicMock()
-            mock_get_session.return_value = mock_session
+            mock_get_session.return_value.__enter__.return_value = mock_session
 
             # Mock all database operations to succeed
             mock_session.add.return_value = None
