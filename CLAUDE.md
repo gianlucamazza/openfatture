@@ -797,7 +797,7 @@ uv run openfatture payment status                       # View payment status
 
 **XML Generation Flow:**
 1. Create `Fattura` model with `Riga` (invoice lines)
-2. `FatturaXMLGenerator` generates FatturaPA XML v1.9
+2. `FatturaPABuilder` (`openfatture/sdi/xml_builder/fatturapa.py`) generates FatturaPA XML v1.9
 3. `XSDValidator` validates against official schema
 4. Optional: `DigitalSigner` signs XML with PKCS#12 certificate
 5. `TemplatePECSender` sends to `sdi01@pec.fatturapa.it`
@@ -888,9 +888,23 @@ See `docs/CONFIGURATION.md` for complete reference.
 ## Code Style
 
 - **Formatter**: Black (line length 100)
-- **Linter**: Ruff (pycodestyle, pyflakes, isort, flake8-bugbear)
+- **Linter**: Ruff (pycodestyle, pyflakes, isort, flake8-bugbear, pyupgrade); PEP 695 generics (`def f[T]`)
 - **Type checking**: MyPy (strict mode, but tests are ignored)
-- **Pre-commit hooks**: Automatically run black, ruff, mypy before commit
+- **Pre-commit hooks**: Automatically run black, ruff, mypy, bandit before commit
+- **No emojis**: plain text only — no emoji/pictographic characters in code, CLI help,
+  Rich/Streamlit UI, i18n bundles, email templates, docs, or filenames.
+
+### Structural conventions (2026 refactor)
+- **CLI command groups are packages, not single files**: `cli/commands/ai/` and
+  `payment/cli/` split by responsibility, each with an `_app.py` (Typer app + shared
+  helpers) and per-group modules; the `__init__` imports the modules to register commands.
+  AI tools live in the `ai/tools/invoice_tools/` package.
+- **Heavy ML deps are lazy**: `sentence-transformers`, the AI providers/agents and the
+  `openfatture.ai` stack are imported inside functions (e.g. `ai/rag/embeddings.py`'s
+  `_sentence_transformer()` seam, `payment/cli/_app.py`), not at module top level, so the
+  CLI starts fast. Tests patch the local seam, not the third-party global.
+- **Streamlit pages**: `web/pages/N_Name.py` (no emoji prefix); navigation/`st.switch_page`
+  paths and `AppTest.from_file` must match these names.
 
 ## Key Implementation Notes
 
@@ -908,7 +922,7 @@ See `docs/CONFIGURATION.md` for complete reference.
 **Create and send invoice:**
 ```python
 from openfatture.storage.database.models import Fattura, Riga, Cliente
-from openfatture.core.xml.generator import FatturaXMLGenerator
+from openfatture.sdi.xml_builder.fatturapa import FatturaPABuilder
 from openfatture.sdi.validator.xsd_validator import XSDValidator
 from openfatture.utils.email.sender import TemplatePECSender
 
@@ -916,8 +930,8 @@ from openfatture.utils.email.sender import TemplatePECSender
 fattura = Fattura(numero="001", data=date.today(), ...)
 riga = Riga(descrizione="Consulting", prezzo_unitario=1000, ...)
 
-# Generate XML
-xml_tree = FatturaXMLGenerator(fattura).generate()
+# Generate XML (FatturaPABuilder(settings).build(fattura) -> XML string)
+xml_str = FatturaPABuilder(get_settings()).build(fattura)
 
 # Validate
 validator = XSDValidator()
