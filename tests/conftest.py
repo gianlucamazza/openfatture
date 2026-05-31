@@ -62,6 +62,142 @@ def db_session(db_engine) -> Generator[Session, None, None]:
     session.close()
 
 
+# ============================================================================
+# Runtime database fixture (real, isolated, wired into the global session)
+# ============================================================================
+#
+# Unit-style fixtures above (``db_engine``/``db_session``) hand back a session
+# object for direct ORM assertions. They do NOT wire the *global* engine, so
+# production code that opens its own session via ``db_session()`` /
+# ``get_session()`` — CLI commands, web services, agents — cannot see their
+# data.
+#
+# ``runtime_db`` closes that gap: it points a temp, file-backed SQLite database
+# at the global engine AND at ``get_settings()`` (via environment variables), so
+# code under test and the test's own seeding share ONE database. A file (rather
+# than ``:memory:``) is used deliberately: CLI commands re-invoke
+# ``init_db(settings.database_url)`` on every call, which rebinds the engine;
+# pointing that URL at a stable file means the re-init resolves to the same DB
+# instead of a fresh empty in-memory one.
+
+# Canonical test cedente/PEC configuration, injected via env so that
+# ``get_settings()`` (a process-wide singleton) resolves complete, valid
+# settings for every command module without per-module patching.
+TEST_RUNTIME_ENV = {
+    "CEDENTE_DENOMINAZIONE": "Test Company SRL",
+    "CEDENTE_PARTITA_IVA": "12345678903",
+    "CEDENTE_CODICE_FISCALE": "TSTCMP80A01H501X",
+    "CEDENTE_REGIME_FISCALE": "RF19",
+    "CEDENTE_INDIRIZZO": "Via Test 123",
+    "CEDENTE_CAP": "00100",
+    "CEDENTE_COMUNE": "Roma",
+    "CEDENTE_PROVINCIA": "RM",
+    "CEDENTE_NAZIONE": "IT",
+    "PEC_ADDRESS": "test@pec.example.com",
+    "PEC_PASSWORD": TEST_PEC_PASSWORD,
+    "PEC_SMTP_SERVER": "smtp.test.com",
+    "PEC_SMTP_PORT": "465",
+}
+
+
+@pytest.fixture
+def runtime_db(tmp_path, monkeypatch):
+    """Real, isolated DB wired into the global session factory and settings.
+
+    Yields the global ``SessionLocal`` (a sessionmaker). Open a session from it
+    to seed data; code under test that calls ``db_session()`` / ``init_db()``
+    shares the same database.
+    """
+    import openfatture.storage.database.base as db_base
+    from openfatture.utils import config as config_module
+
+    url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    monkeypatch.setenv("DATABASE_URL", url)
+    for key, value in TEST_RUNTIME_ENV.items():
+        monkeypatch.setenv(key, value)
+
+    # Rebuild the settings singleton so every get_settings() caller sees the
+    # test database_url and cedente/PEC config, then create the schema.
+    config_module.reload_settings()
+    db_base.init_db(url)
+    try:
+        yield db_base.SessionLocal
+    finally:
+        if db_base.engine is not None:
+            db_base.engine.dispose()
+        db_base.engine = None
+        db_base.SessionLocal = None
+        config_module._settings = None
+
+
+@pytest.fixture
+def runtime_session(runtime_db) -> Generator[Session, None, None]:
+    """A session bound to the ``runtime_db`` for seeding test data."""
+    session = runtime_db()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def seed_cliente(runtime_session: Session) -> Cliente:
+    """Persist a sample client into the runtime database."""
+    cliente = Cliente(
+        denominazione="Acme Corporation",
+        partita_iva="12345678901",
+        codice_fiscale="CMPACM80A01H501Z",
+        codice_destinatario="ABC1234",
+        pec="acme@pec.it",
+        indirizzo="Via Roma 1",
+        cap="20100",
+        comune="Milano",
+        provincia="MI",
+        nazione="IT",
+        email="contact@acme.com",
+        telefono="+39 02 12345678",
+    )
+    runtime_session.add(cliente)
+    runtime_session.commit()
+    runtime_session.refresh(cliente)
+    return cliente
+
+
+@pytest.fixture
+def seed_fattura(runtime_session: Session, seed_cliente: Cliente) -> Fattura:
+    """Persist a sample invoice (with one line) into the runtime database."""
+    fattura = Fattura(
+        numero="1",
+        anno=2025,
+        data_emissione=date(2025, 1, 15),
+        cliente_id=seed_cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.BOZZA,
+        imponibile=Decimal("1000.00"),
+        iva=Decimal("220.00"),
+        totale=Decimal("1220.00"),
+    )
+    runtime_session.add(fattura)
+    runtime_session.flush()
+    runtime_session.add(
+        RigaFattura(
+            fattura_id=fattura.id,
+            numero_riga=1,
+            descrizione="Consulenza sviluppo software",
+            quantita=Decimal("10"),
+            prezzo_unitario=Decimal("100.00"),
+            unita_misura="ore",
+            aliquota_iva=Decimal("22.00"),
+            imponibile=Decimal("1000.00"),
+            iva=Decimal("220.00"),
+            totale=Decimal("1220.00"),
+        )
+    )
+    runtime_session.commit()
+    runtime_session.refresh(fattura)
+    return fattura
+
+
 @pytest.fixture
 def test_settings(test_data_dir: Path) -> Settings:
     """Create test settings with temporary directories."""
