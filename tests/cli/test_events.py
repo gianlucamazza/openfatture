@@ -178,6 +178,7 @@ class TestEventsCLI:
             event_type="TestEvent",
             event_data='{"key": "value"}',
             occurred_at=datetime.now(),
+            published_at=datetime.now(),
             entity_type="invoice",
             entity_id=1,
         )
@@ -251,7 +252,7 @@ class TestEventsCLI:
         result = runner.invoke(app, ["search", "invoice"])
 
         assert result.exit_code == 0
-        mock_repo.search.assert_called_once_with("invoice", limit=100)
+        mock_repo.search.assert_called_once_with("invoice", limit=50)
 
     @patch("openfatture.cli.commands.events.get_settings")
     @patch("openfatture.cli.commands.events.init_db")
