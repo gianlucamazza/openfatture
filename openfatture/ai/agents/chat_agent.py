@@ -431,7 +431,7 @@ class ChatAgent(BaseAgent[ChatContext]):
                 accumulated_content_length=len(accumulated_content),
             )
             # Emit error as StreamEvent
-            yield StreamEvent.content(f"\n\n❌ Errore durante l'esecuzione: {str(e)}")
+            yield StreamEvent.content(f"\n\nErrore durante l'esecuzione: {str(e)}")
 
     async def _build_prompt(self, context: ChatContext) -> list[Message]:
         """

@@ -43,7 +43,7 @@ class TestQIFImporter:
             db_session.add(tx)
         db_session.commit()
 
-        # Verify first transaction date (01/15/2025 → 2025-01-15)
+        # Verify first transaction date (01/15/2025 2025-01-15)
         first_tx = sorted(bank_account.transactions, key=lambda t: t.date)[0]
         assert first_tx.date.year == 2025
         assert first_tx.date.month == 1

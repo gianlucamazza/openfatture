@@ -27,7 +27,7 @@ def retrain_trigger(
 
     scheduler = get_scheduler()
 
-    console.print("\n[bold blue]🔄 Manual Model Retraining[/bold blue]\n")
+    console.print("\n[bold blue]Manual Model Retraining[/bold blue]\n")
 
     # Run async retraining
 
@@ -36,7 +36,7 @@ def retrain_trigger(
 
     # Display results
     if result["success"]:
-        console.print(f"[bold green]✅ {result['message']}[/bold green]\n")
+        console.print(f"[bold green]{result['message']}[/bold green]\n")
 
         if result.get("deployed"):
             console.print(f"[cyan]Version ID:[/cyan] {result.get('version_id')}")
@@ -59,7 +59,7 @@ def retrain_trigger(
         else:
             console.print(f"[dim]Model not deployed: {result.get('message')}[/dim]")
     else:
-        console.print(f"[bold red]❌ {result['message']}[/bold red]\n")
+        console.print(f"[bold red]{result['message']}[/bold red]\n")
 
 
 @retrain_app.command("status")
@@ -80,7 +80,7 @@ def retrain_status() -> None:
     scheduler = get_scheduler()
     status = scheduler.get_status()
 
-    console.print("\n[bold blue]🔄 Retraining Scheduler Status[/bold blue]\n")
+    console.print("\n[bold blue]Retraining Scheduler Status[/bold blue]\n")
 
     # Main status
     status_table = Table(show_header=False, box=None)
@@ -88,8 +88,8 @@ def retrain_status() -> None:
     status_table.add_column("Value")
 
     # Enabled/Running
-    enabled_icon = "✅" if status["enabled"] else "❌"
-    running_icon = "🟢" if status["running"] else "⚫"
+    enabled_icon = "" if status["enabled"] else ""
+    running_icon = "" if status["running"] else ""
 
     status_table.add_row("Enabled:", f"{enabled_icon} {status['enabled']}")
     status_table.add_row("Running:", f"{running_icon} {status['running']}")
@@ -115,16 +115,16 @@ def retrain_status() -> None:
     should_trigger = trigger_status.get("should_trigger", False)
 
     if should_trigger:
-        console.print("[bold yellow]⚠️  Retraining Triggers Met[/bold yellow]\n")
+        console.print("[bold yellow]Retraining Triggers Met[/bold yellow]\n")
     else:
-        console.print("[bold green]✅ No Retraining Needed[/bold green]\n")
+        console.print("[bold green]No Retraining Needed[/bold green]\n")
 
     # Feedback stats
     feedback_stats = trigger_status.get("feedback_stats", {})
     console.print("[bold]Feedback Status:[/bold]")
     console.print(f"  Unprocessed: {feedback_stats.get('unprocessed_count', 0)}")
     console.print(f"  Threshold: {feedback_stats.get('threshold', 0)}")
-    ready_icon = "✅" if feedback_stats.get("ready") else "❌"
+    ready_icon = "" if feedback_stats.get("ready") else ""
     console.print(f"  Ready: {ready_icon}")
     console.print()
 
@@ -136,7 +136,7 @@ def retrain_status() -> None:
     if time_stats.get("days_since_training") is not None:
         console.print(f"  Days Elapsed: {time_stats['days_since_training']}")
     console.print(f"  Threshold: {time_stats.get('threshold_days', 0)} days")
-    ready_icon = "✅" if time_stats.get("ready") else "❌"
+    ready_icon = "" if time_stats.get("ready") else ""
     console.print(f"  Ready: {ready_icon}")
     console.print()
 
@@ -165,7 +165,7 @@ def retrain_history(
     version_manager = ModelVersionManager()
     versions = version_manager.list_versions("cash_flow")
 
-    console.print("\n[bold blue]📦 Model Version History[/bold blue]\n")
+    console.print("\n[bold blue]Model Version History[/bold blue]\n")
 
     if not versions:
         console.print("[dim]No model versions found.[/dim]\n")
@@ -224,13 +224,13 @@ def retrain_rollback(
 
     version_manager = ModelVersionManager()
 
-    console.print("\n[bold blue]🔄 Model Rollback[/bold blue]\n")
+    console.print("\n[bold blue]Model Rollback[/bold blue]\n")
 
     # Verify version exists
     try:
         version = version_manager.load_version("cash_flow", version_id, restore_to_current=False)
     except FileNotFoundError:
-        console.print(f"[bold red]❌ Version '{version_id}' not found[/bold red]\n")
+        console.print(f"[bold red]Version '{version_id}' not found[/bold red]\n")
         raise typer.Exit(1)
 
     # Show version info
@@ -250,7 +250,7 @@ def retrain_rollback(
 
     # Confirmation
     if not confirm:
-        proceed = typer.confirm("⚠️  This will overwrite the current model. Continue?")
+        proceed = typer.confirm("This will overwrite the current model. Continue?")
         if not proceed:
             console.print("[dim]Rollback cancelled.[/dim]\n")
             raise typer.Exit(0)
@@ -259,8 +259,8 @@ def retrain_rollback(
     try:
         version_manager.rollback_to_version("cash_flow", version_id)
         console.print(
-            f"[bold green]✅ Successfully rolled back to version {version_id}[/bold green]\n"
+            f"[bold green]Successfully rolled back to version {version_id}[/bold green]\n"
         )
     except Exception as e:
-        console.print(f"[bold red]❌ Rollback failed: {e}[/bold red]\n")
+        console.print(f"[bold red]Rollback failed: {e}[/bold red]\n")
         raise typer.Exit(1)

@@ -29,7 +29,7 @@ def main():
     codice_destinatario = os.environ.get("OPENFATTURE_CODICE_DESTINATARIO")
     pec = os.environ.get("OPENFATTURE_PEC")
 
-    print("👥 New Client Created")
+    print("New Client Created")
     print("=" * 50)
     print(f"Client ID: {client_id}")
     print(f"Name: {client_name}")
@@ -63,9 +63,9 @@ def main():
     #     headers={"Authorization": f"Bearer {os.environ.get('CRM_API_KEY')}"}
     # )
     # if response.status_code == 201:
-    #     print("✅ Client synced to CRM")
+    # print("Client synced to CRM")
     # else:
-    #     print(f"⚠️  CRM sync failed: {response.status_code}")
+    # print(f"CRM sync failed: {response.status_code}")
 
     # Log to file for audit trail
     log_file = os.path.expanduser("~/.openfatture/logs/client-events.log")
@@ -81,8 +81,8 @@ def main():
     with open(log_file, "a") as f:
         f.write(json.dumps(log_entry) + "\n")
 
-    print("\n✅ Hook executed successfully")
-    print(f"📝 Event logged to: {log_file}")
+    print("\nHook executed successfully")
+    print(f"Event logged to: {log_file}")
 
 
 if __name__ == "__main__":

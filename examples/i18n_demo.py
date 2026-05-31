@@ -165,7 +165,7 @@ def main():
     demo_pluralization()
     demo_email_translations()
 
-    console.print("\n[bold green]✅ Demo complete![/bold green]")
+    console.print("\n[bold green]Demo complete![/bold green]")
     console.print("\n[dim]All features demonstrated successfully.[/dim]")
 
 

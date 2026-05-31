@@ -112,7 +112,7 @@ class TestAIDescribeCommandValidation:
         result = runner.invoke(app, ["describe", "Consulting services"])
 
         assert result.exit_code == 0  # Command doesn't exit with error, just shows message
-        assert "❌ Error:" in result.stdout
+        assert "Error:" in result.stdout
 
 
 class TestAISuggestVATCommandValidation:
@@ -402,7 +402,9 @@ class TestAIForecastCommandValidation:
 
     def test_forecast_default_parameters(self):
         """Test forecast command with default parameters."""
-        with patch("openfatture.ai.agents.cash_flow_predictor.CashFlowPredictorAgent") as mock_agent_class:
+        with patch(
+            "openfatture.ai.agents.cash_flow_predictor.CashFlowPredictorAgent"
+        ) as mock_agent_class:
             mock_agent = Mock()
             mock_forecast = Mock()
             mock_forecast.months = 3

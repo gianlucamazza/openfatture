@@ -37,7 +37,7 @@ openfatture/
 - **AI Module**: Provider abstraction (OpenAI/Anthropic/Ollama), agent protocol, tool registry, session management
 - **Payment Module**: Domain-Driven Design with matchers (exact, fuzzy, date window)
 - **Event System**: Observer pattern for audit trail, repository pattern for queries, analytics service for insights
-- **SDI Integration**: XML generation → validation → PEC sending → notification processing
+- **SDI Integration**: XML generation validation PEC sending notification processing
 - **Database**: SQLAlchemy ORM with models: Fattura, Riga, Cliente, Prodotto, NotificaSDI, PaymentAllocation, EventLog
 
 ## Modern Utilities (2025)
@@ -300,7 +300,7 @@ The voice module (`openfatture/ai/voice/`) adds text-to-speech (TTS) and speech-
 - **Provider Abstraction**: `BaseVoiceProvider` abstract class for future extensibility (Google, Azure, etc.)
 - **OpenAI Implementation**: Full Whisper STT (100+ languages) + TTS (6 voices) integration
 - **Factory Pattern**: `create_voice_provider()` with environment-based configuration
-- **Orchestration Layer**: `VoiceAssistant` coordinates STT → ChatAgent → TTS pipeline
+- **Orchestration Layer**: `VoiceAssistant` coordinates STT ChatAgent TTS pipeline
 - **Audio Handling**: Microphone recording via `sounddevice`, multi-format support (mp3, opus, aac, flac, wav)
 
 **Key Components:**
@@ -392,13 +392,13 @@ if response.synthesis:
 **Voice Orchestration Flow:**
 ```
 1. Audio Recording (sounddevice)
-   ↓
+
 2. Speech-to-Text (Whisper API)
-   ↓ transcription.text + language
+   transcription.text + language
 3. LLM Processing (ChatAgent with context)
-   ↓ llm_response
+   llm_response
 4. Text-to-Speech (OpenAI TTS)
-   ↓ audio_data (MP3/OPUS/etc)
+   audio_data (MP3/OPUS/etc)
 5. Audio Playback (sounddevice) or Save
 ```
 
@@ -411,7 +411,7 @@ if response.synthesis:
 - **Error Handling**: Comprehensive exception hierarchy (VoiceProviderError, AuthError, RateLimitError, TimeoutError)
 
 **Audio Specifications:**
-- **Recording**: 16kHz sample rate, mono (configurable), 16-bit PCM → WAV
+- **Recording**: 16kHz sample rate, mono (configurable), 16-bit PCM WAV
 - **STT Input**: Supports WAV, MP3, M4A, WEBM, MP4 (Whisper API)
 - **TTS Output**: MP3 (default), OPUS, AAC, FLAC, PCM at 24kHz
 - **Latency**: ~1-3s STT + LLM time + ~0.5-1s TTS = 2-5s total typical
@@ -520,11 +520,11 @@ uv run python -m pytest tests/cli/test_custom_commands.py -v
 ```
 
 **Benefits:**
-- ⚡ **Productivity**: Reusable workflows eliminate repetitive prompts
-- 🔧 **Customization**: Tailor commands to your specific business needs
-- 🎯 **Consistency**: Standardized prompts ensure reliable AI outputs
-- 📚 **Shareability**: YAML files can be shared across team/community
-- 🔄 **Hot Reload**: `/reload` command picks up changes without restart
+- **Productivity**: Reusable workflows eliminate repetitive prompts
+- **Customization**: Tailor commands to your specific business needs
+- **Consistency**: Standardized prompts ensure reliable AI outputs
+- **Shareability**: YAML files can be shared across team/community
+- **Hot Reload**: `/reload` command picks up changes without restart
 
 **See also:**
 - `docs/examples/custom-commands/README.md` - Complete usage guide
@@ -595,9 +595,9 @@ uv run pytest tests/ai/test_react_e2e_ollama.py::TestReActOllamaSuccessRate -v
 
 **Common Issues:**
 - **Low success rate**: Check temperature=0.0, verify model is qwen3:8b, monitor metrics
-- **Infinite loops**: Tool not providing expected data → validate tool outputs
-- **Max iterations reached**: Query too complex → increase max_iterations or split query
-- **Failed tool calls**: Invalid parameters → improve tool parameter descriptions
+- **Infinite loops**: Tool not providing expected data validate tool outputs
+- **Max iterations reached**: Query too complex increase max_iterations or split query
+- **Failed tool calls**: Invalid parameters improve tool parameter descriptions
 
 **See also:**
 - `docs/AI_ARCHITECTURE.md` - Complete ReAct architecture documentation
@@ -642,7 +642,7 @@ uv run openfatture events trends --type payment_reconciled         # Trend analy
 **Visualizations:**
 - ASCII bar charts with Rich library (█ blocks scaled to data)
 - Tree-style timeline views with connectors (┌ ├ └)
-- Color-coded trend indicators (📈 📉 ➡️)
+- Color-coded trend indicators ()
 - Formatted tables with proper alignment
 
 **Testing Coverage:**
@@ -844,10 +844,10 @@ See `docs/CONFIGURATION.md` for complete reference.
 - `PaymentAllocation`: Payment reconciliation linkage
 
 **Relationships:**
-- Fattura → Cliente (many-to-one)
-- Fattura → Riga (one-to-many)
-- Riga → Prodotto (many-to-one, optional)
-- Fattura → NotificaSDI (one-to-many)
+- Fattura Cliente (many-to-one)
+- Fattura Riga (one-to-many)
+- Riga Prodotto (many-to-one, optional)
+- Fattura NotificaSDI (one-to-many)
 
 ## Italian Tax Codes
 

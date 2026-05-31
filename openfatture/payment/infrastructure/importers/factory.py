@@ -39,7 +39,7 @@ class ImporterFactory:
         >>> result = importer.import_transactions(account)
     """
 
-    # Registry pattern: Format → Importer class mapping
+    # Registry pattern: Format Importer class mapping
     # Will be populated after importers are defined
     _registry: dict[FileFormat, type[BaseImporter]] = {}
 

@@ -123,7 +123,7 @@ class TestFuzzyMatcherPerformance:
         avg_latency = sum(latencies) / len(latencies)
         p95_latency = sorted(latencies)[int(len(latencies) * 0.95)]
 
-        print("\n🔹 Latency (10 payments):")
+        print("\nLatency (10 payments):")
         print(f"   Average: {avg_latency:.2f}ms")
         print(f"   P95: {p95_latency:.2f}ms")
         print(f"   Min: {min(latencies):.2f}ms, Max: {max(latencies):.2f}ms")
@@ -150,7 +150,7 @@ class TestFuzzyMatcherPerformance:
         p50_latency = sorted(latencies)[int(len(latencies) * 0.50)]
         p95_latency = sorted(latencies)[int(len(latencies) * 0.95)]
 
-        print("\n🔹 Latency (100 payments):")
+        print("\nLatency (100 payments):")
         print(f"   P50: {p50_latency:.2f}ms")
         print(f"   Average: {avg_latency:.2f}ms")
         print(f"   P95: {p95_latency:.2f}ms")
@@ -172,7 +172,7 @@ class TestFuzzyMatcherPerformance:
         elapsed = time.perf_counter() - start_time
 
         throughput = len(transactions) / elapsed
-        print("\n🔹 Throughput (50 payments):")
+        print("\nThroughput (50 payments):")
         print(f"   {throughput:.0f} transactions/second")
         print(f"   Total time: {elapsed:.2f}s for {len(transactions)} transactions")
         print(f"   Avg latency per match: {(elapsed / len(transactions)) * 1000:.2f}ms")

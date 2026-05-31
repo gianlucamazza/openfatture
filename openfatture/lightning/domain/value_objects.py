@@ -289,7 +289,7 @@ class CapitalGain:
 
     Dal 2025 in Italia:
     - Tutte le plusvalenze sono tassabili (no soglia 2.000 EUR)
-    - Aliquota: 26% (2025) → 33% (2026+)
+    - Aliquota: 26% (2025) 33% (2026+)
     - Da dichiarare in Quadro RT (redditi diversi)
 
     Attributes:

@@ -287,7 +287,7 @@ def test_hook_bridge_registers_as_listener(event_bus, hook_bridge):
 def test_end_to_end_flow(
     event_bus, hook_bridge, invoice_create_hook, temp_hooks_dir, registry, executor
 ):
-    """Test complete end-to-end flow: event → bridge → executor → result."""
+    """Test complete end-to-end flow: event bridge executor result."""
     # Reload registry
     registry.reload()
 

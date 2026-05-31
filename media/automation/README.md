@@ -35,11 +35,11 @@ ollama pull llama3.2
 ./scripts/check_ollama.sh llama3.2
 ```
 
-✅ **Why Ollama**
-- 🆓 Zero API costs (vs Anthropic/OpenAI)
-- 🔒 Privacy-first: no data leaves your machine
-- 📦 Deterministic responses for demos
-- ⚡ Fast on Apple Silicon M1/M2/M3
+**Why Ollama**
+- Zero API costs (vs Anthropic/OpenAI)
+- Privacy-first: no data leaves your machine
+- Deterministic responses for demos
+- Fast on Apple Silicon M1/M2/M3
 
 ### 3. Environment Configuration
 `.env.demo` is preconfigured for Ollama:
@@ -153,7 +153,7 @@ make media-clean        # Clean generated media
 
 **Fix:** use a supported theme:
 ```
-Set Theme "Dracula"  # ✅ Supported
+Set Theme "Dracula" # Supported
 ```
 
 ### Ollama: Service Not Responding

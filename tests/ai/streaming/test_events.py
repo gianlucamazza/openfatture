@@ -325,8 +325,8 @@ class TestStreamEventEdgeCases:
 
     def test_unicode_content(self):
         """Test event with unicode content."""
-        event = StreamEvent.content("Fattura 🧾 €1.234,56")
-        assert "🧾" in event.data
+        event = StreamEvent.content("Fattura €1.234,56")
+        assert "" in event.data
         assert "€" in event.data
 
     def test_nested_dict_data(self):

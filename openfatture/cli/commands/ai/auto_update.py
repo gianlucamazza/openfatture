@@ -26,7 +26,7 @@ def auto_update_status() -> None:
     service = get_auto_indexing_service()
     status = service.get_status()
 
-    console.print("\n[bold blue]🔄 RAG Auto-Update Service Status[/bold blue]\n")
+    console.print("\n[bold blue]RAG Auto-Update Service Status[/bold blue]\n")
 
     # Main status
     status_table = Table(show_header=False, box=None)
@@ -34,8 +34,8 @@ def auto_update_status() -> None:
     status_table.add_column("Value")
 
     # Enabled/Running
-    enabled_icon = "✅" if status["enabled"] else "❌"
-    running_icon = "🟢" if status["running"] else "⚫"
+    enabled_icon = "" if status["enabled"] else ""
+    running_icon = "" if status["running"] else ""
 
     status_table.add_row("Enabled:", f"{enabled_icon} {status['enabled']}")
     status_table.add_row("Running:", f"{running_icon} {status['running']}")
@@ -88,12 +88,12 @@ def auto_update_start() -> None:
 
     service = get_auto_indexing_service()
 
-    console.print("\n[bold blue]🔄 Starting RAG Auto-Update Service[/bold blue]\n")
+    console.print("\n[bold blue]Starting RAG Auto-Update Service[/bold blue]\n")
 
     with console.status("[bold green]Starting service..."):
         run_async(service.start())
 
-    console.print("[bold green]✅ Service started successfully[/bold green]\n")
+    console.print("[bold green]Service started successfully[/bold green]\n")
 
 
 @auto_update_app.command("stop")
@@ -111,12 +111,12 @@ def auto_update_stop() -> None:
 
     service = get_auto_indexing_service()
 
-    console.print("\n[bold blue]🔄 Stopping RAG Auto-Update Service[/bold blue]\n")
+    console.print("\n[bold blue]Stopping RAG Auto-Update Service[/bold blue]\n")
 
     with console.status("[bold yellow]Stopping service..."):
         run_async(service.stop())
 
-    console.print("[bold yellow]⏸️  Service stopped[/bold yellow]\n")
+    console.print("[bold yellow]Service stopped[/bold yellow]\n")
 
 
 @auto_update_app.command("queue")
@@ -133,7 +133,7 @@ def auto_update_queue() -> None:
     tracker = get_change_tracker()
     queue = get_reindex_queue()
 
-    console.print("\n[bold blue]📊 RAG Auto-Update Queue Statistics[/bold blue]\n")
+    console.print("\n[bold blue]RAG Auto-Update Queue Statistics[/bold blue]\n")
 
     # Queue stats
     queue_stats = queue.get_stats()
@@ -141,7 +141,7 @@ def auto_update_queue() -> None:
     stats_table.add_column("Metric", style="cyan bold")
     stats_table.add_column("Value")
 
-    stats_table.add_row("Running:", "🟢 Yes" if queue_stats["running"] else "⚫ No")
+    stats_table.add_row("Running:", "Yes" if queue_stats["running"] else "No")
     stats_table.add_row("Total Processed:", str(queue_stats["total_processed"]))
     stats_table.add_row("Total Batches:", str(queue_stats["total_batches"]))
     if queue_stats.get("last_process_time_ms"):
@@ -189,7 +189,7 @@ def auto_update_manual(
 
     service = get_auto_indexing_service()
 
-    console.print("\n[bold blue]🔄 Manual Reindexing[/bold blue]\n")
+    console.print("\n[bold blue]Manual Reindexing[/bold blue]\n")
     console.print(f"[bold]Entity Type:[/bold] {entity_type}")
     console.print(f"[bold]Entity IDs:[/bold] {', '.join(map(str, entity_ids))}\n")
 
@@ -197,7 +197,7 @@ def auto_update_manual(
         result = run_async(service.manual_reindex(entity_type, entity_ids))
 
     # Display results
-    console.print("[bold green]✅ Reindexing completed[/bold green]\n")
+    console.print("[bold green]Reindexing completed[/bold green]\n")
     console.print(f"[cyan]Requested:[/cyan] {result['requested_count']}")
     console.print(f"[green]Successful:[/green] {len(result['successful'])}")
     console.print(f"[red]Failed:[/red] {len(result['failed'])}")

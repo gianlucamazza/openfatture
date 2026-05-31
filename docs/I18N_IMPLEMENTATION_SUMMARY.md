@@ -4,12 +4,12 @@
 
 Successfully implemented a **modern, enterprise-grade internationalization system** for OpenFatture using **Mozilla Fluent**, supporting 5 languages (IT, EN, ES, FR, DE) with full test coverage.
 
-## ✅ Completed Implementation (Phase 1 - Infrastructure)
+## Completed Implementation (Phase 1 - Infrastructure)
 
 ### 1. Dependencies & Configuration
-- ✅ Added `fluent.runtime>=0.4.0` - Mozilla Fluent runtime
-- ✅ Added `babel>=2.14.0` - Locale data, date/number formatting
-- ✅ Updated `Settings` with `locale`, `supported_locales`, `fallback_locale` fields
+- Added `fluent.runtime>=0.4.0` - Mozilla Fluent runtime
+- Added `babel>=2.14.0` - Locale data, date/number formatting
+- Updated `Settings` with `locale`, `supported_locales`, `fallback_locale` fields
 
 ### 2. Module Structure (`openfatture/i18n/`)
 ```
@@ -39,10 +39,10 @@ openfatture/i18n/
 ```
 
 ### 3. Translation Files (Fluent .ftl format)
-- ✅ **220+ strings migrated** from old JSON system
-- ✅ **5 languages** with identical key structure
-- ✅ **Pluralization support** (Fluent native feature)
-- ✅ **Variable interpolation** with `{ $variable_name }` syntax
+- **220+ strings migrated** from old JSON system
+- **5 languages** with identical key structure
+- **Pluralization support** (Fluent native feature)
+- **Variable interpolation** with `{ $variable_name }` syntax
 
 ### 4. Core Features Implemented
 
@@ -92,16 +92,16 @@ format_date_localized(date(2024, 3, 15))  # "15 mar 2024" (IT medium)
 ```
 
 ### 5. Testing Infrastructure
-- ✅ **14 unit tests** - All passing ✅
-- ✅ Tests cover: basic translation, locale switching, variable interpolation, fallback logic
-- ✅ Test file: `tests/i18n/test_basic.py`
+- **14 unit tests** - All passing
+- Tests cover: basic translation, locale switching, variable interpolation, fallback logic
+- Test file: `tests/i18n/test_basic.py`
 
 ### 6. Documentation
-- ✅ `openfatture/i18n/README.md` - Complete user guide (400+ lines)
-- ✅ `docs/I18N_IMPLEMENTATION_SUMMARY.md` - This summary
-- ✅ Inline code documentation with examples
+- `openfatture/i18n/README.md` - Complete user guide (400+ lines)
+- `docs/I18N_IMPLEMENTATION_SUMMARY.md` - This summary
+- Inline code documentation with examples
 
-## 🎯 Phase 1 Metrics
+## Phase 1 Metrics
 
 | Metric | Value |
 |--------|-------|
@@ -112,7 +112,7 @@ format_date_localized(date(2024, 3, 15))  # "15 mar 2024" (IT medium)
 | **Dependencies Added** | 2 (fluent.runtime, babel) |
 | **Code Lines** | ~1,200 lines (including tests) |
 
-## 📊 Architecture Highlights
+## Architecture Highlights
 
 ### 1. Performance Optimizations
 - **Bundle Caching**: Fluent bundles loaded once, cached per locale
@@ -122,19 +122,19 @@ format_date_localized(date(2024, 3, 15))  # "15 mar 2024" (IT medium)
 
 ### 2. Fallback Chain
 ```
-Requested Locale → English → Italian (always available)
+Requested Locale English Italian (always available)
 ```
 
 Example:
 - Request: `_("common-yes", locale="de")`
-- Try German → English → Italian → Return key if all fail
+- Try German English Italian Return key if all fail
 
 ### 3. Error Handling
 - Missing translations return the message key (debugging)
 - Formatting errors logged with `structlog`
 - Invalid locales raise `ValueError`
 
-## 🚀 Next Steps (Phase 2-8)
+## Next Steps (Phase 2-8)
 
 ### Phase 2: CLI Translation (Week 3-4)
 - [ ] Convert CLI fattura commands (28 strings)
@@ -174,7 +174,7 @@ Example:
 - [ ] Create translation coverage reports
 - [ ] Write migration script from old email i18n
 
-## 📈 Estimated Remaining Effort
+## Estimated Remaining Effort
 
 | Phase | Strings | Days | Priority |
 |-------|---------|------|----------|
@@ -186,7 +186,7 @@ Example:
 | Documentation | 15,000+ | 20 | LOW |
 | **TOTAL** | **~16,000** | **52 days** | - |
 
-## 🎉 Key Achievements
+## Key Achievements
 
 1. **Modern Stack**: Mozilla Fluent (industry-standard, used by Firefox, Thunderbird)
 2. **Type-Safe**: Full type hints with Pydantic integration
@@ -195,7 +195,7 @@ Example:
 5. **Performance**: Cached bundles, lazy loading, minimal overhead
 6. **Best Practices**: Follows Mozilla Fluent guidelines 2025
 
-## 🛠️ Technical Implementation Notes
+## Technical Implementation Notes
 
 ### Critical Fix: FluentBundle.format_pattern()
 **Issue**: `format_pattern()` returns `(str, list[Exception])` tuple, not just string
@@ -219,26 +219,26 @@ with open(ftl_file) as f:
 ```
 
 ### Locale Storage
-- **Global Default**: Environment var → Settings → "it"
+- **Global Default**: Environment var Settings "it"
 - **Per-Thread**: Thread-local storage via `_thread_local`
 - **Per-Request**: Context managers for temporary overrides
 
-## 📚 References
+## References
 
 - [Mozilla Fluent Syntax](https://projectfluent.org/fluent/guide/)
 - [Fluent Python Runtime](https://github.com/projectfluent/python-fluent)
 - [Babel Documentation](https://babel.pocoo.org/)
 
-## 🔗 Related Files
+## Related Files
 
 - **Source**: `openfatture/i18n/`
 - **Tests**: `tests/i18n/test_basic.py`
 - **Config**: `openfatture/utils/config.py` (Settings.locale)
 - **Docs**: `openfatture/i18n/README.md`
 
-## ✨ Summary
+## Summary
 
-**Phase 1 (Infrastructure): 100% COMPLETE ✅**
+**Phase 1 (Infrastructure): 100% COMPLETE **
 
 - Modern i18n system with Fluent
 - 5 languages supported

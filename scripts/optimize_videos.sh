@@ -46,19 +46,19 @@ readonly AUDIO_SAMPLE_RATE=44100
 
 # Logging functions
 log_info() {
-    echo -e "${BLUE}ℹ${NC}  $*"
+    echo -e "${BLUE}${NC} $*"
 }
 
 log_success() {
-    echo -e "${GREEN}✓${NC}  $*"
+    echo -e "${GREEN}${NC} $*"
 }
 
 log_error() {
-    echo -e "${RED}✗${NC}  $*" >&2
+    echo -e "${RED}${NC} $*" >&2
 }
 
 log_warning() {
-    echo -e "${YELLOW}⚠${NC}  $*" >&2
+    echo -e "${YELLOW}${NC} $*" >&2
 }
 
 # Check dependencies
@@ -156,7 +156,7 @@ process_video() {
 main() {
     cd "${ROOT_DIR}"
 
-    echo -e "${BLUE}🎬 OpenFatture Video Optimization${NC}"
+    echo -e "${BLUE}OpenFatture Video Optimization${NC}"
     echo "=================================="
     echo ""
 
@@ -201,12 +201,12 @@ main() {
     done
 
     # Summary
-    echo -e "${GREEN}✅ Video optimization complete!${NC}"
+    echo -e "${GREEN}Video optimization complete!${NC}"
     echo ""
     echo "Output structure:"
     tree "${VIDEO_DIR}" -L 2 -h || ls -lhR "${VIDEO_DIR}"
     echo ""
-    echo "💡 Next steps:"
+    echo "Next steps:"
     echo "  - Review video quality in media/videos/"
     echo "  - Generate GIFs: ./scripts/generate_gifs.sh"
     echo "  - Update documentation with video links"

@@ -114,7 +114,7 @@ class MatchingService:
             return []
 
         # 2. Apply each strategy
-        all_matches: dict[int, MatchResult] = {}  # payment_id → best match
+        all_matches: dict[int, MatchResult] = {}  # payment_id best match
 
         for strategy in self.strategies:
             try:

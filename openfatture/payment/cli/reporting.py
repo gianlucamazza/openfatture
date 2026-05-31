@@ -19,7 +19,7 @@ def audit(
         None, "--transaction", "-t", help="Filter by transaction ID"
     ),
 ) -> None:
-    """📋 Payment allocation audit trail.
+    """Payment allocation audit trail.
 
     Shows the history of payment allocations with confidence scores,
     match types, and timestamps for auditing and troubleshooting.
@@ -54,7 +54,7 @@ def audit(
                 tx_uuid = UUID(transaction_id)
                 query = query.where(PaymentAllocation.transaction_id == tx_uuid)
             except ValueError:
-                console.print(f"[red]❌ Invalid transaction ID format: {transaction_id}[/]")
+                console.print(f"[red]Invalid transaction ID format: {transaction_id}[/]")
                 raise typer.Exit(1)
 
         # Execute query
@@ -66,7 +66,7 @@ def audit(
             return
 
         # Display table
-        table = Table(title=f"💰 Payment Allocation Audit Trail (Last {len(allocations)} records)")
+        table = Table(title=f"Payment Allocation Audit Trail (Last {len(allocations)} records)")
         table.add_column("ID", style="dim")
         table.add_column("Payment", style="cyan")
         table.add_column("Transaction", style="magenta")
@@ -106,7 +106,7 @@ def audit(
 def stats(
     account_id: int | None = typer.Option(None, "--account", "-a", help="Filter by account"),
 ) -> None:
-    """📊 Payment tracking statistics.
+    """Payment tracking statistics.
 
     Examples:
         # Global stats
@@ -124,7 +124,7 @@ def stats(
         ignored = len(tx_repo.get_by_status(TransactionStatus.IGNORED, account_id))
 
         # Display table
-        table = Table(title="📊 Payment Tracking Statistics")
+        table = Table(title="Payment Tracking Statistics")
         table.add_column("Status", style="bold")
         table.add_column("Count", justify="right", style="cyan")
         table.add_column("Percentage", justify="right", style="dim")
@@ -132,10 +132,10 @@ def stats(
         total = unmatched + matched + ignored
 
         table.add_row(
-            "🔍 Unmatched", str(unmatched), f"{unmatched / total * 100:.1f}%" if total else "-"
+            "Unmatched", str(unmatched), f"{unmatched / total * 100:.1f}%" if total else "-"
         )
-        table.add_row("✅ Matched", str(matched), f"{matched / total * 100:.1f}%" if total else "-")
-        table.add_row("⏭️  Ignored", str(ignored), f"{ignored / total * 100:.1f}%" if total else "-")
+        table.add_row("Matched", str(matched), f"{matched / total * 100:.1f}%" if total else "-")
+        table.add_row("Ignored", str(ignored), f"{ignored / total * 100:.1f}%" if total else "-")
         table.add_row("━" * 15, "━" * 8, "━" * 12)
         table.add_row("[bold]Total", f"[bold]{total}", "100%" if total else "-")
 

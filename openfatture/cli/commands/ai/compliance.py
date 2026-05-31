@@ -72,12 +72,12 @@ async def _run_compliance_check(
 
     level = level_map.get(level_str.lower())
     if not level:
-        console.print(f"[bold red]❌ Invalid level: {level_str}[/bold red]")
+        console.print(f"[bold red]Invalid level: {level_str}[/bold red]")
         console.print("Valid levels: basic, standard, advanced")
         raise typer.Exit(1)
 
     if format_type == "rich":
-        console.print(f"\n[bold blue]🔍 Compliance Check (Level: {level.value})[/bold blue]\n")
+        console.print(f"\n[bold blue]Compliance Check (Level: {level.value})[/bold blue]\n")
 
     # Track execution metrics (rules-based, not LLM)
     start_time = time.time()
@@ -120,10 +120,10 @@ async def _run_compliance_check(
         success = True
 
     except ValueError as e:
-        console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
+        console.print(f"\n[bold red]Error:[/bold red] {e}\n")
         raise typer.Exit(1)
     except Exception as e:
-        console.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}\n")
+        console.print(f"\n[bold red]Unexpected error:[/bold red] {e}\n")
         logger.error("compliance_check_error", error=str(e), error_type=type(e).__name__)
         raise typer.Exit(1)
     finally:
@@ -151,11 +151,11 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
     # Status panel
     if report.is_compliant:
         status_text = (
-            "[bold green]✓ COMPLIANT[/bold green]\n\nThe invoice is ready for SDI submission"
+            "[bold green]COMPLIANT[/bold green]\n\nThe invoice is ready for SDI submission"
         )
         border_style = "green"
     else:
-        status_text = f"[bold red]✗ NOT COMPLIANT[/bold red]\n\nFound {len(report.get_errors())} critical errors"
+        status_text = f"[bold red]NOT COMPLIANT[/bold red]\n\nFound {len(report.get_errors())} critical errors"
         border_style = "red"
 
     console.print(
@@ -176,9 +176,7 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
     score_color = (
         "green"
         if report.compliance_score >= 80
-        else "yellow"
-        if report.compliance_score >= 60
-        else "red"
+        else "yellow" if report.compliance_score >= 60 else "red"
     )
     scores_table.add_row(
         "Compliance Score:", f"[{score_color}]{report.compliance_score:.1f}/100[/{score_color}]"
@@ -220,38 +218,38 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
 
     # Display errors
     if errors:
-        console.print("[bold red]❌ Errors (Must Fix):[/bold red]\n")
+        console.print("[bold red]Errors (Must Fix):[/bold red]\n")
         for i, issue in enumerate(errors, 1):
             console.print(f"  {i}. [{issue.code}] {issue.message}")
             console.print(f"     Field: [cyan]{issue.field}[/cyan]")
             if issue.suggestion:
-                console.print(f"     💡 {issue.suggestion}")
+                console.print(f" {issue.suggestion}")
             if issue.reference:
                 console.print(f"     [dim]Ref: {issue.reference}[/dim]")
             console.print()
 
     # Display warnings
     if warnings:
-        console.print("[bold yellow]⚠️  Warnings:[/bold yellow]\n")
+        console.print("[bold yellow]Warnings:[/bold yellow]\n")
         for i, issue in enumerate(warnings, 1):
             console.print(f"  {i}. [{issue.code}] {issue.message}")
             console.print(f"     Field: [cyan]{issue.field}[/cyan]")
             if issue.suggestion:
-                console.print(f"     💡 {issue.suggestion}")
+                console.print(f" {issue.suggestion}")
             console.print()
 
     # Display info (only if verbose)
     if verbose and infos:
-        console.print("[bold blue]ℹ️  Informational:[/bold blue]\n")
+        console.print("[bold blue]Informational:[/bold blue]\n")
         for i, issue in enumerate(infos, 1):
             console.print(f"  {i}. [{issue.code}] {issue.message}")
             if issue.suggestion:
-                console.print(f"     💡 {issue.suggestion}")
+                console.print(f" {issue.suggestion}")
             console.print()
 
     # Recommendations
     if report.recommendations:
-        console.print("[bold cyan]💡 Recommendations:[/bold cyan]\n")
+        console.print("[bold cyan]Recommendations:[/bold cyan]\n")
         for rec in report.recommendations:
             console.print(f"  • {rec}")
         console.print()
@@ -264,4 +262,4 @@ def _display_compliance_report(report: Any, verbose: bool) -> None:
         console.print("  3. Address warnings to reduce rejection risk")
         console.print()
     else:
-        console.print("[bold green]✅ Invoice is ready for SDI submission![/bold green]\n")
+        console.print("[bold green]Invoice is ready for SDI submission![/bold green]\n")

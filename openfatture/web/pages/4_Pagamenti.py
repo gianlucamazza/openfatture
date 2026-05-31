@@ -14,7 +14,7 @@ t = get_translator()
 
 st.set_page_config(
     page_title=t("page-payments-page-title"),
-    page_icon="💰",
+    page_icon="",
     layout="wide",
 )
 
@@ -162,7 +162,7 @@ if st.session_state.get("show_import_form", False):
                     )
 
                     if result["success"]:
-                        st.success(f"✅ {result['message']}")
+                        st.success(f"{result['message']}")
 
                         # Show details
                         col1, col2, col3 = st.columns(3)
@@ -203,7 +203,7 @@ if st.session_state.get("show_import_form", False):
                         st.success(t("page-payments-import-success-refresh"))
 
                     else:
-                        st.error(f"❌ {result['message']}")
+                        st.error(f"{result['message']}")
                         if result.get("errors"):
                             for error in result["errors"]:
                                 st.write(f"• {error}")
@@ -223,7 +223,7 @@ try:
         for i, account in enumerate(accounts):
             with cols[i % len(cols)]:
                 with st.container(border=True):
-                    st.subheader(f"🏦 {account['name']}")
+                    st.subheader(f"{account['name']}")
                     st.metric(
                         t("page-payments-accounts-current-balance"),
                         f"€{account['current_balance']:,.2f}",
@@ -379,25 +379,25 @@ try:
 
             with col_invoice:
                 if pd.notna(row[invoice_col]) and row[invoice_col]:
-                    st.write(f"✅ {row[invoice_col]}")
+                    st.write(f"{row[invoice_col]}")
                 else:
                     st.write("-")
 
             with col_actions:
                 tx_id = row[id_col]
-                if st.button("👁️", key=f"view_{tx_id}", help=t("page-payments-action-view-details")):
+                if st.button("", key=f"view_{tx_id}", help=t("page-payments-action-view-details")):
                     st.session_state.selected_transaction_id = tx_id
                     st.session_state.show_transaction_detail = True
 
                 if row[status_col] == t("page-payments-status-unmatched"):
-                    if st.button("🔗", key=f"match_{tx_id}", help=t("page-payments-action-match")):
+                    if st.button("", key=f"match_{tx_id}", help=t("page-payments-action-match")):
                         st.session_state.selected_transaction_id = tx_id
                         st.session_state.show_match_form = True
                 elif row[status_col] in [
                     t("page-payments-status-matched"),
                     t("page-payments-status-paired"),
                 ]:
-                    st.write("✅")  # Already matched
+                    st.write("")  # Already matched
 
             st.markdown("---")
 

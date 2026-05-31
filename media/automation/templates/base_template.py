@@ -227,10 +227,10 @@ def main():
             return 1
 
         if engine.validate_template(args.scenario):
-            print(f"✓ Scenario {args.scenario} template is valid")
+            print(f"Scenario {args.scenario} template is valid")
             return 0
         else:
-            print(f"✗ Scenario {args.scenario} template is invalid")
+            print(f"Scenario {args.scenario} template is invalid")
             return 1
 
     elif args.action == "generate":
@@ -246,7 +246,7 @@ def main():
 
         try:
             output_path = engine.generate_tape_file(args.scenario, args.output, custom_vars)
-            print(f"✓ Generated VHS tape: {output_path}")
+            print(f"Generated VHS tape: {output_path}")
             return 0
         except Exception as e:
             print(f"Error generating tape: {e}")

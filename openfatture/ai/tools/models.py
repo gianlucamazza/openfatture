@@ -273,6 +273,6 @@ class ToolResult(BaseModel):
     def to_string(self) -> str:
         """Convert to human-readable string."""
         if self.success:
-            return f"✓ {self.tool_name}: {self.data}"
+            return f"{self.tool_name}: {self.data}"
         else:
-            return f"✗ {self.tool_name}: {self.error}"
+            return f"{self.tool_name}: {self.error}"

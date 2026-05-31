@@ -1,4 +1,4 @@
-# Lightning Network - Guida Compliance Italia 🇮🇹
+# Lightning Network - Guida Compliance Italia
 
 **Versione:** 1.0 | **Data:** Gennaio 2025 | **Normativa:** Legge di Bilancio 2023-2025
 
@@ -28,7 +28,7 @@ OpenFatture integra strumenti di compliance automatica per **pagamenti Lightning
 - Comandi CLI per generare report fiscali per commercialisti
 - Best practices per rimanere conformi
 
-> **⚠️ DISCLAIMER:** Questa guida ha scopo informativo. Per consulenza fiscale personalizzata, rivolgersi a un commercialista o consulente fiscale certificato.
+> **DISCLAIMER:** Questa guida ha scopo informativo. Per consulenza fiscale personalizzata, rivolgersi a un commercialista o consulente fiscale certificato.
 
 ---
 
@@ -172,28 +172,28 @@ openfatture lightning compliance-check --tax-year 2025
 **Output:**
 
 ```
-🔍 Lightning Compliance Check - 2025
+Lightning Compliance Check - 2025
 
-📊 Tax Year Summary
+Tax Year Summary
   Number of payments:         12
   Total revenue (EUR):        15,000.00 €
   Total capital gains (EUR):  2,500.00 €
   Estimated tax owed (EUR):   650.00 €
 
-🛡️ AML Compliance (Threshold: 5,000 EUR)
+AML Compliance (Threshold: 5,000 EUR)
   Total over threshold:       2
   Verified:                   1
-  Unverified:                 ⚠️ 1 REQUIRE VERIFICATION
+  Unverified: 1 REQUIRE VERIFICATION
 
-📋 Quadro RW Declaration (Mandatory from 2025)
+Quadro RW Declaration (Mandatory from 2025)
   Invoices requiring declaration: 12
-  Action required:            ⚠️ Declare all crypto holdings in Quadro RW
+  Action required: Declare all crypto holdings in Quadro RW
 
-⚠️ Data Quality
+Data Quality
   Invoices with missing tax data: 0
-  Status:                     ✅ All settled invoices have tax data
+  Status: All settled invoices have tax data
 
-❌ Compliance Issues Found: 1 unverified AML payment(s)
+Compliance Issues Found: 1 unverified AML payment(s)
 ```
 
 **Con dettagli verbose:**
@@ -305,7 +305,7 @@ Unverified Payments (1 total)
 │ abc123...    │  6,000.00 € │ 2025-06-15 ... │ 101        │
 └──────────────┴─────────────┴────────────────┴────────────┘
 
-⚠️ Action Required: These payments require client identity verification
+Action Required: These payments require client identity verification
 Use: openfatture lightning aml verify <payment-hash> --verified-by <email>
 ```
 
@@ -321,9 +321,9 @@ openfatture lightning aml verify abc123... \
 **Output:**
 
 ```
-✅ Verifying AML Payment: abc123...
+Verifying AML Payment: abc123...
 
-✅ Payment verified successfully
+Payment verified successfully
 
 Payment Hash:  abc123...
 Amount (EUR):  6,000.00 €
@@ -377,8 +377,8 @@ openfatture lightning compliance-check --tax-year 2025 --verbose
 
 Risolvi eventuali problemi:
 
-- Pagamenti AML non verificati → Verifica cliente
-- Dati fiscali mancanti → Integra tasso BTC/EUR e costo acquisto
+- Pagamenti AML non verificati Verifica cliente
+- Dati fiscali mancanti Integra tasso BTC/EUR e costo acquisto
 
 ### Step 4: Fine Anno Fiscale
 
@@ -425,7 +425,7 @@ invoice_service.create_invoice_from_fattura(
     totale_eur=Decimal("1000.00"),
     descrizione="Consulenza IT",
     cliente_nome="Acme Corp",
-    acquisition_cost_eur=Decimal("800.00")  # ⬅️ IMPORTANTE
+    acquisition_cost_eur=Decimal("800.00") # IMPORTANTE
 )
 ```
 
@@ -545,6 +545,6 @@ Per consulenza fiscale personalizzata:
 
 ---
 
-**🇮🇹 Fatto con ❤️ per freelance e PMI italiane**
+**Fatto con per freelance e PMI italiane**
 
 Per domande o segnalazioni: https://github.com/venerelabs/openfatture/issues

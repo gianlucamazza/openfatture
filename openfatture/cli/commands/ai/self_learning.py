@@ -23,7 +23,7 @@ def self_learning_status() -> None:
     from openfatture.ai.ml.retraining import get_scheduler
     from openfatture.ai.rag.auto_update import get_auto_indexing_service
 
-    console.print("\n[bold blue]🤖 Self-Learning System Dashboard[/bold blue]\n")
+    console.print("\n[bold blue]Self-Learning System Dashboard[/bold blue]\n")
 
     # RAG Auto-Update Status
     console.print("[bold cyan]═══ RAG Auto-Update ═══[/bold cyan]\n")
@@ -32,8 +32,8 @@ def self_learning_status() -> None:
         status = service.get_status()
 
         # Status indicators
-        enabled_icon = "✅" if status["enabled"] else "❌"
-        running_icon = "🟢" if status["running"] else "⚫"
+        enabled_icon = "" if status["enabled"] else ""
+        running_icon = "" if status["running"] else ""
 
         rag_table = Table(show_header=False, box=None)
         rag_table.add_column("Metric", style="dim")
@@ -65,7 +65,7 @@ def self_learning_status() -> None:
             console.print()
 
     except Exception as e:
-        console.print(f"[yellow]⚠️  Could not fetch RAG auto-update status: {e}[/yellow]\n")
+        console.print(f"[yellow]Could not fetch RAG auto-update status: {e}[/yellow]\n")
 
     # ML Retraining Status
     console.print("[bold cyan]═══ ML Model Retraining ═══[/bold cyan]\n")
@@ -74,8 +74,8 @@ def self_learning_status() -> None:
         status = scheduler.get_status()
 
         # Status indicators
-        enabled_icon = "✅" if status["enabled"] else "❌"
-        running_icon = "🟢" if status["running"] else "⚫"
+        enabled_icon = "" if status["enabled"] else ""
+        running_icon = "" if status["running"] else ""
 
         retrain_table = Table(show_header=False, box=None)
         retrain_table.add_column("Metric", style="dim")
@@ -93,7 +93,7 @@ def self_learning_status() -> None:
         # Trigger status
         trigger_status = status.get("trigger_status", {})
         should_trigger = trigger_status.get("should_trigger", False)
-        trigger_icon = "⚠️" if should_trigger else "✅"
+        trigger_icon = "" if should_trigger else ""
         retrain_table.add_row("Ready to Train:", f"{trigger_icon} {should_trigger}")
 
         # Feedback count
@@ -113,7 +113,7 @@ def self_learning_status() -> None:
             console.print()
 
     except Exception as e:
-        console.print(f"[yellow]⚠️  Could not fetch retraining status: {e}[/yellow]\n")
+        console.print(f"[yellow]Could not fetch retraining status: {e}[/yellow]\n")
 
     # Feedback Collection Stats
     console.print("[bold cyan]═══ Feedback Collection ═══[/bold cyan]\n")
@@ -131,7 +131,7 @@ def self_learning_status() -> None:
         # User feedback
         feedback_table.add_row("User Feedback (7d):", str(user_stats.total_feedback))
         if user_stats.average_rating:
-            stars = "⭐" * min(5, int(user_stats.average_rating))
+            stars = "" * min(5, int(user_stats.average_rating))
             feedback_table.add_row("Avg Rating:", f"{stars} ({user_stats.average_rating:.1f}/5)")
 
         # Prediction feedback
@@ -150,7 +150,7 @@ def self_learning_status() -> None:
             console.print()
 
     except Exception as e:
-        console.print(f"[yellow]⚠️  Could not fetch feedback stats: {e}[/yellow]\n")
+        console.print(f"[yellow]Could not fetch feedback stats: {e}[/yellow]\n")
 
     # Footer with helpful commands
     console.print("[dim]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/dim]")

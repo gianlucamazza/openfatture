@@ -1,7 +1,7 @@
 {% extends "base.txt" %}
 
 {% block content %}
-📊 {{ _('email.batch.summary.title') }}
+{{ _('email.batch.summary.title') }}
 
 {{ _('email.batch.summary.operation') }}: {{ operation_type }}
 {{ _('email.batch.summary.success_rate') }}: {{ ((result.succeeded / result.total) * 100) | percentage }}
@@ -32,7 +32,7 @@
 {% endif %}
 {% else %}
 
-✅ {{ _('email.batch.summary.no_errors') }}
+{{ _('email.batch.summary.no_errors') }}
 {% endif %}
 
 {% if csv_report_path %}

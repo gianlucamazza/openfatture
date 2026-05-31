@@ -1,4 +1,4 @@
-"""Integration tests for preventivo → fattura conversion."""
+"""Integration tests for preventivo fattura conversion."""
 
 from datetime import date, timedelta
 

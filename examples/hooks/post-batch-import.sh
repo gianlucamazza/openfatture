@@ -11,7 +11,7 @@
 #   - OPENFATTURE_RECORDS_SUCCEEDED: Number of successful records
 #   - OPENFATTURE_RECORDS_FAILED: Number of failed records
 
-echo "📦 Batch Import Completed"
+echo "Batch Import Completed"
 echo "================================"
 echo "File: ${OPENFATTURE_FILE_PATH}"
 echo "Operation: ${OPENFATTURE_OPERATION_TYPE}"
@@ -30,7 +30,7 @@ fi
 # Send alert if there are failures
 if [ -n "${OPENFATTURE_RECORDS_FAILED}" ] && [ "${OPENFATTURE_RECORDS_FAILED}" -gt 0 ]; then
     echo ""
-    echo "⚠️  WARNING: ${OPENFATTURE_RECORDS_FAILED} records failed to import!"
+    echo "WARNING: ${OPENFATTURE_RECORDS_FAILED} records failed to import!"
     echo "Review the error log for details."
 
     # Example: Send to monitoring system
@@ -49,4 +49,4 @@ mkdir -p "$(dirname "$log_file")"
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Import completed: ${OPENFATTURE_RECORDS_SUCCEEDED}/${OPENFATTURE_RECORDS_PROCESSED} succeeded" >> "$log_file"
 
 echo ""
-echo "✅ Hook executed successfully"
+echo "Hook executed successfully"

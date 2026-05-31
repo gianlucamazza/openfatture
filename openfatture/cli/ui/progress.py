@@ -77,9 +77,9 @@ def process_with_progress[T](
 
     # Show summary
     if error_count == 0:
-        console.print(f"\n[green]✓ {success_message}: {success_count}/{len(items)}[/green]")
+        console.print(f"\n[green]{success_message}: {success_count}/{len(items)}[/green]")
     else:
-        console.print(f"\n[yellow]⚠ {success_count} successi, {error_count} errori[/yellow]")
+        console.print(f"\n[yellow]{success_count} successi, {error_count} errori[/yellow]")
         console.print(f"\n[red]{error_message}:[/red]")
         for i, err in enumerate(errors[:5], 1):  # Show max 5 errors
             console.print(f"  {i}. {err}")
@@ -111,7 +111,7 @@ def with_spinner[T](
         refresh_per_second=10,
     ) as live:
         result = fn()
-        live.update(f"[green]✓ {success_message}[/green]")
+        live.update(f"[green]{success_message}[/green]")
 
     return result
 

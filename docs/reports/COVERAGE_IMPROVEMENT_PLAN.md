@@ -1,4 +1,4 @@
-# 🎯 Piano di Miglioramento Coverage - OpenFatture
+# Piano di Miglioramento Coverage - OpenFatture
 
 **Data**: 2025-10-17 (Aggiornato con analisi dettagliata)
 **Coverage Globale Attuale**: 47% (28,677 statements, 15,286 non coperti)
@@ -6,28 +6,28 @@
 
 ---
 
-## 📊 Analisi Moduli Prioritari - AGGIORNATA
+## Analisi Moduli Prioritari - AGGIORNATA
 
-### ✅ Moduli con Copertura Eccellente (NO action needed)
+### Moduli con Copertura Eccellente (NO action needed)
 
 | Modulo | Statements | Coverage | Status |
 |--------|-----------|----------|--------|
-| **Event Analytics** | 118 | **96%** ✅ | 16 test esistenti, solo 5 linee mancanti |
-| **SDI - XML Builder** | 150 | **99%** ✅ | 19 test esistenti, solo 1 linea mancante |
-| **SDI - Notifiche Parser** | 131 | **88%** ✅ | 24 test esistenti, 16 linee mancanti |
-| **SDI - Notifiche Processor** | 99 | **92%** ✅ | 29 test esistenti, 8 linee mancanti |
+| **Event Analytics** | 118 | **96%** | 16 test esistenti, solo 5 linee mancanti |
+| **SDI - XML Builder** | 150 | **99%** | 19 test esistenti, solo 1 linea mancante |
+| **SDI - Notifiche Parser** | 131 | **88%** | 24 test esistenti, 16 linee mancanti |
+| **SDI - Notifiche Processor** | 99 | **92%** | 29 test esistenti, 8 linee mancanti |
 
 **Totale coverage già eccellente**: 498 statements con coverage 88-99%
 
-### 🔴 Moduli con Coverage Critica (0% - Action Required)
+### Moduli con Coverage Critica (0% - Action Required)
 
 | Modulo | Statements | Missing | Priority | Effort |
 |--------|-----------|---------|----------|--------|
-| **SDI - PEC Sender** | 101 | 101 | 🔴 CRITICA | 3-4 ore |
-| **SDI - XSD Validator** | 60 | 60 | 🔴 CRITICA | 2-3 ore |
-| **SDI - Digital Signature** | 64 | 64 | 🟡 MEDIA | 2-3 ore |
-| **SDI - Certificate Manager** | 71 | 71 | 🟡 MEDIA | 2-3 ore |
-| **SDI - Signature Verifier** | 68 | 68 | 🟡 MEDIA | 2-3 ore |
+| **SDI - PEC Sender** | 101 | 101 | CRITICA | 3-4 ore |
+| **SDI - XSD Validator** | 60 | 60 | CRITICA | 2-3 ore |
+| **SDI - Digital Signature** | 64 | 64 | MEDIA | 2-3 ore |
+| **SDI - Certificate Manager** | 71 | 71 | MEDIA | 2-3 ore |
+| **SDI - Signature Verifier** | 68 | 68 | MEDIA | 2-3 ore |
 
 **Totale statements da coprire (0%)**: 364 statements (non 862!)
 
@@ -35,17 +35,17 @@
 
 | Modulo | Statements | Missing | Priority | Effort |
 |--------|-----------|---------|----------|--------|
-| **Core - Database Models** | 284 | 35 | 🟢 BASSA | 1-2 ore |
+| **Core - Database Models** | 284 | 35 | BASSA | 1-2 ore |
 
-**Target**: Portare da 88% → 95%+
+**Target**: Portare da 88% 95%+
 
 ---
 
-## 🎯 Strategia di Implementazione (Best Practices)
+## Strategia di Implementazione (Best Practices)
 
-### ✅ **FASE 1: Event Analytics - COMPLETATA**
+### **FASE 1: Event Analytics - COMPLETATA**
 
-**Status**: ✅ 96% coverage già raggiunta con 16 test esistenti!
+**Status**: 96% coverage già raggiunta con 16 test esistenti!
 **File**: `tests/core/events/test_analytics.py` (327 linee)
 **Azione**: Nessuna - modulo già in ottima forma
 
@@ -223,7 +223,7 @@ class TestSignatureVerifier:
 3. `get_certificate_info()` - Estrazione info certificato
 
 **DigitalSigner**:
-1. `sign_file()` - Firma file XML → .p7m
+1. `sign_file()` - Firma file XML .p7m
 2. `sign_data()` - Firma dati in memoria
 3. `_create_pkcs7_signature()` - Creazione CAdES-BES
 4. `verify_signature()` - Verifica base
@@ -240,18 +240,18 @@ class TestSignatureVerifier:
 
 ---
 
-## 📅 Timeline Consigliata (AGGIORNATA)
+## Timeline Consigliata (AGGIORNATA)
 
 ### **Sprint 1 (Settimana 1): SDI Critical Gaps**
 **Obiettivo**: Coprire i moduli critici SDI al 0%
 
 | Giorno | Task | Effort | Coverage Target |
 |--------|------|--------|-----------------|
-| 1 | SDI - PEC Sender | 4h | 0% → 85% (+0.35%) |
-| 2 | SDI - XSD Validator | 3h | 0% → 85% (+0.2%) |
-| 3-4 | Digital Signature Suite | 6h | 0% → 80% (+0.55%) |
+| 1 | SDI - PEC Sender | 4h | 0% 85% (+0.35%) |
+| 2 | SDI - XSD Validator | 3h | 0% 85% (+0.2%) |
+| 3-4 | Digital Signature Suite | 6h | 0% 80% (+0.55%) |
 
-**Sprint 1 Result**: 47% → 48.1% coverage (+1.1%)
+**Sprint 1 Result**: 47% 48.1% coverage (+1.1%)
 
 **Note**: Event Analytics (96%), XML Builder (99%), Notifiche Parser (88%), Notifiche Processor (92%) già coperti - nessuna azione necessaria!
 
@@ -260,22 +260,22 @@ class TestSignatureVerifier:
 
 | Giorno | Task | Effort | Coverage Target |
 |--------|------|--------|-----------------|
-| 1 | Event Analytics: 96% → 98% | 1h | Coprire 5 linee mancanti |
-| 2 | SDI Notifiche Parser: 88% → 95% | 2h | Coprire 16 linee mancanti |
-| 3 | SDI Notifiche Processor: 92% → 95% | 1h | Coprire 8 linee mancanti |
-| 4 | XML Builder: 99% → 100% | 30min | Coprire 1 linea mancante |
+| 1 | Event Analytics: 96% 98% | 1h | Coprire 5 linee mancanti |
+| 2 | SDI Notifiche Parser: 88% 95% | 2h | Coprire 16 linee mancanti |
+| 3 | SDI Notifiche Processor: 92% 95% | 1h | Coprire 8 linee mancanti |
+| 4 | XML Builder: 99% 100% | 30min | Coprire 1 linea mancante |
 
-**Sprint 2 Result**: 48.1% → 48.5% coverage (+0.4%)
+**Sprint 2 Result**: 48.1% 48.5% coverage (+0.4%)
 
 ### **Total Estimated Coverage Improvement**
 - **Starting**: 47%
 - **After Sprint 1**: ~48.1% (+1.1%)
 - **After Sprint 2 (optional)**: ~48.5% (+1.5%)
-- **Additional work needed**: 48.5% → 80% = **31.5%** (requires testing 100+ other modules)
+- **Additional work needed**: 48.5% 80% = **31.5%** (requires testing 100+ other modules)
 
 ---
 
-## 🛠️ Metodologia Best Practices
+## Metodologia Best Practices
 
 ### 1. **Test-First Approach**
 - Leggere il codice sorgente
@@ -335,7 +335,7 @@ class TestFeatureName:
 
 ---
 
-## ✅ Acceptance Criteria
+## Acceptance Criteria
 
 ### Per ogni modulo testato:
 
@@ -360,7 +360,7 @@ class TestFeatureName:
 
 ---
 
-## 📊 Progress Tracking
+## Progress Tracking
 
 ### Coverage Checkpoints
 
@@ -375,11 +375,11 @@ class TestFeatureName:
 | M7 - Notifiche Processor | +0.3% | 7/10 | Day 8 |
 | M8 - Digital Signature | +0.6% | 10/10 | Day 10 |
 
-**Total Improvement**: +3.1% (47% → 50.1%)
+**Total Improvement**: +3.1% (47% 50.1%)
 
 ---
 
-## 🚀 Getting Started - AGGIORNATO
+## Getting Started - AGGIORNATO
 
 ### Prossimo Step Immediato
 
@@ -427,11 +427,11 @@ uv run pytest tests/unit/test_pec_sender.py -v --cov=openfatture/sdi/pec_sender
 uv run pytest tests/unit/test_sdi_notifiche.py tests/unit/test_xml_builder.py -v --cov=openfatture/sdi
 
 # Output atteso:
-# - parser.py: 88% ✅
-# - processor.py: 92% ✅
-# - fatturapa.py: 99% ✅
-# - pec_sender.py: 0% ❌ (da implementare)
-# - xsd_validator.py: 0% ❌ (da implementare)
+# - parser.py: 88%
+# - processor.py: 92%
+# - fatturapa.py: 99%
+# - pec_sender.py: 0% (da implementare)
+# - xsd_validator.py: 0% (da implementare)
 ```
 
 ### Command Reference
@@ -452,19 +452,19 @@ uv run pytest tests/ --cov=openfatture --cov-report=term | grep "TOTAL"
 
 ---
 
-## 📈 Success Metrics - AGGIORNATO
+## Success Metrics - AGGIORNATO
 
 ### Definition of Done (per questo piano CORRETTO)
 
-- [x] **Coverage Report Analizzato**: ✅ DONE (Scoperto che molto era già coperto!)
-- [x] **Event Analytics**: ✅ 96% coverage già raggiunta (16 test esistenti)
-- [x] **SDI - XML Builder**: ✅ 99% coverage già raggiunta (19 test esistenti)
-- [x] **SDI - Notifiche Parser**: ✅ 88% coverage già raggiunta (24 test esistenti)
-- [x] **SDI - Notifiche Processor**: ✅ 92% coverage già raggiunta (29 test esistenti)
-- [ ] **SDI - PEC Sender**: 0% → 85% (DA IMPLEMENTARE)
-- [ ] **SDI - XSD Validator**: 0% → 85% (DA IMPLEMENTARE)
-- [ ] **Digital Signature Suite**: 0% → 80% (DA IMPLEMENTARE)
-- [ ] **Coverage Globale**: 47% → 48.1%+ (Sprint 1)
+- [x] **Coverage Report Analizzato**: DONE (Scoperto che molto era già coperto!)
+- [x] **Event Analytics**: 96% coverage già raggiunta (16 test esistenti)
+- [x] **SDI - XML Builder**: 99% coverage già raggiunta (19 test esistenti)
+- [x] **SDI - Notifiche Parser**: 88% coverage già raggiunta (24 test esistenti)
+- [x] **SDI - Notifiche Processor**: 92% coverage già raggiunta (29 test esistenti)
+- [ ] **SDI - PEC Sender**: 0% 85% (DA IMPLEMENTARE)
+- [ ] **SDI - XSD Validator**: 0% 85% (DA IMPLEMENTARE)
+- [ ] **Digital Signature Suite**: 0% 80% (DA IMPLEMENTARE)
+- [ ] **Coverage Globale**: 47% 48.1%+ (Sprint 1)
 - [ ] **Tutti i test passing**: 100%
 - [ ] **Documentation updated**: README con coverage badges
 

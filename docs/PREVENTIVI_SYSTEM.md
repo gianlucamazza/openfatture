@@ -48,9 +48,9 @@ CONVERTITO = "convertito"    # Converted to invoice
 ```
 
 **Relazioni:**
-- `Cliente` → `Preventivo` (one-to-many): `cliente.preventivi`
-- `Preventivo` → `RigaPreventivo` (one-to-many): `preventivo.righe`
-- `Preventivo` ↔ `Fattura` (one-to-one): `preventivo.fattura` / `fattura.preventivo`
+- `Cliente` `Preventivo` (one-to-many): `cliente.preventivi`
+- `Preventivo` `RigaPreventivo` (one-to-many): `preventivo.righe`
+- `Preventivo` `Fattura` (one-to-one): `preventivo.fattura` / `fattura.preventivo`
 
 ### Business Logic Layer
 
@@ -156,14 +156,14 @@ pdf_path = generator.generate(preventivo, "preventivo_001.pdf")
 ```bash
 $ openfatture preventivo crea
 
-📋 Create New Preventivo (Quote)
+Create New Preventivo (Quote)
 
 Available clients:
   1. Cliente Test SRL (12345678901)
   2. ACME Corp (98765432100)
 
 Select client ID [1]: 1
-✓ Client: Cliente Test SRL
+Client: Cliente Test SRL
 
 Validity: 30 days (expires: 2025-11-15)
 
@@ -175,14 +175,14 @@ Quantity [1.0]: 10
 Unit price (€) [100.0]: 150
 VAT rate (%) [22.0]: 22
 Unit of measure [ore]: ore
-  ✓ Added: Consulenza IT - €1830.00
+  Added: Consulenza IT - €1830.00
 
 Item 2 description:
 
 Add notes? [y/n]: n
 Add terms and conditions? [y/n]: n
 
-✓ Preventivo created successfully!
+Preventivo created successfully!
 
 ┌─────────────────────────────────────┐
 │ Preventivo 1/2025                   │
@@ -220,7 +220,7 @@ $ openfatture preventivo lista --stato bozza
 ```bash
 $ openfatture preventivo converti 1
 
-🔄 Converting Preventivo to Fattura
+Converting Preventivo to Fattura
 
 Preventivo: 1/2025
 Client: Cliente Test SRL
@@ -228,7 +228,7 @@ Total: €1830.00
 
 Convert to invoice? [Y/n]: y
 
-✓ Preventivo converted successfully!
+Preventivo converted successfully!
 
 ┌─────────────────────────────────────┐
 │ Invoice 1/2025                      │
@@ -253,8 +253,8 @@ Next: openfatture fattura invia 1 --pec
 ### Test Coverage
 
 **Unit Tests** (`tests/core/test_preventivo_service.py`):
-- ✅ 10 test cases
-- ✅ 63% coverage del service
+- 10 test cases
+- 63% coverage del service
 - Tests:
   - Creazione preventivo con successo
   - Validazione cliente invalido
@@ -264,10 +264,10 @@ Next: openfatture fattura invia 1 --pec
   - Protezione preventivi convertiti
 
 **Integration Tests** (`tests/integration/test_preventivo_conversion.py`):
-- ✅ 8 test cases
-- ✅ 59% coverage della conversione
+- 8 test cases
+- 59% coverage della conversione
 - Tests:
-  - Conversione preventivo→fattura completa
+  - Conversione preventivofattura completa
   - Validazioni (già convertito, scaduto)
   - Preservazione dati (note, righe)
   - Tipi documento diversi (TD01, TD06)
@@ -314,10 +314,10 @@ uv run python -m pytest -k preventivo -v
 ```
 BOZZA ──────────┐
     │           │
-    ↓           ↓
-INVIATO ──→ ACCETTATO ──→ CONVERTITO (finale)
+
+INVIATO ──ACCETTATO ──CONVERTITO (finale)
     │           │
-    ↓           ↓
+
 RIFIUTATO   SCADUTO
 ```
 
@@ -329,16 +329,16 @@ RIFIUTATO   SCADUTO
 | Feature                | Preventivo              | Fattura                    |
 |------------------------|-------------------------|----------------------------|
 | Scopo                  | Offerta/Stima           | Documento fiscale          |
-| XML FatturaPA          | ❌ No                   | ✅ Sì                      |
-| Invio SDI              | ❌ No                   | ✅ Sì                      |
-| Scadenza               | ✅ Sì (validità)        | ❌ No                      |
+| XML FatturaPA | No | Sì |
+| Invio SDI | No | Sì |
+| Scadenza | Sì (validità) | No |
 | Stati                  | 6 stati                 | 7 stati (diversi)          |
 | Numerazione            | Separata (1/2025, ...)  | Separata (1/2025, ...)     |
-| Conversione            | → Fattura               | ← Preventivo (opzionale)   |
+| Conversione | Fattura | Preventivo (opzionale) |
 | PDF                    | Template specifico      | Template fattura           |
 | Footer PDF             | "Non costituisce fattura" | "Documento fiscale"      |
-| Pagamenti              | ❌ No tracking          | ✅ Sistema completo        |
-| SDI Notifications      | ❌ No                   | ✅ RC/NS/MC/DT             |
+| Pagamenti | No tracking | Sistema completo |
+| SDI Notifications | No | RC/NS/MC/DT |
 
 ## Esempi di Utilizzo Avanzato
 
@@ -519,15 +519,15 @@ openfatture preventivo aggiorna-stato <id> bozza
 ## Changelog
 
 **v1.1.0 (2025-10-16)** - Sistema Preventivi
-- ✅ Modelli database (Preventivo, RigaPreventivo, StatoPreventivo)
-- ✅ PreventivoService completo (CRUD + conversione)
-- ✅ CLI commands (6 comandi)
-- ✅ PDF generator dedicato
-- ✅ 18 test cases (10 unit + 8 integration)
-- ✅ Relazione bidirezionale Preventivo ↔ Fattura
-- ✅ Gestione automatica scadenze
-- ✅ Validazioni business logic completa
+- Modelli database (Preventivo, RigaPreventivo, StatoPreventivo)
+- PreventivoService completo (CRUD + conversione)
+- CLI commands (6 comandi)
+- PDF generator dedicato
+- 18 test cases (10 unit + 8 integration)
+- Relazione bidirezionale Preventivo Fattura
+- Gestione automatica scadenze
+- Validazioni business logic completa
 
 ---
 
-**Sistema preventivi implementato e testato con successo! 🎉**
+**Sistema preventivi implementato e testato con successo! **

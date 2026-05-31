@@ -57,7 +57,7 @@ def select_cliente(message: str = "Seleziona cliente:", allow_none: bool = False
             style=openfatture_style,
             use_arrow_keys=True,
             use_jk_keys=False,  # Disable j/k to avoid conflicts with typing
-            instruction="(Digita per cercare, ↑↓ per navigare, INVIO per selezionare)",
+            instruction="(Digita per cercare, per navigare, INVIO per selezionare)",
         ).ask()
 
         if cliente_id is None:
@@ -120,7 +120,7 @@ def select_fattura(
             style=openfatture_style,
             use_arrow_keys=True,
             use_jk_keys=False,
-            instruction="(Digita per cercare, ↑↓ per navigare, INVIO per selezionare)",
+            instruction="(Digita per cercare, per navigare, INVIO per selezionare)",
         ).ask()
 
         if fattura_id is None:

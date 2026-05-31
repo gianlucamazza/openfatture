@@ -50,7 +50,7 @@ class UserMockProvider(BaseLLMProvider):
 Ho analizzato il tuo input e generato quanto richiesto.
 La risposta è formattata in modo chiaro e professionale.
 
-✅ Operazione completata con successo.
+Operazione completata con successo.
 """
 
         return AgentResponse(
@@ -436,30 +436,30 @@ def uat_summary(request):
         print("\n" + "=" * 80)
         print("CUSTOM COMMANDS - USER ACCEPTANCE TESTING SUMMARY")
         print("=" * 80)
-        print("\n✅ Command Discovery:")
+        print("\nCommand Discovery:")
         print("  - Users can list all available commands")
         print("  - Users can find commands by aliases")
         print("  - Clear error messages for invalid commands")
-        print("\n✅ Command Execution:")
+        print("\nCommand Execution:")
         print("  - Invoice creation workflow works end-to-end")
         print("  - Client lookup provides comprehensive information")
         print("  - VAT suggestions are helpful and accurate")
         print("  - Compliance checks are thorough and clear")
         print("  - Monthly reports are comprehensive")
-        print("\n✅ User Workflows:")
+        print("\nUser Workflows:")
         print("  - Multi-step workflows execute smoothly")
         print("  - Context is maintained across commands")
         print("  - Common use cases are well-supported")
-        print("\n✅ Customization:")
+        print("\nCustomization:")
         print("  - Users can create custom commands")
         print("  - Hot-reload works without restart")
         print("  - Custom commands integrate seamlessly")
-        print("\n✅ Performance:")
+        print("\nPerformance:")
         print("  - Command listing feels instant (< 100ms)")
         print("  - Command expansion is imperceptible (< 50ms)")
         print("  - No lag or delays in typical usage")
         print("\n" + "=" * 80)
-        print("RESULT: ✅ ALL UAT CRITERIA MET - FEATURE READY FOR PRODUCTION")
+        print("RESULT: ALL UAT CRITERIA MET - FEATURE READY FOR PRODUCTION")
         print("=" * 80 + "\n")
 
     request.addfinalizer(print_summary)

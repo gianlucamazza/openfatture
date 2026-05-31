@@ -26,18 +26,18 @@ The hook system consists of three main components:
 3. **Bridge**: Automatic connection between events and hooks
 
 ```
-Event Published → Event Bus → Hook Bridge → Hook Executor → Your Script
+Event Published Event Bus Hook Bridge Hook Executor Your Script
 ```
 
 **Key Features:**
-- ✅ Shell (`.sh`, `.bash`) and Python (`.py`) support
-- ✅ Automatic event-to-hook mapping
-- ✅ Environment variable injection
-- ✅ Timeout enforcement
-- ✅ Error isolation (one hook failure doesn't affect others)
-- ✅ Priority-based execution
-- ✅ Enable/disable without deleting
-- ✅ Test hooks with sample data
+- Shell (`.sh`, `.bash`) and Python (`.py`) support
+- Automatic event-to-hook mapping
+- Environment variable injection
+- Timeout enforcement
+- Error isolation (one hook failure doesn't affect others)
+- Priority-based execution
+- Enable/disable without deleting
+- Test hooks with sample data
 
 ---
 
@@ -84,7 +84,7 @@ openfatture hooks test post-invoice-send
 ```bash
 # Send an invoice - your hook will execute automatically
 openfatture fattura invia 123 --pec
-# → post-invoice-send.sh executes automatically after successful send
+# post-invoice-send.sh executes automatically after successful send
 ```
 
 ---
@@ -116,13 +116,13 @@ event_bus.publish(InvoiceCreatedEvent(
 
 Hooks are discovered automatically from `~/.openfatture/hooks/` and executed when matching events occur:
 
-1. **Event Published** → `InvoiceSentEvent`
-2. **Hook Registry** → Finds matching hooks (`post-invoice-send.*`)
-3. **Hook Executor** → Runs each hook with:
+1. **Event Published** `InvoiceSentEvent`
+2. **Hook Registry** Finds matching hooks (`post-invoice-send.*`)
+3. **Hook Executor** Runs each hook with:
    - Environment variables injected
    - Timeout enforcement (default: 30s)
    - Output capture (stdout/stderr)
-4. **Result Logging** → Success/failure logged with structured data
+4. **Result Logging** Success/failure logged with structured data
 
 ---
 
@@ -244,8 +244,8 @@ Output:
 ┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ Name                   ┃ Enabled ┃ Timeout ┃ Description            ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ post-invoice-send      │    ✓    │    15s  │ Send Slack notification│
-│ post-invoice-create    │    ✓    │    30s  │ Backup database        │
+│ post-invoice-send │ │ 15s │ Send Slack notification│
+│ post-invoice-create │ │ 30s │ Backup database │
 └────────────────────────┴─────────┴─────────┴────────────────────────┘
 ```
 
@@ -643,6 +643,6 @@ Have a useful hook? Share it with the community!
 
 ---
 
-**Happy Hooking!** 🪝
+**Happy Hooking!**
 
 For questions or issues, please file an issue on GitHub or consult the documentation.

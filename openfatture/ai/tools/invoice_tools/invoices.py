@@ -324,7 +324,7 @@ def update_invoice_status(
     new_status: str,
 ) -> dict[str, Any]:
     """
-    Update invoice status (workflow: BOZZA → DA_INVIARE).
+    Update invoice status (workflow: BOZZA DA_INVIARE).
 
     Args:
         fattura_id: Invoice ID
@@ -403,7 +403,7 @@ def update_invoice_status(
             "numero": f"{fattura.numero}/{fattura.anno}",
             "old_status": old_status,
             "new_status": new_status_enum.value,
-            "message": f"Invoice {fattura.numero}/{fattura.anno} status changed: {old_status} → {new_status_enum.value}",
+            "message": f"Invoice {fattura.numero}/{fattura.anno} status changed: {old_status} {new_status_enum.value}",
         }
 
     except Exception as e:

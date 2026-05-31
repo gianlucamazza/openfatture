@@ -108,9 +108,9 @@ web-validation-max-value = Valore massimo: { $value }
 
 ### Error Messages
 web-error-generic = Si è verificato un errore inaspettato
-web-error-unexpected = 🚨 Si è verificato un errore imprevisto. Riprova più tardi.
-web-error-reload-page = 🔄 Ricarica Pagina
-web-error-goto-health = 🏥 Vai alla Dashboard Salute
+web-error-unexpected = Si è verificato un errore imprevisto. Riprova più tardi.
+web-error-reload-page = Ricarica Pagina
+web-error-goto-health = Vai alla Dashboard Salute
 web-error-network = Errore di connessione
 web-error-timeout = Timeout della richiesta
 web-error-unauthorized = Non autorizzato
@@ -123,23 +123,23 @@ web-error-saving = Errore durante il salvataggio
 web-error-deleting = Errore durante l'eliminazione
 
 ### Sidebar
-web-sidebar-quick-stats = 📊 Statistiche Rapide
+web-sidebar-quick-stats = Statistiche Rapide
 web-sidebar-invoices = Fatture
 web-sidebar-clients = Clienti
 web-sidebar-revenue = Fatturato
 web-sidebar-pending = In Sospeso
-web-sidebar-configuration = ⚙️ Configurazione
+web-sidebar-configuration = Configurazione
 web-sidebar-company = Azienda
 web-sidebar-vat-number = P.IVA
 web-sidebar-tax-regime = Regime
-web-sidebar-ai-enabled = 🤖 AI Abilitato
+web-sidebar-ai-enabled = AI Abilitato
 web-sidebar-ai-disabled = AI Non Configurato
 web-sidebar-ai-provider = Provider
-web-sidebar-advanced-ops = 🔧 Operazioni Avanzate
+web-sidebar-advanced-ops = Operazioni Avanzate
 web-sidebar-error-loading-stats = Errore caricamento stats: { $error }
 
 ### Language Selector
-web-lang-selector-title = 🌍 Lingua
+web-lang-selector-title = Lingua
 web-lang-selector-italian = Italiano
 web-lang-selector-english = English
 web-lang-selector-spanish = Español

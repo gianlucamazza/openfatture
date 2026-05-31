@@ -23,18 +23,18 @@ from openfatture.ai.providers.factory import create_provider
 async def test_ai_assistant() -> None:
     """Test AI assistant with various queries."""
     print("\n" + "=" * 80)
-    print("🧪 TEST E2E AI ASSISTANT")
+    print("TEST E2E AI ASSISTANT")
     print("=" * 80)
 
     # Initialize AI provider and agent
-    print("\n1️⃣  Inizializzazione AI provider...")
+    print("\n1Inizializzazione AI provider...")
     try:
         provider = create_provider()
         agent = ChatAgent(provider=provider)
-        print(f"   ✅ AI provider creato: {provider.__class__.__name__}")
-        print("   ✅ Chat agent inizializzato")
+        print(f" AI provider creato: {provider.__class__.__name__}")
+        print(" Chat agent inizializzato")
     except Exception as e:
-        print(f"   ❌ Errore inizializzazione: {e}")
+        print(f" Errore inizializzazione: {e}")
         return
 
     from typing import Any
@@ -61,8 +61,8 @@ async def test_ai_assistant() -> None:
     results: list[dict[str, Any]] = []
 
     for idx, test_case in enumerate(test_cases, 1):
-        print(f"\n{idx + 1}️⃣  Test: {test_case['name']}")
-        print(f"   📝 Query: {test_case['query']}")
+        print(f"\n{idx + 1}Test: {test_case['name']}")
+        print(f" Query: {test_case['query']}")
 
         try:
             # Create context
@@ -78,7 +78,7 @@ async def test_ai_assistant() -> None:
 
             # Check for errors
             if "400" in response.content or "Invalid schema" in response.content:
-                print("   ❌ ERRORE 400: Schema OpenAI invalido")
+                print(" ERRORE 400: Schema OpenAI invalido")
                 results.append({"test": test_case["name"], "status": "FAIL", "error": "400"})
                 continue
 
@@ -87,8 +87,8 @@ async def test_ai_assistant() -> None:
             if hasattr(response, "metadata") and response.metadata:
                 tools_used = response.metadata.get("tools_used", [])
 
-            print(f"   ✅ Risposta ricevuta ({len(response.content)} caratteri)")
-            print(f"   🔧 Tool utilizzati: {tools_used or 'nessuno'}")
+            print(f" Risposta ricevuta ({len(response.content)} caratteri)")
+            print(f" Tool utilizzati: {tools_used or 'nessuno'}")
 
             # Check if expected tools were called
             expected_tools_called = any(
@@ -96,17 +96,17 @@ async def test_ai_assistant() -> None:
             )
 
             if expected_tools_called or tools_used:
-                print("   ✅ Tool calling funzionante")
+                print(" Tool calling funzionante")
                 status = "PASS"
             else:
-                print("   ⚠️  Nessun tool chiamato (potrebbe essere intenzionale)")
+                print(" Nessun tool chiamato (potrebbe essere intenzionale)")
                 status = "PARTIAL"
 
             # Print response preview
             preview = (
                 response.content[:200] + "..." if len(response.content) > 200 else response.content
             )
-            print(f"\n   💬 Risposta AI: {preview}")
+            print(f"\n Risposta AI: {preview}")
 
             results.append(
                 {
@@ -118,29 +118,29 @@ async def test_ai_assistant() -> None:
             )
 
         except Exception as e:
-            print(f"   ❌ ERRORE: {e}")
+            print(f" ERRORE: {e}")
             results.append({"test": test_case["name"], "status": "FAIL", "error": str(e)})
 
     # Final report
     print("\n" + "=" * 80)
-    print("📊 RIEPILOGO RISULTATI")
+    print("RIEPILOGO RISULTATI")
     print("=" * 80)
 
     passed = sum(1 for r in results if r["status"] == "PASS")
     partial = sum(1 for r in results if r["status"] == "PARTIAL")
     failed = sum(1 for r in results if r["status"] == "FAIL")
 
-    print(f"\n✅ Test superati: {passed}/{len(test_cases)}")
-    print(f"⚠️  Test parziali: {partial}/{len(test_cases)}")
-    print(f"❌ Test falliti: {failed}/{len(test_cases)}")
+    print(f"\nTest superati: {passed}/{len(test_cases)}")
+    print(f"Test parziali: {partial}/{len(test_cases)}")
+    print(f"Test falliti: {failed}/{len(test_cases)}")
 
-    print("\n📋 Dettagli:")
+    print("\nDettagli:")
     for result in results:
         status_icon = {
-            "PASS": "✅",
-            "PARTIAL": "⚠️ ",
-            "FAIL": "❌",
-        }.get(str(result["status"]), "❓")
+            "PASS": "",
+            "PARTIAL": "",
+            "FAIL": "",
+        }.get(str(result["status"]), "")
 
         print(f"\n{status_icon} {result['test']}")
         if result["status"] == "PASS" or result["status"] == "PARTIAL":
@@ -152,9 +152,9 @@ async def test_ai_assistant() -> None:
     print("\n" + "=" * 80)
 
     if failed == 0:
-        print("✅ TUTTI I TEST COMPLETATI CON SUCCESSO!")
+        print("TUTTI I TEST COMPLETATI CON SUCCESSO!")
     else:
-        print(f"⚠️  {failed} test falliti. Verifica i blockers sopra.")
+        print(f"{failed} test falliti. Verifica i blockers sopra.")
 
     print("=" * 80)
 

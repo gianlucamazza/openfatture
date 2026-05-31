@@ -2,7 +2,7 @@
 
 Modular build system organised by functional area.
 
-## 📁 Structure
+## Structure
 
 ```
 Makefile                 # Primary orchestrator
@@ -16,7 +16,7 @@ makefiles/
 └── media.mk            # Media automation (videos, screenshots)
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Core Commands
 
@@ -50,7 +50,7 @@ make help-media     # Media automation
 make help-all       # All available commands
 ```
 
-## 📚 Categories
+## Categories
 
 ### Base Commands (`makefiles/base.mk`)
 

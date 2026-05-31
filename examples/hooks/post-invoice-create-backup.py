@@ -19,7 +19,7 @@ def main():
     invoice_number = os.getenv("OPENFATTURE_INVOICE_NUMBER", "unknown")
     invoice_id = os.getenv("OPENFATTURE_INVOICE_ID", "unknown")
 
-    print(f"📦 Backing up database after invoice {invoice_number} creation...")
+    print(f"Backing up database after invoice {invoice_number} creation...")
 
     # Determine database path
     # Assuming SQLite database at ~/.openfatture/data/openfatture.db
@@ -27,7 +27,7 @@ def main():
     db_path = home / ".openfatture" / "data" / "openfatture.db"
 
     if not db_path.exists():
-        print(f"⚠️  Database not found at {db_path}")
+        print(f"Database not found at {db_path}")
         print("Backup skipped (not an error)")
         return 0
 
@@ -43,7 +43,7 @@ def main():
     # Copy database file
     try:
         shutil.copy2(db_path, backup_path)
-        print("✅ Database backed up successfully")
+        print("Database backed up successfully")
         print(f"   Location: {backup_path}")
         print(f"   Size: {backup_path.stat().st_size / 1024:.1f} KB")
 
@@ -53,7 +53,7 @@ def main():
         return 0
 
     except Exception as e:
-        print(f"❌ Backup failed: {e}")
+        print(f"Backup failed: {e}")
         return 1
 
 
@@ -75,7 +75,7 @@ def _cleanup_old_backups(backup_dir: Path, keep: int = 10):
                 pass
 
         if removed_count > 0:
-            print(f"🗑️  Removed {removed_count} old backup(s)")
+            print(f"Removed {removed_count} old backup(s)")
 
 
 if __name__ == "__main__":

@@ -4,13 +4,13 @@ The **AI Chat Assistant** is an interactive conversational AI for OpenFatture th
 
 ## Features
 
-- 💬 **Natural Language Conversations** - Ask questions in plain Italian or English
-- 🛠️ **Function Calling** - AI can search invoices, query clients, and retrieve statistics
-- 💾 **Session Persistence** - Resume conversations where you left off
-- 📊 **Real-time Statistics** - Track tokens, costs, and conversation metrics
-- 🎨 **Rich UI** - Beautiful markdown rendering in the terminal
-- ⌨️ **Command System** - Powerful slash commands for session management
-- 🔄 **Multi-Provider Support** - Works with OpenAI, Anthropic, or local Ollama
+- **Natural Language Conversations** - Ask questions in plain Italian or English
+- **Function Calling** - AI can search invoices, query clients, and retrieve statistics
+- **Session Persistence** - Resume conversations where you left off
+- **Real-time Statistics** - Track tokens, costs, and conversation metrics
+- **Rich UI** - Beautiful markdown rendering in the terminal
+- **Command System** - Powerful slash commands for session management
+- **Multi-Provider Support** - Works with OpenAI, Anthropic, or local Ollama
 
 ---
 
@@ -42,7 +42,7 @@ AI_API_KEY=sk-ant-your-api-key-here
 **Interactive Mode** (Recommended):
 ```bash
 openfatture -i
-# Navigate to: 8. AI Assistant → 1. Chat
+# Navigate to: 8. AI Assistant 1. Chat
 ```
 
 **Direct Access** (if configured):
@@ -211,7 +211,7 @@ AI: [Lists all 6 available tools with descriptions]
 **`/save`** - Save current session
 ```
 Tu: /save
-AI: ✓ Sessione salvata: cb851a65...
+AI: Sessione salvata: cb851a65...
 ```
 
 **`/export`** - Export conversation to file
@@ -221,7 +221,7 @@ AI: Formato di export:
     1. Markdown
     2. JSON
 Tu: 1
-AI: ✓ Esportato in: ~/.openfatture/ai/sessions/cb851a65-export.md
+AI: Esportato in: ~/.openfatture/ai/sessions/cb851a65-export.md
 ```
 
 ### Utility Commands
@@ -231,7 +231,7 @@ AI: ✓ Esportato in: ~/.openfatture/ai/sessions/cb851a65-export.md
 Tu: /clear
 AI: Vuoi davvero cancellare tutti i messaggi? (y/n)
 Tu: y
-AI: ✓ Chat pulita
+AI: Chat pulita
 ```
 
 **`/exit`** or **`/quit`** - Exit chat
@@ -311,8 +311,8 @@ Quest'anno hai emesso 42 fatture...
 
 ### 1. Be Specific
 
-❌ **Vague:** "Dimmi qualcosa sulle fatture"
-✅ **Specific:** "Mostrami le fatture da inviare di questo mese"
+**Vague:** "Dimmi qualcosa sulle fatture"
+**Specific:** "Mostrami le fatture da inviare di questo mese"
 
 ### 2. Use Follow-Up Questions
 
@@ -329,7 +329,7 @@ AI: [Filters previous results]
 Use `/save` for conversations you might want to reference later:
 ```
 Tu: /save
-AI: ✓ Sessione salvata
+AI: Sessione salvata
 ```
 
 ### 4. Check Your Usage
@@ -343,9 +343,9 @@ AI: Tokens: 1,234 | Cost: $0.0123
 ### 5. Use Natural Language
 
 The AI understands Italian business terminology:
-- "fatture scadute" → overdue invoices
-- "clienti attivi" → active clients
-- "fatturato anno corrente" → current year revenue
+- "fatture scadute" overdue invoices
+- "clienti attivi" active clients
+- "fatturato anno corrente" current year revenue
 
 ---
 
@@ -566,20 +566,20 @@ enriched_context = enrich_chat_context(context)
 
 ## Next Steps
 
-- 📖 Read the [AI Architecture Documentation](../docs/AI_ARCHITECTURE.md)
-- 🤖 Try the [Invoice Assistant](AI_INVOICE_ASSISTANT.md)
-- 💡 Try the [Tax Advisor](AI_TAX_ADVISOR.md)
-- 🔧 Explore [Configuration Options](../docs/CONFIGURATION.md)
-- 🤝 Contribute: [GitHub Repository](https://github.com/venerelabs/openfatture)
+- Read the [AI Architecture Documentation](../docs/AI_ARCHITECTURE.md)
+- Try the [Invoice Assistant](AI_INVOICE_ASSISTANT.md)
+- Try the [Tax Advisor](AI_TAX_ADVISOR.md)
+- Explore [Configuration Options](../docs/CONFIGURATION.md)
+- Contribute: [GitHub Repository](https://github.com/venerelabs/openfatture)
 
 ---
 
 ## Support
 
-- 📚 Documentation: [docs/](../docs/)
-- 💬 Community: [GitHub Discussions](https://github.com/venerelabs/openfatture/discussions)
-- 🐛 Bug Reports: [GitHub Issues](https://github.com/venerelabs/openfatture/issues)
-- 📧 Email: info@gianlucamazza.it
+- Documentation: [docs/](../docs/)
+- Community: [GitHub Discussions](https://github.com/venerelabs/openfatture/discussions)
+- Bug Reports: [GitHub Issues](https://github.com/venerelabs/openfatture/issues)
+- Email: info@gianlucamazza.it
 
 ---
 

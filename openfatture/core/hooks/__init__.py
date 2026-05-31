@@ -27,7 +27,7 @@ Usage:
     >>>
     >>> # Now hooks will execute automatically when events are published
     >>> event_bus.publish(InvoiceSentEvent(...))
-    >>> # → post-invoice-send.sh executes automatically
+    >>> # post-invoice-send.sh executes automatically
 """
 
 from __future__ import annotations

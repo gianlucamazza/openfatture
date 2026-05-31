@@ -205,7 +205,7 @@ class BaseWorkflowState(BaseModel):
 class InvoiceCreationState(BaseWorkflowState):
     """State for Invoice Creation workflow.
 
-    Workflow: User Input → Description Agent → Tax Advisor → Compliance → Create
+    Workflow: User Input Description Agent Tax Advisor Compliance Create
 
     Human approval checkpoints:
     1. After Description (optional)
@@ -290,7 +290,7 @@ class InvoiceCreationState(BaseWorkflowState):
 class ComplianceCheckState(BaseWorkflowState):
     """State for Compliance Check workflow.
 
-    Workflow: Load Invoice → Rules Check → Heuristics → SDI Patterns → AI Analysis
+    Workflow: Load Invoice Rules Check Heuristics SDI Patterns AI Analysis
 
     Multi-level compliance checking:
     - Level 1 (BASIC): Deterministic rules only
@@ -334,7 +334,7 @@ class ComplianceCheckState(BaseWorkflowState):
 class CashFlowAnalysisState(BaseWorkflowState):
     """State for Cash Flow Analysis workflow.
 
-    Workflow: Load Unpaid → Predict Each → Aggregate → Generate Insights
+    Workflow: Load Unpaid Predict Each Aggregate Generate Insights
 
     Can run for:
     - All clients (comprehensive forecast)
@@ -377,7 +377,7 @@ class CashFlowAnalysisState(BaseWorkflowState):
 class BatchProcessingState(BaseWorkflowState):
     """State for Batch Processing workflow.
 
-    Workflow: Load Batch → Parallel Process → Aggregate Results → Report
+    Workflow: Load Batch Parallel Process Aggregate Results Report
 
     Supports:
     - Parallel agent execution (rate-limited)

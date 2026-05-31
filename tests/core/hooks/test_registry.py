@@ -148,27 +148,27 @@ def test_get_hooks_for_event(temp_hooks_dir, sample_hooks):
 
 def test_event_name_to_pattern_conversion(registry):
     """Test that event names are correctly converted to hook patterns."""
-    # InvoiceCreatedEvent → post-invoice-create, on-invoice-create
+    # InvoiceCreatedEvent post-invoice-create, on-invoice-create
     patterns = registry._event_to_hook_patterns("InvoiceCreatedEvent")
     assert "post-invoice-create" in patterns
     assert "on-invoice-create" in patterns
 
-    # InvoiceSentEvent → post-invoice-send, on-invoice-send
+    # InvoiceSentEvent post-invoice-send, on-invoice-send
     patterns = registry._event_to_hook_patterns("InvoiceSentEvent")
     assert "post-invoice-send" in patterns
     assert "on-invoice-send" in patterns
 
-    # InvoiceDeletedEvent → post-invoice-delete, on-invoice-delete
+    # InvoiceDeletedEvent post-invoice-delete, on-invoice-delete
     patterns = registry._event_to_hook_patterns("InvoiceDeletedEvent")
     assert "post-invoice-delete" in patterns
     assert "on-invoice-delete" in patterns
 
-    # AICommandStartedEvent → pre-ai-command, on-ai-command-start
+    # AICommandStartedEvent pre-ai-command, on-ai-command-start
     patterns = registry._event_to_hook_patterns("AICommandStartedEvent")
     assert "pre-ai-command" in patterns
     assert "on-ai-command-start" in patterns
 
-    # AICommandCompletedEvent → post-ai-command, on-ai-command-complete
+    # AICommandCompletedEvent post-ai-command, on-ai-command-complete
     patterns = registry._event_to_hook_patterns("AICommandCompletedEvent")
     assert "post-ai-command" in patterns
     assert "on-ai-command-complete" in patterns

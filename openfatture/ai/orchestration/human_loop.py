@@ -308,13 +308,13 @@ class HumanReviewer:
         if request.errors:
             self.console.print("[bold red]Errors:[/bold red]")
             for error in request.errors:
-                self.console.print(f"  ❌ {error}")
+                self.console.print(f" {error}")
             self.console.print()
 
         if request.warnings:
             self.console.print("[bold yellow]Warnings:[/bold yellow]")
             for warning in request.warnings:
-                self.console.print(f"  ⚠️  {warning}")
+                self.console.print(f" {warning}")
             self.console.print()
 
         # Request decision
@@ -350,9 +350,9 @@ class HumanReviewer:
 
         self.console.print()
         if approved:
-            self.console.print("[bold green]✓ Approved[/bold green]")
+            self.console.print("[bold green]Approved[/bold green]")
         else:
-            self.console.print("[bold red]✗ Rejected[/bold red]")
+            self.console.print("[bold red]Rejected[/bold red]")
         self.console.print()
 
         return ApprovalResponse(

@@ -1,7 +1,7 @@
 {% extends "base.txt" %}
 
 {% block content %}
-❌ {{ _('email.sdi.notifica_scarto.title') }}
+{{ _('email.sdi.notifica_scarto.title') }}
 
 {{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
 
@@ -25,7 +25,7 @@
 
 ---
 
-⚠️  {{ _('email.sdi.notifica_scarto.action_required') }}
+{{ _('email.sdi.notifica_scarto.action_required') }}
 
 {{ _('email.sdi.notifica_scarto.action_text') }}
 

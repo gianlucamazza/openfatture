@@ -194,12 +194,12 @@ def show_notification(
 
         # Header
         type_emoji = {
-            "RC": "✅",
-            "NS": "❌",
-            "AT": "📨",
-            "MC": "⚠️",
-            "NE": "📋",
-        }.get(notifica.tipo_notifica, "📬")
+            "RC": "",
+            "NS": "",
+            "AT": "",
+            "MC": "",
+            "NE": "",
+        }.get(notifica.tipo_notifica, "")
 
         console.print(
             f"\n{_('cli-notifiche-show-title', emoji=type_emoji, id=notifica.id, tipo=notifica.tipo_notifica)}\n"

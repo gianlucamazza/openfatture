@@ -200,7 +200,7 @@ def render_health_dashboard() -> None:
         >>> from openfatture.web.utils.health import render_health_dashboard
         >>> render_health_dashboard()
     """
-    st.markdown("## 🏥 System Health")
+    st.markdown("## System Health")
     st.markdown("Real-time health monitoring of application components")
 
     # Run health checks
@@ -212,7 +212,7 @@ def render_health_dashboard() -> None:
     overall_status = checker.get_overall_status(checks)
 
     # Overall status indicator
-    status_emoji = {"healthy": "✅", "degraded": "⚠️", "unhealthy": "❌"}
+    status_emoji = {"healthy": "", "degraded": "", "unhealthy": ""}
 
     st.markdown("---")
 
@@ -237,7 +237,7 @@ def render_health_dashboard() -> None:
     st.markdown("### Component Status")
 
     for check in checks:
-        status_icon = status_emoji.get(check.status, "❓")
+        status_icon = status_emoji.get(check.status, "")
 
         with st.expander(f"{status_icon} {check.component.upper()} - {check.status.upper()}"):
             st.markdown(f"**Message:** {check.message}")
@@ -251,7 +251,7 @@ def render_health_dashboard() -> None:
                     st.text(f"  {key}: {value}")
 
     # Refresh button
-    if st.button("🔄 Refresh Health Checks", use_container_width=True):
+    if st.button("Refresh Health Checks", use_container_width=True):
         st.rerun()
 
 

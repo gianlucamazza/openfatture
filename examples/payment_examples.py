@@ -84,7 +84,7 @@ def create_sample_csv(file_path: Path) -> None:
 20/10/2024;3000,00;Bonifico ricevuto;FAT-005;Delta Corporation;IT40S0542811101000000098765
 """
     file_path.write_text(content, encoding="utf-8")
-    print(f"✅ Created sample CSV at: {file_path}")
+    print(f"Created sample CSV at: {file_path}")
 
 
 def create_sample_payments(session: Session) -> list[Pagamento]:
@@ -136,12 +136,12 @@ def create_sample_payments(session: Session) -> list[Pagamento]:
         session.add(payment)
 
     session.commit()
-    print(f"✅ Created {len(payments)} sample payments")
+    print(f"Created {len(payments)} sample payments")
     return payments
 
 
 async def example_1_basic_workflow():
-    """Example 1: Complete workflow - Import → Match → Reconcile → Remind.
+    """Example 1: Complete workflow - Import Match Reconcile Remind.
 
     This demonstrates the typical end-to-end flow:
     1. Import bank transactions from CSV
@@ -159,7 +159,7 @@ async def example_1_basic_workflow():
 
     try:
         # Create sample data
-        print("📝 Setting up sample data...")
+        print("Setting up sample data...")
 
         # Create bank account
         account = BankAccount(
@@ -184,7 +184,7 @@ async def example_1_basic_workflow():
         create_sample_csv(csv_path)
 
         # STEP 1: Import transactions from CSV
-        print("\n🔄 Step 1: Importing transactions from CSV...")
+        print("\nStep 1: Importing transactions from CSV...")
 
         config = CSVConfig(
             delimiter=";",
@@ -211,14 +211,14 @@ async def example_1_basic_workflow():
 
         session.commit()
 
-        print(f"✅ Imported {len(transactions)} transactions")
+        print(f"Imported {len(transactions)} transactions")
         for tx in transactions[:3]:  # Show first 3
             print(
                 f"   • {tx.date}: €{tx.amount:,.2f} - {tx.description[:40]}... ({tx.status.value})"
             )
 
         # STEP 2: Auto-match transactions with payments
-        print("\n🔍 Step 2: Auto-matching transactions with payments...")
+        print("\nStep 2: Auto-matching transactions with payments...")
 
         # Setup repositories
         tx_repo = BankTransactionRepository(session)
@@ -253,16 +253,16 @@ async def example_1_basic_workflow():
             if match_results:
                 best_match = match_results[0]
                 print(
-                    f"   ✓ Match found: {tx.description[:30]}... → "
+                    f" Match found: {tx.description[:30]}... "
                     f"Invoice {best_match.payment.numero_fattura} "
                     f"(confidence: {best_match.confidence:.1%})"
                 )
                 matches_found += 1
 
-        print(f"\n✅ Found {matches_found} potential matches")
+        print(f"\nFound {matches_found} potential matches")
 
         # STEP 3: Auto-reconcile high-confidence matches
-        print("\n💰 Step 3: Auto-reconciling high-confidence matches...")
+        print("\nStep 3: Auto-reconciling high-confidence matches...")
 
         reconciliation_service = ReconciliationService(
             tx_repo=tx_repo, payment_repo=payment_repo, matching_service=matching_service
@@ -272,12 +272,12 @@ async def example_1_basic_workflow():
             account_id=account.id, auto_apply=True, auto_apply_threshold=0.85
         )
 
-        print(f"✅ Auto-reconciled: {result.matched_count} transactions")
+        print(f"Auto-reconciled: {result.matched_count} transactions")
         print(f"   Review needed: {result.review_count} (confidence 60-84%)")
         print(f"   Unmatched: {result.unmatched_count}")
 
         # STEP 4: Schedule reminders for unpaid invoices
-        print("\n📧 Step 4: Scheduling payment reminders...")
+        print("\nStep 4: Scheduling payment reminders...")
 
         reminder_repo = ReminderRepository(session)
         reminder_scheduler = ReminderScheduler(
@@ -297,16 +297,16 @@ async def example_1_basic_workflow():
                 )
                 scheduled += len(reminders)
 
-        print(f"✅ Scheduled {scheduled} reminders")
+        print(f"Scheduled {scheduled} reminders")
 
         # Summary
         print("\n" + "=" * 80)
-        print("📊 WORKFLOW SUMMARY")
+        print("WORKFLOW SUMMARY")
         print("=" * 80)
-        print(f"✅ Imported:         {len(transactions)} transactions")
-        print(f"✅ Matched:          {result.matched_count} auto-reconciled")
-        print(f"⚠️  Review needed:   {result.review_count}")
-        print(f"📧 Reminders:        {scheduled} scheduled")
+        print(f"Imported: {len(transactions)} transactions")
+        print(f"Matched: {result.matched_count} auto-reconciled")
+        print(f"Review needed: {result.review_count}")
+        print(f"Reminders: {scheduled} scheduled")
         print("=" * 80)
 
         # Cleanup
@@ -327,7 +327,7 @@ async def example_2_csv_import_configurations():
     print("=" * 80 + "\n")
 
     # Intesa Sanpaolo format (semicolon, European decimals)
-    print("🏦 Format 1: Intesa Sanpaolo")
+    print("Format 1: Intesa Sanpaolo")
     intesa_config = CSVConfig(
         delimiter=";",
         encoding="ISO-8859-1",
@@ -347,7 +347,7 @@ async def example_2_csv_import_configurations():
     print("   Date format: DD/MM/YYYY")
 
     # UniCredit format (CSV, ISO dates)
-    print("\n🏦 Format 2: UniCredit")
+    print("\nFormat 2: UniCredit")
     unicredit_config = CSVConfig(
         delimiter=",",
         encoding="UTF-8",
@@ -367,7 +367,7 @@ async def example_2_csv_import_configurations():
     print("   Date format: YYYY-MM-DD (ISO)")
 
     # BNL format (tab-separated)
-    print("\n🏦 Format 3: BNL (Banca Nazionale del Lavoro)")
+    print("\nFormat 3: BNL (Banca Nazionale del Lavoro)")
     bnl_config = CSVConfig(
         delimiter="\t",  # Tab-separated
         encoding="UTF-8",
@@ -383,7 +383,7 @@ async def example_2_csv_import_configurations():
     print("   Delimiter: TAB")
     print("   Skip footer: 2 rows (summary)")
 
-    print("\n✅ Configured 3 different bank formats")
+    print("\nConfigured 3 different bank formats")
     print("   Use CSVImporter(file_path, config) to import with any format")
 
 
@@ -454,7 +454,7 @@ async def example_3_matching_strategies():
         fuzzy_matcher = FuzzyDescriptionMatcher(weight=0.8, threshold=0.65)
         iban_matcher = IBANMatcher(weight=0.7)
 
-        print("🔍 Testing matching strategies:\n")
+        print("Testing matching strategies:\n")
 
         for i, scenario_data in enumerate(scenarios, 1):
             tx = BankTransaction(
@@ -485,7 +485,7 @@ async def example_3_matching_strategies():
             # Show best match
             best = max([exact_match, fuzzy_match, iban_match], key=lambda m: m.confidence)
             if best.confidence > 0.5:
-                print(f"   ✅ Best: {best.match_type.value} (confidence: {best.confidence:.1%})")
+                print(f" Best: {best.match_type.value} (confidence: {best.confidence:.1%})")
             print()
 
     finally:
@@ -538,11 +538,11 @@ async def example_4_manual_reconciliation():
         session.add(payment)
         session.commit()
 
-        print(f"📝 Transaction: €{tx.amount} - {tx.description}")
-        print(f"📄 Payment: Invoice {payment.numero_fattura} - €{payment.importo_totale}")
+        print(f"Transaction: €{tx.amount} - {tx.description}")
+        print(f"Payment: Invoice {payment.numero_fattura} - €{payment.importo_totale}")
 
         # Manual reconciliation
-        print("\n🔍 Step 1: Manual reconciliation...")
+        print("\nStep 1: Manual reconciliation...")
 
         matching_service = MatchingService(tx_repo=tx_repo, payment_repo=payment_repo, matchers=[])
 
@@ -559,23 +559,23 @@ async def example_4_manual_reconciliation():
 
         session.refresh(payment)
 
-        print("✅ Transaction matched!")
+        print("Transaction matched!")
         print(f"   Status: {reconciled.status.value}")
         print(f"   Match type: {reconciled.match_type.value}")
         print(f"   Payment total paid: €{payment.importo_pagato}")
 
         # Unmatch (rollback)
-        print("\n↩️  Step 2: Unmatching transaction...")
+        print("\nStep 2: Unmatching transaction...")
 
         reset_tx = await reconciliation_service.reset_transaction(tx.id)
         session.refresh(payment)
 
-        print("✅ Transaction unmatched!")
+        print("Transaction unmatched!")
         print(f"   Status: {reset_tx.status.value}")
         print(f"   Payment total paid: €{payment.importo_pagato}")
 
         # Re-match
-        print("\n🔄 Step 3: Re-matching with updated confidence...")
+        print("\nStep 3: Re-matching with updated confidence...")
 
         rematched = await reconciliation_service.reconcile(
             transaction_id=tx.id,
@@ -584,7 +584,7 @@ async def example_4_manual_reconciliation():
             confidence=0.95,
         )
 
-        print("✅ Transaction re-matched!")
+        print("Transaction re-matched!")
         print(f"   Match type: {rematched.match_type.value}")
         print(f"   Confidence: {rematched.match_confidence:.1%}")
 
@@ -619,10 +619,10 @@ async def example_5_batch_operations():
 
         session.commit()
 
-        print(f"🏦 Created {len(accounts)} bank accounts")
+        print(f"Created {len(accounts)} bank accounts")
 
         # Simulate batch import (normally from multiple CSV files)
-        print("\n📥 Batch importing transactions...")
+        print("\nBatch importing transactions...")
 
         total_imported = 0
         start_time = datetime.now()
@@ -644,12 +644,12 @@ async def example_5_batch_operations():
 
         elapsed = (datetime.now() - start_time).total_seconds()
 
-        print(f"✅ Imported {total_imported} transactions")
+        print(f"Imported {total_imported} transactions")
         print(f"   Time: {elapsed:.2f}s")
         print(f"   Throughput: {total_imported / elapsed:.1f} tx/sec")
 
         # Batch reconciliation
-        print("\n🔄 Batch reconciliation...")
+        print("\nBatch reconciliation...")
 
         tx_repo = BankTransactionRepository(session)
         payment_repo = PaymentRepository(session)
@@ -726,9 +726,9 @@ async def example_6_error_handling():
             await reconciliation_service.reconcile(
                 transaction_id=tx.id, payment_id=payment.id, match_type=MatchType.MANUAL
             )
-            print("   ❌ Should have raised ValueError")
+            print(" Should have raised ValueError")
         except ValueError as e:
-            print(f"   ✅ Caught expected error: {e}")
+            print(f" Caught expected error: {e}")
 
         # Test 2: Amount mismatch warning
         print("\nTest 2: Amount mismatch (logs warning)")
@@ -751,7 +751,7 @@ async def example_6_error_handling():
                 payment_id=payment.id,  # €100 payment vs €500 transaction
                 match_type=MatchType.MANUAL,
             )
-            print("   ⚠️  Warning logged: Transaction (€500) exceeds payment (€100)")
+            print(" Warning logged: Transaction (€500) exceeds payment (€100)")
         except Exception as e:
             print(f"   Error: {e}")
 
@@ -765,11 +765,11 @@ async def example_6_error_handling():
                 payment_id=payment.id,
                 match_type=MatchType.MANUAL,
             )
-            print("   ❌ Should have raised ValueError")
+            print(" Should have raised ValueError")
         except ValueError as e:
-            print("   ✅ Caught expected error: Transaction ... not found")
+            print(" Caught expected error: Transaction ... not found")
 
-        print("\n✅ All error handling tests completed")
+        print("\nAll error handling tests completed")
 
     finally:
         session.close()
@@ -777,7 +777,7 @@ async def example_6_error_handling():
 
 async def main():
     """Run all examples."""
-    print("\n💰 OpenFatture - Payment Tracking Examples")
+    print("\nOpenFatture - Payment Tracking Examples")
     print("=" * 80)
     print()
     print("This demo showcases the complete Payment Tracking module:")
@@ -801,10 +801,10 @@ async def main():
     await example_6_error_handling()
 
     print("\n" + "=" * 80)
-    print("✅ All examples completed!")
+    print("All examples completed!")
     print("=" * 80)
     print()
-    print("📚 Next steps:")
+    print("Next steps:")
     print("  • Read full documentation: docs/PAYMENT_TRACKING.md")
     print("  • Explore matchers: openfatture/payment/matchers/")
     print("  • Check CLI commands: openfatture payment --help")
@@ -826,11 +826,11 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         import traceback
 
         traceback.print_exc()
-        print("\n💡 Troubleshooting:")
+        print("\nTroubleshooting:")
         print("  1. Make sure database is initialized: openfatture db init")
         print("  2. Check that at least one client exists in database")
         print("  3. Ensure all dependencies are installed: uv sync --all-extras")

@@ -34,14 +34,14 @@
         "next_steps_text": "Riceverai una notifica quando la fattura sarà consegnata al destinatario. Il processo può richiedere alcune ore."
       },
       "notifica_attestazione": {
-        "subject": "📨 Fattura {{numero}}/{{anno}} - Trasmissione Confermata",
+        "subject": "Fattura {{numero}}/{{anno}} - Trasmissione Confermata",
         "title": "Attestazione di Trasmissione",
         "intro": "Il Sistema di Interscambio (SDI) conferma la ricezione della fattura.",
         "message": "La fattura è stata accettata dal sistema e verrà inoltrata al destinatario.",
         "sdi_id": "Identificativo SDI"
       },
       "notifica_consegna": {
-        "subject": "✅ Fattura {{numero}}/{{anno}} Consegnata",
+        "subject": "Fattura {{numero}}/{{anno}} Consegnata",
         "title": "Fattura Consegnata con Successo",
         "intro": "La fattura è stata consegnata con successo al destinatario.",
         "message": "Il Sistema di Interscambio ha confermato la consegna della fattura al sistema del cliente.",
@@ -49,7 +49,7 @@
         "next_steps": "Attendi ora l'esito da parte del committente (accettazione o rifiuto)."
       },
       "notifica_scarto": {
-        "subject": "❌ Fattura {{numero}}/{{anno}} Scartata da SDI",
+        "subject": "Fattura {{numero}}/{{anno}} Scartata da SDI",
         "title": "Fattura Scartata",
         "intro": "La fattura è stata scartata dal Sistema di Interscambio a causa di errori di validazione.",
         "error_list": "Lista Errori",
@@ -58,7 +58,7 @@
         "error_count": "{{count}} errore(i) rilevato(i)"
       },
       "notifica_mancata_consegna": {
-        "subject": "⚠️ Fattura {{numero}}/{{anno}} - Mancata Consegna",
+        "subject": "Fattura {{numero}}/{{anno}} - Mancata Consegna",
         "title": "Mancata Consegna",
         "intro": "Il Sistema di Interscambio non è riuscito a consegnare la fattura al destinatario.",
         "reason": "Motivo",
@@ -66,7 +66,7 @@
         "action_text": "Verifica i dati del destinatario (PEC o Codice Destinatario) e reinvia la fattura con le informazioni corrette."
       },
       "notifica_esito_accettata": {
-        "subject": "✅ Fattura {{numero}}/{{anno}} Accettata dal Cliente",
+        "subject": "Fattura {{numero}}/{{anno}} Accettata dal Cliente",
         "title": "Fattura Accettata",
         "intro": "Il committente ha accettato la fattura.",
         "message": "La fattura è stata validata e accettata dal destinatario. Il processo di fatturazione è completato con successo.",
@@ -74,7 +74,7 @@
         "accepted": "Accettata (EC01)"
       },
       "notifica_esito_rifiutata": {
-        "subject": "⚠️ Fattura {{numero}}/{{anno}} Rifiutata dal Cliente",
+        "subject": "Fattura {{numero}}/{{anno}} Rifiutata dal Cliente",
         "title": "Fattura Rifiutata",
         "intro": "Il committente ha rifiutato la fattura.",
         "message": "Il destinatario ha respinto la fattura. Contatta il cliente per chiarimenti.",

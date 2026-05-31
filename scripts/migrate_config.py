@@ -26,7 +26,7 @@ def migrate():
     print("Saving configuration to TOML...")
     save_config(settings, config_path)
 
-    print(f"✅ Successfully migrated configuration to {config_path}")
+    print(f"Successfully migrated configuration to {config_path}")
     print("You can now safely remove your .env file.")
 
 

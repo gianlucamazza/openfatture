@@ -405,7 +405,7 @@ class MediaMetricsCollector:
                     level_icon = (
                         self.alert_config.get("alert_levels", {})
                         .get(alert.get("level", "info"), {})
-                        .get("icon", "ℹ️")
+                        .get("icon", "")
                     )
                     print(
                         f"{level_icon} [{alert.get('level', 'info').upper()}] {alert.get('title', 'Alert')}: {alert.get('message', '')}"
@@ -413,11 +413,11 @@ class MediaMetricsCollector:
 
                 # Email notifications (placeholder for future implementation)
                 if notifications_config.get("email", {}).get("enabled", False):
-                    print(f"📧 Email notification would be sent for: {alert.get('title', 'Alert')}")
+                    print(f"Email notification would be sent for: {alert.get('title', 'Alert')}")
 
                 # Slack notifications (placeholder for future implementation)
                 if notifications_config.get("slack", {}).get("enabled", False):
-                    print(f"💬 Slack notification would be sent for: {alert.get('title', 'Alert')}")
+                    print(f"Slack notification would be sent for: {alert.get('title', 'Alert')}")
 
     def get_summary_stats(self, days: int = 7) -> dict[str, Any]:
         """Get summary statistics for recent days."""
@@ -520,7 +520,7 @@ def main():
     collector = MediaMetricsCollector(args.metrics_dir)
     collector.collect_run_metrics(metrics_data)
 
-    print(f"✓ Metrics collected for run {args.run_id}")
+    print(f"Metrics collected for run {args.run_id}")
 
 
 if __name__ == "__main__":

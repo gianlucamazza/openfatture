@@ -86,7 +86,7 @@ async def _rag_status() -> None:
         tags = ", ".join(source.tags or [])
         table.add_row(
             source.id,
-            "✅" if source.enabled else "❌",
+            "" if source.enabled else "",
             str(source.path),
             tags,
         )
@@ -119,7 +119,7 @@ async def _rag_index(sources: Iterable[str] | None) -> None:
         chunks = await indexer.index_sources(source_ids=source_ids)
 
     console.print(
-        f"\n[bold green]✅ Indicizzazione completata:[/bold green] {chunks} chunk aggiornati."
+        f"\n[bold green]Indicizzazione completata:[/bold green] {chunks} chunk aggiornati."
     )
 
 

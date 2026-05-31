@@ -1,6 +1,6 @@
 """Smoke + unit tests for the AI Assistant Streamlit page.
 
-The page (``openfatture/web/pages/5_🤖_AI_Assistant.py``) previously had no
+The page (``openfatture/web/pages/5_AI_Assistant.py``) previously had no
 tests at all. This module adds:
 
 1. A Streamlit ``AppTest`` smoke test that runs the page top-to-bottom with the
@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from streamlit.testing.v1 import AppTest
 
-PAGE_PATH = "openfatture/web/pages/5_🤖_AI_Assistant.py"
+PAGE_PATH = "openfatture/web/pages/5_AI_Assistant.py"
 
 
 def _make_ai_service() -> MagicMock:

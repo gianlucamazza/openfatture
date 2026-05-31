@@ -1,6 +1,6 @@
 """Helper functions for the AI Assistant page.
 
-Extracted from ``5_🤖_AI_Assistant.py`` to keep the page thin and make the
+Extracted from ``5__AI_Assistant.py`` to keep the page thin and make the
 logic independently importable and testable.
 """
 

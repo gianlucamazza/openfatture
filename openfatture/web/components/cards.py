@@ -31,7 +31,7 @@ def metric_card(
         help_text: Tooltip help text
 
     Example:
-        >>> metric_card("Revenue", "€10,500", delta="+15%", icon="💰")
+        >>> metric_card("Revenue", "€10,500", delta="+15%", icon="")
     """
     display_title = f"{icon} {title}" if icon else title
     st.metric(
@@ -59,8 +59,8 @@ def status_card(
         description: Optional description text
 
     Example:
-        >>> status_card("Active", color="green", icon="✅")
-        >>> status_card("Pending", color="yellow", icon="⏳", description="Awaiting approval")
+        >>> status_card("Active", color="green", icon="")
+        >>> status_card("Pending", color="yellow", icon="", description="Awaiting approval")
     """
     # Color mapping
     color_map = {
@@ -135,7 +135,7 @@ def invoice_card(
         col1, col2, col3 = st.columns([3, 2, 2])
 
         with col1:
-            st.markdown(f"**📄 {numero}**")
+            st.markdown(f"**{numero}**")
             st.caption(f"Cliente: {cliente}")
 
         with col2:
@@ -146,7 +146,7 @@ def invoice_card(
             status_badge(stato, color=status_color)
 
         if on_click:
-            if st.button("Dettagli →", key=f"invoice_{numero}", use_container_width=True):
+            if st.button("Dettagli ", key=f"invoice_{numero}", use_container_width=True):
                 on_click()
 
         st.markdown("---")
@@ -180,7 +180,7 @@ def client_card(
         ... )
     """
     with st.container():
-        st.markdown(f"### 👤 {denominazione}")
+        st.markdown(f"### {denominazione}")
 
         col1, col2 = st.columns(2)
 
@@ -188,7 +188,7 @@ def client_card(
             if partita_iva:
                 st.caption(f"P.IVA: {partita_iva}")
             if email:
-                st.caption(f"📧 {email}")
+                st.caption(f"{email}")
 
         with col2:
             if total_invoices is not None:
@@ -258,7 +258,7 @@ def status_badge(
 def info_card(
     title: str,
     content: str | list[str],
-    icon: str = "ℹ️",
+    icon: str = "",
     color: str = "blue",
     expandable: bool = False,
 ) -> None:
@@ -276,7 +276,7 @@ def info_card(
         >>> info_card(
         ...     title="Getting Started",
         ...     content=["Step 1: Configure", "Step 2: Create invoice"],
-        ...     icon="🚀"
+        ... icon=""
         ... )
     """
     if expandable:
@@ -310,8 +310,8 @@ def kpi_dashboard(
 
     Example:
         >>> kpi_dashboard([
-        ...     {"title": "Revenue", "value": "€10K", "delta": "+15%", "icon": "💰"},
-        ...     {"title": "Invoices", "value": 42, "delta": "+3", "icon": "📄"},
+        ... {"title": "Revenue", "value": "€10K", "delta": "+15%", "icon": ""},
+        ... {"title": "Invoices", "value": 42, "delta": "+3", "icon": ""},
         ... ], columns=2)
     """
     cols = st.columns(columns)

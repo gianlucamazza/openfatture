@@ -39,10 +39,10 @@ def list_transactions(
         )
 
         if not transactions:
-            console.print("[yellow]ℹ️  No transactions found for the given filters.[/]")
+            console.print("[yellow]No transactions found for the given filters.[/]")
             return
 
-        table = Table(title="🔍 Bank Transactions", show_lines=False)
+        table = Table(title="Bank Transactions", show_lines=False)
         table.add_column("ID", style="cyan")
         table.add_column("Date", justify="center")
         table.add_column("Amount", justify="right")
@@ -73,7 +73,7 @@ def show_transaction(transaction_id: UUID = typer.Argument(..., help="Transactio
         transaction = tx_repo.get_by_id(transaction_id)
 
         if not transaction:
-            console.print(f"[red]✗ Transaction {transaction_id} not found[/]")
+            console.print(f"[red]Transaction {transaction_id} not found[/]")
             raise typer.Exit(1)
 
         table = Table(title=f"Transaction {transaction_id}", show_header=False)
@@ -111,7 +111,7 @@ def import_transactions(
         help="Minimum confidence threshold for auto-matching (0.0-1.0, default: 0.85)",
     ),
 ) -> None:
-    """📥 Import bank statement and auto-match transactions.
+    """Import bank statement and auto-match transactions.
 
     Examples:
         # Import Intesa Sanpaolo with auto-matching
@@ -128,18 +128,18 @@ def import_transactions(
         account_repo = BankAccountRepository(session)
         account = account_repo.get_by_id(account_id)
         if not account:
-            console.print(f"[red]✗ Account {account_id} not found[/]")
+            console.print(f"[red]Account {account_id} not found[/]")
             raise typer.Exit(1)
 
         # 2. Create importer with factory
-        console.print(f"[cyan]📂 Detecting format for {file_path.name}...[/]")
+        console.print(f"[cyan]Detecting format for {file_path.name}...[/]")
         factory = ImporterFactory()
 
         try:
             importer = factory.create_from_file(file_path, bank_preset=bank_preset)
-            console.print(f"[green]✓ Format detected: {importer.__class__.__name__}[/]")
+            console.print(f"[green]Format detected: {importer.__class__.__name__}[/]")
         except ValueError as e:
-            console.print(f"[red]✗ {e}[/]")
+            console.print(f"[red]{e}[/]")
             raise typer.Exit(1)
 
         # 3. Import with progress
@@ -147,15 +147,15 @@ def import_transactions(
         result = importer.import_transactions(account)
 
         # 4. Display results table
-        table = Table(title="📊 Import Results", show_header=True)
+        table = Table(title="Import Results", show_header=True)
         table.add_column("Metric", style="cyan", width=20)
         table.add_column("Count", justify="right", style="bold")
 
-        table.add_row("✅ Success", f"[green]{result.success_count}[/]")
-        table.add_row("❌ Errors", f"[red]{result.error_count}[/]")
-        table.add_row("🔁 Duplicates", f"[yellow]{result.duplicate_count}[/]")
+        table.add_row("Success", f"[green]{result.success_count}[/]")
+        table.add_row("Errors", f"[red]{result.error_count}[/]")
+        table.add_row("Duplicates", f"[yellow]{result.duplicate_count}[/]")
         table.add_row("━" * 20, "━" * 10)
-        table.add_row("📈 Total", f"[bold]{result.total_count}[/]")
+        table.add_row("Total", f"[bold]{result.total_count}[/]")
 
         console.print(table)
 
@@ -167,7 +167,7 @@ def import_transactions(
 
         # 6. Auto-match if enabled
         if auto_match and result.success_count > 0:
-            console.print(f"\n[cyan]🔍 Auto-matching with confidence >= {confidence}...[/]")
+            console.print(f"\n[cyan]Auto-matching with confidence >= {confidence}...[/]")
 
             # Initialize services
             matching_service = _build_matching_service(
@@ -193,11 +193,11 @@ def import_transactions(
 
             # Display reconciliation results
             console.print("\n[bold]Reconciliation Results:[/]")
-            console.print(f"  [green]✅ Matched: {recon_result.matched_count}[/]")
-            console.print(f"  [yellow]⏳ Review needed: {recon_result.review_count}[/]")
-            console.print(f"  [dim]❔ Unmatched: {recon_result.unmatched_count}[/]")
+            console.print(f" [green]Matched: {recon_result.matched_count}[/]")
+            console.print(f" [yellow]Review needed: {recon_result.review_count}[/]")
+            console.print(f" [dim]Unmatched: {recon_result.unmatched_count}[/]")
 
             if recon_result.review_count > 0:
                 console.print(
-                    "\n[yellow]💡 Tip: Run 'openfatture payment queue' to review medium-confidence matches[/]"
+                    "\n[yellow]Tip: Run 'openfatture payment queue' to review medium-confidence matches[/]"
                 )

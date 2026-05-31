@@ -3,7 +3,7 @@
 Enterprise-grade resilience patterns for AI systems:
 - Circuit Breaker: Prevent cascading failures
 - Exponential Backoff: Graceful retry with jitter
-- Fallback Chains: Provider failover (Anthropic → OpenAI → Ollama)
+- Fallback Chains: Provider failover (Anthropic OpenAI Ollama)
 - Timeout Management: Prevent hanging operations
 - Health Checks: Monitor provider availability
 

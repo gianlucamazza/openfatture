@@ -11,7 +11,7 @@ from openfatture.utils.config import get_settings
 # Initialize translator
 t = Translator()
 
-st.set_page_config(page_title=t("page-settings-page-title"), page_icon="⚙️", layout="wide")
+st.set_page_config(page_title=t("page-settings-page-title"), page_icon="", layout="wide")
 
 st.title(t("page-settings-title"))
 

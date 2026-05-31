@@ -305,7 +305,7 @@ class TestReActOllamaMultiToolCalls:
     async def test_search_then_get_details(
         self, ollama_qwen3_provider, tool_registry_with_mock_tools
     ):
-        """Test ReAct: search_invoices → get_invoice_details."""
+        """Test ReAct: search_invoices get_invoice_details."""
         orchestrator = ReActOrchestrator(
             provider=ollama_qwen3_provider,
             tool_registry=tool_registry_with_mock_tools,
@@ -327,7 +327,7 @@ class TestReActOllamaMultiToolCalls:
     async def test_stats_then_search_by_status(
         self, ollama_qwen3_provider, tool_registry_with_mock_tools
     ):
-        """Test ReAct: get_invoice_stats → search_invoices(stato=DA_INVIARE)."""
+        """Test ReAct: get_invoice_stats search_invoices(stato=DA_INVIARE)."""
         orchestrator = ReActOrchestrator(
             provider=ollama_qwen3_provider,
             tool_registry=tool_registry_with_mock_tools,
@@ -453,7 +453,7 @@ class TestReActOllamaSuccessRate:
         ), f"Tool calling success rate too low: {success_rate:.2%} (expected ≥80%)"
 
         # Print stats for analysis
-        print(f"\n✅ Success Rate: {success_rate:.2%} ({successes}/{total})")
+        print(f"\nSuccess Rate: {success_rate:.2%} ({successes}/{total})")
         print(f"Parser Stats: {orchestrator.parser.get_stats()}")
 
 

@@ -70,23 +70,23 @@ Please include the following information:
 
 ### Implemented
 
-- ✅ **Secrets Management** - Environment variables + encryption support
-- ✅ **Input Validation** - Pydantic models for data validation
-- ✅ **SQL Injection Protection** - SQLAlchemy ORM (parameterized queries)
-- ✅ **Audit Logging** - Structured logs with correlation IDs
-- ✅ **Sensitive Data Filtering** - Automatic redaction in logs
-- ✅ **HTTPS** - Required for PEC communications
-- ✅ **Dependency Scanning** - GitHub Dependabot + Safety
-- ✅ **Code Scanning** - Trivy security scanner in CI
-- ✅ **Web UI Security** - File upload validation, input sanitization, rate limiting, CSRF protection
+- **Secrets Management** - Environment variables + encryption support
+- **Input Validation** - Pydantic models for data validation
+- **SQL Injection Protection** - SQLAlchemy ORM (parameterized queries)
+- **Audit Logging** - Structured logs with correlation IDs
+- **Sensitive Data Filtering** - Automatic redaction in logs
+- **HTTPS** - Required for PEC communications
+- **Dependency Scanning** - GitHub Dependabot + Safety
+- **Code Scanning** - Trivy security scanner in CI
+- **Web UI Security** - File upload validation, input sanitization, rate limiting, CSRF protection
 
 ### Planned
 
-- 🔄 **Digital Signature Verification** - Verify signed XMLs
-- 🔄 **Rate Limiting** - Prevent abuse
-- 🔄 **2FA Support** - Two-factor authentication
-- 🔄 **Secrets Rotation** - Automatic credential rotation
-- 🔄 **Intrusion Detection** - Monitor for attacks
+- **Digital Signature Verification** - Verify signed XMLs
+- **Rate Limiting** - Prevent abuse
+- **2FA Support** - Two-factor authentication
+- **Secrets Rotation** - Automatic credential rotation
+- **Intrusion Detection** - Monitor for attacks
 
 ## Web UI Security
 
@@ -259,19 +259,19 @@ AI_API_KEY=sk-...  # Keep secret!
 
 OpenFatture handles personal data (client information, financial data). Ensure:
 
-- ✅ Data minimization - Only collect necessary data
-- ✅ Right to access - Users can export their data
-- ✅ Right to deletion - Users can delete their data
-- ✅ Data encryption - Sensitive data encrypted
-- ✅ Audit logs - Track all data access
-- ✅ Data retention - 10-year retention for invoices (Italian law)
+- Data minimization - Only collect necessary data
+- Right to access - Users can export their data
+- Right to deletion - Users can delete their data
+- Data encryption - Sensitive data encrypted
+- Audit logs - Track all data access
+- Data retention - 10-year retention for invoices (Italian law)
 
 ### Italian Tax Law
 
-- ✅ Invoice data stored for 10 years
-- ✅ Audit trail for all operations
-- ✅ Tamper-proof logs
-- ✅ SDI communication logs
+- Invoice data stored for 10 years
+- Audit trail for all operations
+- Tamper-proof logs
+- SDI communication logs
 
 ## Security Checklist
 

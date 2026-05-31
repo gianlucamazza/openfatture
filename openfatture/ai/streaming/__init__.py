@@ -21,7 +21,7 @@ Example Usage:
             acc.add(event.get_text())
             print(event.get_text(), end="", flush=True)
         elif event.type == StreamEventType.TOOL_START:
-            print(f"🔧 {event.data['tool_name']}")
+            print(f"{event.data['tool_name']}")
 
     # Get accumulated text
     full_text = acc.get_text()

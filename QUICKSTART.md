@@ -216,11 +216,11 @@ uv run streamlit run openfatture/web/app.py
 ```
 
 La Web UI offre:
-- 📊 Dashboard real-time con KPI e grafici
-- 🧾 Gestione fatture visuale
-- 🤖 AI Assistant integrato
-- 💰 Monitoraggio pagamenti
-- ⚙️ Configurazione sistema
+- Dashboard real-time con KPI e grafici
+- Gestione fatture visuale
+- AI Assistant integrato
+- Monitoraggio pagamenti
+- Configurazione sistema
 
 **Nota:** CLI e Web UI condividono lo stesso database. Puoi usarle insieme!
 
@@ -244,10 +244,10 @@ Per la guida completa: `docs/WEB_UI_GUIDE.md`
 
 ## Next Steps
 
-1. 📖 Read the full [README](README.md)
-2. 🤝 Check [CONTRIBUTING](CONTRIBUTING.md) to help improve OpenFatture
-3. 💬 Join [GitHub Discussions](https://github.com/venerelabs/openfatture/discussions)
-4. 🐛 Report issues at [GitHub Issues](https://github.com/venerelabs/openfatture/issues)
+1. Read the full [README](README.md)
+2. Check [CONTRIBUTING](CONTRIBUTING.md) to help improve OpenFatture
+3. Join [GitHub Discussions](https://github.com/venerelabs/openfatture/discussions)
+4. Report issues at [GitHub Issues](https://github.com/venerelabs/openfatture/issues)
 
 ## Example: Complete Invoice Flow
 
@@ -277,4 +277,4 @@ openfatture fattura show 1
 openfatture report iva --trimestre Q1
 ```
 
-Happy invoicing! 🧾
+Happy invoicing!

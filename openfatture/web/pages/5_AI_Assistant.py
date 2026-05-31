@@ -24,7 +24,7 @@ from openfatture.web.utils.i18n import get_translator
 # Initialize translator
 t = get_translator()
 
-st.set_page_config(page_title=t("page-ai-page-title"), page_icon="🤖", layout="wide")
+st.set_page_config(page_title=t("page-ai-page-title"), page_icon="", layout="wide")
 
 # Title
 st.title(t("page-ai-title"))
@@ -45,10 +45,10 @@ if not ai_service.is_available():
 # Tab selection
 tab1, tab2, tab3, tab4 = st.tabs(
     [
-        f"💬 {t('page-ai-tab-chat')}",
-        f"📝 {t('page-ai-tab-description')}",
-        f"🧾 {t('page-ai-tab-vat')}",
-        f"🎤 {t('page-ai-tab-voice')}",
+        f"{t('page-ai-tab-chat')}",
+        f"{t('page-ai-tab-description')}",
+        f"{t('page-ai-tab-vat')}",
+        f"{t('page-ai-tab-voice')}",
     ]
 )
 

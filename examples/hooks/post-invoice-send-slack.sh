@@ -11,7 +11,7 @@
 SLACK_WEBHOOK="${SLACK_WEBHOOK_URL:-}"
 
 if [ -z "$SLACK_WEBHOOK" ]; then
-    echo "⚠️  SLACK_WEBHOOK_URL not set. Skipping notification."
+    echo "SLACK_WEBHOOK_URL not set. Skipping notification."
     echo "Set it in your environment or ~/.openfatture/.env"
     exit 0
 fi
@@ -26,13 +26,13 @@ TOTAL_AMOUNT="${OPENFATTURE_TOTAL_AMOUNT:-0.00}"
 curl -X POST "$SLACK_WEBHOOK" \
   -H 'Content-Type: application/json' \
   -d "{
-    \"text\": \"📄 Invoice Sent to SDI\",
+    \"text\": \"Invoice Sent to SDI\",
     \"blocks\": [
       {
         \"type\": \"header\",
         \"text\": {
           \"type\": \"plain_text\",
-          \"text\": \"📄 Invoice Sent Successfully\"
+          \"text\": \"Invoice Sent Successfully\"
         }
       },
       {
@@ -52,7 +52,7 @@ curl -X POST "$SLACK_WEBHOOK" \
           },
           {
             \"type\": \"mrkdwn\",
-            \"text\": \"*Status:*\\nSent to SDI ✅\"
+            \"text\": \"*Status:*\\nSent to SDI \"
           }
         ]
       },
@@ -70,8 +70,8 @@ curl -X POST "$SLACK_WEBHOOK" \
   --silent --show-error
 
 if [ $? -eq 0 ]; then
-    echo "✅ Slack notification sent successfully"
+    echo "Slack notification sent successfully"
 else
-    echo "❌ Failed to send Slack notification"
+    echo "Failed to send Slack notification"
     exit 1
 fi

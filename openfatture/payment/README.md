@@ -12,14 +12,14 @@ The Payment Tracking Module provides comprehensive bank reconciliation and payme
 
 ### Key Features
 
-- 🏦 **Multi-Bank Support** - Import statements from CSV, OFX, QIF formats
-- 🔍 **Intelligent Matching** - 5 matching algorithms with confidence scoring
-- 📥 **Bank Presets** - Pre-configured for Intesa Sanpaolo, UniCredit, Revolut
-- 🎯 **Smart Workflow** - Auto-apply high-confidence, review medium-confidence matches
-- 🔔 **Payment Reminders** - Automated escalation strategies (DEFAULT, PROGRESSIVE, AGGRESSIVE)
-- 📧 **Multi-Channel Notifications** - Email, SMS, webhook with Jinja2 templates
-- 📊 **Rich CLI** - Interactive reconciliation with progress tracking
-- 🏗️ **Clean Architecture** - Hexagonal, DDD, SOLID principles
+- **Multi-Bank Support** - Import statements from CSV, OFX, QIF formats
+- **Intelligent Matching** - 5 matching algorithms with confidence scoring
+- **Bank Presets** - Pre-configured for Intesa Sanpaolo, UniCredit, Revolut
+- **Smart Workflow** - Auto-apply high-confidence, review medium-confidence matches
+- **Payment Reminders** - Automated escalation strategies (DEFAULT, PROGRESSIVE, AGGRESSIVE)
+- **Multi-Channel Notifications** - Email, SMS, webhook with Jinja2 templates
+- **Rich CLI** - Interactive reconciliation with progress tracking
+- **Clean Architecture** - Hexagonal, DDD, SOLID principles
 
 ---
 
@@ -122,7 +122,7 @@ transaction = BankTransaction(
 )
 ```
 
-**Lifecycle:** UNMATCHED → MATCHED → IGNORED
+**Lifecycle:** UNMATCHED MATCHED IGNORED
 
 **Fields:**
 - `id`: UUID identifier
@@ -698,4 +698,4 @@ GPL-3.0-or-later - See LICENSE file
 
 ---
 
-**Built with ❤️ following Clean Architecture, DDD, and SOLID principles**
+**Built with following Clean Architecture, DDD, and SOLID principles**

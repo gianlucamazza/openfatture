@@ -66,7 +66,7 @@ class LightningInvoiceService:
 
 async def main():
     """Test the Lightning integration."""
-    print("🧪 Testing Lightning Network Integration")
+    print("Testing Lightning Network Integration")
     print("=" * 50)
 
     # Initialize components
@@ -75,7 +75,7 @@ async def main():
     invoice_service = LightningInvoiceService(lnd_client, btc_converter)
 
     # Test invoice creation
-    print("📄 Testing invoice creation from fattura...")
+    print("Testing invoice creation from fattura...")
 
     fattura_id = 123
     totale_eur = Decimal("100.00")
@@ -86,7 +86,7 @@ async def main():
         fattura_id, totale_eur, descrizione, cliente_nome
     )
 
-    print("✅ Invoice created successfully!")
+    print("Invoice created successfully!")
     print(f"   Payment hash: {invoice.payment_hash}")
     print(f"   Amount: {invoice.amount_msat} msat ({invoice.amount_msat / 1000:.0f} sat)")
     print(f"   Description: {invoice.description}")
@@ -94,23 +94,23 @@ async def main():
     print()
 
     # Test BTC conversion
-    print("💱 Testing BTC conversion...")
+    print("Testing BTC conversion...")
     eur_amount = Decimal("50.00")
     btc_amount = await btc_converter.convert_eur_to_btc(eur_amount)
     print(".2f")
     print(".8f")
     print()
 
-    print("🎉 All tests passed! Lightning integration is working.")
+    print("All tests passed! Lightning integration is working.")
     print()
-    print("📋 Implementation Summary:")
-    print("   ✓ Domain model (entities, value objects, events)")
-    print("   ✓ LND client with mock implementation")
-    print("   ✓ Invoice generation service")
-    print("   ✓ Payment monitoring service")
-    print("   ✓ Event handlers for integration")
-    print("   ✓ CLI commands for management")
-    print("   ✓ Basic testing framework")
+    print("Implementation Summary:")
+    print(" Domain model (entities, value objects, events)")
+    print(" LND client with mock implementation")
+    print(" Invoice generation service")
+    print(" Payment monitoring service")
+    print(" Event handlers for integration")
+    print(" CLI commands for management")
+    print(" Basic testing framework")
 
 
 if __name__ == "__main__":

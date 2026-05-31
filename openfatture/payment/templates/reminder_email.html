@@ -128,7 +128,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>💰 Payment Reminder</h1>
+            <h1>Payment Reminder</h1>
         </div>
 
         <!-- Content -->
@@ -164,24 +164,24 @@
             <!-- Status Alert -->
             {% if days_to_due < 0 %}
                 <div class="alert alert-danger">
-                    <span class="icon">⚠️</span>
+                    <span class="icon"></span>
                     <strong>ATTENTION:</strong> The payment is <strong>{{ -days_to_due }} days overdue</strong>.
                     Please arrange settlement as soon as possible.
                 </div>
             {% elif days_to_due == 0 %}
                 <div class="alert alert-warning">
-                    <span class="icon">⏰</span>
+                    <span class="icon"></span>
                     <strong>DUE TODAY:</strong> The payment falls due today.
                     Kindly proceed with the transfer.
                 </div>
             {% elif days_to_due <= 3 %}
                 <div class="alert alert-warning">
-                    <span class="icon">📅</span>
+                    <span class="icon"></span>
                     The payment is due in <strong>{{ days_to_due }} days</strong>.
                 </div>
             {% else %}
                 <div class="alert alert-info">
-                    <span class="icon">ℹ️</span>
+                    <span class="icon"></span>
                     The payment is due in <strong>{{ days_to_due }} days</strong>.
                 </div>
             {% endif %}

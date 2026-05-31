@@ -111,7 +111,7 @@ class TestBankTransaction:
     def test_transaction_status_transitions(
         self, db_session: Session, bank_transaction: BankTransaction
     ):
-        """Test valid status transitions: UNMATCHED → MATCHED → IGNORED."""
+        """Test valid status transitions: UNMATCHED MATCHED IGNORED."""
         # Initial state
         assert bank_transaction.status == TransactionStatus.UNMATCHED
 
@@ -259,7 +259,7 @@ class TestPaymentReminder:
         assert reminder.reminder_date == due_date - timedelta(days=7)
 
     def test_reminder_status_transitions(self, db_session: Session, payment_reminder):
-        """Test valid status transitions: PENDING → SENT → FAILED."""
+        """Test valid status transitions: PENDING SENT FAILED."""
         # Initial state
         assert payment_reminder.status == ReminderStatus.PENDING
 

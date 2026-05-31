@@ -53,7 +53,7 @@ async def _run_cash_flow_forecast(
     format_type = get_format_from_context(ctx, json_output)
 
     if format_type == "rich":
-        console.print("\n[bold blue]💰 AI Cash Flow Forecasting[/bold blue]\n")
+        console.print("\n[bold blue]AI Cash Flow Forecasting[/bold blue]\n")
 
     # Track execution metrics (ML model, not LLM, so no tokens)
     start_time = time.time()
@@ -117,11 +117,11 @@ async def _run_cash_flow_forecast(
         success = True
 
     except ValueError as e:
-        console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
+        console.print(f"\n[bold red]Error:[/bold red] {e}\n")
         logger.error("forecast_error", error=str(e))
         raise typer.Exit(1)
     except Exception as e:
-        console.print(f"\n[bold red]❌ Unexpected error:[/bold red] {e}\n")
+        console.print(f"\n[bold red]Unexpected error:[/bold red] {e}\n")
         logger.error("forecast_unexpected_error", error=str(e), error_type=type(e).__name__)
         raise typer.Exit(1)
     finally:
@@ -148,7 +148,7 @@ def _display_forecast(forecast: Any) -> None:
     console.print(
         Panel(
             summary_text,
-            title="[bold]📊 Cash Flow Summary[/bold]",
+            title="[bold]Cash Flow Summary[/bold]",
             border_style="blue",
         )
     )
@@ -182,7 +182,7 @@ def _display_forecast(forecast: Any) -> None:
         console.print(
             Panel(
                 forecast.insights,
-                title="[bold]🤖 AI Insights[/bold]",
+                title="[bold]AI Insights[/bold]",
                 border_style="magenta",
             )
         )
@@ -190,7 +190,7 @@ def _display_forecast(forecast: Any) -> None:
 
     # Recommendations
     if forecast.recommendations:
-        console.print("[bold cyan]💡 Recommendations:[/bold cyan]\n")
+        console.print("[bold cyan]Recommendations:[/bold cyan]\n")
         for rec in forecast.recommendations:
             console.print(f"  • {rec}")
         console.print()

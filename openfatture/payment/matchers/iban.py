@@ -36,9 +36,9 @@ class IBANMatcher(IMatcherStrategy):
         Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden
 
     Confidence Scoring:
-    - IBAN found in reference → confidence 0.90
-    - IBAN found + amount exact match → confidence 0.95
-    - IBAN found + date exact match → confidence 0.95
+    - IBAN found in reference confidence 0.90
+    - IBAN found + amount exact match confidence 0.95
+    - IBAN found + date exact match confidence 0.95
 
     Attributes:
         date_tolerance_days: Date window for matching (default 30 days for IBAN)

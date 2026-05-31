@@ -87,7 +87,7 @@ class TestReminderStatus:
     """Tests for ReminderStatus enum."""
 
     def test_reminder_status_lifecycle(self):
-        """Test reminder status represents lifecycle: PENDING → SENT → FAILED."""
+        """Test reminder status represents lifecycle: PENDING SENT FAILED."""
         assert ReminderStatus.PENDING.value == "pending"
         assert ReminderStatus.SENT.value == "sent"
         assert ReminderStatus.FAILED.value == "failed"

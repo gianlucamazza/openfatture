@@ -33,7 +33,7 @@ Usage:
     )
 
 Migration from old patterns:
-    # OLD (web/pages/5_🤖_AI_Assistant.py)
+    # OLD (web/pages/5_AI_Assistant.py)
     for attempt in range(max_retries):
         try:
             return await func()

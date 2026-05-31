@@ -70,7 +70,7 @@ async def _run_voice_chat(
         import sounddevice as sd
     except ImportError:
         console.print(
-            "[bold red]❌ Error:[/bold red] Audio dependencies not installed.\n"
+            "[bold red]Error:[/bold red] Audio dependencies not installed.\n"
             "Install with: [cyan]uv sync[/cyan]\n"
         )
         raise typer.Exit(1)
@@ -82,19 +82,19 @@ async def _run_voice_chat(
     # Check if voice is enabled in settings
     if not settings.voice_enabled:
         console.print(
-            "[bold yellow]⚠️  Voice features are not enabled in settings.[/bold yellow]\n"
+            "[bold yellow]Voice features are not enabled in settings.[/bold yellow]\n"
             "Set OPENFATTURE_VOICE_ENABLED=true in .env\n"
         )
 
     # Verify API key
     if not settings.openai_api_key:
         console.print(
-            "[bold red]❌ Error:[/bold red] OPENAI_API_KEY not set.\n"
+            "[bold red]Error:[/bold red] OPENAI_API_KEY not set.\n"
             "Voice features require OpenAI API access for Whisper STT and TTS.\n"
         )
         raise typer.Exit(1)
 
-    console.print("[bold blue]🎤 Voice Chat Assistant[/bold blue]\n")
+    console.print("[bold blue]Voice Chat Assistant[/bold blue]\n")
     console.print(f"Recording: {duration}s at {sample_rate}Hz, {channels} channel(s)")
     console.print(f"Mode: {'Interactive' if interactive else 'Single recording'}\n")
 
@@ -131,7 +131,7 @@ async def _run_voice_chat(
                 enable_tts=not no_playback,
             )
 
-        console.print("[green]✓ Voice assistant ready[/green]\n")
+        console.print("[green]Voice assistant ready[/green]\n")
 
         # List available audio devices
         devices = sd.query_devices()
@@ -155,11 +155,11 @@ async def _run_voice_chat(
                     f"[bold green]Recording {conversation_number}:[/bold green] "
                 ).strip()
                 if user_command.lower() in ("exit", "quit", "q"):
-                    console.print("[dim]Goodbye! 👋[/dim]\n")
+                    console.print("[dim]Goodbye! [/dim]\n")
                     break
 
             # Record audio
-            console.print(f"[bold yellow]🔴 Recording for {duration} seconds...[/bold yellow]")
+            console.print(f"[bold yellow]Recording for {duration} seconds...[/bold yellow]")
             try:
                 audio_data = sd.rec(
                     int(duration * sample_rate),
@@ -168,9 +168,9 @@ async def _run_voice_chat(
                     dtype="int16",
                 )
                 sd.wait()  # Wait for recording to finish
-                console.print("[green]✓ Recording complete[/green]\n")
+                console.print("[green]Recording complete[/green]\n")
             except Exception as e:
-                console.print(f"[bold red]❌ Recording failed:[/bold red] {e}\n")
+                console.print(f"[bold red]Recording failed:[/bold red] {e}\n")
                 if not interactive:
                     raise typer.Exit(1)
                 continue
@@ -202,7 +202,7 @@ async def _run_voice_chat(
                         save_audio=save_path,
                     )
                 except Exception as e:
-                    console.print(f"[bold red]❌ Processing failed:[/bold red] {e}\n")
+                    console.print(f"[bold red]Processing failed:[/bold red] {e}\n")
                     if not interactive:
                         raise typer.Exit(1)
                     continue
@@ -223,7 +223,7 @@ async def _run_voice_chat(
 
             # Play audio response
             if response.synthesis and not no_playback:
-                console.print("[bold yellow]🔊 Playing response...[/bold yellow]")
+                console.print("[bold yellow]Playing response...[/bold yellow]")
                 try:
                     # OpenAI TTS returns MP3 by default, we need to decode it
                     # For simplicity, save to temp file and inform user
@@ -240,7 +240,7 @@ async def _run_voice_chat(
                         "Use --save-audio to save responses.[/dim]\n"
                     )
                 except Exception as e:
-                    console.print(f"[yellow]⚠️  Audio save failed:[/yellow] {e}\n")
+                    console.print(f"[yellow]Audio save failed:[/yellow] {e}\n")
 
             # Save response audio if requested
             if save_audio and response.synthesis:
@@ -273,7 +273,7 @@ async def _run_voice_chat(
         console.print("\n[dim]Interrupted by user[/dim]")
         success = False
     except Exception as e:
-        console.print(f"\n[bold red]❌ Error:[/bold red] {e}\n")
+        console.print(f"\n[bold red]Error:[/bold red] {e}\n")
         logger.error("voice_chat_error", error=str(e), error_type=type(e).__name__)
         raise typer.Exit(1)
     finally:

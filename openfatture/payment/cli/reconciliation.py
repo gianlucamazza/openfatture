@@ -25,7 +25,7 @@ def match(
     auto_apply: bool = typer.Option(True, "--auto-apply/--manual-only"),
     limit: int | None = typer.Option(None, "--limit", "-l", help="Max transactions to match"),
 ) -> None:
-    """🔍 Match unmatched transactions to payments.
+    """Match unmatched transactions to payments.
 
     Examples:
         # Match all unmatched with auto-apply
@@ -60,10 +60,10 @@ def match(
         )
 
         if not unmatched:
-            console.print("[green]✅ No unmatched transactions[/]")
+            console.print("[green]No unmatched transactions[/]")
             return
 
-        console.print(f"[cyan]🔍 Matching {len(unmatched)} transactions...[/]")
+        console.print(f"[cyan]Matching {len(unmatched)} transactions...[/]")
 
         matched_count = 0
         review_count = 0
@@ -89,8 +89,8 @@ def match(
 
         # Results
         console.print("\n[bold]Results:[/]")
-        console.print(f"  [green]✅ Matched: {matched_count}[/]")
-        console.print(f"  [yellow]⏳ Review needed: {review_count}[/]")
+        console.print(f" [green]Matched: {matched_count}[/]")
+        console.print(f" [yellow]Review needed: {review_count}[/]")
 
 
 @app.command(name="reconcile")
@@ -108,7 +108,7 @@ def reconcile(
 
     mode_normalized = mode.lower().strip()
     if mode_normalized not in {"auto", "preview"}:
-        console.print("[red]✗ Invalid mode. Use 'auto' or 'preview'.[/]")
+        console.print("[red]Invalid mode. Use 'auto' or 'preview'.[/]")
         raise typer.Exit(1)
 
     with get_db_session() as session:
@@ -139,7 +139,7 @@ def reconcile(
             else:
                 session.rollback()
 
-            summary = Table(title="🤝 Reconciliation Summary", show_header=True)
+            summary = Table(title="Reconciliation Summary", show_header=True)
             summary.add_column("Metric", style="cyan")
             summary.add_column("Value", justify="right")
             summary.add_row("Processed", str(result.total_count))
@@ -176,7 +176,7 @@ def reconcile(
 
         except Exception as exc:  # pragma: no cover - defensive logging
             session.rollback()
-            console.print(f"[red]✗ Reconciliation failed: {exc}[/]")
+            console.print(f"[red]Reconciliation failed: {exc}[/]")
             raise typer.Exit(1) from exc
 
 
@@ -187,7 +187,7 @@ def queue(
     confidence_min: float = typer.Option(0.60, "--min", min=0.0, max=1.0),
     confidence_max: float = typer.Option(0.84, "--max", min=0.0, max=1.0),
 ) -> None:
-    """📋 Review queue for manual reconciliation.
+    """Review queue for manual reconciliation.
 
     Interactive mode allows approving/ignoring matches one by one.
 
@@ -225,12 +225,12 @@ def queue(
         )
 
         if not review_queue:
-            console.print("[green]✅ No transactions need review[/]")
+            console.print("[green]No transactions need review[/]")
             return
 
         if interactive:
             # Interactive mode
-            console.print(f"[bold cyan]📋 Review Queue: {len(review_queue)} transactions[/]\n")
+            console.print(f"[bold cyan]Review Queue: {len(review_queue)} transactions[/]\n")
 
             for i, (tx, matches) in enumerate(review_queue, 1):
                 console.print(f"[bold]Transaction {i}/{len(review_queue)}[/]")
@@ -239,7 +239,7 @@ def queue(
                 console.print(f"  Description: {tx.description}")
 
                 # Suggestions table
-                table = Table(title="💡 Suggested Matches", show_header=True)
+                table = Table(title="Suggested Matches", show_header=True)
                 table.add_column("#", style="cyan", width=3)
                 table.add_column("Invoice", style="yellow")
                 table.add_column("Confidence", justify="right", style="green")
@@ -270,21 +270,21 @@ def queue(
                             tx.id, matches[0].payment.id, MatchType.MANUAL
                         )
                     )
-                    console.print("[green]✅ Reconciled[/]\n")
+                    console.print("[green]Reconciled[/]\n")
 
                 elif action == "ignore":
                     reason = Prompt.ask("Reason (optional)", default="")
                     _run(reconciliation_service.ignore_transaction(tx.id, reason))
-                    console.print("[yellow]⏭️  Ignored[/]\n")
+                    console.print("[yellow]Ignored[/]\n")
 
                 elif action == "quit":
                     break
                 else:
-                    console.print("[dim]⏩ Skipped[/]\n")
+                    console.print("[dim]Skipped[/]\n")
 
         else:
             # List-only mode
-            table = Table(title=f"📋 Review Queue ({len(review_queue)} items)")
+            table = Table(title=f"Review Queue ({len(review_queue)} items)")
             table.add_column("Date", style="cyan")
             table.add_column("Amount", justify="right", style="green")
             table.add_column("Description", style="yellow")
@@ -350,17 +350,17 @@ def match_transaction(
             )
             session.commit()
             console.print(
-                f"[green]✓ Transaction {transaction_id} matched to payment {payment_id} ({match_type.value})[/]"
+                f"[green]Transaction {transaction_id} matched to payment {payment_id} ({match_type.value})[/]"
             )
             if tx.match_confidence is not None:
                 console.print(f"  Confidence: {tx.match_confidence:.2%}")
         except ValueError as exc:
             session.rollback()
-            console.print(f"[red]✗ {exc}[/]")
+            console.print(f"[red]{exc}[/]")
             raise typer.Exit(1) from exc
         except Exception as exc:  # pragma: no cover - defensive logging
             session.rollback()
-            console.print(f"[red]✗ Failed to match transaction: {exc}[/]")
+            console.print(f"[red]Failed to match transaction: {exc}[/]")
             raise typer.Exit(1) from exc
 
 
@@ -387,12 +387,12 @@ def unmatch_transaction(
         try:
             _run(reconciliation_service.reset_transaction(transaction_id))
             session.commit()
-            console.print(f"[green]✓ Transaction {transaction_id} reset to UNMATCHED[/]")
+            console.print(f"[green]Transaction {transaction_id} reset to UNMATCHED[/]")
         except ValueError as exc:
             session.rollback()
-            console.print(f"[red]✗ {exc}[/]")
+            console.print(f"[red]{exc}[/]")
             raise typer.Exit(1) from exc
         except Exception as exc:  # pragma: no cover - defensive logging
             session.rollback()
-            console.print(f"[red]✗ Failed to reset transaction: {exc}[/]")
+            console.print(f"[red]Failed to reset transaction: {exc}[/]")
             raise typer.Exit(1) from exc

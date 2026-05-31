@@ -34,65 +34,65 @@ def create_page_registry() -> dict[str, Any]:
         Dictionary mapping page IDs to st.Page objects
     """
     # Core pages
-    home = st.Page("openfatture/web/pages/home.py", title="Home", icon="🏠", default=True)
+    home = st.Page("openfatture/web/pages/home.py", title="Home", icon="", default=True)
 
     dashboard = st.Page(
-        "openfatture/web/pages/1_📊_Dashboard.py",
+        "openfatture/web/pages/1_Dashboard.py",
         title="Dashboard",
-        icon="📊",
+        icon="",
     )
 
     # Invoice management
     invoices = st.Page(
-        "openfatture/web/pages/2_🧾_Fatture.py",
+        "openfatture/web/pages/2_Fatture.py",
         title="Fatture",
-        icon="🧾",
+        icon="",
     )
 
     clients = st.Page(
-        "openfatture/web/pages/3_👥_Clienti.py",
+        "openfatture/web/pages/3_Clienti.py",
         title="Clienti",
-        icon="👥",
+        icon="",
     )
 
     # Payments
     payments = st.Page(
-        "openfatture/web/pages/4_💰_Pagamenti.py",
+        "openfatture/web/pages/4_Pagamenti.py",
         title="Pagamenti",
-        icon="💰",
+        icon="",
     )
 
     # AI features
     ai_assistant = st.Page(
-        "openfatture/web/pages/5_🤖_AI_Assistant.py",
+        "openfatture/web/pages/5_AI_Assistant.py",
         title="AI Assistant",
-        icon="🤖",
+        icon="",
     )
 
     # Settings
     settings = st.Page(
-        "openfatture/web/pages/6_⚙️_Impostazioni.py",
+        "openfatture/web/pages/6_Impostazioni.py",
         title="Impostazioni",
-        icon="⚙️",
+        icon="",
     )
 
     # Advanced features
     lightning = st.Page(
-        "openfatture/web/pages/7_⚡_Lightning.py",
+        "openfatture/web/pages/7_Lightning.py",
         title="Lightning",
-        icon="⚡",
+        icon="",
     )
 
     batch = st.Page(
-        "openfatture/web/pages/8_📦_Batch.py",
+        "openfatture/web/pages/8_Batch.py",
         title="Batch Operations",
-        icon="📦",
+        icon="",
     )
 
     reports = st.Page(
-        "openfatture/web/pages/9_📊_Reports.py",
+        "openfatture/web/pages/9_Reports.py",
         title="Reports",
-        icon="📊",
+        icon="",
     )
 
     return {
@@ -129,22 +129,22 @@ def setup_navigation() -> Any:
     # Group pages logically for better UX
     navigation = st.navigation(
         {
-            "🏠 Home": [pages["home"]],
-            "📊 Business": [
+            "Home": [pages["home"]],
+            "Business": [
                 pages["dashboard"],
                 pages["invoices"],
                 pages["clients"],
             ],
-            "💰 Finance": [
+            "Finance": [
                 pages["payments"],
                 pages["lightning"],
             ],
-            "🤖 AI & Tools": [
+            "AI & Tools": [
                 pages["ai_assistant"],
                 pages["batch"],
                 pages["reports"],
             ],
-            "⚙️ Settings": [
+            "Settings": [
                 pages["settings"],
             ],
         },
@@ -178,27 +178,27 @@ def setup_navigation_with_conditions() -> Any:
 
     # Build navigation dict conditionally
     nav_dict = {
-        "🏠 Home": [pages["home"]],
-        "📊 Business": [
+        "Home": [pages["home"]],
+        "Business": [
             pages["dashboard"],
             pages["invoices"],
             pages["clients"],
         ],
-        "💰 Finance": [pages["payments"]],
-        "🤖 AI & Tools": [],
-        "⚙️ Settings": [pages["settings"]],
+        "Finance": [pages["payments"]],
+        "AI & Tools": [],
+        "Settings": [pages["settings"]],
     }
 
     # Add Lightning only if enabled
     if getattr(settings, "lightning_enabled", False):
-        nav_dict["💰 Finance"].append(pages["lightning"])
+        nav_dict["Finance"].append(pages["lightning"])
 
     # Add AI features only if configured
     if settings.ai_chat_enabled:
-        nav_dict["🤖 AI & Tools"].append(pages["ai_assistant"])
+        nav_dict["AI & Tools"].append(pages["ai_assistant"])
 
     # Always show batch and reports
-    nav_dict["🤖 AI & Tools"].extend([pages["batch"], pages["reports"]])
+    nav_dict["AI & Tools"].extend([pages["batch"], pages["reports"]])
 
     # Remove empty sections
     nav_dict = {k: v for k, v in nav_dict.items() if v}
@@ -241,7 +241,7 @@ def render_shared_sidebar() -> None:
         st.markdown("---")
 
         # Quick stats (common across all pages)
-        st.subheader("📊 Quick Stats")
+        st.subheader("Quick Stats")
 
         try:
             from openfatture.cli.ui.dashboard import DashboardData

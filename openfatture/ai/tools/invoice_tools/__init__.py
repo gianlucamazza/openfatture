@@ -431,7 +431,7 @@ def get_invoice_tools() -> list[Tool]:
         ),
         Tool(
             name="update_invoice_status",
-            description="Update invoice status (workflow: BOZZA ↔ DA_INVIARE). Validates invoice completeness.",
+            description="Update invoice status (workflow: BOZZA DA_INVIARE). Validates invoice completeness.",
             category="invoices",
             parameters=[
                 ToolParameter(

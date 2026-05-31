@@ -356,7 +356,7 @@ class TestCompleteWorkflowE2E:
     """Test complete end-to-end workflows combining multiple features."""
 
     def test_full_invoice_lifecycle_via_app(self, app_runner, db_session, tmp_path, temp_config):
-        """Test complete invoice lifecycle: create → generate PDF → send."""
+        """Test complete invoice lifecycle: create generate PDF send."""
         # Create appent
         appente = Cliente(
             denominazione="Full Lifecycle Client",

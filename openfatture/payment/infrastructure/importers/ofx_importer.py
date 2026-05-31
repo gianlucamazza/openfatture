@@ -33,12 +33,12 @@ class OFXImporter(BaseImporter):
     - Investment transactions (basic support)
 
     OFX Field Mapping:
-    - FITID → reference (unique transaction ID)
-    - DTPOSTED → date (posting date)
-    - TRNAMT → amount (negative for debits)
-    - MEMO → description
-    - NAME → counterparty
-    - BANKID + ACCTID → account matching
+    - FITID reference (unique transaction ID)
+    - DTPOSTED date (posting date)
+    - TRNAMT amount (negative for debits)
+    - MEMO description
+    - NAME counterparty
+    - BANKID + ACCTID account matching
 
     Example:
         >>> importer = OFXImporter(Path("statement.ofx"))
@@ -117,7 +117,7 @@ class OFXImporter(BaseImporter):
                 # Log error but continue processing
                 logger.warning(
                     "ofx_transaction_skipped",
-                    transaction_id=getattr(ofx_tx, 'id', 'unknown'),
+                    transaction_id=getattr(ofx_tx, "id", "unknown"),
                     error=str(e),
                     account_id=self.account_id,
                 )

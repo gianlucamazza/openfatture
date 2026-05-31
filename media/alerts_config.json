@@ -43,22 +43,22 @@
   "alert_levels": {
     "info": {
       "color": "blue",
-      "icon": "ℹ️",
+      "icon": "",
       "retention_days": 7
     },
     "warning": {
       "color": "orange",
-      "icon": "⚠️",
+      "icon": "",
       "retention_days": 30
     },
     "error": {
       "color": "red",
-      "icon": "❌",
+      "icon": "",
       "retention_days": 90
     },
     "critical": {
       "color": "darkred",
-      "icon": "🚨",
+      "icon": "",
       "retention_days": 365
     }
   },

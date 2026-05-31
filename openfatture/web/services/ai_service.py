@@ -41,12 +41,12 @@ class ToolCallEvent:
     def from_chunk(cls, chunk: str) -> "ToolCallEvent | None":
         """Parse a chunk to see if it's a tool call event."""
         # Pattern for tool execution start
-        start_match = re.search(r"🔧 Eseguendo (\d+) strumento/i\.\.\.", chunk)
+        start_match = re.search(r"Eseguendo (\d+) strumento/i\.\.\.", chunk)
         if start_match:
             return cls("start", {"count": int(start_match.group(1))})
 
         # Pattern for successful tool execution
-        success_match = re.search(r"✅ ([^:]+): (.+)", chunk)
+        success_match = re.search(r"([^:]+): (.+)", chunk)
         if success_match:
             return cls(
                 "success",
@@ -57,7 +57,7 @@ class ToolCallEvent:
             )
 
         # Pattern for failed tool execution
-        error_match = re.search(r"❌ ([^:]+): (.+)", chunk)
+        error_match = re.search(r"([^:]+): (.+)", chunk)
         if error_match:
             return cls(
                 "error",
@@ -65,7 +65,7 @@ class ToolCallEvent:
             )
 
         # Pattern for execution summary
-        summary_match = re.search(r"📊 Completato: (\d+) riuscito/i, (\d+) fallito/i", chunk)
+        summary_match = re.search(r"Completato: (\d+) riuscito/i, (\d+) fallito/i", chunk)
         if summary_match:
             return cls(
                 "summary",
@@ -73,7 +73,7 @@ class ToolCallEvent:
             )
 
         # Pattern for timing
-        timing_match = re.search(r"⏱️ Tempo esecuzione: ([\d.]+)s", chunk)
+        timing_match = re.search(r"Tempo esecuzione: ([\d.]+)s", chunk)
         if timing_match:
             return cls("timing", {"duration": float(timing_match.group(1))})
 

@@ -1,7 +1,7 @@
 {% extends "base.txt" %}
 
 {% block content %}
-⚠️ {{ _('email.sdi.notifica_esito_rifiutata.title') }}
+{{ _('email.sdi.notifica_esito_rifiutata.title') }}
 
 {{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
 
@@ -23,7 +23,7 @@
 
 ---
 
-⚠️  {{ _('email.sdi.notifica_esito_rifiutata.action_required') }}
+{{ _('email.sdi.notifica_esito_rifiutata.action_required') }}
 
 {{ _('email.sdi.notifica_esito_rifiutata.action_text') }}
 {% endblock %}

@@ -10,9 +10,9 @@ Example:
             case StreamEventType.CONTENT:
                 print(event.data, end="", flush=True)
             case StreamEventType.TOOL_START:
-                print(f"🔧 {event.data['tool_name']}")
+                print(f"{event.data['tool_name']}")
             case StreamEventType.TOOL_RESULT:
-                print(f"✅ Result: {event.data['result']}")
+                print(f"Result: {event.data['result']}")
 """
 
 from __future__ import annotations

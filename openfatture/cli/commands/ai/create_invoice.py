@@ -133,10 +133,10 @@ async def _run_invoice_workflow(
         elif format_type == "rich":
             # Display results in rich format
             if result.invoice_id:
-                console.print("[bold green]✅ Invoice created successfully![/bold green]")
+                console.print("[bold green]Invoice created successfully![/bold green]")
                 console.print(f"Invoice ID: {result.invoice_id}")
             else:
-                console.print(f"[yellow]⚠️ Workflow completed with status: {result.status}[/yellow]")
+                console.print(f"[yellow]Workflow completed with status: {result.status}[/yellow]")
 
             console.print(f"Status: {result.status}")
 

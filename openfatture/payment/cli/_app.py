@@ -20,7 +20,7 @@ from ..infrastructure.repository import (
 )
 from ..matchers import CompositeMatcher, ExactAmountMatcher, IMatcherStrategy
 
-app = typer.Typer(name="payment", help="💰 Payment tracking & reconciliation", no_args_is_help=True)
+app = typer.Typer(name="payment", help="Payment tracking & reconciliation", no_args_is_help=True)
 console = Console()
 logger = get_logger(__name__)
 
@@ -73,7 +73,7 @@ def _get_transaction_insight_service() -> TransactionInsightService | None:
             model=provider.model,
         )
         console.print(
-            "[dim green]🤖 AI payment insight abilitato per analizzare causali e pagamenti parziali[/]"
+            "[dim green]AI payment insight abilitato per analizzare causali e pagamenti parziali[/]"
         )
     except ProviderError as exc:
         logger.info(
@@ -82,7 +82,7 @@ def _get_transaction_insight_service() -> TransactionInsightService | None:
             provider=exc.provider,
         )
         console.print(
-            "[dim yellow]⚠️  AI insight non disponibile (configura le credenziali OPENFATTURE_AI_* per abilitarlo)[/]"
+            "[dim yellow]AI insight non disponibile (configura le credenziali OPENFATTURE_AI_* per abilitarlo)[/]"
         )
         _INSIGHT_SERVICE = None
     except Exception as exc:  # pragma: no cover - defensive guard
@@ -91,7 +91,7 @@ def _get_transaction_insight_service() -> TransactionInsightService | None:
             error=str(exc),
             error_type=type(exc).__name__,
         )
-        console.print(f"[dim yellow]⚠️  Impossibile inizializzare l'AI insight: {exc}[/]")
+        console.print(f"[dim yellow]Impossibile inizializzare l'AI insight: {exc}[/]")
         _INSIGHT_SERVICE = None
 
     return _INSIGHT_SERVICE

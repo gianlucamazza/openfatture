@@ -212,8 +212,8 @@ openfatture/web/
 
 ### Common Web UI Tasks
 
-- **Add New Dashboard Metric**: Update `pages/1_📊_Dashboard.py`
-- **Extend AI Assistant**: Modify `pages/5_🤖_AI_Assistant.py`
+- **Add New Dashboard Metric**: Update `pages/1_Dashboard.py`
+- **Extend AI Assistant**: Modify `pages/5_AI_Assistant.py`
 - **Add Security Feature**: Update `utils/security.py`
 - **Create New Component**: Add to `components/` directory
 - **Improve Navigation**: Update `navigation.py`
@@ -240,7 +240,7 @@ Bump the major version when you make **incompatible API changes**:
 - Breaking changes to configuration format
 - Changes to database schema that require migration
 
-**Example**: `0.9.0` → `1.0.0`
+**Example**: `0.9.0` `1.0.0`
 
 #### MINOR (0.X.0)
 
@@ -250,7 +250,7 @@ Bump the minor version when you add functionality in a **backward-compatible man
 - Deprecating features (but not removing them)
 - Adding new database models (with migrations)
 
-**Example**: `0.5.2` → `0.6.0`
+**Example**: `0.5.2` `0.6.0`
 
 #### PATCH (0.0.X)
 
@@ -259,20 +259,20 @@ Bump the patch version for **backward-compatible bug fixes**:
 - Performance improvements
 - Documentation fixes
 
-**Example**: `0.5.1` → `0.5.2`
+**Example**: `0.5.1` `0.5.2`
 
 ### Version Bumping Tool
 
 OpenFatture uses **[bump-my-version](https://github.com/callowayproject/bump-my-version)** for automated version management.
 
 ```bash
-# Bump patch version (e.g., 0.1.0 → 0.1.1)
+# Bump patch version (e.g., 0.1.0 0.1.1)
 uv run bump-my-version bump patch
 
-# Bump minor version (e.g., 0.1.0 → 0.2.0)
+# Bump minor version (e.g., 0.1.0 0.2.0)
 uv run bump-my-version bump minor
 
-# Bump major version (e.g., 0.1.0 → 1.0.0)
+# Bump major version (e.g., 0.1.0 1.0.0)
 uv run bump-my-version bump major
 
 # Dry-run to see what would change
@@ -280,10 +280,10 @@ uv run bump-my-version bump patch --dry-run --verbose
 ```
 
 When you bump a version, the tool automatically:
-1. ✅ Updates `__version__` in `openfatture/__init__.py`
-2. ✅ Updates `CHANGELOG.md` with new version header
-3. ✅ Creates a git commit: `Bump version: X.Y.Z → X.Y.Z+1`
-4. ✅ Creates a git tag: `vX.Y.Z+1`
+1. Updates `__version__` in `openfatture/__init__.py`
+2. Updates `CHANGELOG.md` with new version header
+3. Creates a git commit: `Bump version: X.Y.Z X.Y.Z+1`
+4. Creates a git tag: `vX.Y.Z+1`
 
 After bumping, push with: `git push --follow-tags`
 
@@ -299,26 +299,26 @@ Before bumping a version, update `CHANGELOG.md`:
 We especially welcome contributions in:
 
 ### High Priority
-- 🧪 **Test Coverage**: Expand test suite
-- 📖 **Documentation**: User guides, examples
-- 🌍 **Localization**: Support other languages
-- 🔐 **Digital Signature**: Integrate signing libraries
+- **Test Coverage**: Expand test suite
+- **Documentation**: User guides, examples
+- **Localization**: Support other languages
+- **Digital Signature**: Integrate signing libraries
 
 ### Medium Priority
-- 🎨 **Web UI**: Modern Streamlit interface with dashboard, AI assistant, and invoice management
-- 📊 **Advanced Reports**: More analytics
-- 🔌 **Integrations**: Banking, accounting software
-- 🤖 **AI Enhancements**: Better models
+- **Web UI**: Modern Streamlit interface with dashboard, AI assistant, and invoice management
+- **Advanced Reports**: More analytics
+- **Integrations**: Banking, accounting software
+- **AI Enhancements**: Better models
 
 ### Always Welcome
-- 🐛 Bug fixes
-- 📝 Documentation improvements
-- ✅ Test additions
-- ♿ Accessibility improvements
+- Bug fixes
+- Documentation improvements
+- Test additions
+- Accessibility improvements
 
 ## Questions?
 
-- 💬 [GitHub Discussions](https://github.com/gianlucamazza/openfatture/discussions)
-- 📧 Email: info@gianlucamazza.it
+- [GitHub Discussions](https://github.com/gianlucamazza/openfatture/discussions)
+- Email: info@gianlucamazza.it
 
-Thank you for contributing! 🙏
+Thank you for contributing!

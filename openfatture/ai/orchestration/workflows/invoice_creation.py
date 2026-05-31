@@ -143,8 +143,8 @@ class InvoiceCreationWorkflow:
         """Build LangGraph state machine.
 
         Graph structure:
-        START → description_agent → [approval_check] → tax_agent → [approval_check]
-              → compliance_check → [approval_check] → create_invoice → END
+        START description_agent [approval_check] tax_agent [approval_check]
+              compliance_check [approval_check] create_invoice END
 
         Conditional edges:
         - Skip approval if confidence > threshold

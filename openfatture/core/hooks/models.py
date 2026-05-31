@@ -87,7 +87,7 @@ class HookResult:
 
     def __str__(self) -> str:
         """Human-readable string representation."""
-        status = "✓ SUCCESS" if self.success else "✗ FAILED"
+        status = "SUCCESS" if self.success else "FAILED"
         return (
             f"Hook '{self.hook_name}' {status} "
             f"(exit={self.exit_code}, duration={self.duration_ms:.1f}ms)"

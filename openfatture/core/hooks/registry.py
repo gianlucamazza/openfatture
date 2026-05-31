@@ -173,9 +173,9 @@ class HookRegistry:
         """Get hooks matching the given event name.
 
         Maps event names to hook naming convention and returns all matching hooks:
-        - InvoiceCreatedEvent → [post-invoice-create]
-        - InvoiceSentEvent → [post-invoice-send]
-        - AICommandStartedEvent → [pre-ai-command]
+        - InvoiceCreatedEvent [post-invoice-create]
+        - InvoiceSentEvent [post-invoice-send]
+        - AICommandStartedEvent [pre-ai-command]
         - etc.
 
         Args:
@@ -243,12 +243,12 @@ class HookRegistry:
                 patterns.append("pre-ai-command")
                 patterns.append("on-ai-command-start")
         elif "Created" in event_name:
-            # e.g., InvoiceCreatedEvent → post-invoice-create
+            # e.g., InvoiceCreatedEvent post-invoice-create
             base = kebab.replace("-created", "")
             patterns.append(f"post-{base}-create")
             patterns.append(f"on-{base}-create")
         elif "Sent" in event_name:
-            # e.g., InvoiceSentEvent → post-invoice-send
+            # e.g., InvoiceSentEvent post-invoice-send
             base = kebab.replace("-sent", "")
             patterns.append(f"post-{base}-send")
             patterns.append(f"on-{base}-send")
@@ -261,7 +261,7 @@ class HookRegistry:
             patterns.append(f"post-{base}-validate")
             patterns.append(f"on-{base}-validate")
         elif "Notification" in event_name:
-            # e.g., SDINotificationReceivedEvent → on-sdi-notification
+            # e.g., SDINotificationReceivedEvent on-sdi-notification
             patterns.append("on-sdi-notification")
         else:
             # Generic pattern

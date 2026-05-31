@@ -57,7 +57,7 @@ def data_table(
 
     # Filtering
     if filterable and not df.empty:
-        with st.expander("🔍 Filtri", expanded=False):
+        with st.expander("Filtri", expanded=False):
             filter_cols = st.columns(min(3, len(df.columns)))
 
             for idx, col in enumerate(df.columns[:3]):  # Max 3 filter columns
@@ -94,13 +94,13 @@ def data_table(
         with col2:
             sort_order = st.radio(
                 "Ordine",
-                options=["↑ Asc", "↓ Desc"],
+                options=["Asc", "Desc"],
                 key=f"{key_prefix}_sort_order",
                 horizontal=True,
             )
 
         if sort_col:
-            ascending = sort_order == "↑ Asc"
+            ascending = sort_order == "Asc"
             df = df.sort_values(by=sort_col, ascending=ascending)
 
     # Pagination
@@ -153,7 +153,7 @@ def invoice_table(
         ... )
     """
     if not invoices:
-        st.info("📭 Nessuna fattura trovata")
+        st.info("Nessuna fattura trovata")
         return
 
     df = pd.DataFrame(invoices)
@@ -183,7 +183,7 @@ def invoice_table(
             "Seleziona fattura per dettagli",
             options=[""] + [f"{inv['numero']}/{inv.get('anno', '')}" for inv in invoices],
         )
-        if selected and st.button("👁️ Vedi Dettagli"):
+        if selected and st.button("Vedi Dettagli"):
             # Find selected invoice
             for inv in invoices:
                 if f"{inv['numero']}/{inv.get('anno', '')}" == selected:

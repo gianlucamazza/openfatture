@@ -233,7 +233,7 @@ class TestFormatterErrorHandling:
         output = formatter.format_response(error_response)
 
         assert "## Error" in output
-        assert "❌" in output
+        assert "" in output
         assert "Test error" in output
 
     def test_html_formatter_handles_error_response(self):

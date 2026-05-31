@@ -1,10 +1,10 @@
-# 🚀 Quick Start Guide - OpenFatture
+# Quick Start Guide - OpenFatture
 
 Hands-on walkthrough to get OpenFatture running in 15 minutes.
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Requirements
 - Python 3.12 or later
@@ -28,7 +28,7 @@ uv run python -c "from openfatture import __version__; print(f'OpenFatture v{__v
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### 1. Create the `.env` File
 
@@ -90,7 +90,7 @@ LOCALE=it
 uv run python -c "
 from openfatture.storage.database.session import init_db
 init_db()
-print('✅ Database initialised!')
+print('Database initialised!')
 "
 ```
 
@@ -107,23 +107,23 @@ from openfatture.utils.email.sender import TemplatePECSender
 settings = get_settings()
 sender = TemplatePECSender(settings=settings)
 
-print('📧 Sending PEC test email...')
+print('Sending PEC test email...')
 success, error = sender.send_test_email()
 
 if success:
-    print('✅ PEC configured correctly!')
+    print('PEC configured correctly!')
     print(f'   Check the inbox: {settings.notification_email}')
 else:
-    print(f'❌ Error: {error}')
+    print(f'Error: {error}')
     print('   Double-check PEC credentials in .env')
 "
 ```
 
-If the test email lands in your inbox you are ready to go! 🎉
+If the test email lands in your inbox you are ready to go!
 
 ---
 
-## ⚡ Enable Lightning Network Payments (Optional)
+## Enable Lightning Network Payments (Optional)
 
 OpenFatture supports instant Bitcoin payments via the Lightning Network. This is completely optional and requires a Lightning node.
 
@@ -161,9 +161,9 @@ openfatture config set lightning_macaroon_path ~/.lnd/data/chain/bitcoin/mainnet
 openfatture lightning status
 
 # Expected output:
-# ✅ LND Connection: OK
-# 📊 Channels: 1 active, 500k sats capacity
-# 💰 Balance: 250k sats local, 250k sats remote
+# LND Connection: OK
+# Channels: 1 active, 500k sats capacity
+# Balance: 250k sats local, 250k sats remote
 ```
 
 ### Create Your First Lightning Invoice
@@ -173,26 +173,26 @@ openfatture lightning status
 openfatture lightning invoice create --amount 100.00 --description "Quick test payment"
 
 # Output:
-# ⚡ Lightning Invoice Created
-# 💰 Amount: 100.00 EUR (2,222 sats @ 45,000 EUR/BTC)
-# ⏰ Expires: 2025-01-16 10:30:00
-# 🔗 Payment Request: lnbc22220n1...
+# Lightning Invoice Created
+# Amount: 100.00 EUR (2,222 sats @ 45,000 EUR/BTC)
+# Expires: 2025-01-16 10:30:00
+# Payment Request: lnbc22220n1...
 
 # Share the payment request with your customer
 # They can pay instantly using any Lightning wallet!
 ```
 
 **Why Lightning?**
-- ⚡ **Instant settlement** (seconds vs hours for traditional payments)
-- 💰 **Low fees** (0.1-1 EUR vs 2-3% for card payments)
-- 🌍 **Global** (works worldwide, no currency conversion needed)
-- 🔒 **Secure** (built on Bitcoin's cryptography)
+- **Instant settlement** (seconds vs hours for traditional payments)
+- **Low fees** (0.1-1 EUR vs 2-3% for card payments)
+- **Global** (works worldwide, no currency conversion needed)
+- **Secure** (built on Bitcoin's cryptography)
 
 See [Lightning Network Guide](../docs/LIGHTNING_NETWORK.md) for complete setup instructions.
 
 ---
 
-## 📄 Create Your First Invoice
+## Create Your First Invoice
 
 ### 1. Add the First Customer
 
@@ -221,7 +221,7 @@ cliente = Cliente(
 session.add(cliente)
 session.commit()
 
-print(f"✅ Customer created: {cliente.denominazione} (ID: {cliente.id})")
+print(f"Customer created: {cliente.denominazione} (ID: {cliente.id})")
 ```
 
 Run:
@@ -282,7 +282,7 @@ fattura.totale = sum(l.totale for l in fattura.linee)
 session.add(fattura)
 session.commit()
 
-print(f"✅ Invoice created: {fattura.numero}/{fattura.anno}")
+print(f"Invoice created: {fattura.numero}/{fattura.anno}")
 print(f"   Customer: {fattura.cliente.denominazione}")
 print(f"   Total: €{fattura.totale}")
 ```
@@ -294,7 +294,7 @@ uv run python create_invoice.py
 
 ---
 
-## 📤 Send the Invoice to SDI
+## Send the Invoice to SDI
 
 ### 1. Generate the FatturaPA XML
 
@@ -319,11 +319,11 @@ xml_filename = f"IT{fattura.cliente.partita_iva}_{int(fattura.numero):05d}.xml"
 xml_path = Path(f"/tmp/{xml_filename}")
 xml_tree.write(str(xml_path), encoding="utf-8", xml_declaration=True)
 
-print(f"✅ XML generato: {xml_path}")
+print(f"XML generato: {xml_path}")
 print(f"   Dimensione: {xml_path.stat().st_size} bytes")
 
 # Display a preview (for debugging only)
-print(f"\n📄 XML content:")
+print(f"\nXML content:")
 print(xml_tree.read_text())
 ```
 
@@ -355,7 +355,7 @@ xml_path = Path(f"/tmp/{xml_filename}")
 # Send using the professional template
 sender = TemplatePECSender(settings=settings)
 
-print(f"📧 Sending invoice {fattura.numero}/{fattura.anno} to SDI...")
+print(f"Sending invoice {fattura.numero}/{fattura.anno} to SDI...")
 
 success, error = sender.send_invoice_to_sdi(
     fattura=fattura,
@@ -364,7 +364,7 @@ success, error = sender.send_invoice_to_sdi(
 )
 
 if success:
-    print("✅ Invoice delivered successfully!")
+    print("Invoice delivered successfully!")
     print(f"   Status: {fattura.stato.value}")
     print("   Email sent using the professional template")
     print(f"   Recipient: {settings.sdi_pec_address}")
@@ -372,7 +372,7 @@ if success:
     # The invoice status is now INVIATA
     session.commit()
 else:
-    print(f"❌ Delivery error: {error}")
+    print(f"Delivery error: {error}")
 ```
 
 Run:
@@ -381,14 +381,14 @@ uv run python send_to_sdi.py
 ```
 
 **Behind the scenes:**
-1. ✅ The XML is attached to the PEC email
-2. ✅ OpenFatture renders a professional HTML template
-3. ✅ The invoice status changes to `INVIATA`
-4. ✅ The NOTIFICATION_EMAIL receives a confirmation
+1. The XML is attached to the PEC email
+2. OpenFatture renders a professional HTML template
+3. The invoice status changes to `INVIATA`
+4. The NOTIFICATION_EMAIL receives a confirmation
 
 ---
 
-## 📬 Receive SDI Notifications Automatically
+## Receive SDI Notifications Automatically
 
 When SDI replies (typically within five days), OpenFatture sends you automatic updates via email.
 
@@ -396,11 +396,11 @@ When SDI replies (typically within five days), OpenFatture sends you automatic u
 
 | Code | Description | Automatic Email |
 |------|-------------|-----------------|
-| **AT** | Transmission receipt | ✅ Email sent |
-| **RC** | Delivery receipt | ✅ Email sent |
-| **NS** | Rejection notice | ❌ Email sent with errors |
-| **MC** | Failed delivery | ⚠️ Email sent |
-| **NE** | Outcome notice (accepted/rejected) | ✅/❌ Email sent |
+| **AT** | Transmission receipt | Email sent |
+| **RC** | Delivery receipt | Email sent |
+| **NS** | Rejection notice | Email sent with errors |
+| **MC** | Failed delivery | Email sent |
+| **NE** | Outcome notice (accepted/rejected) | /Email sent |
 
 ### Process Notifications Manually
 
@@ -421,7 +421,7 @@ settings = get_settings()
 sender = TemplatePECSender(settings=settings)
 processor = NotificationProcessor(
     db_session=session,
-    email_sender=sender  # ← Enables automatic emails!
+    email_sender=sender # Enables automatic emails!
 )
 
 # Process the SDI notification file
@@ -430,17 +430,17 @@ notification_file = Path("RC_IT12345678901_00001.xml")
 success, error, notification = processor.process_file(notification_file)
 
 if success:
-    print(f"✅ Notification processed: {notification.tipo_notifica.value}")
+    print(f"Notification processed: {notification.tipo_notifica.value}")
     print(f"   Invoice: {notification.fattura.numero}/{notification.fattura.anno}")
     print(f"   New status: {notification.fattura.stato.value}")
-    print(f"📧 Automatic email sent to: {settings.notification_email}")
+    print(f"Automatic email sent to: {settings.notification_email}")
 else:
-    print(f"❌ Errore: {error}")
+    print(f"Errore: {error}")
 ```
 
 ---
 
-## 🎨 Customise Email Templates
+## Customise Email Templates
 
 ### Preview the Email Before Sending
 
@@ -489,7 +489,7 @@ preview_path = renderer.preview(
     output_path=Path("/tmp/email_preview.html"),
 )
 
-print(f"📧 Anteprima generata: file://{preview_path}")
+print(f"Anteprima generata: file://{preview_path}")
 print("   Open the file in your browser to review the email")
 ```
 
@@ -508,7 +508,7 @@ Restart the application to apply the changes.
 
 ---
 
-## 🔍 Final Verification
+## Final Verification
 
 ### Final Checklist
 
@@ -519,7 +519,7 @@ from openfatture.utils.config import get_settings
 from openfatture.utils.email.sender import TemplatePECSender
 sender = TemplatePECSender(settings=get_settings())
 success, _ = sender.send_test_email()
-print('✅ PEC OK' if success else '❌ PEC ERROR')
+print('PEC OK' if success else 'PEC ERROR')
 "
 
 # 2. Database test
@@ -528,22 +528,22 @@ from openfatture.storage.database.session import get_session
 from openfatture.storage.database.models import Cliente
 session = next(get_session())
 count = session.query(Cliente).count()
-print(f'✅ Database OK ({count} customers)')
+print(f'Database OK ({count} customers)')
 "
 
 # 3. Configuration test
 uv run python -c "
 from openfatture.utils.config import get_settings
 s = get_settings()
-print(f'✅ Cedente: {s.cedente_denominazione}')
-print(f'✅ PEC: {s.pec_address}')
-print(f'✅ Notifiche: {s.notification_email}')
+print(f'Cedente: {s.cedente_denominazione}')
+print(f'PEC: {s.pec_address}')
+print(f'Notifiche: {s.notification_email}')
 "
 ```
 
 ---
 
-## 📚 Next Steps
+## Next Steps
 
 Now that OpenFatture is configured:
 
@@ -555,7 +555,7 @@ Now that OpenFatture is configured:
 
 ---
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### Issue: Email Not Sent
 
@@ -583,7 +583,7 @@ print(f'Password set: {\"Yes\" if s.pec_password else \"No\"}')
 uv run python -c "
 from openfatture.storage.database.session import init_db
 init_db()
-print('✅ Database ricreato')
+print('Database ricreato')
 "
 ```
 
@@ -596,7 +596,7 @@ ls -la openfatture/utils/email/templates/
 
 ---
 
-## 💡 Tips & Best Practices
+## Tips & Best Practices
 
 1. **Always run a test first:** call `send_test_email()` before sending real invoices.
 2. **Back up the database:** `cp openfatture.db openfatture.db.backup`.
@@ -606,6 +606,6 @@ ls -la openfatture/utils/email/templates/
 
 ---
 
-**Congratulations! 🎉 OpenFatture is now configured.**
+**Congratulations! OpenFatture is now configured.**
 
 For questions and support: [GitHub Issues](https://github.com/gianlucamazza/openfatture/issues)

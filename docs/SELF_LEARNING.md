@@ -272,14 +272,14 @@ Automatically reindexes the vector store when invoice/client data changes.
 ```python
 # User creates invoice
 openfatture fattura crea
-# → after_insert event fires
-# → ChangeTracker records: EntityChange(entity_type="invoice", entity_id=123)
-# → ReindexQueue adds to pending queue
-# → After 5s debounce, processes batch
-# → Fetches invoice 123 from database
-# → Generates embeddings
-# → Updates ChromaDB collection
-# → AI now knows about this invoice
+# after_insert event fires
+# ChangeTracker records: EntityChange(entity_type="invoice", entity_id=123)
+# ReindexQueue adds to pending queue
+# After 5s debounce, processes batch
+# Fetches invoice 123 from database
+# Generates embeddings
+# Updates ChromaDB collection
+# AI now knows about this invoice
 ```
 
 **CLI Commands**:
@@ -453,12 +453,12 @@ openfatture ai rag reindex
 # Create invoice
 openfatture fattura crea
 
-# → Auto-update automatically indexes it within 5 seconds
+# Auto-update automatically indexes it within 5 seconds
 
 # Ask AI about it immediately
 openfatture ai chat
 > "What invoices did I create today?"
-# → AI has fresh data!
+# AI has fresh data!
 ```
 
 4. **Monitor Auto-Update**:

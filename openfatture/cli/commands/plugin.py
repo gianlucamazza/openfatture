@@ -41,7 +41,7 @@ def list_plugins(
     table.add_column("Author", style="blue")
 
     for plugin in plugins:
-        status = "✅ Enabled" if registry.is_enabled(plugin.metadata.name) else "❌ Disabled"
+        status = "Enabled" if registry.is_enabled(plugin.metadata.name) else "Disabled"
         if not show_disabled and not registry.is_enabled(plugin.metadata.name):
             continue
 
@@ -74,10 +74,10 @@ def enable_plugin(
     registry = get_plugin_registry()
 
     if registry.enable_plugin(name):
-        console.print(f"[green]✅ Plugin '{name}' enabled[/green]")
+        console.print(f"[green]Plugin '{name}' enabled[/green]")
         console.print("\n[dim]Restart OpenFatture to apply changes[/dim]")
     else:
-        console.print(f"[red]❌ Plugin '{name}' not found[/red]")
+        console.print(f"[red]Plugin '{name}' not found[/red]")
         console.print("\n[dim]Available plugins:[/dim]")
         for plugin in registry.list_plugins():
             console.print(f"  • {plugin.metadata.name}")
@@ -98,7 +98,7 @@ def disable_plugin(
         console.print(f"[yellow]Plugin '{name}' disabled[/yellow]")
         console.print("\n[dim]Restart OpenFatture to apply changes[/dim]")
     else:
-        console.print(f"[red]❌ Plugin '{name}' not found or already disabled[/red]")
+        console.print(f"[red]Plugin '{name}' not found or already disabled[/red]")
 
 
 @app.command("discover")
@@ -116,7 +116,7 @@ def discover_plugins(
     if plugin_dir is None:
         plugin_dir = Path.home() / ".openfatture" / "plugins"
 
-    console.print(f"[bold blue]🔍 Discovering plugins in: {plugin_dir}[/bold blue]\n")
+    console.print(f"[bold blue]Discovering plugins in: {plugin_dir}[/bold blue]\n")
 
     discovery = PluginDiscovery([plugin_dir])
     plugins = discovery.discover_plugins()
@@ -136,12 +136,12 @@ def discover_plugins(
             registry.register_plugin(plugin)
             registered_count += 1
             console.print(
-                f"[green]✅ Registered:[/green] {plugin.metadata.name} v{plugin.metadata.version}"
+                f"[green]Registered:[/green] {plugin.metadata.name} v{plugin.metadata.version}"
             )
         except Exception as e:
-            console.print(f"[red]❌ Failed to register {plugin.metadata.name}: {e}[/red]")
+            console.print(f"[red]Failed to register {plugin.metadata.name}: {e}[/red]")
 
-    console.print(f"\n[bold green]🎉 Registered {registered_count} plugin(s)[/bold green]")
+    console.print(f"\n[bold green]Registered {registered_count} plugin(s)[/bold green]")
 
     if registered_count > 0:
         console.print("\n[dim]Use 'openfatture plugin list' to see all plugins[/dim]")
@@ -161,12 +161,12 @@ def plugin_info(
     plugin = registry.get_plugin(name)
 
     if not plugin:
-        console.print(f"[red]❌ Plugin '{name}' not found[/red]")
+        console.print(f"[red]Plugin '{name}' not found[/red]")
         return
 
     metadata = plugin.metadata
 
-    console.print(f"\n[bold blue]🔌 Plugin: {metadata.name}[/bold blue]\n")
+    console.print(f"\n[bold blue]Plugin: {metadata.name}[/bold blue]\n")
 
     # Info table
     info = Table(show_header=False, box=None)
@@ -178,7 +178,7 @@ def plugin_info(
     info.add_row("Description", metadata.description)
     info.add_row("Author", metadata.author)
     info.add_row("Compatible Versions", metadata.compatible_versions)
-    info.add_row("Enabled", "✅ Yes" if registry.is_enabled(name) else "❌ No")
+    info.add_row("Enabled", "Yes" if registry.is_enabled(name) else "No")
 
     if metadata.homepage:
         info.add_row("Homepage", metadata.homepage)
@@ -201,10 +201,10 @@ def install_plugin(
         openfatture plugin install openfatture-plugin-lightning
         openfatture plugin install https://github.com/user/plugin-repo.git
     """
-    console.print(f"[bold blue]📦 Installing plugin: {package}[/bold blue]\n")
+    console.print(f"[bold blue]Installing plugin: {package}[/bold blue]\n")
 
     # For now, just show placeholder - actual implementation would use pip
-    console.print("[yellow]⚠️  Plugin installation not yet implemented[/yellow]")
+    console.print("[yellow]Plugin installation not yet implemented[/yellow]")
     console.print("[dim]This feature will be available in a future version[/dim]")
     console.print("\n[dim]For now, manually install plugins with:[/dim]")
     console.print(f"[dim]  pip install {package}[/dim]")
@@ -220,10 +220,10 @@ def uninstall_plugin(
     Examples:
         openfatture plugin uninstall lightning
     """
-    console.print(f"[bold blue]🗑️  Uninstalling plugin: {name}[/bold blue]\n")
+    console.print(f"[bold blue]Uninstalling plugin: {name}[/bold blue]\n")
 
     # For now, just show placeholder
-    console.print("[yellow]⚠️  Plugin uninstallation not yet implemented[/yellow]")
+    console.print("[yellow]Plugin uninstallation not yet implemented[/yellow]")
     console.print("[dim]This feature will be available in a future version[/dim]")
     console.print("\n[dim]For now, manually uninstall with:[/dim]")
     console.print(f"[dim]  pip uninstall openfatture-plugin-{name}[/dim]")

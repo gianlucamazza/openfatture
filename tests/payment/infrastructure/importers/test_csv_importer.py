@@ -65,10 +65,10 @@ class TestCSVImporterIntesa:
             db_session.add(tx)
         db_session.commit()
 
-        # Verify amount parsing (comma → decimal point)
+        # Verify amount parsing (comma decimal point)
         transactions = sorted(bank_account.transactions, key=lambda t: t.amount, reverse=True)
         max_amount = transactions[0].amount
-        assert max_amount == Decimal("3000.00")  # "3.000,00" → 3000.00
+        assert max_amount == Decimal("3000.00")  # "3.000,00" 3000.00
 
     def test_intesa_debit_credit_detection(self, db_session, bank_account):
         """Test negative amounts for debits."""

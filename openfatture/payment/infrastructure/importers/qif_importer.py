@@ -327,7 +327,7 @@ class QIFImporter(BaseImporter):
         # Remove whitespace and thousand separators
         amount_str = amount_str.strip().replace(",", "")
 
-        # Handle parentheses for negative amounts: (150.00) → -150.00
+        # Handle parentheses for negative amounts: (150.00) -150.00
         if amount_str.startswith("(") and amount_str.endswith(")"):
             amount_str = "-" + amount_str[1:-1]
 

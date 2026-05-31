@@ -147,7 +147,7 @@ def create_invoice(
             typer.echo("Payment Request:")
             typer.echo(invoice.payment_request)
             typer.echo()
-            typer.echo("⚡ Use this payment request in your Lightning wallet")
+            typer.echo("Use this payment request in your Lightning wallet")
 
         except Exception as e:
             typer.echo(f"Error creating invoice: {e}", err=True)
@@ -312,9 +312,9 @@ def simulate_payment(payment_hash: str):
         try:
             success = await payment_service.simulate_payment(payment_hash)
             if success:
-                typer.echo(f"✓ Payment simulated for invoice: {payment_hash[:8]}...")
+                typer.echo(f"Payment simulated for invoice: {payment_hash[:8]}...")
             else:
-                typer.echo("✗ Payment simulation failed", err=True)
+                typer.echo("Payment simulation failed", err=True)
                 raise typer.Exit(1)
 
         except Exception as e:

@@ -18,7 +18,7 @@ def feedback_stats(
     analytics = FeedbackAnalytics()
 
     # User feedback stats
-    console.print("\n[bold blue]📊 User Feedback Statistics[/bold blue]\n")
+    console.print("\n[bold blue]User Feedback Statistics[/bold blue]\n")
     user_stats = analytics.get_user_feedback_stats(days=days)
 
     stats_table = Table(title=f"Last {days} Days", show_header=False)
@@ -27,7 +27,7 @@ def feedback_stats(
 
     stats_table.add_row("Total Feedback", str(user_stats.total_feedback))
     if user_stats.average_rating:
-        stars = "⭐" * int(user_stats.average_rating)
+        stars = "" * int(user_stats.average_rating)
         stats_table.add_row("Average Rating", f"{stars} ({user_stats.average_rating:.1f}/5)")
     stats_table.add_row("Total Corrections", str(user_stats.total_corrections))
     stats_table.add_row("Recent (7 days)", str(user_stats.recent_feedback_count))
@@ -50,7 +50,7 @@ def feedback_stats(
         console.print()
 
     # Prediction feedback stats
-    console.print("[bold blue]🤖 ML Prediction Feedback Statistics[/bold blue]\n")
+    console.print("[bold blue]ML Prediction Feedback Statistics[/bold blue]\n")
     pred_stats = analytics.get_prediction_feedback_stats(days=days)
 
     pred_table = Table(title=f"Last {days} Days", show_header=False)
@@ -109,11 +109,11 @@ def feedback_export(
     cutoff_date = datetime.utcnow() - timedelta(days=days)
 
     # This is a simplified export - in production, you'd query with date filters
-    console.print(f"\n[bold blue]📤 Exporting feedback data (last {days} days)[/bold blue]\n")
+    console.print(f"\n[bold blue]Exporting feedback data (last {days} days)[/bold blue]\n")
 
     # Export user feedback (simplified - would need proper date filtering in service)
     console.print("[dim]Note: Full export functionality requires additional service methods[/dim]")
-    console.print(f"[green]✓ Export location: {output}[/green]\n")
+    console.print(f"[green]Export location: {output}[/green]\n")
 
 
 @feedback_app.command("analyze")
@@ -129,7 +129,7 @@ def feedback_analyze(
     analytics = FeedbackAnalytics()
 
     # Correction patterns
-    console.print("\n[bold blue]🔍 Correction Patterns Analysis[/bold blue]\n")
+    console.print("\n[bold blue]Correction Patterns Analysis[/bold blue]\n")
     patterns = analytics.get_correction_patterns(limit=limit)
 
     if patterns:
@@ -153,7 +153,7 @@ def feedback_analyze(
         console.print("[dim]No correction patterns found.[/dim]\n")
 
     # Low confidence predictions
-    console.print("[bold blue]⚠️  Low Confidence Predictions (Requires Review)[/bold blue]\n")
+    console.print("[bold blue]Low Confidence Predictions (Requires Review)[/bold blue]\n")
     low_conf = analytics.get_low_confidence_predictions(threshold=threshold, limit=limit)
 
     if low_conf:
@@ -170,14 +170,14 @@ def feedback_analyze(
                 pred["prediction_type"],
                 pred["entity"],
                 f"{pred['confidence']:.1%}" if pred["confidence"] else "N/A",
-                "✓" if pred["user_accepted"] else "✗",
+                "" if pred["user_accepted"] else "",
             )
 
         console.print(low_conf_table)
         console.print()
 
         console.print(
-            f"[bold yellow]💡 Tip:[/bold yellow] These {len(low_conf)} predictions need human review "
+            f"[bold yellow]Tip:[/bold yellow] These {len(low_conf)} predictions need human review "
             "for model improvement.\n"
         )
     else:

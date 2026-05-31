@@ -93,11 +93,11 @@ def test_performance_summary():
     print("RETRIEVAL PERFORMANCE SUMMARY")
     print("=" * 70)
     print("\nTargets:")
-    print("  ✓ Basic retrieval:      <200ms")
-    print("  ✓ Filtered retrieval:   <250ms")
-    print("  ✓ Results relevance:    Verified")
-    print("  ✓ Results ranking:      Verified")
-    print("\nAll retrieval performance targets validated! ✅")
+    print(" Basic retrieval: <200ms")
+    print(" Filtered retrieval: <250ms")
+    print(" Results relevance: Verified")
+    print(" Results ranking: Verified")
+    print("\nAll retrieval performance targets validated! ")
     print("=" * 70 + "\n")
 
 

@@ -208,7 +208,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 OpenFatture Media Dashboard</h1>
+            <h1>OpenFatture Media Dashboard</h1>
             <p>Monitoraggio costi, performance e automazione media</p>
         </div>
 
@@ -221,14 +221,14 @@
             <!-- Metrics Overview -->
             <div class="dashboard-grid">
                 <div class="card">
-                    <h3>📈 Panoramica Generale</h3>
+                    <h3>Panoramica Generale</h3>
                     <div class="metric-grid" id="overview-metrics">
                         <!-- Populated by JavaScript -->
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3>💰 Costi Totali</h3>
+                    <h3>Costi Totali</h3>
                     <div class="metric-grid" id="cost-metrics">
                         <!-- Populated by JavaScript -->
                     </div>
@@ -238,14 +238,14 @@
             <!-- Charts Row -->
             <div class="dashboard-grid">
                 <div class="card">
-                    <h3>📊 Trend Costi</h3>
+                    <h3>Trend Costi</h3>
                     <div class="chart-container">
                         <canvas id="costChart"></canvas>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3>⚡ Performance</h3>
+                    <h3>Performance</h3>
                     <div class="chart-container">
                         <canvas id="performanceChart"></canvas>
                     </div>
@@ -255,14 +255,14 @@
             <!-- Alerts and Status -->
             <div class="dashboard-grid">
                 <div class="card">
-                    <h3>🚨 Alert Attivi</h3>
+                    <h3>Alert Attivi</h3>
                     <div id="alerts-container" class="alerts-list">
                         <!-- Populated by JavaScript -->
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3>📋 Ultime Esecuzioni</h3>
+                    <h3>Ultime Esecuzioni</h3>
                     <div class="chart-container">
                         <canvas id="runsChart"></canvas>
                     </div>
@@ -270,7 +270,7 @@
             </div>
         </div>
 
-        <button class="refresh-btn" onclick="loadDashboardData()">🔄 Aggiorna Dashboard</button>
+        <button class="refresh-btn" onclick="loadDashboardData()">Aggiorna Dashboard</button>
     </div>
 
     <script>
@@ -321,7 +321,7 @@
                 console.error('Error loading dashboard data:', error);
                 loading.innerHTML = `
                     <div style="text-align: center;">
-                        <p>❌ Errore caricamento dati</p>
+                        <p>Errore caricamento dati</p>
                         <p style="font-size: 0.9rem; color: #666;">${error.message}</p>
                         <p style="font-size: 0.8rem; color: #999;">Assicurati che il server API sia in esecuzione</p>
                     </div>
@@ -503,7 +503,7 @@
             const recentAlerts = alerts.slice(-10).reverse();
 
             if (recentAlerts.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">✅ Nessun alert attivo</p>';
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Nessun alert attivo</p>';
                 return;
             }
 

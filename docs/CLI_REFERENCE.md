@@ -2,7 +2,7 @@
 
 Complete catalogue of the `openfatture` CLI commands and the tasks you can run from the terminal.
 
-> **🎥 Demo videos**
+> **Demo videos**
 > - [Setup & Configuration](../media/output/scenario_a_onboarding.mp4) (2:30)
 > - [Invoice Creation](../media/output/scenario_b_invoice.mp4) (3:30)
 > - [AI Assistant](../media/output/scenario_c_ai.mp4) (2:45)
@@ -300,7 +300,7 @@ openfatture events dashboard --days 7
 # - Activity trends (comparing periods)
 # - Top event types with ASCII bar charts
 # - Entity activity distribution
-# - Trend indicators (📈 increasing, 📉 decreasing, ➡️ stable)
+# - Trend indicators (increasing, decreasing, stable)
 ```
 
 ### Trends Analysis
@@ -551,7 +551,7 @@ openfatture config show | grep VOICE
 
 Compliance analysis (`ai check`) remains in beta; when it fails, use `--format json` for easier diagnostics.
 
-> ℹ️ **Tip:** After setting `OPENAI_API_KEY` (or a local embedding provider), run `openfatture ai rag index` to populate the knowledge base. Agents will automatically cite normative sources such as `[1] DPR 633/72 art...`.
+> **Tip:** After setting `OPENAI_API_KEY` (or a local embedding provider), run `openfatture ai rag index` to populate the knowledge base. Agents will automatically cite normative sources such as `[1] DPR 633/72 art...`.
 
 ---
 
@@ -568,7 +568,7 @@ Compliance analysis (`ai check`) remains in beta; when it fails, use `--format j
 
 ## 10. Lightning Network Payments
 
-⚡ **Lightning Network integration for instant Bitcoin payments.**
+**Lightning Network integration for instant Bitcoin payments.**
 
 ### Prerequisites
 - LND (Lightning Network Daemon) running and accessible

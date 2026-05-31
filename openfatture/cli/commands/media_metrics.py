@@ -51,7 +51,7 @@ def summary():
             console.print(f"[yellow]{week_stats['error']}[/yellow]")
             return
 
-        console.print("[bold]📊 Media Automation Metrics Summary[/bold]")
+        console.print("[bold]Media Automation Metrics Summary[/bold]")
         console.print()
 
         # Weekly summary
@@ -94,7 +94,7 @@ def costs():
             console.print("[yellow]No cost data available[/yellow]")
             return
 
-        console.print("[bold]💰 Cost Analysis[/bold]")
+        console.print("[bold]Cost Analysis[/bold]")
         console.print()
 
         # Calculate totals
@@ -147,7 +147,7 @@ def performance():
             console.print("[yellow]No performance data available[/yellow]")
             return
 
-        console.print("[bold]⚡ Performance Analysis[/bold]")
+        console.print("[bold]Performance Analysis[/bold]")
         console.print()
 
         # Overall stats
@@ -219,10 +219,10 @@ def alerts():
         alerts = collector._load_json_list(collector.alerts_file)
 
         if not alerts:
-            console.print("[green]✓ No active alerts[/green]")
+            console.print("[green]No active alerts[/green]")
             return
 
-        console.print("[bold]🚨 Active Alerts[/bold]")
+        console.print("[bold]Active Alerts[/bold]")
         console.print()
 
         # Group alerts by type
@@ -245,13 +245,13 @@ def alerts():
             timestamp = alert.get("timestamp", "")[:16]  # YYYY-MM-DD HH:MM
 
             if level == "error":
-                icon = "❌"
+                icon = ""
                 style = "red"
             elif level == "warning":
-                icon = "⚠️"
+                icon = ""
                 style = "yellow"
             else:
-                icon = "ℹ️"
+                icon = ""
                 style = "blue"
 
             console.print(
@@ -273,12 +273,12 @@ def dashboard():
         costs = collector._load_json_dict(collector.costs_file)
         alerts_list = collector._load_json_list(collector.alerts_file)
 
-        console.print("[bold]🎬 OpenFatture Media Dashboard[/bold]")
+        console.print("[bold]OpenFatture Media Dashboard[/bold]")
         console.print()
 
         # Cost overview
         if "error" not in week_stats:
-            console.print("💰 [bold]Cost Overview (7 days)[/bold]")
+            console.print("[bold]Cost Overview (7 days)[/bold]")
             console.print(f"   Total: [yellow]${week_stats['total_cost_usd']:.3f}[/yellow]")
             console.print(
                 f"   Budget: [green]$7.00 remaining[/green] (${7 - week_stats['total_cost_usd']:.3f} left)"
@@ -287,7 +287,7 @@ def dashboard():
 
         # Performance overview
         if "error" not in week_stats:
-            console.print("⚡ [bold]Performance (7 days)[/bold]")
+            console.print("[bold]Performance (7 days)[/bold]")
             console.print(f"   Success Rate: [green]{week_stats['success_rate_pct']:.1f}%[/green]")
             console.print(
                 f"   Avg Duration: [blue]{week_stats['avg_duration_seconds']:.1f}s[/blue]"
@@ -298,7 +298,7 @@ def dashboard():
         # Recent alerts
         if alerts_list:
             recent_alerts = list(alerts_list[-5:])  # Last 5 alerts
-            console.print("🚨 [bold]Recent Alerts[/bold]")
+            console.print("[bold]Recent Alerts[/bold]")
             for alert in recent_alerts:
                 level = alert.get("level", "info")
                 message = alert.get("message", "")[:60] + (
@@ -306,11 +306,11 @@ def dashboard():
                 )
 
                 if level == "error":
-                    console.print(f"   [red]❌ {message}[/red]")
+                    console.print(f" [red]{message}[/red]")
                 elif level == "warning":
-                    console.print(f"   [yellow]⚠️  {message}[/yellow]")
+                    console.print(f" [yellow]{message}[/yellow]")
                 else:
-                    console.print(f"   [blue]ℹ️  {message}[/blue]")
+                    console.print(f" [blue]{message}[/blue]")
             console.print()
 
         # Data freshness

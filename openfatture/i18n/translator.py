@@ -30,13 +30,13 @@ def _(message_id: str, locale: str | None = None, **variables: Any) -> str:
 
     Examples:
         >>> _("cli-fattura-create-title")
-        "🧾 Crea Nuova Fattura"  # Italian (default)
+        "Crea Nuova Fattura" # Italian (default)
 
         >>> _("cli-fattura-created", numero="001")
-        "✅ Fattura 001 creata con successo!"
+        "Fattura 001 creata con successo!"
 
         >>> _("cli-fattura-create-title", locale="en")
-        "🧾 Create New Invoice"  # English
+        "Create New Invoice" # English
 
         >>> _("errors-invoice-not-found", numero="INV-123")
         "Fattura INV-123 non trovata"  # Italian
@@ -87,7 +87,7 @@ def translate_dict(data: dict[str, Any], locale: str | None = None) -> dict[str,
     Example:
         >>> data = {"title": "cli-fattura-create-title", "count": 10}
         >>> translate_dict(data)
-        {"title": "🧾 Crea Nuova Fattura", "count": 10}
+        {"title": "Crea Nuova Fattura", "count": 10}
     """
     result: dict[str, Any] = {}
 

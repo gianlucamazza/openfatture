@@ -161,7 +161,7 @@ class TestCompositeMatcherPerformance:
 
         print(
             f"\nSpeedup: {speedup:.2f}x "
-            f"(Sequential: {sequential_time*1000:.1f}ms → "
+            f"(Sequential: {sequential_time*1000:.1f}ms "
             f"Parallel: {parallel_time*1000:.1f}ms)"
         )
 

@@ -46,13 +46,13 @@ class HTMLFormatter(BaseFormatter):
         parts.append('<div class="container">')
 
         # Title
-        parts.append("<h1>🤖 AI Response</h1>")
+        parts.append("<h1>AI Response</h1>")
 
         # Handle errors
         if response.status.value == "error":
             parts.append('<div class="error">')
             parts.append(
-                f"<p>❌ <strong>Error:</strong> {html.escape(response.error or 'Unknown error')}</p>"
+                f"<p><strong>Error:</strong> {html.escape(response.error or 'Unknown error')}</p>"
             )
             parts.append("</div>")
         else:
@@ -317,7 +317,7 @@ class HTMLFormatter(BaseFormatter):
         parts.append('<div class="container">')
         parts.append("<h1>Error</h1>")
         parts.append('<div class="error">')
-        parts.append(f"<p>❌ <strong>Error:</strong> {html.escape(error_msg)}</p>")
+        parts.append(f"<p><strong>Error:</strong> {html.escape(error_msg)}</p>")
         parts.append("</div>")
         parts.append("</div>")
         parts.append("</body>")

@@ -1,7 +1,7 @@
 """Internal sub-package backing the AI Assistant Streamlit page.
 
 Holds the helper functions and per-tab render functions extracted from
-``5_🤖_AI_Assistant.py`` so the page itself stays thin.
+``5__AI_Assistant.py`` so the page itself stays thin.
 """
 
 from openfatture.web.pages._ai_assistant.helpers import (

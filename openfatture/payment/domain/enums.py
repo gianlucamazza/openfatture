@@ -7,9 +7,9 @@ class TransactionStatus(str, Enum):
     """Bank transaction matching status.
 
     Lifecycle:
-        UNMATCHED → MATCHED (after auto-reconciliation)
-        UNMATCHED → IGNORED (manual action)
-        MATCHED → UNMATCHED (undo reconciliation)
+        UNMATCHED MATCHED (after auto-reconciliation)
+        UNMATCHED IGNORED (manual action)
+        MATCHED UNMATCHED (undo reconciliation)
     """
 
     UNMATCHED = "unmatched"  # Transaction not yet matched to any payment
@@ -45,9 +45,9 @@ class ReminderStatus(str, Enum):
     """Payment reminder status.
 
     Lifecycle:
-        PENDING → SENT (after email dispatch)
-        PENDING → CANCELLED (payment received before sending)
-        SENT → FAILED (email delivery error)
+        PENDING SENT (after email dispatch)
+        PENDING CANCELLED (payment received before sending)
+        SENT FAILED (email delivery error)
     """
 
     PENDING = "pending"  # Reminder scheduled but not sent

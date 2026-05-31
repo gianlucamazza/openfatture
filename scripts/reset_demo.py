@@ -285,7 +285,7 @@ def seed_demo_data() -> None:
         session.add_all(invoices)
         session.commit()
 
-        print("✅ Demo dataset generated successfully:")
+        print("Demo dataset generated successfully:")
         print(f"  • Clients: {len(clients)}")
         print(f"  • Products: {len(products)}")
         print(f"  • Invoices: {len(invoices)} (statuses: bozza/inviata/consegnata)")

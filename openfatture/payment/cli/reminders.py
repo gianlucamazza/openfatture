@@ -20,7 +20,7 @@ def schedule_reminders(
         "default", "--strategy", "-s", help="Reminder strategy: default|aggressive|gentle|minimal"
     ),
 ) -> None:
-    """⏰ Schedule payment reminders.
+    """Schedule payment reminders.
 
     Strategies:
         - default: [-7, -3, 0, 7, 30] days
@@ -54,10 +54,10 @@ def schedule_reminders(
         try:
             reminders = _run(scheduler.schedule_reminders(payment_id, strategy_map[strategy]))
 
-            console.print(f"\n[green]✅ Scheduled {len(reminders)} reminders[/]")
+            console.print(f"\n[green]Scheduled {len(reminders)} reminders[/]")
 
             # Display schedule
-            table = Table(title="📅 Reminder Schedule")
+            table = Table(title="Reminder Schedule")
             table.add_column("Date", style="cyan")
             table.add_column("Days to Due", justify="right", style="yellow")
             table.add_column("Status", style="dim")
@@ -74,13 +74,13 @@ def schedule_reminders(
                     days_until_due = getattr(reminder, "days_before_due", None)
 
                 if days_until_due is None:
-                    status = "❔ Unknown"
+                    status = "Unknown"
                 elif days_until_due > 0:
-                    status = "⏰ Before due"
+                    status = "Before due"
                 elif days_until_due == 0:
-                    status = "📅 Due today"
+                    status = "Due today"
                 else:
-                    status = "❗ After due"
+                    status = "After due"
 
                 table.add_row(
                     getattr(reminder, "reminder_date", date.today()).strftime("%d/%m/%Y"),
@@ -101,7 +101,7 @@ def process_reminders(
         None, "--date", help="Date to process (YYYY-MM-DD), default: today"
     ),
 ) -> None:
-    """📧 Process due reminders (background job).
+    """Process due reminders (background job).
 
     Run this daily via cron to send reminders.
 
@@ -131,13 +131,11 @@ def process_reminders(
             ReminderRepository(session), PaymentRepository(session), notifier
         )
 
-        console.print(
-            f"[cyan]📧 Processing reminders for {process_date.strftime('%d/%m/%Y')}...[/]"
-        )
+        console.print(f"[cyan]Processing reminders for {process_date.strftime('%d/%m/%Y')}...[/]")
 
         count = _run(scheduler.process_due_reminders(process_date))
 
-        console.print(f"\n[green]✅ Sent {count} reminders[/]")
+        console.print(f"\n[green]Sent {count} reminders[/]")
 
 
 @app.command(name="list-reminders")
@@ -159,10 +157,10 @@ def list_reminders(
         reminders = repo.list_reminders(status=status, payment_id=payment_id, limit=effective_limit)
 
         if not reminders:
-            console.print("[yellow]ℹ️  No reminders found for the given filters.[/]")
+            console.print("[yellow]No reminders found for the given filters.[/]")
             return
 
-        table = Table(title="📬 Payment Reminders")
+        table = Table(title="Payment Reminders")
         table.add_column("ID", justify="right", style="cyan")
         table.add_column("Payment", justify="right")
         table.add_column("Date", justify="center")
@@ -196,15 +194,15 @@ def cancel_reminder(reminder_id: int = typer.Argument(..., help="Reminder ID to 
         repo = ReminderRepository(session)
         reminder = repo.get_by_id(reminder_id)
         if not reminder:
-            console.print(f"[red]✗ Reminder {reminder_id} not found[/]")
+            console.print(f"[red]Reminder {reminder_id} not found[/]")
             raise typer.Exit(1)
 
         if reminder.status == ReminderStatus.SENT:
-            console.print(f"[yellow]⚠️  Reminder {reminder_id} already sent; cannot cancel.[/]")
+            console.print(f"[yellow]Reminder {reminder_id} already sent; cannot cancel.[/]")
             raise typer.Exit(1)
 
         reminder.cancel()
         repo.update(reminder)
         session.commit()
 
-        console.print(f"[green]✓ Reminder {reminder_id} cancelled[/]")
+        console.print(f"[green]Reminder {reminder_id} cancelled[/]")

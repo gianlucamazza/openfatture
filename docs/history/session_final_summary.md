@@ -1,53 +1,53 @@
-# 🎊 Final Session: Type Safety Journey Complete
+# Final Session: Type Safety Journey Complete
 
-## 📊 Final Results
+## Final Results
 
 | Metric | Start | End | Delta |
 |--------|-------|-----|-------|
-| **MyPy errors** | 112 | 50 | **-62 (-55%)** ✅ |
+| **MyPy errors** | 112 | 50 | **-62 (-55%)** |
 | **Files with errors** | ~30 | 24 | -6 |
-| **Type safety (estimate)** | 45% | **72%** | **+27%** 🚀 |
+| **Type safety (estimate)** | 45% | **72%** | **+27%** |
 
 ---
 
-## ✅ Completed This Session
+## Completed This Session
 
 ### 1. **CATEGORY D: Missing Attributes** (9 issues)
-**Status:** ✅ 100% complete
+**Status:** 100% complete
 
 **Architecture Changes**
-- ✅ `BankTransaction.matched_at` – audit trail timestamp
-- ✅ `Pagamento.revert_payment()` – safe payment allocation rollback
-- ✅ `InvoiceBatchProcessor` – dedicated CSV import/export class (245 lines)
-- ✅ `batch.py` – updated imports and type annotations
+- `BankTransaction.matched_at` – audit trail timestamp
+- `Pagamento.revert_payment()` – safe payment allocation rollback
+- `InvoiceBatchProcessor` – dedicated CSV import/export class (245 lines)
+- `batch.py` – updated imports and type annotations
 
 **Impact:** Payment reconciliation architecture is now consistent and type-safe.
 
 ---
 
 ### 2. **Quick Fixes** (2 issues)
-**Status:** ✅ 100% complete
+**Status:** 100% complete
 
 **Fixes**
-- ✅ `batch.py:111-113` – explicit tuple unpacking with type hints
-- ✅ `config_wizard.py:445` – Questionary checkbox default workaround
+- `batch.py:111-113` – explicit tuple unpacking with type hints
+- `config_wizard.py:445` – Questionary checkbox default workaround
 
 **Pattern:** Explicit type annotations for tuple unpacking scenarios.
 
 ---
 
 ### 3. **NO-UNTYPED-DEF (Partial)** (4/17 issues)
-**Status:** ✅ 4/17 resolved (23%)
+**Status:** 4/17 resolved (23%)
 
 **Fixes**
-- ✅ `autocomplete.py:22,33` – added types to `Validator.validate()` (Document → None)
-- ✅ `ollama.py:334,338` – typed async context managers (Self, Any → None)
+- `autocomplete.py:22,33` – added types to `Validator.validate()` (Document None)
+- `ollama.py:334,338` – typed async context managers (Self, Any None)
 
 **Pattern:** Function/method signature annotations.
 
 ---
 
-## 📝 Remaining Errors (50 total)
+## Remaining Errors (50 total)
 
 ### Category Breakdown
 - **NO-ANY-RETURN:** ~35 issues (70%) – functions returning `Any`
@@ -56,15 +56,15 @@
 
 ---
 
-## 🏗️ Best Practices Applied
+## Best Practices Applied
 
-✅ **Architecture**
+**Architecture**
 - Single Responsibility (InvoiceBatchProcessor)
 - Defensive programming (`revert_payment` validation)
 - Audit trail (`matched_at` timestamp)
 - Type safety first (no new `type: ignore`, one legacy exception)
 
-✅ **Code Quality**
+**Code Quality**
 - Comprehensive docstrings with examples
 - Explicit type hints for every new function
 - Runtime validation via `ValueError`
@@ -72,7 +72,7 @@
 
 ---
 
-## 📦 Files Modified (11)
+## Files Modified (11)
 
 **New File (1)**
 - `openfatture/core/batch/invoice_processor.py` (245 lines)
@@ -89,7 +89,7 @@
 
 ---
 
-## 🎯 Recommended Next Steps
+## Recommended Next Steps
 
 ### **High Priority**
 1. **DB migration:** `ALTER TABLE bank_transactions ADD COLUMN matched_at TIMESTAMP NULL;`
@@ -107,7 +107,7 @@
 
 ---
 
-## 💡 Lessons Learned
+## Lessons Learned
 
 1. **Effective categorisation** accelerates fixes (pattern-based batching).
 2. **Architecture beats quick hacks:** `InvoiceBatchProcessor` > ad-hoc wrappers.
@@ -116,11 +116,11 @@
 
 ---
 
-## 🚀 Impact Summary
+## Impact Summary
 
 **OpenFatture is now significantly more robust:**
-- 55% reduction in MyPy errors (112 → 50)
-- 27% improvement in type safety (45% → 72%)
+- 55% reduction in MyPy errors (112 50)
+- 27% improvement in type safety (45% 72%)
 - Batch operations architecture hardened
 - Payment reconciliation supports safe rollback
 - Full audit trail for bank transactions
@@ -137,4 +137,4 @@
 **Suggested commits:** 3 (Category D, Quick Fixes, NO-UNTYPED-DEF batch)
 **Lines changed:** ~300 added/modified
 
-**🎉 Great job! Type-safety journey on track...**
+**Great job! Type-safety journey on track...**

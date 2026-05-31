@@ -4,7 +4,7 @@
 - `resolve_of_timeline.yaml`: preset DaVinci Resolve per timeline UHD con export multipli.
 
 Import istruzioni:
-1. OBS → Profilo > Importa, seleziona JSON.
-2. Resolve → Project Manager > Presets > Importa, seleziona YAML (convertito via script `scripts/resolve_import.py` se necessario).
+1. OBS Profilo > Importa, seleziona JSON.
+2. Resolve Project Manager > Presets > Importa, seleziona YAML (convertito via script `scripts/resolve_import.py` se necessario).
 
 Aggiorna versione nel nome file quando modifichi parametri chiave (bitrate, fps, color space).

@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Key metrics (total events, event types, velocity, trends)
     - Top event types with ASCII bar charts
     - Entity activity distribution
-    - Trend indicators (📈 increasing, 📉 decreasing, ➡️ stable)
+    - Trend indicators (increasing, decreasing, stable)
   - `trends [--days N] [--type TYPE]` - Time-based activity trends with bar charts
 
 - **Visualizations**:
@@ -118,7 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Domain Models**:
 
   - `BankAccount`: Multi-account support with IBAN validation
-  - `BankTransaction`: Full transaction lifecycle (UNMATCHED → MATCHED → IGNORED)
+  - `BankTransaction`: Full transaction lifecycle (UNMATCHED MATCHED IGNORED)
   - `PaymentReminder`: Automated payment tracking with configurable strategies
   - Value Objects: `MatchResult`, `ReconciliationResult` for type-safe operations
   - Enums: `TransactionStatus`, `MatchType`, `ReminderStatus`, `ReminderStrategy`

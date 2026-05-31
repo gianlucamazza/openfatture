@@ -207,11 +207,11 @@ examples:
 Usage:
 ```
 > /hello Bob
-🔧 Custom command expanded:
+Custom command expanded:
 Say hello to Bob in a friendly way...
 
-🤖 AI:
-Hello Bob! 👋 I hope you're having a wonderful day...
+AI:
+Hello Bob! I hope you're having a wonderful day...
 ```
 
 ---
@@ -278,11 +278,11 @@ template: |
 ## Integration with OpenFatture
 
 Custom commands have full access to AI capabilities:
-- ✅ Tool calling (search invoices, clients)
-- ✅ RAG enrichment (knowledge base, invoice history)
-- ✅ Structured outputs
-- ✅ Session persistence
-- ✅ Cost tracking
+- Tool calling (search invoices, clients)
+- RAG enrichment (knowledge base, invoice history)
+- Structured outputs
+- Session persistence
+- Cost tracking
 
 The AI agent processes custom command expansions just like regular user input,
 so you can leverage all OpenFatture features within your commands.

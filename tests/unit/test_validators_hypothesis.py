@@ -187,7 +187,7 @@ class TestDecimalProperties:
     )
     def test_decimal_to_string_roundtrip(self, amount: Decimal):
         """
-        Property: Converting Decimal → str → Decimal should preserve value.
+        Property: Converting Decimal str Decimal should preserve value.
         """
         formatted = format_importo(float(amount))
         parsed_back = Decimal(formatted)

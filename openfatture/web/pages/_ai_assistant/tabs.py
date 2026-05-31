@@ -1,7 +1,7 @@
 """Tab render functions for the AI Assistant page.
 
 Each ``render_*_tab`` function contains exactly the body of the corresponding
-``with tabN:`` block from the original ``5_🤖_AI_Assistant.py`` page. The page
+``with tabN:`` block from the original ``5__AI_Assistant.py`` page. The page
 itself is now thin and simply calls these inside the relevant tab context.
 
 Services and helpers are passed as parameters so the functions don't rely on
@@ -35,7 +35,7 @@ def render_chat_tab(
     feedback_service: Any,
 ) -> None:
     """Render the Chat Assistant tab (original ``with tab1:`` body)."""
-    st.markdown(f"### 💬 {t('page-ai-chat-title')}")
+    st.markdown(f"### {t('page-ai-chat-title')}")
     st.markdown(t("page-ai-chat-description"))
 
     # Initialize conversation history
@@ -45,7 +45,7 @@ def render_chat_tab(
     col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
     with col2:
         if st.button(
-            f"💾 {t('page-ai-chat-save')}",
+            f"{t('page-ai-chat-save')}",
             use_container_width=True,
             help=t("page-ai-chat-save-help"),
         ):
@@ -65,7 +65,7 @@ def render_chat_tab(
                 st.error(t("page-ai-error-generic", error=str(e)))
     with col3:
         if st.button(
-            f"🔄 {t('page-ai-chat-reload')}",
+            f"{t('page-ai-chat-reload')}",
             use_container_width=True,
             help=t("page-ai-chat-reload-help"),
         ):
@@ -76,7 +76,7 @@ def render_chat_tab(
             except Exception as e:
                 st.error(t("page-ai-error-generic", error=str(e)))
     with col4:
-        if st.button(f"🗑️ {t('page-ai-chat-clear')}", use_container_width=True):
+        if st.button(f"{t('page-ai-chat-clear')}", use_container_width=True):
             clear_conversation_history()
             st.rerun()
 
@@ -91,10 +91,10 @@ def render_chat_tab(
             content = msg["content"]
 
             if role == "user":
-                with st.chat_message("user", avatar="🧑"):
+                with st.chat_message("user", avatar=""):
                     st.markdown(content)
             else:
-                with st.chat_message("assistant", avatar="🤖"):
+                with st.chat_message("assistant", avatar=""):
                     st.markdown(content)
 
     # File upload section
@@ -128,7 +128,7 @@ def render_chat_tab(
 
     # Show currently uploaded files
     if "uploaded_files" in st.session_state and st.session_state.uploaded_files:
-        st.markdown(f"### 📎 {t('page-ai-chat-files-attached')}")
+        st.markdown(f"### {t('page-ai-chat-files-attached')}")
         cols = st.columns([3, 1])
 
         with cols[0]:
@@ -138,11 +138,11 @@ def render_chat_tab(
                     st.image(file_data["file"], caption=file_data["details"]["name"], width=150)
                 else:
                     st.info(
-                        f"📄 {file_data['details']['name']} ({file_data['details']['size']} bytes)"
+                        f"{file_data['details']['name']} ({file_data['details']['size']} bytes)"
                     )
 
         with cols[1]:
-            if st.button(f"🗑️ {t('page-ai-chat-files-clear-all')}", use_container_width=True):
+            if st.button(f"{t('page-ai-chat-files-clear-all')}", use_container_width=True):
                 st.session_state.uploaded_files = []
                 st.success(t("page-ai-chat-files-cleared"))
                 st.rerun()
@@ -156,7 +156,7 @@ def render_chat_tab(
             st.markdown(t("page-ai-chat-custom-commands-count", count=len(commands)))
             for cmd in commands:
                 aliases = f" ({', '.join(cmd['aliases'])})" if cmd["aliases"] else ""
-                with st.expander(f"🤖 /{cmd['name']}{aliases} - {cmd['category']}"):
+                with st.expander(f"/{cmd['name']}{aliases} - {cmd['category']}"):
                     st.markdown(
                         t("page-ai-chat-custom-commands-description", desc=cmd["description"])
                     )
@@ -192,7 +192,7 @@ def render_chat_tab(
 
                 with col2:
                     if st.button(
-                        f"📂 {t('page-ai-chat-sessions-load')}",
+                        f"{t('page-ai-chat-sessions-load')}",
                         key=f"load_{session['id']}",
                         use_container_width=True,
                     ):
@@ -212,7 +212,7 @@ def render_chat_tab(
 
                 with col3:
                     if st.button(
-                        f"📝 {t('page-ai-chat-sessions-rename')}",
+                        f"{t('page-ai-chat-sessions-rename')}",
                         key=f"rename_{session['id']}",
                         use_container_width=True,
                     ):
@@ -221,7 +221,7 @@ def render_chat_tab(
 
                 with col4:
                     if st.button(
-                        f"🗑️ {t('page-ai-chat-sessions-delete')}",
+                        f"{t('page-ai-chat-sessions-delete')}",
                         key=f"delete_{session['id']}",
                         use_container_width=True,
                     ):
@@ -246,7 +246,7 @@ def render_chat_tab(
         if command_feedback:
             # This is a command - show feedback and don't send to AI
             with chat_container:
-                with st.chat_message("assistant", avatar="🤖"):
+                with st.chat_message("assistant", avatar=""):
                     st.markdown(command_feedback)
             # Add to history
             history.append({"role": "user", "content": user_input})
@@ -267,7 +267,7 @@ def render_chat_tab(
         # Prepare message content with file information
         message_content = final_input
         if attached_files:
-            file_info_parts = [f"\n\n📎 {t('page-ai-chat-files-attached')}:"]
+            file_info_parts = [f"\n\n{t('page-ai-chat-files-attached')}:"]
 
             for file_data in attached_files:
                 file_name = file_data["details"]["name"]
@@ -309,14 +309,14 @@ def render_chat_tab(
                     )
 
             message_content += "\n".join(file_info_parts)
-            message_content += f"\n\n💡 {t('page-ai-chat-file-analysis-hint')}"
+            message_content += f"\n\n{t('page-ai-chat-file-analysis-hint')}"
 
         # Add user message to history
         history.append({"role": "user", "content": message_content})
 
         # Display user message
         with chat_container:
-            with st.chat_message("user", avatar="🧑"):
+            with st.chat_message("user", avatar=""):
                 st.markdown(message_content)
 
                 # Show file attachments
@@ -330,12 +330,12 @@ def render_chat_tab(
                             )
                         else:
                             st.info(
-                                f"📄 {file_data['details']['name']} ({file_data['details']['size']} bytes)"
+                                f"{file_data['details']['name']} ({file_data['details']['size']} bytes)"
                             )
 
         # Get AI response with streaming
         with chat_container:
-            with st.chat_message("assistant", avatar="🤖"):
+            with st.chat_message("assistant", avatar=""):
                 response_placeholder = st.empty()
                 full_response = ""
 
@@ -361,7 +361,7 @@ def render_chat_tab(
                                     if tool_events:
                                         tool_display = "\n\n" + "\n".join(
                                             [
-                                                f"🔧 **{event.data.get('tool_name', 'Tool')}:** {event.data.get('result', event.data.get('error', ''))}"
+                                                f"**{event.data.get('tool_name', 'Tool')}:** {event.data.get('result', event.data.get('error', ''))}"
                                                 for event in tool_events[-3:]  # Show last 3 events
                                             ]
                                         )
@@ -376,7 +376,7 @@ def render_chat_tab(
                                     current_text = "".join(chunks)
                                     tool_display = "\n\n" + "\n".join(
                                         [
-                                            f"🔧 **{event.data.get('tool_name', 'Tool')}:** {event.data.get('result', event.data.get('error', ''))}"
+                                            f"**{event.data.get('tool_name', 'Tool')}:** {event.data.get('result', event.data.get('error', ''))}"
                                             for event in tool_events[-3:]  # Show last 3 events
                                         ]
                                     )
@@ -397,13 +397,13 @@ def render_chat_tab(
                         response_placeholder.markdown(full_response)
 
                         # Add feedback buttons after successful response
-                        if full_response and not full_response.startswith("❌"):
+                        if full_response and not full_response.startswith(""):
                             st.markdown("---")
                             feedback_col1, feedback_col2, feedback_col3 = st.columns([1, 1, 2])
 
                             with feedback_col1:
                                 if st.button(
-                                    f"👍 {t('page-ai-chat-feedback-good')}",
+                                    f"{t('page-ai-chat-feedback-good')}",
                                     key=f"good_{len(history)}",
                                     use_container_width=True,
                                 ):
@@ -420,7 +420,7 @@ def render_chat_tab(
 
                             with feedback_col2:
                                 if st.button(
-                                    f"👎 {t('page-ai-chat-feedback-bad')}",
+                                    f"{t('page-ai-chat-feedback-bad')}",
                                     key=f"bad_{len(history)}",
                                     use_container_width=True,
                                 ):
@@ -436,7 +436,7 @@ def render_chat_tab(
                                         st.error(t("page-ai-chat-feedback-error"))
 
                             with feedback_col3:
-                                with st.popover(f"💬 {t('page-ai-chat-feedback-comment')}"):
+                                with st.popover(f"{t('page-ai-chat-feedback-comment')}"):
                                     user_comment = st.text_area(
                                         t("page-ai-chat-feedback-comment-label"),
                                         height=100,
@@ -485,7 +485,7 @@ def render_chat_tab(
 
 def render_description_tab(ai_service: Any) -> None:
     """Render the Invoice Description Generator tab (original ``with tab2:`` body)."""
-    st.markdown(f"### 📝 {t('page-ai-desc-title')}")
+    st.markdown(f"### {t('page-ai-desc-title')}")
     st.markdown(t("page-ai-desc-description"))
 
     with st.form("description_form"):
@@ -529,9 +529,7 @@ def render_description_tab(ai_service: Any) -> None:
                 help=t("page-ai-desc-tech-help"),
             )
 
-        submitted = st.form_submit_button(
-            f"✨ {t('page-ai-desc-generate')}", use_container_width=True
-        )
+        submitted = st.form_submit_button(f"{t('page-ai-desc-generate')}", use_container_width=True)
 
     if submitted:
         if not servizio:
@@ -572,16 +570,16 @@ def render_description_tab(ai_service: Any) -> None:
                         if response.metadata.get("is_structured"):
                             data = response.metadata["parsed_model"]
 
-                            st.markdown(f"#### 📄 {t('page-ai-desc-result-title')}")
+                            st.markdown(f"#### {t('page-ai-desc-result-title')}")
                             st.info(data["descrizione_completa"])
 
                             if data.get("deliverables"):
-                                st.markdown(f"#### 📦 {t('page-ai-desc-deliverables')}")
+                                st.markdown(f"#### {t('page-ai-desc-deliverables')}")
                                 for item in data["deliverables"]:
                                     st.markdown(f"- {item}")
 
                             if data.get("competenze"):
-                                st.markdown(f"#### 🔧 {t('page-ai-desc-skills')}")
+                                st.markdown(f"#### {t('page-ai-desc-skills')}")
                                 for skill in data["competenze"]:
                                     st.markdown(f"- {skill}")
 
@@ -592,7 +590,7 @@ def render_description_tab(ai_service: Any) -> None:
                                 st.markdown(t("page-ai-desc-notes", notes=data["note"]))
 
                         else:
-                            st.markdown(f"#### 📄 {t('page-ai-desc-result-generated')}")
+                            st.markdown(f"#### {t('page-ai-desc-result-generated')}")
                             st.info(response.content)
 
                         # Metrics
@@ -631,7 +629,7 @@ def render_description_tab(ai_service: Any) -> None:
 
 def render_vat_tab(ai_service: Any) -> None:
     """Render the VAT Suggestion tab (original ``with tab3:`` body)."""
-    st.markdown(f"### 🧾 {t('page-ai-vat-title')}")
+    st.markdown(f"### {t('page-ai-vat-title')}")
     st.markdown(t("page-ai-vat-description"))
 
     with st.form("vat_form"):
@@ -690,7 +688,7 @@ def render_vat_tab(ai_service: Any) -> None:
         )
 
         submitted_vat = st.form_submit_button(
-            f"🧾 {t('page-ai-vat-suggest')}", use_container_width=True
+            f"{t('page-ai-vat-suggest')}", use_container_width=True
         )
 
     if submitted_vat:
@@ -716,7 +714,7 @@ def render_vat_tab(ai_service: Any) -> None:
                             data = response.metadata["parsed_model"]
 
                             # Main tax info
-                            st.markdown(f"#### 📊 {t('page-ai-vat-treatment-title')}")
+                            st.markdown(f"#### {t('page-ai-vat-treatment-title')}")
 
                             info_cols = st.columns(3)
 
@@ -748,26 +746,26 @@ def render_vat_tab(ai_service: Any) -> None:
                                 )
 
                             # Explanation
-                            st.markdown(f"#### 📋 {t('page-ai-vat-explanation-title')}")
+                            st.markdown(f"#### {t('page-ai-vat-explanation-title')}")
                             st.markdown(data["spiegazione"])
 
                             # Legal reference
-                            st.markdown(f"#### 📜 {t('page-ai-vat-legal-reference-title')}")
+                            st.markdown(f"#### {t('page-ai-vat-legal-reference-title')}")
                             st.markdown(data["riferimento_normativo"])
 
                             # Invoice notes
                             if data.get("note_fattura"):
-                                st.markdown(f"#### 📝 {t('page-ai-vat-invoice-note-title')}")
+                                st.markdown(f"#### {t('page-ai-vat-invoice-note-title')}")
                                 st.code(data["note_fattura"])
 
                             # Recommendations
                             if data.get("raccomandazioni") and len(data["raccomandazioni"]) > 0:
-                                st.markdown(f"#### 💡 {t('page-ai-vat-recommendations-title')}")
+                                st.markdown(f"#### {t('page-ai-vat-recommendations-title')}")
                                 for racc in data["raccomandazioni"]:
                                     st.markdown(f"- {racc}")
 
                         else:
-                            st.markdown(f"#### 📊 {t('page-ai-vat-suggestion-title')}")
+                            st.markdown(f"#### {t('page-ai-vat-suggestion-title')}")
                             st.info(response.content)
 
                         # Metrics
@@ -792,7 +790,7 @@ def render_vat_tab(ai_service: Any) -> None:
 
 def render_voice_tab(voice_service: Any) -> None:
     """Render the Voice Chat tab (original ``with tab4:`` body)."""
-    st.markdown(f"### 🎤 {t('page-ai-voice-title')}")
+    st.markdown(f"### {t('page-ai-voice-title')}")
 
     # Check if voice is available
     if not voice_service.is_available():
@@ -836,17 +834,17 @@ def render_voice_tab(voice_service: Any) -> None:
     # Action buttons
     voice_col1, voice_col2 = st.columns([4, 1])
     with voice_col2:
-        if st.button(f"🗑️ {t('page-ai-voice-clear')}", use_container_width=True):
+        if st.button(f"{t('page-ai-voice-clear')}", use_container_width=True):
             st.session_state.voice_conversation_history = []
             st.rerun()
 
     # Display voice conversation history
     if voice_history:
-        st.markdown(f"### 📜 {t('page-ai-voice-history-title')}")
+        st.markdown(f"### {t('page-ai-voice-history-title')}")
         with st.container():
             for i, interaction in enumerate(voice_history):
                 # User message
-                with st.chat_message("user", avatar="🧑"):
+                with st.chat_message("user", avatar=""):
                     st.markdown(t("page-ai-voice-user-message", text=interaction["transcription"]))
                     if interaction.get("language"):
                         st.caption(
@@ -854,7 +852,7 @@ def render_voice_tab(voice_service: Any) -> None:
                         )
 
                 # Assistant response
-                with st.chat_message("assistant", avatar="🤖"):
+                with st.chat_message("assistant", avatar=""):
                     st.markdown(t("page-ai-voice-assistant-message", text=interaction["response"]))
 
                     # Show audio if available
@@ -890,7 +888,7 @@ def render_voice_tab(voice_service: Any) -> None:
     st.markdown("---")
 
     # Audio input
-    st.markdown(f"### 🎙️ {t('page-ai-voice-record-title')}")
+    st.markdown(f"### {t('page-ai-voice-record-title')}")
 
     # Streamlit audio input (available from Streamlit 1.28+)
     audio_input = st.audio_input(
@@ -906,7 +904,7 @@ def render_voice_tab(voice_service: Any) -> None:
         st.audio(audio_input, format="audio/wav")
 
         # Process audio button
-        if st.button(f"🚀 {t('page-ai-voice-process')}", type="primary", use_container_width=True):
+        if st.button(f"{t('page-ai-voice-process')}", type="primary", use_container_width=True):
             with st.spinner(t("page-ai-voice-processing")):
                 try:
                     # Read audio bytes
@@ -951,23 +949,23 @@ def render_voice_tab(voice_service: Any) -> None:
                     result_col1, result_col2 = st.columns(2)
 
                     with result_col1:
-                        st.markdown(f"#### 📝 {t('page-ai-voice-transcription-title')}")
+                        st.markdown(f"#### {t('page-ai-voice-transcription-title')}")
                         st.info(t("page-ai-voice-user-message", text=response.transcription.text))
                         st.caption(
                             t("page-ai-voice-language", lang=response.transcription.language)
                         )
 
                     with result_col2:
-                        st.markdown(f"#### 🤖 {t('page-ai-voice-response-title')}")
+                        st.markdown(f"#### {t('page-ai-voice-response-title')}")
                         st.success(t("page-ai-voice-assistant-message", text=response.llm_response))
 
                     # Audio response
                     if response.synthesis:
-                        st.markdown(f"#### 🔊 {t('page-ai-voice-audio-response-title')}")
+                        st.markdown(f"#### {t('page-ai-voice-audio-response-title')}")
                         st.audio(response.synthesis.audio_data, format="audio/mp3")
 
                     # Metrics
-                    st.markdown(f"#### 📊 {t('page-ai-voice-metrics-title')}")
+                    st.markdown(f"#### {t('page-ai-voice-metrics-title')}")
                     metrics_cols = st.columns(4)
                     with metrics_cols[0]:
                         st.metric("STT", f"{response.stt_latency_ms:.0f}ms")

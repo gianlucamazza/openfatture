@@ -12,7 +12,7 @@ from openfatture.web.utils.i18n import get_translator
 
 t = get_translator()
 
-st.set_page_config(page_title=t("page-reports-page-title"), page_icon="📊", layout="wide")
+st.set_page_config(page_title=t("page-reports-page-title"), page_icon="", layout="wide")
 
 # Title
 st.title(t("page-reports-title"))

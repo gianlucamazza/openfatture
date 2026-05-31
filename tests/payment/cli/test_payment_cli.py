@@ -104,7 +104,7 @@ class TestImportCommand:
         # Verify success
         assert result.exit_code == 0
         assert "Import Results" in result.stdout
-        assert "✅ Success" in result.stdout
+        assert "Success" in result.stdout
         assert "Matched: 8" in result.stdout
 
     def test_import_account_not_found(self, temp_csv, mocker):
@@ -216,7 +216,7 @@ class TestImportCommand:
 
         assert result.exit_code == 0
         assert "Auto-matching" not in result.stdout
-        assert "✅ Success" in result.stdout
+        assert "Success" in result.stdout
 
 
 class TestAccountCommands:
@@ -521,9 +521,7 @@ class TestReminderManagementCommands:
             mock_session = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            repo = mocker.patch(
-                "openfatture.payment.cli.reminders.ReminderRepository"
-            ).return_value
+            repo = mocker.patch("openfatture.payment.cli.reminders.ReminderRepository").return_value
             reminder = Mock()
             reminder.id = 7
             reminder.payment_id = 10
@@ -548,9 +546,7 @@ class TestReminderManagementCommands:
             mock_session.rollback = MagicMock()
             mock_get_db.return_value.__enter__.return_value = mock_session
 
-            repo = mocker.patch(
-                "openfatture.payment.cli.reminders.ReminderRepository"
-            ).return_value
+            repo = mocker.patch("openfatture.payment.cli.reminders.ReminderRepository").return_value
             reminder = Mock()
             reminder.status = ReminderStatus.PENDING
             reminder.cancel = Mock()

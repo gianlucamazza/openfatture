@@ -1,7 +1,7 @@
 """
 Integration tests for complete invoice workflow.
 
-Tests the entire flow: Create Invoice → Generate XML → Validate → Send to SDI
+Tests the entire flow: Create Invoice Generate XML Validate Send to SDI
 """
 
 from datetime import date
@@ -31,7 +31,7 @@ class TestInvoiceWorkflowE2E:
         self, db_session: Session, test_settings, mock_pec_server, tmp_path
     ):
         """
-        Test complete workflow: create → generate XML → send to SDI.
+        Test complete workflow: create generate XML send to SDI.
 
         This is the happy path that a user would follow.
         """

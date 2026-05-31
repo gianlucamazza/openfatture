@@ -54,7 +54,7 @@ class LightningPaymentSettledHandler:
 
             # Log successful payment
             print(
-                f"✓ Lightning payment processed: {event.amount_msat} msat "
+                f"Lightning payment processed: {event.amount_msat} msat "
                 f"for fattura {invoice_record.fattura_id}"
             )
 
@@ -135,7 +135,7 @@ class LightningInvoiceExpiredHandler:
             if invoice_record.fattura_id:
                 await self._handle_fattura_invoice_expired(invoice_record.fattura_id)
 
-            print(f"✓ Lightning invoice expiry processed: {event.payment_hash[:8]}...")
+            print(f"Lightning invoice expiry processed: {event.payment_hash[:8]}...")
 
         except Exception as e:
             print(f"Error processing Lightning invoice expiry: {e}")

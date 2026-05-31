@@ -43,7 +43,7 @@ def create_account(
                 existing = repo.get_by_iban(iban)
                 if existing:
                     console.print(
-                        f"[red]✗ An account with IBAN {iban} already exists (ID {existing.id}).[/]"
+                        f"[red]An account with IBAN {iban} already exists (ID {existing.id}).[/]"
                     )
                     raise typer.Exit(1)
 
@@ -61,13 +61,13 @@ def create_account(
             )
             repo.add(account)
             session.commit()
-            console.print(f"[green]✓ Account created with ID {account.id}[/]")
+            console.print(f"[green]Account created with ID {account.id}[/]")
         except typer.Exit:
             session.rollback()
             raise
         except Exception as exc:  # pragma: no cover - defensive logging
             session.rollback()
-            console.print(f"[red]✗ Failed to create account: {exc}[/]")
+            console.print(f"[red]Failed to create account: {exc}[/]")
             raise typer.Exit(1) from exc
 
 
@@ -83,10 +83,10 @@ def list_accounts(
         accounts = repo.list_accounts(include_inactive=include_inactive)
 
         if not accounts:
-            console.print("[yellow]ℹ️  No bank accounts configured yet.[/]")
+            console.print("[yellow]No bank accounts configured yet.[/]")
             return
 
-        table = Table(title="🏦 Bank Accounts", show_lines=False)
+        table = Table(title="Bank Accounts", show_lines=False)
         table.add_column("ID", style="cyan", justify="right")
         table.add_column("Name", style="bold")
         table.add_column("IBAN", style="dim")
@@ -105,7 +105,7 @@ def list_accounts(
                 account.currency,
                 f"{account.opening_balance:.2f}",
                 f"{account.current_balance:.2f}",
-                "✅" if account.is_active else "❌",
+                "" if account.is_active else "",
             )
 
         console.print(table)
@@ -129,7 +129,7 @@ def update_account(
         repo = BankAccountRepository(session)
         account = repo.get_by_id(account_id)
         if not account:
-            console.print(f"[red]✗ Account {account_id} not found[/]")
+            console.print(f"[red]Account {account_id} not found[/]")
             raise typer.Exit(1)
 
         try:
@@ -137,7 +137,7 @@ def update_account(
                 existing = repo.get_by_iban(iban)
                 if existing and existing.id != account.id:
                     console.print(
-                        f"[red]✗ Another account with IBAN {iban} exists (ID {existing.id}).[/]"
+                        f"[red]Another account with IBAN {iban} exists (ID {existing.id}).[/]"
                     )
                     raise typer.Exit(1)
                 account.iban = iban
@@ -157,13 +157,13 @@ def update_account(
 
             repo.update(account)
             session.commit()
-            console.print(f"[green]✓ Account {account_id} updated[/]")
+            console.print(f"[green]Account {account_id} updated[/]")
         except typer.Exit:
             session.rollback()
             raise
         except Exception as exc:  # pragma: no cover - defensive logging
             session.rollback()
-            console.print(f"[red]✗ Failed to update account: {exc}[/]")
+            console.print(f"[red]Failed to update account: {exc}[/]")
             raise typer.Exit(1) from exc
 
 
@@ -175,15 +175,15 @@ def delete_account(account_id: int = typer.Argument(..., help="Account ID to del
         try:
             deleted = repo.delete(account_id)
             if not deleted:
-                console.print(f"[yellow]⚠️  Account {account_id} not found[/]")
+                console.print(f"[yellow]Account {account_id} not found[/]")
                 raise typer.Exit(1)
 
             session.commit()
-            console.print(f"[green]✓ Account {account_id} deleted[/]")
+            console.print(f"[green]Account {account_id} deleted[/]")
         except typer.Exit:
             session.rollback()
             raise
         except Exception as exc:  # pragma: no cover - defensive logging
             session.rollback()
-            console.print(f"[red]✗ Failed to delete account: {exc}[/]")
+            console.print(f"[red]Failed to delete account: {exc}[/]")
             raise typer.Exit(1) from exc

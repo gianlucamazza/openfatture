@@ -39,7 +39,7 @@ class RichFormatter(BaseFormatter):
         """
         # Return content with Rich markup
         if response.status.value == "error":
-            return f"[bold red]❌ Error:[/bold red] {response.error or 'Unknown error'}"
+            return f"[bold red]Error:[/bold red] {response.error or 'Unknown error'}"
 
         return response.content
 
@@ -74,7 +74,7 @@ class RichFormatter(BaseFormatter):
         # Handle errors
         if response.status.value == "error":
             self.console.print(
-                f"\n[bold red]❌ Error:[/bold red] {response.error or 'Unknown error'}\n"
+                f"\n[bold red]Error:[/bold red] {response.error or 'Unknown error'}\n"
             )
             return
 
@@ -82,7 +82,7 @@ class RichFormatter(BaseFormatter):
         self.console.print(
             Panel(
                 response.content,
-                title="[bold]🤖 AI Response[/bold]",
+                title="[bold]AI Response[/bold]",
                 border_style="green",
             )
         )
@@ -133,7 +133,7 @@ class RichFormatter(BaseFormatter):
         Returns:
             Rich formatted error message
         """
-        return f"[bold red]❌ Error:[/bold red] {error_msg}"
+        return f"[bold red]Error:[/bold red] {error_msg}"
 
     def _format_metadata_impl(self, metadata: dict[str, Any]) -> str:
         """Format metadata with Rich markup.
