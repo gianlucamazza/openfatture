@@ -1,16 +1,53 @@
-"""
-Tests for config CLI commands.
+"""Tests for config CLI commands.
+
+The ``config show`` command renders a Rich table through the i18n ``_()`` helper,
+so the locale is pinned to English to make label assertions deterministic, and a
+wide terminal width is forced so Rich does not truncate the rendered cells.
+
+``config set`` writes through the real ``save_config`` seam to a TOML file under
+``dirs.user_config_dir``; the tests patch those seams (not a legacy ``.env``
+append) so they exercise the command's actual behaviour: flat attribute keys are
+validated against ``get_settings()``, type-converted from the current value, and
+persisted via ``save_config``.
 """
 
-from unittest.mock import Mock, mock_open, patch
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.config import app
 
-runner = CliRunner()
+
+class _WideCliRunner(CliRunner):
+    """CliRunner that renders Rich output at a wide terminal width.
+
+    Under the default 80-column terminal Rich truncates table cells, which would
+    make substring assertions ("Not set", "Set", the API key) flaky. A fixed wide
+    width keeps the rendered tokens intact and deterministic.
+    """
+
+    def invoke(self, *args, **kwargs):  # type: ignore[override]
+        env = {"COLUMNS": "220", **(kwargs.pop("env", None) or {})}
+        return super().invoke(*args, env=env, **kwargs)
+
+
+runner = _WideCliRunner()
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def _english_locale():
+    """Pin the locale to English so label assertions are deterministic."""
+    from openfatture.i18n import get_locale, set_locale
+
+    previous = get_locale()
+    set_locale("en")
+    try:
+        yield
+    finally:
+        set_locale(previous)
 
 
 class TestShowConfigCommand:
@@ -150,67 +187,89 @@ class TestReloadConfigCommand:
 
 
 class TestSetConfigCommand:
-    """Test 'config set' command."""
+    """Test 'config set' command.
 
-    @patch("builtins.open", new_callable=mock_open)
-    def test_set_config_success(self, mock_file):
-        """Test successful configuration setting."""
-        result = runner.invoke(app, ["set", "pec.address", "newemail@pec.it"])
+    ``config set`` validates the key against the live settings object, type-coerces
+    the value from the current attribute, and persists via ``save_config`` to a TOML
+    file. ``dirs`` and ``save_config`` are patched at their definition modules because
+    the command imports them locally inside the function body.
+    """
 
-        assert result.exit_code == 0
-        assert "Set pec.address = newemail@pec.it" in result.stdout
-        assert "Restart CLI or run 'config reload'" in result.stdout
+    @patch("openfatture.cli.wizard.save_config")
+    @patch("openfatture.utils.config.dirs")
+    def test_set_config_success(self, mock_dirs, mock_save_config, tmp_path):
+        """Test successful configuration setting for a valid string key."""
+        mock_dirs.user_config_dir = tmp_path
 
-        # Verify file operations
-        mock_file.assert_called_once_with(".env", "a")
-        handle = mock_file()
-        handle.write.assert_called_once()
-
-        # Check what was written
-        written_content = handle.write.call_args[0][0]
-        assert "PEC_ADDRESS" in written_content
-        assert "newemail@pec.it" in written_content
-
-    @patch("builtins.open", new_callable=mock_open)
-    def test_set_config_converts_key_format(self, mock_file):
-        """Test that config set converts keys to proper format."""
-        result = runner.invoke(app, ["set", "cedente.denominazione", "New Company"])
+        result = runner.invoke(app, ["set", "ai_provider", "anthropic"])
 
         assert result.exit_code == 0
-        assert "Set cedente.denominazione = New Company" in result.stdout
+        assert "Set ai_provider = anthropic" in result.stdout
+        assert "Saved to" in result.stdout
 
-        # Check that key was converted to uppercase with underscores
-        handle = mock_file()
-        written_content = handle.write.call_args[0][0]
-        assert "CEDENTE_DENOMINAZIONE" in written_content
+        # The updated settings object is persisted to the config file.
+        mock_save_config.assert_called_once()
+        saved_settings, saved_path = mock_save_config.call_args[0]
+        assert saved_settings.ai_provider == "anthropic"
+        assert Path(saved_path) == tmp_path / "config.toml"
 
-    @patch("builtins.open", new_callable=mock_open)
-    def test_set_config_with_spaces_in_value(self, mock_file):
+    @patch("openfatture.cli.wizard.save_config")
+    @patch("openfatture.utils.config.dirs")
+    def test_set_config_updates_string_attribute(self, mock_dirs, mock_save_config, tmp_path):
+        """Test that config set updates a flat string attribute on settings."""
+        mock_dirs.user_config_dir = tmp_path
+
+        result = runner.invoke(app, ["set", "cedente_denominazione", "New Company"])
+
+        assert result.exit_code == 0
+        assert "Set cedente_denominazione = New Company" in result.stdout
+
+        # The new value is applied to the settings object before saving.
+        saved_settings = mock_save_config.call_args[0][0]
+        assert saved_settings.cedente_denominazione == "New Company"
+
+    @patch("openfatture.cli.wizard.save_config")
+    @patch("openfatture.utils.config.dirs")
+    def test_set_config_with_spaces_in_value(self, mock_dirs, mock_save_config, tmp_path):
         """Test setting config with spaces in value."""
-        result = runner.invoke(app, ["set", "cedente.indirizzo", "Via Roma 123"])
+        mock_dirs.user_config_dir = tmp_path
+
+        result = runner.invoke(app, ["set", "cedente_indirizzo", "Via Roma 123"])
 
         assert result.exit_code == 0
         assert "Via Roma 123" in result.stdout
 
-        handle = mock_file()
-        written_content = handle.write.call_args[0][0]
-        assert "Via Roma 123" in written_content
+        saved_settings = mock_save_config.call_args[0][0]
+        assert saved_settings.cedente_indirizzo == "Via Roma 123"
 
-    @patch("builtins.open", side_effect=PermissionError("Permission denied"))
-    def test_set_config_permission_error(self, mock_file):
-        """Test config set with permission error."""
-        result = runner.invoke(app, ["set", "pec.address", "test@pec.it"])
+    @patch("openfatture.cli.wizard.save_config", side_effect=PermissionError("Permission denied"))
+    @patch("openfatture.utils.config.dirs")
+    def test_set_config_permission_error(self, mock_dirs, mock_save_config, tmp_path):
+        """Test config set when persistence fails with a permission error."""
+        mock_dirs.user_config_dir = tmp_path
+
+        result = runner.invoke(app, ["set", "ai_provider", "anthropic"])
+
+        assert result.exit_code == 1
+        assert "Error" in result.stdout
+
+    @patch("openfatture.cli.wizard.save_config", side_effect=OSError("File not found"))
+    @patch("openfatture.utils.config.dirs")
+    def test_set_config_file_error(self, mock_dirs, mock_save_config, tmp_path):
+        """Test config set when persistence fails with a file error."""
+        mock_dirs.user_config_dir = tmp_path
+
+        result = runner.invoke(app, ["set", "ai_provider", "anthropic"])
 
         assert result.exit_code == 1
         assert "Error" in result.stdout
 
-    @patch("builtins.open", side_effect=OSError("File not found"))
-    def test_set_config_file_error(self, mock_file):
-        """Test config set with file error."""
-        result = runner.invoke(app, ["set", "pec.address", "test@pec.it"])
+    def test_set_config_invalid_key(self):
+        """Test that config set rejects keys that do not exist on settings."""
+        result = runner.invoke(app, ["set", "nonexistent_key", "value"])
 
         assert result.exit_code == 1
-        assert "Error" in result.stdout
+        assert "Invalid configuration key" in result.stdout
 
     def test_set_config_requires_key_and_value(self):
         """Test that config set requires both key and value arguments."""
@@ -219,18 +278,21 @@ class TestSetConfigCommand:
         assert result.exit_code != 0
 
         # Missing value argument
-        result = runner.invoke(app, ["set", "pec.address"])
+        result = runner.invoke(app, ["set", "ai_provider"])
         assert result.exit_code != 0
 
-    @patch("builtins.open", new_callable=mock_open)
-    def test_set_config_with_numeric_value(self, mock_file):
-        """Test setting config with numeric value."""
-        result = runner.invoke(app, ["set", "pec.smtp.port", "465"])
+    @patch("openfatture.cli.wizard.save_config")
+    @patch("openfatture.utils.config.dirs")
+    def test_set_config_with_numeric_value(self, mock_dirs, mock_save_config, tmp_path):
+        """Test setting config with numeric value coerces from the int attribute."""
+        mock_dirs.user_config_dir = tmp_path
+
+        result = runner.invoke(app, ["set", "ai_chat_max_tokens", "465"])
 
         assert result.exit_code == 0
         assert "465" in result.stdout
 
-        handle = mock_file()
-        written_content = handle.write.call_args[0][0]
-        assert "PEC_SMTP_PORT" in written_content
-        assert "465" in written_content
+        # An integer-typed setting is coerced to int before saving.
+        saved_settings = mock_save_config.call_args[0][0]
+        assert saved_settings.ai_chat_max_tokens == 465
+        assert isinstance(saved_settings.ai_chat_max_tokens, int)

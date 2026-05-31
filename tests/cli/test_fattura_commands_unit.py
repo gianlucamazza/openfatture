@@ -1,12 +1,20 @@
 """
 Unit tests for fattura CLI command functions.
 
-Tests the actual command logic with proper mocking of dependencies.
+These exercise the command functions directly against a real, isolated database
+(``runtime_db``) instead of mocking SQLAlchemy query chains: data is seeded
+through the same database the command reads (via the real ``db_session()``
+seam), and the locale is pinned to English so message assertions are
+deterministic. Rich output is captured through a wide, recording ``Console`` so
+table cells are not truncated.
 """
 
-from unittest.mock import MagicMock, patch
+import io
+from unittest.mock import patch
 
 import pytest
+import typer
+from rich.console import Console
 
 from openfatture.cli.commands.fattura import (
     crea_fattura,
@@ -15,98 +23,85 @@ from openfatture.cli.commands.fattura import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _english_locale():
+    """Pin the locale to English so message assertions are deterministic."""
+    from openfatture.i18n import get_locale, set_locale
+
+    previous = get_locale()
+    set_locale("en")
+    try:
+        yield
+    finally:
+        set_locale(previous)
+
+
+def _recording_console() -> Console:
+    """A wide Console that records output to a StringIO.
+
+    The wide width stops Rich from truncating table cells, keeping rendered
+    tokens intact for substring assertions.
+    """
+    return Console(file=io.StringIO(), width=220, force_terminal=False)
+
+
 class TestListFattureFunction:
     """Test list_fatture function directly."""
 
-    @patch("openfatture.cli.commands.fattura._get_session")
-    @patch("openfatture.cli.commands.fattura.ensure_db")
-    def test_list_fatture_empty(self, mock_ensure_db, mock_get_session):
+    def test_list_fatture_empty(self, runtime_db):
         """Test listing when no invoices exist."""
-        mock_db = MagicMock()
-        mock_get_session.return_value = mock_db
-        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = []
-
-        with patch("openfatture.cli.commands.fattura.console") as mock_console:
+        console = _recording_console()
+        with patch("openfatture.cli.commands.fattura.console", console):
             list_fatture(stato=None, anno=None, limit=50)
 
-            # Should print "No invoices found"
-            mock_console.print.assert_called()
+        output = console.file.getvalue()
+        assert "No invoices found" in output
 
-    @patch("openfatture.cli.commands.fattura._get_session")
-    @patch("openfatture.cli.commands.fattura.ensure_db")
-    def test_list_fatture_with_data(self, mock_ensure_db, mock_get_session, sample_fattura):
+    def test_list_fatture_with_data(self, runtime_db, seed_fattura):
         """Test listing invoices with data."""
-        mock_db = MagicMock()
-        mock_get_session.return_value = mock_db
-
-        # Mock the query chain
-        mock_query = mock_db.query.return_value.order_by.return_value
-        mock_query.limit.return_value.all.return_value = [sample_fattura]
-
-        with patch("openfatture.cli.commands.fattura.console") as mock_console:
+        console = _recording_console()
+        with patch("openfatture.cli.commands.fattura.console", console):
             list_fatture(stato=None, anno=None, limit=50)
 
-            # Should print table
-            mock_console.print.assert_called()
+        output = console.file.getvalue()
+        # Table title and the seeded invoice row are rendered.
+        assert "Invoices" in output
+        assert "Acme Corporation" in output
 
 
 class TestShowFatturaFunction:
-    """Test show_fattura function directly."""
+    """Test genera_xml function directly."""
 
-    @patch("openfatture.cli.commands.fattura.typer.Exit")
-    @patch("openfatture.cli.commands.fattura._get_session")
-    @patch("openfatture.cli.commands.fattura.ensure_db")
-    def test_genera_xml_invoice_not_found(self, mock_ensure_db, mock_get_session, mock_exit):
+    def test_genera_xml_invoice_not_found(self, runtime_db):
         """Test XML generation for non-existent invoice."""
-        mock_db = MagicMock()
-        mock_get_session.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
-        mock_exit.side_effect = SystemExit(1)
-
-        with patch("openfatture.cli.commands.fattura.console") as mock_console:
-            with pytest.raises(SystemExit):
+        console = _recording_console()
+        with patch("openfatture.cli.commands.fattura.console", console):
+            with pytest.raises(typer.Exit):
                 genera_xml(999, output=None, no_validate=False)
 
-            mock_console.print.assert_called()
-            mock_exit.assert_called_once_with(1)
+        output = console.file.getvalue()
+        assert "not found" in output
 
 
 class TestCreaFatturaFunction:
     """Test crea_fattura function directly."""
 
-    @patch("openfatture.cli.commands.fattura.typer.Exit")
-    @patch("openfatture.cli.commands.fattura._get_session")
-    @patch("openfatture.cli.commands.fattura.ensure_db")
-    def test_crea_no_clients(self, mock_ensure_db, mock_get_session, mock_exit):
+    def test_crea_no_clients(self, runtime_db):
         """Test creating invoice when no clients exist."""
-        mock_db = MagicMock()
-        mock_get_session.return_value = mock_db
-        mock_db.query.return_value.order_by.return_value.all.return_value = []
-
-        mock_exit.side_effect = SystemExit(1)
-
-        with patch("openfatture.cli.commands.fattura.console") as mock_console:
-            with pytest.raises(SystemExit):
+        console = _recording_console()
+        with patch("openfatture.cli.commands.fattura.console", console):
+            with pytest.raises(typer.Exit):
                 crea_fattura(None)
 
-            mock_console.print.assert_called()
-            mock_exit.assert_called_once_with(1)
+        output = console.file.getvalue()
+        assert "No clients found" in output
 
-    @patch("openfatture.cli.commands.fattura.typer.Exit")
-    @patch("openfatture.cli.commands.fattura._get_session")
-    @patch("openfatture.cli.commands.fattura.ensure_db")
-    def test_crea_client_not_found(self, mock_ensure_db, mock_get_session, mock_exit):
+    def test_crea_client_not_found(self, runtime_db):
         """Test creating invoice with non-existent client ID."""
-        mock_db = MagicMock()
-        mock_get_session.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
-        mock_exit.side_effect = SystemExit(1)
-
-        with patch("openfatture.cli.commands.fattura.console") as mock_console:
-            with pytest.raises(SystemExit):
+        console = _recording_console()
+        with patch("openfatture.cli.commands.fattura.console", console):
+            with pytest.raises(typer.Exit):
                 crea_fattura(999)
 
-            mock_console.print.assert_called()
-            mock_exit.assert_called_once_with(1)
+        output = console.file.getvalue()
+        assert "Invalid client selection" in output
