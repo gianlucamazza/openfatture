@@ -357,7 +357,9 @@ class OpenAIVoiceProvider(BaseVoiceProvider):
             }
 
             # Call TTS API with streaming
-            async with self.client.audio.speech.with_streaming_response.create(**params) as response:
+            async with self.client.audio.speech.with_streaming_response.create(
+                **params
+            ) as response:
                 # Stream audio chunks
                 async for chunk in response.iter_bytes(chunk_size=self.config.chunk_size_bytes):
                     if chunk:  # Filter out empty chunks

@@ -26,7 +26,7 @@ def _params(callback: Any) -> list[str]:
         sig = inspect.signature(callback)
     except (TypeError, ValueError):
         return []
-    return [p for p in sig.parameters]
+    return list(sig.parameters)
 
 
 def _walk(app: Any, prefix: str, out: list[str]) -> None:

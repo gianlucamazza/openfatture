@@ -167,9 +167,7 @@ class TestEventsCLI:
     @patch("openfatture.cli.commands.events.init_db")
     @patch("openfatture.cli.commands.events.EventRepository")
     @patch("openfatture.cli.commands.events.console")
-    def test_show_event(
-        self, mock_console, mock_repo_class, mock_init_db, mock_get_settings
-    ):
+    def test_show_event(self, mock_console, mock_repo_class, mock_init_db, mock_get_settings):
         """Test showing a specific event."""
         from openfatture.storage.database.models import EventLog
 
@@ -217,9 +215,7 @@ class TestEventsCLI:
     @patch("openfatture.cli.commands.events.init_db")
     @patch("openfatture.cli.commands.events.EventRepository")
     @patch("openfatture.cli.commands.events.console")
-    def test_timeline_command(
-        self, mock_console, mock_repo_class, mock_init_db, mock_get_settings
-    ):
+    def test_timeline_command(self, mock_console, mock_repo_class, mock_init_db, mock_get_settings):
         """Test timeline command."""
         mock_repo = Mock()
         mock_repo_class.return_value = mock_repo
@@ -243,9 +239,7 @@ class TestEventsCLI:
     @patch("openfatture.cli.commands.events.init_db")
     @patch("openfatture.cli.commands.events.EventRepository")
     @patch("openfatture.cli.commands.events.console")
-    def test_search_command(
-        self, mock_console, mock_repo_class, mock_init_db, mock_get_settings
-    ):
+    def test_search_command(self, mock_console, mock_repo_class, mock_init_db, mock_get_settings):
         """Test search command."""
         mock_repo = Mock()
         mock_repo_class.return_value = mock_repo

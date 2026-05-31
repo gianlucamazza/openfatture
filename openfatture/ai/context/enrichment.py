@@ -1,7 +1,7 @@
 """Context enrichment utilities for AI agents."""
 
 from datetime import datetime
-from typing import Any, cast
+from typing import Any
 
 from openfatture.ai.domain.context import AgentContext, ChatContext
 from openfatture.storage.database.base import get_session
@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 class ContextManager:
     """
     Manages context enrichment for AI agents.
-    
+
     Handles:
     - Business data injection (stats, recent items)
     - RAG enrichment (documents, knowledge)
@@ -73,8 +73,11 @@ class ContextManager:
             Enriched context with relevant documents
         """
         try:
-            from openfatture.ai.config.settings import get_ai_settings
-            from openfatture.ai.rag import KnowledgeIndexer, RAGSystem
+            # Availability probe: importing these raises ImportError (caught
+            # below) when the optional RAG stack is not installed, so the chat
+            # degrades gracefully instead of crashing.
+            from openfatture.ai.config.settings import get_ai_settings  # noqa: F401
+            from openfatture.ai.rag import KnowledgeIndexer, RAGSystem  # noqa: F401
             from openfatture.ai.rag.config import get_rag_config
 
             # Check if RAG is enabled
@@ -117,10 +120,11 @@ class ContextManager:
         """Get API key for embeddings if needed."""
         if config.embedding_provider == "openai":
             from openfatture.ai.config.settings import get_ai_settings
+
             ai_settings = get_ai_settings()
             if ai_settings.openai_api_key:
                 return ai_settings.openai_api_key.get_secret_value()
-            
+
             logger.warning(
                 "openai_api_key_missing_for_rag",
                 message="RAG enabled but OPENAI_API_KEY missing.",
@@ -130,15 +134,11 @@ class ContextManager:
         return None
 
     async def _enrich_invoices(
-        self, 
-        context: AgentContext, 
-        query: str, 
-        config: Any, 
-        api_key: str | None
+        self, context: AgentContext, query: str, config: Any, api_key: str | None
     ) -> None:
         """Enrich context with invoice data."""
         from openfatture.ai.rag import RAGSystem
-        
+
         rag = await RAGSystem.create(config, api_key=api_key)
         invoice_results = await rag.search(
             query=query,
@@ -156,15 +156,11 @@ class ContextManager:
             )
 
     async def _enrich_knowledge(
-        self, 
-        context: AgentContext, 
-        query: str, 
-        config: Any, 
-        api_key: str | None
+        self, context: AgentContext, query: str, config: Any, api_key: str | None
     ) -> None:
         """Enrich context with knowledge base data."""
         from openfatture.ai.rag import KnowledgeIndexer
-        
+
         try:
             knowledge_indexer = await KnowledgeIndexer.create(
                 config=config,
@@ -312,13 +308,15 @@ class ContextManager:
         }
 
 
-# Global instance for backward compatibility if needed, 
+# Global instance for backward compatibility if needed,
 # though dependency injection is preferred.
 default_context_manager = ContextManager()
+
 
 # Backward compatibility functions
 async def enrich_chat_context(context: ChatContext) -> ChatContext:
     return await default_context_manager.enrich_context(context)
+
 
 async def enrich_with_rag(context: AgentContext, query: str) -> AgentContext:
     return await default_context_manager.enrich_with_rag(context, query)

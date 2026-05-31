@@ -3,11 +3,9 @@
 This module handles indexing of invoices and related documents into the vector store.
 """
 
-from sqlalchemy.orm import Session
-
 from openfatture.ai.rag.vector_store import VectorStore
-from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura
+from openfatture.storage.session import db_session
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)

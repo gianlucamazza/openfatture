@@ -51,7 +51,7 @@ class TestFactoryContextDetection:
         store1 = get_session_store()
         store2 = get_session_store(store_type="auto")
 
-        assert type(store1) == type(store2)
+        assert type(store1) is type(store2)
 
     def test_get_default_store(self):
         """Test get_default_store() convenience function."""
@@ -196,7 +196,7 @@ class TestFactoryEdgeCases:
         assert store1 is not store2
 
         # But same type and directory
-        assert type(store1) == type(store2)
+        assert type(store1) is type(store2)
         assert store1.sessions_dir == store2.sessions_dir
 
     def test_factory_with_all_parameters(self, tmp_path: Path):

@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-from openfatture.ai.domain.message import Role
 from openfatture.ai.session import ChatSession, SessionStatus
 from openfatture.ai.session.file_store import FileSessionStore
 
@@ -135,14 +134,18 @@ class TestFileSessionStoreListingSorting:
         sessions = store.list_sessions()
         assert len(sessions) == 5
 
-    def test_list_sessions_with_limit(self, store_with_sessions: tuple[FileSessionStore, list[ChatSession]]):
+    def test_list_sessions_with_limit(
+        self, store_with_sessions: tuple[FileSessionStore, list[ChatSession]]
+    ):
         """Test listing with limit."""
         store, _ = store_with_sessions
 
         sessions = store.list_sessions(limit=3)
         assert len(sessions) == 3
 
-    def test_list_sessions_sorted_by_updated(self, store_with_sessions: tuple[FileSessionStore, list[ChatSession]]):
+    def test_list_sessions_sorted_by_updated(
+        self, store_with_sessions: tuple[FileSessionStore, list[ChatSession]]
+    ):
         """Test sessions are sorted by last update (newest first)."""
         store, original_sessions = store_with_sessions
 
@@ -158,7 +161,9 @@ class TestFileSessionStoreListingSorting:
         # First session should be at the top now
         assert sessions[0].id == original_sessions[0].id
 
-    def test_list_active_only(self, store_with_sessions: tuple[FileSessionStore, list[ChatSession]]):
+    def test_list_active_only(
+        self, store_with_sessions: tuple[FileSessionStore, list[ChatSession]]
+    ):
         """Test filtering by status."""
         store, original_sessions = store_with_sessions
 
@@ -176,7 +181,9 @@ class TestFileSessionStoreListingSorting:
         archived = store.list_sessions(status=SessionStatus.ARCHIVED)
         assert len(archived) == 1
 
-    def test_list_excludes_deleted_by_default(self, store_with_sessions: tuple[FileSessionStore, list[ChatSession]]):
+    def test_list_excludes_deleted_by_default(
+        self, store_with_sessions: tuple[FileSessionStore, list[ChatSession]]
+    ):
         """Test deleted sessions excluded by default."""
         store, original_sessions = store_with_sessions
 

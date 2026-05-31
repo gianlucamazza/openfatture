@@ -3,15 +3,14 @@
 from datetime import datetime, timedelta
 
 from sqlalchemy import Integer, func
-from sqlalchemy.orm import Session
 
 from openfatture.ai.feedback.models import FeedbackStats, PredictionFeedbackStats
-from openfatture.storage.session import db_session
 from openfatture.storage.database.models import (
     FeedbackType,
     ModelPredictionFeedback,
     UserFeedback,
 )
+from openfatture.storage.session import db_session
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)

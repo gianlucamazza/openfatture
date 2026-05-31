@@ -20,10 +20,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sqlalchemy import and_
-from sqlalchemy.orm import Session
 
-from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.storage.session import db_session
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)

@@ -71,7 +71,9 @@ class StreamlitSessionStore(SessionStore):
         self._ensure_streamlit_context()
         self._init_sessions_dict()
 
-        logger.debug("streamlit_session_store_initialized", has_fallback=persistent_fallback is not None)
+        logger.debug(
+            "streamlit_session_store_initialized", has_fallback=persistent_fallback is not None
+        )
 
     def _ensure_streamlit_context(self) -> None:
         """Verify we're running in Streamlit context."""

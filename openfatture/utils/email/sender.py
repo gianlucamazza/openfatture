@@ -28,9 +28,9 @@ from openfatture.utils.email.models import (
     FatturaInvioContext,
     NotificaSDIContext,
 )
-from openfatture.utils.retry import retry_sync, RetryConfig
 from openfatture.utils.email.renderer import TemplateRenderer
-from openfatture.utils.rate_limiter import ExponentialBackoff, RateLimiter
+from openfatture.utils.rate_limiter import RateLimiter
+from openfatture.utils.retry import RetryConfig, retry_sync
 
 
 class TemplatePECSender:
