@@ -12,7 +12,7 @@ from openfatture.web.utils.i18n import get_translator
 
 t = get_translator()
 
-st.set_page_config(page_title=t("page-clients-title"), page_icon="👥", layout="wide")
+st.set_page_config(page_title=t("page-clients-title"), page_icon="", layout="wide")
 
 # Title
 st.title(t("page-clients-title"))
@@ -228,7 +228,7 @@ try:
 
             with col_pec:
                 if row[t("page-clients-table-col-pec")]:
-                    st.write(f"📧 {row[t('page-clients-table-col-pec')]}")
+                    st.write(f"{row[t('page-clients-table-col-pec')]}")
                 else:
                     st.write("-")
 
@@ -243,15 +243,15 @@ try:
 
             with col_actions:
                 client_id = int(row[t("page-clients-table-col-id")])
-                if st.button("👁️", key=f"view_{client_id}", help=t("page-clients-action-view")):
+                if st.button("", key=f"view_{client_id}", help=t("page-clients-action-view")):
                     st.session_state.selected_client_id = client_id
                     st.session_state.show_client_detail = True
 
-                if st.button("✏️", key=f"edit_{client_id}", help=t("page-clients-action-edit")):
+                if st.button("", key=f"edit_{client_id}", help=t("page-clients-action-edit")):
                     st.session_state.selected_client_id = client_id
                     st.session_state.show_edit_client = True
 
-                if st.button("🗑️", key=f"delete_{client_id}", help=t("page-clients-action-delete")):
+                if st.button("", key=f"delete_{client_id}", help=t("page-clients-action-delete")):
                     st.session_state.selected_client_id = client_id
                     st.session_state.show_delete_confirm = True
 

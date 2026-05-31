@@ -75,7 +75,7 @@
 ## 10. Ingestion Pipeline
 - **Stages**
   1. **Discovery:** scan source folders (`docs/`, `prompts/`, external storage) using a manifest (`kb_sources.yml`) to define included files.
-  2. **Parsing:** load Markdown/YAML → logical structure (headings, tables, examples); normalise markup.
+  2. **Parsing:** load Markdown/YAML logical structure (headings, tables, examples); normalise markup.
   3. **Chunking:** split into ~350 tokens with 50-token overlap, keep `chunk_index`, generate short summary and keywords (LLM or heuristic).
   4. **Metadata enrichment:** apply schema fields, detect `law_reference` via regex (DPR, art., comma).
   5. **Embedding:** call `create_embeddings()` with caching; fall back to local provider if API key absent.
@@ -142,7 +142,7 @@
 - **Integration Tests**
   - End-to-end ingestion on sample `docs/iva_sample.md`.
   - Retrieval assertions for key queries (e.g. "reverse charge edilizia").
-  - ChatAgent with mocked RAG → assert that responses include citations.
+  - ChatAgent with mocked RAG assert that responses include citations.
 - **Benchmarking**
   - Compare TaxAdvisor answers with/without RAG (precision@3 for citations).
   - Monitor embedding costs versus baseline.

@@ -104,8 +104,8 @@ class CashFlowAnalysisWorkflow:
         """Build LangGraph state machine.
 
         Graph structure:
-        START → initialize_agent → load_unpaid_invoices → predict_batch
-              → aggregate_monthly → analyze_risks → generate_insights → END
+        START initialize_agent load_unpaid_invoices predict_batch
+              aggregate_monthly analyze_risks generate_insights END
 
         Parallel execution:
         - predict_batch runs predictions in parallel
@@ -128,7 +128,7 @@ class CashFlowAnalysisWorkflow:
         # Sequential edges
         workflow.add_edge("initialize_agent", "load_invoices")
 
-        # Conditional: load → predict or error
+        # Conditional: load predict or error
         workflow.add_conditional_edges(
             "load_invoices",
             self._should_predict,

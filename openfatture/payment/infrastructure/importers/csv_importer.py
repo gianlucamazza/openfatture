@@ -42,7 +42,7 @@ class CSVConfig:
     skip_rows: int = 0
     skip_footer: int = 0
 
-    # Field mapping: internal field name → CSV column name
+    # Field mapping: internal field name CSV column name
     field_mapping: dict[str, str] = field(
         default_factory=lambda: {
             "date": "Date",

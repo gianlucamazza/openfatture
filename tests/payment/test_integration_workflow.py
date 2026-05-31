@@ -162,7 +162,7 @@ class TestCompletePaymentWorkflow:
     async def test_csv_import_match_reconcile_workflow(
         self, db_session, sample_bank_account, sample_payments
     ):
-        """Test complete workflow: CSV Import → Match → Reconcile.
+        """Test complete workflow: CSV Import Match Reconcile.
 
         Scenario:
         1. Import transactions from CSV
@@ -268,7 +268,7 @@ class TestCompletePaymentWorkflow:
         csv_path.unlink()
 
     def test_bank_account_transaction_relationship(self, db_session, sample_bank_account):
-        """Test BankAccount → BankTransaction relationship."""
+        """Test BankAccount BankTransaction relationship."""
         # Create transactions
         tx1 = BankTransaction(
             account=sample_bank_account,
@@ -295,7 +295,7 @@ class TestCompletePaymentWorkflow:
         assert tx2 in sample_bank_account.transactions
 
     def test_transaction_lifecycle_states(self, db_session, sample_bank_account, sample_payments):
-        """Test transaction state transitions: UNMATCHED → MATCHED → UNMATCHED."""
+        """Test transaction state transitions: UNMATCHED MATCHED UNMATCHED."""
         # Create transaction
         tx = BankTransaction(
             account=sample_bank_account,

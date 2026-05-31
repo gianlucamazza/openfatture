@@ -1,4 +1,4 @@
-# OpenFatture 🧾
+# OpenFatture
 
 **Open-source electronic invoicing for Italian freelancers** — built around a CLI-first workflow, AI automation, and payment reconciliation.
 
@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-> 📘 For the consolidated v1.1.0 documentation, visit the docs hub at `docs/README.md` and the release notes in `docs/releases/`.
+> For the consolidated v1.1.0 documentation, visit the docs hub at `docs/README.md` and the release notes in `docs/releases/`.
 
 ---
 
@@ -347,4 +347,4 @@ The software is provided “as-is” for educational and production use. Ensure 
 
 ---
 
-Made with ❤️ by freelancers, for freelancers.
+Made with by freelancers, for freelancers.

@@ -1,7 +1,8 @@
 """Menu builder for interactive CLI."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 import questionary
 from questionary import Choice
@@ -40,7 +41,7 @@ class MenuBuilder:
         self.options.append(MenuOption(title="", value="", is_separator=True))
         return self
 
-    def add_back_option(self, title: str = "← Torna indietro", value: str = "back") -> "MenuBuilder":
+    def add_back_option(self, title: str = "Torna indietro", value: str = "back") -> "MenuBuilder":
         """Add a back option."""
         self.back_option = MenuOption(title=title, value=value)
         return self
@@ -68,7 +69,7 @@ class MenuBuilder:
             use_shortcuts=True,
             use_arrow_keys=True,
             style=openfatture_style,
-            instruction="(Usa i tasti numerici o frecce ↑↓, INVIO per confermare)",
+            instruction="(Usa i tasti numerici o frecce , INVIO per confermare)",
         ).ask()
 
     def run(self) -> None:

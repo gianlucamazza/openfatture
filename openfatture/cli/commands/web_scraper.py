@@ -34,12 +34,12 @@ def status():
         }
 
         console.print("\n[bold blue]Regulatory Web Scraper Status[/bold blue]")
-        console.print(f"Enabled: {'✅' if config.enabled else '❌'}")
-        console.print(f"Running: {'✅' if status_info['is_running'] else '❌'}")
+        console.print(f"Enabled: {'' if config.enabled else ''}")
+        console.print(f"Running: {'' if status_info['is_running'] else ''}")
         console.print(f"Check Interval: {config.check_interval_hours} hours")
-        console.print(f"Require Human Review: {'✅' if config.require_human_review else '❌'}")
+        console.print(f"Require Human Review: {'' if config.require_human_review else ''}")
         console.print(f"Auto Update Threshold: {config.auto_update_threshold}")
-        console.print(f"Should Check Now: {'✅' if status_info['should_check'] else '❌'}")
+        console.print(f"Should Check Now: {'' if status_info['should_check'] else ''}")
 
         if status_info["last_check_time"]:
             console.print(f"Last Check: {status_info['last_check_time']}")
@@ -148,8 +148,8 @@ async def list_sources():
                 source["name"][:50] + "..." if len(source["name"]) > 50 else source["name"],
                 source.get("category", "N/A"),
                 str(source.get("priority", 1)),
-                "✅" if source.get("enabled", True) else "❌",
-                "✅" if source.get("official_source", False) else "❌",
+                "" if source.get("enabled", True) else "",
+                "" if source.get("official_source", False) else "",
             )
 
         console.print(table)
@@ -186,10 +186,10 @@ async def show_source(source_id: str):
         console.print(f"Category: {source.get('category', 'N/A')}")
         console.print(f"Jurisdiction: {source.get('jurisdiction', 'N/A')}")
         console.print(f"Priority: {source.get('priority', 1)}")
-        console.print(f"Enabled: {'✅' if source.get('enabled', True) else '❌'}")
-        console.print(f"Official Source: {'✅' if source.get('official_source', False) else '❌'}")
+        console.print(f"Enabled: {'' if source.get('enabled', True) else ''}")
+        console.print(f"Official Source: {'' if source.get('official_source', False) else ''}")
         console.print(f"Content Type: {source.get('content_type', 'html')}")
-        console.print(f"Follow Links: {'✅' if source.get('follow_links', False) else '❌'}")
+        console.print(f"Follow Links: {'' if source.get('follow_links', False) else ''}")
 
         if source.get("description"):
             console.print(f"Description: {source['description']}")

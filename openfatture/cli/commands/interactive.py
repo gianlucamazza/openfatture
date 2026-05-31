@@ -13,7 +13,7 @@ console = Console()
 @app.command("start")
 def interactive_mode() -> None:
     """
-    🎯 Launch interactive mode with menus.
+    Launch interactive mode with menus.
 
     Navigate with arrow keys, select with Enter.
     Press Ctrl+C to exit at any time.
@@ -41,21 +41,21 @@ def interactive_mode() -> None:
                 break
 
         except KeyboardInterrupt:
-            console.print("\n\n[yellow]⚠ Interrupted by user.[/yellow]")
+            console.print("\n\n[yellow]Interrupted by user.[/yellow]")
             show_goodbye()
             break
         except Exception as e:
-            console.print(f"\n[red]❌ Error: {e}[/red]")
+            console.print(f"\n[red]Error: {e}[/red]")
             console.print("[dim]Press Ctrl+C to exit or continue with another action.[/dim]")
 
 
 def show_welcome() -> None:
     """Display welcome message."""
     welcome_text = """
-    [bold blue]🚀 OpenFatture - Interactive Mode[/bold blue]
+    [bold blue]OpenFatture - Interactive Mode[/bold blue]
 
     [dim]Welcome to OpenFatture's interactive mode![/dim]
-    [dim]Use [bold]↑↓[/bold] to navigate and [bold]ENTER[/bold] to select.[/dim]
+    [dim]Use [bold][/bold] to navigate and [bold]ENTER[/bold] to select.[/dim]
     [dim]Press [bold]Ctrl+C[/bold] at any time to exit.[/dim]
     """
 
@@ -70,7 +70,7 @@ def show_welcome() -> None:
 
 def show_goodbye() -> None:
     """Display goodbye message."""
-    console.print("\n[bold green]👋 Thanks for using OpenFatture![/bold green]")
+    console.print("\n[bold green]Thanks for using OpenFatture![/bold green]")
     console.print(
         "[dim]To restart interactive mode: [cyan]openfatture interactive start[/cyan][/dim]\n"
     )

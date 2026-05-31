@@ -57,50 +57,50 @@ class E2EMockProvider(BaseLLMProvider):
 
         # Check most specific patterns first (order matters!)
         if "compliance check" in content_lower or "verifica compliance" in content_lower:
-            content = """**🔍 COMPLIANCE CHECK - FATTURA 2025-042**
+            content = """**COMPLIANCE CHECK - FATTURA 2025-042**
 
 ---
 
 ## 1. Validazione Formale
-✅ Dati cedente completi e corretti
-✅ Dati cessionario completi e corretti
-✅ Numero fattura valido e progressivo
-✅ Data emissione valida
-✅ Codice destinatario presente
+Dati cedente completi e corretti
+Dati cessionario completi e corretti
+Numero fattura valido e progressivo
+Data emissione valida
+Codice destinatario presente
 
 ## 2. Righe Fattura
-✅ Descrizioni dettagliate (>20 caratteri)
-✅ Quantità e unità di misura presenti
-✅ Prezzi unitari corretti
-✅ Totali calcolati correttamente
+Descrizioni dettagliate (>20 caratteri)
+Quantità e unità di misura presenti
+Prezzi unitari corretti
+Totali calcolati correttamente
 
 ## 3. Trattamento Fiscale
-✅ Aliquote IVA corrette (22% standard)
-⚠️ **ATTENZIONE:** Verificare se cliente PA richiede split payment
-✅ Ritenuta d'acconto NON necessaria (servizi B2B)
-✅ Bollo virtuale: NON richiesto (importo con IVA >77,47€)
+Aliquote IVA corrette (22% standard)
+**ATTENZIONE:** Verificare se cliente PA richiede split payment
+Ritenuta d'acconto NON necessaria (servizi B2B)
+Bollo virtuale: NON richiesto (importo con IVA >77,47€)
 
 ## 4. Compliance SDI
-✅ Schema FatturaPA v1.9 rispettato
-✅ Codice ATECO valido
-✅ Nessun pattern noto di rigetto
+Schema FatturaPA v1.9 rispettato
+Codice ATECO valido
+Nessun pattern noto di rigetto
 
 ## 5. Best Practices
-✅ Descrizione professionale e dettagliata
-✅ Note fattura appropriate
-✅ Riferimenti normativi corretti
+Descrizione professionale e dettagliata
+Note fattura appropriate
+Riferimenti normativi corretti
 
 ---
 
 ## Risultato Finale
-✅ **READY per invio SDI**
+**READY per invio SDI**
 
 **Probabilità di accettazione:** 95%
 
 **Nota:** Se il cliente è PA, aggiungere codice EsigibilitaIVA = "S" per split payment.
 """
         elif "report mensile" in content_lower or "report completo" in content_lower:
-            content = """**📊 REPORT MENSILE - OTTOBRE 2025**
+            content = """**REPORT MENSILE - OTTOBRE 2025**
 
 ---
 
@@ -109,7 +109,7 @@ class E2EMockProvider(BaseLLMProvider):
 - **Imponibile totale:** €15,000.00
 - **IVA totale:** €3,300.00
 - **Totale fatturato:** €18,300.00
-- **Variazione vs settembre:** +15% 📈
+- **Variazione vs settembre:** +15%
 - **Media per fattura:** €1,525.00
 
 ## 2. Incassi
@@ -140,16 +140,16 @@ class E2EMockProvider(BaseLLMProvider):
 - **Bolli virtuali applicati:** 2 (€4.00)
 
 ## 5. Insights & Raccomandazioni
-📈 **Tendenze positive:**
+**Tendenze positive:**
 - Crescita del 15% rispetto al mese precedente
 - 2 nuovi clienti acquisiti
 - Tempo medio di incasso stabile (28 giorni)
 
-⚠️ **Criticità:**
+**Criticità:**
 - 1 fattura scaduta (Acme Corp) - inviare sollecito
 - 2 fatture in scadenza entro 7 giorni - monitorare
 
-✅ **Azioni consigliate:**
+**Azioni consigliate:**
 1. Contattare Acme Corp per sollecito pagamento fattura scaduta
 2. Pianificare strategia per dicembre (mese storicamente più debole)
 3. Valutare incentivi per clienti top (Beta SRL, Gamma SpA)
@@ -158,7 +158,7 @@ class E2EMockProvider(BaseLLMProvider):
         elif "cerca nel database" in content_lower or (
             "informazioni complete" in content_lower and "cliente" in content_lower
         ):
-            content = """**👤 CLIENTE: ACME CORP**
+            content = """**CLIENTE: ACME CORP**
 
 ---
 
@@ -177,21 +177,21 @@ class E2EMockProvider(BaseLLMProvider):
 - **Ultima fattura:** 2025-09-15 (€750.00)
 
 ## Stato Pagamenti
-- ✅ **Pagate:** 12 fatture (€10,000.00)
-- ⏳ **In sospeso:** 2 fatture (€1,750.00)
-- ⚠️ **Scadute:** 1 fattura (€750.00) - Scadenza: 2025-09-30
+- **Pagate:** 12 fatture (€10,000.00)
+- **In sospeso:** 2 fatture (€1,750.00)
+- **Scadute:** 1 fattura (€750.00) - Scadenza: 2025-09-30
 
 ## Ultime 5 Fatture
-1. 2025-042 - €750.00 - 15/09/2025 - ⚠️ SCADUTA
-2. 2025-038 - €1,000.00 - 05/09/2025 - ✅ PAGATA
-3. 2025-031 - €500.00 - 20/08/2025 - ✅ PAGATA
-4. 2025-025 - €1,200.00 - 10/08/2025 - ✅ PAGATA
-5. 2025-018 - €800.00 - 01/08/2025 - ✅ PAGATA
+1. 2025-042 - €750.00 - 15/09/2025 - SCADUTA
+2. 2025-038 - €1,000.00 - 05/09/2025 - PAGATA
+3. 2025-031 - €500.00 - 20/08/2025 - PAGATA
+4. 2025-025 - €1,200.00 - 10/08/2025 - PAGATA
+5. 2025-018 - €800.00 - 01/08/2025 - PAGATA
 
-⚠️ **ATTENZIONE:** Cliente ha 1 fattura scaduta. Contattare per sollecito pagamento.
+**ATTENZIONE:** Cliente ha 1 fattura scaduta. Contattare per sollecito pagamento.
 """
         elif "fattura completa" in content_lower or "crea una fattura" in content_lower:
-            content = """**📄 FATTURA GENERATA**
+            content = """**FATTURA GENERATA**
 
 **Cliente:** Acme Corp
 **Servizio:** Consulenza web
@@ -210,7 +210,7 @@ Consulenza professionale per lo sviluppo di un'applicazione web completa, inclus
 - **Totale:** 610€
 
 ## 3. Compliance SDI
-✅ **CONFORME** - Pronta per l'invio a SDI
+**CONFORME** - Pronta per l'invio a SDI
 
 - Descrizione dettagliata (>20 caratteri)
 - IVA corretta per servizi professionali B2B
@@ -225,7 +225,7 @@ Vuoi procedere con la creazione della fattura?
             or "quale aliquota" in content_lower
             or "iva" in content_lower
         ):
-            content = """**💶 SUGGERIMENTO IVA**
+            content = """**SUGGERIMENTO IVA**
 
 ---
 
@@ -239,11 +239,11 @@ IT consulting per società di costruzioni
 I servizi professionali di consulenza IT rientrano nella categoria dei servizi generici soggetti ad aliquota ordinaria del 22% (art. 1, DPR 633/72).
 
 ## Regime Speciale?
-❌ **Reverse Charge:** NON applicabile
+**Reverse Charge:** NON applicabile
 - Il reverse charge (inversione contabile) si applica principalmente a servizi edili e cessioni di beni specifici
 - I servizi IT generici non rientrano in questa casistica
 
-❌ **Split Payment:** Verifica necessaria
+**Split Payment:** Verifica necessaria
 - Se il cliente è una Pubblica Amministrazione, potrebbe essere richiesto lo split payment
 - Indicare codice "S" nel campo EsigibilitaIVA se applicabile
 
@@ -471,7 +471,7 @@ class TestCustomCommandsE2E:
         assert response.status == ResponseStatus.SUCCESS
         assert "2025-042" in response.content
         assert "SDI" in response.content
-        assert "✅" in response.content or "READY" in response.content
+        assert "" in response.content or "READY" in response.content
         assert "%" in response.content  # Acceptance probability
 
     async def test_report_mensile_workflow(self, e2e_registry, e2e_mock_provider):

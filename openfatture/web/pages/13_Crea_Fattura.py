@@ -44,7 +44,7 @@ def render_step_indicator(current_step: int, total_steps: int) -> None:
             if i + 1 == current_step:
                 st.markdown(f"**{step_name}**")
             elif i + 1 < current_step:
-                st.markdown(f"✅ {step_name}")
+                st.markdown(f"{step_name}")
             else:
                 st.markdown(f"○ {step_name}")
 
@@ -260,7 +260,7 @@ def step_3_add_products(wizard_state: dict[str, Any]) -> bool:
     if line_items:
         st.subheader(t("page-invoice-create-lines-title"))
         for i, item in enumerate(line_items):
-            with st.expander(f"📦 {item['descrizione'][:50]}...", expanded=False):
+            with st.expander(f"{item['descrizione'][:50]}...", expanded=False):
                 col1, col2, col3 = st.columns([2, 1, 1])
                 with col1:
                     item["descrizione"] = st.text_area(
@@ -653,7 +653,7 @@ def step_5_summary_and_create(wizard_state: dict[str, Any]) -> bool:
 
 def main() -> None:
     """Main page function."""
-    st.set_page_config(page_title=t("page-invoice-create-page-title"), page_icon="✏️", layout="wide")
+    st.set_page_config(page_title=t("page-invoice-create-page-title"), page_icon="", layout="wide")
 
     st.title(t("page-invoice-create-title"))
 

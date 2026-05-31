@@ -10,7 +10,7 @@ from rich.text import Text
 from openfatture.payment.application.services.payment_overview import PaymentDueEntry
 from openfatture.services.dashboard import DashboardService
 from openfatture.storage.database.base import get_session
-from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.storage.database.models import StatoFattura
 
 console = Console()
 
@@ -35,30 +35,30 @@ def create_overview_panel(service: DashboardService) -> Panel:
 
     # Create metrics text
     content = Text()
-    content.append("📊 Totale Fatture: ", style="bold")
+    content.append("Totale Fatture: ", style="bold")
     content.append(f"{total_invoices}\n", style="cyan")
 
-    content.append("👥 Totale Clienti: ", style="bold")
+    content.append("Totale Clienti: ", style="bold")
     content.append(f"{total_clients}\n\n", style="cyan")
 
-    content.append("💰 Fatturato Totale: ", style="bold")
+    content.append("Fatturato Totale: ", style="bold")
     content.append(f"€{total_revenue:,.2f}\n", style="green bold")
 
-    content.append("📅 Fatturato Mese: ", style="bold")
+    content.append("Fatturato Mese: ", style="bold")
     content.append(f"€{revenue_month:,.2f}\n", style="green")
 
-    content.append("📈 Fatturato Anno: ", style="bold")
+    content.append("Fatturato Anno: ", style="bold")
     content.append(f"€{revenue_year:,.2f}\n\n", style="green")
 
-    content.append("⏳ In Sospeso: ", style="bold")
+    content.append("In Sospeso: ", style="bold")
     content.append(f"€{pending:,.2f}\n", style="yellow")
 
-    content.append("📤 Inviate (da accettare): ", style="bold")
+    content.append("Inviate (da accettare): ", style="bold")
     content.append(f"{sent_not_accepted}", style="yellow")
 
     return Panel(
         Align.center(content),
-        title="[bold blue]📋 Panoramica[/bold blue]",
+        title="[bold blue]Panoramica[/bold blue]",
         border_style="blue",
     )
 
@@ -73,21 +73,21 @@ def create_status_table(service: DashboardService) -> Table:
     Returns:
         Rich Table
     """
-    table = Table(title="📊 Distribuzione per Stato", show_header=True, header_style="bold magenta")
+    table = Table(title="Distribuzione per Stato", show_header=True, header_style="bold magenta")
     table.add_column("Stato", style="cyan", no_wrap=True)
     table.add_column("Numero", justify="right", style="green")
 
     status_data = service.get_invoices_by_status()
     status_emoji = {
-        "bozza": "📝",
-        "da_inviare": "📤",
-        "inviata": "✉️",
-        "accettata": "✅",
-        "rifiutata": "❌",
+        "bozza": "",
+        "da_inviare": "",
+        "inviata": "",
+        "accettata": "",
+        "rifiutata": "",
     }
 
     for stato, count in status_data:
-        emoji = status_emoji.get(stato, "📄")
+        emoji = status_emoji.get(stato, "")
         table.add_row(f"{emoji} {stato.replace('_', ' ').title()}", str(count))
 
     # Add total row
@@ -110,7 +110,7 @@ def create_monthly_revenue_table(service: DashboardService, months: int = 6) -> 
         Rich Table
     """
     table = Table(
-        title=f"📈 Fatturato Ultimi {months} Mesi", show_header=True, header_style="bold magenta"
+        title=f"Fatturato Ultimi {months} Mesi", show_header=True, header_style="bold magenta"
     )
     table.add_column("Mese", style="cyan", no_wrap=True)
     table.add_column("Fatturato", justify="right", style="green")
@@ -139,7 +139,7 @@ def create_top_clients_table(service: DashboardService, limit: int = 5) -> Table
     Returns:
         Rich Table
     """
-    table = Table(title=f"👑 Top {limit} Clienti", show_header=True, header_style="bold magenta")
+    table = Table(title=f"Top {limit} Clienti", show_header=True, header_style="bold magenta")
     table.add_column("Cliente", style="cyan")
     table.add_column("Fatture", justify="right", style="yellow")
     table.add_column("Fatturato", justify="right", style="green")
@@ -165,7 +165,7 @@ def create_recent_invoices_table(service: DashboardService, limit: int = 5) -> T
     Returns:
         Rich Table
     """
-    table = Table(title=f"🕐 Ultime {limit} Fatture", show_header=True, header_style="bold magenta")
+    table = Table(title=f"Ultime {limit} Fatture", show_header=True, header_style="bold magenta")
     table.add_column("Numero", style="cyan", no_wrap=True)
     table.add_column("Data", style="yellow", no_wrap=True)
     table.add_column("Cliente", style="white")
@@ -175,11 +175,11 @@ def create_recent_invoices_table(service: DashboardService, limit: int = 5) -> T
     recent = service.get_recent_invoices(limit)
 
     status_emoji = {
-        StatoFattura.BOZZA: "📝",
-        StatoFattura.DA_INVIARE: "📤",
-        StatoFattura.INVIATA: "✉️",
-        StatoFattura.ACCETTATA: "✅",
-        StatoFattura.RIFIUTATA: "❌",
+        StatoFattura.BOZZA: "",
+        StatoFattura.DA_INVIARE: "",
+        StatoFattura.INVIATA: "",
+        StatoFattura.ACCETTATA: "",
+        StatoFattura.RIFIUTATA: "",
     }
 
     for fattura in recent:
@@ -187,7 +187,7 @@ def create_recent_invoices_table(service: DashboardService, limit: int = 5) -> T
         if fattura.cliente is None:
             continue
 
-        emoji = status_emoji.get(fattura.stato, "📄")
+        emoji = status_emoji.get(fattura.stato, "")
         client_name = (
             fattura.cliente.denominazione[:30] + "..."
             if len(fattura.cliente.denominazione) > 30
@@ -212,21 +212,21 @@ def create_payment_stats_panel(service: DashboardService) -> Panel:
     total = stats["unmatched"] + stats["matched"] + stats["ignored"]
 
     content = Text()
-    content.append("🔍 Non Abbinati: ", style="bold")
+    content.append("Non Abbinati: ", style="bold")
     content.append(f"{stats['unmatched']}\n", style="yellow")
 
-    content.append("✅ Abbinati: ", style="bold")
+    content.append("Abbinati: ", style="bold")
     content.append(f"{stats['matched']}\n", style="green")
 
-    content.append("⏭️  Ignorati: ", style="bold")
+    content.append("Ignorati: ", style="bold")
     content.append(f"{stats['ignored']}\n\n", style="dim")
 
-    content.append("📊 Totale Transazioni: ", style="bold")
+    content.append("Totale Transazioni: ", style="bold")
     content.append(f"{total}", style="cyan")
 
     return Panel(
         Align.center(content),
-        title="[bold magenta]💰 Tracking Pagamenti[/bold magenta]",
+        title="[bold magenta]Tracking Pagamenti[/bold magenta]",
         border_style="magenta",
     )
 
@@ -239,10 +239,10 @@ def create_payment_due_panel(
     summary = service.get_payment_due_summary(window_days, max_upcoming)
 
     if not (summary.overdue or summary.due_soon or summary.upcoming):
-        message = Align.center(Text("✅ Nessun pagamento pendente", style="green bold"))
+        message = Align.center(Text("Nessun pagamento pendente", style="green bold"))
         return Panel(
             message,
-            title=f"[bold blue]💳 Scadenze Pagamenti (<= {window_days} gg)[/bold blue]",
+            title=f"[bold blue]Scadenze Pagamenti (<= {window_days} gg)[/bold blue]",
             border_style="green",
         )
 
@@ -319,7 +319,7 @@ def create_payment_due_panel(
 
     return Panel(
         table,
-        title=f"[bold blue]💳 Scadenze Pagamenti (<= {window_days} gg)[/bold blue]",
+        title=f"[bold blue]Scadenze Pagamenti (<= {window_days} gg)[/bold blue]",
         subtitle=footer,
         border_style="blue",
     )

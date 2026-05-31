@@ -11,7 +11,7 @@ from openfatture.web.utils.i18n import get_translator
 
 t = get_translator()
 
-st.set_page_config(page_title=t("page-events-page-title"), page_icon="📋", layout="wide")
+st.set_page_config(page_title=t("page-events-page-title"), page_icon="", layout="wide")
 
 # Title
 st.title(t("page-events-title"))
@@ -299,10 +299,10 @@ with tab_timeline:
                     col_time, col_type, col_desc = st.columns([2, 2, 6])
 
                     with col_time:
-                        st.write(f"🕐 **{event['timestamp'].strftime('%d/%m/%Y %H:%M')}**")
+                        st.write(f"**{event['timestamp'].strftime('%d/%m/%Y %H:%M')}**")
 
                     with col_type:
-                        st.write(f"📋 {event['event_type']}")
+                        st.write(f"{event['event_type']}")
 
                     with col_desc:
                         st.write(event["description"])

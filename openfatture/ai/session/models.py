@@ -300,7 +300,7 @@ class ChatSession(BaseModel):
             if msg.role == Role.SYSTEM:
                 continue
 
-            role_emoji = "👤" if msg.role == Role.USER else "🤖"
+            role_emoji = "" if msg.role == Role.USER else ""
             timestamp = msg.timestamp.strftime("%H:%M:%S")
 
             lines.append(f"\n### {role_emoji} {msg.role.value.title()} ({timestamp})\n")

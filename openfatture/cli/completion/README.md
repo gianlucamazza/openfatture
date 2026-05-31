@@ -4,13 +4,13 @@ Shell completion scripts for **bash** and **zsh** that provide tab-completion fo
 
 ## Features
 
-✅ **Command completion**: `openfatture <TAB>` → shows all available commands
-✅ **Subcommand completion**: `openfatture fattura <TAB>` → shows fattura subcommands
-✅ **Option completion**: `openfatture fattura crea --<TAB>` → shows available options
-✅ **Value completion**: `--stato <TAB>` → shows valid invoice stati
-✅ **File completion**: `-o <TAB>` → shows files for output paths
-✅ **Template completion**: `--template <TAB>` → shows available PDF templates
-✅ **Provider completion**: `--provider <TAB>` → shows AI providers
+**Command completion**: `openfatture <TAB>` shows all available commands
+**Subcommand completion**: `openfatture fattura <TAB>` shows fattura subcommands
+**Option completion**: `openfatture fattura crea --<TAB>` shows available options
+**Value completion**: `--stato <TAB>` shows valid invoice stati
+**File completion**: `-o <TAB>` shows files for output paths
+**Template completion**: `--template <TAB>` shows available PDF templates
+**Provider completion**: `--provider <TAB>` shows AI providers
 
 ## Quick Installation
 

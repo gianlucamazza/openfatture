@@ -7,9 +7,9 @@ class InvoiceStatus(str, Enum):
     """Lightning invoice status.
 
     Lifecycle:
-        PENDING → SETTLED (payment received)
-        PENDING → EXPIRED (time expired)
-        PENDING → CANCELLED (manually cancelled)
+        PENDING SETTLED (payment received)
+        PENDING EXPIRED (time expired)
+        PENDING CANCELLED (manually cancelled)
     """
 
     PENDING = "pending"  # Invoice created, waiting for payment

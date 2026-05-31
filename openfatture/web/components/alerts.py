@@ -9,7 +9,7 @@ from typing import Literal
 import streamlit as st
 
 
-def success_alert(message: str, icon: str = "✅", dismissible: bool = False) -> None:
+def success_alert(message: str, icon: str = "", dismissible: bool = False) -> None:
     """
     Display a success alert.
 
@@ -27,7 +27,7 @@ def success_alert(message: str, icon: str = "✅", dismissible: bool = False) ->
             with col1:
                 st.success(f"{icon} {message}")
             with col2:
-                if st.button("✖", key=f"dismiss_{hash(message)}"):
+                if st.button("", key=f"dismiss_{hash(message)}"):
                     st.rerun()
     else:
         st.success(f"{icon} {message}")
@@ -36,7 +36,7 @@ def success_alert(message: str, icon: str = "✅", dismissible: bool = False) ->
 def error_alert(
     message: str,
     details: str | None = None,
-    icon: str = "❌",
+    icon: str = "",
     show_exception: bool = False,
 ) -> None:
     """
@@ -54,7 +54,7 @@ def error_alert(
     st.error(f"{icon} {message}")
 
     if details:
-        with st.expander("ℹ️ Dettagli Errore"):
+        with st.expander("Dettagli Errore"):
             st.code(details)
 
     if show_exception:
@@ -67,7 +67,7 @@ def warning_alert(
     message: str,
     action: str | None = None,
     on_action: Callable | None = None,
-    icon: str = "⚠️",
+    icon: str = "",
 ) -> None:
     """
     Display a warning alert with optional action.
@@ -95,7 +95,7 @@ def warning_alert(
 def info_alert(
     message: str,
     learn_more_url: str | None = None,
-    icon: str = "ℹ️",
+    icon: str = "",
 ) -> None:
     """
     Display an informational alert.
@@ -114,7 +114,7 @@ def info_alert(
     st.info(f"{icon} {message}")
 
     if learn_more_url:
-        st.markdown(f"[📚 Learn more]({learn_more_url})")
+        st.markdown(f"[Learn more]({learn_more_url})")
 
 
 def confirmation_dialog(
@@ -146,7 +146,7 @@ def confirmation_dialog(
         ...     danger=True
         ... )
     """
-    with st.expander(f"⚠️ {title}", expanded=True):
+    with st.expander(f"{title}", expanded=True):
         st.markdown(message)
 
         col1, col2 = st.columns(2)
@@ -193,13 +193,13 @@ def toast_notification(
     # Note: st.toast requires Streamlit >= 1.27
     try:
         if type == "success":
-            st.toast(f"✅ {message}", icon="✅")
+            st.toast(f"{message}", icon="")
         elif type == "error":
-            st.toast(f"❌ {message}", icon="❌")
+            st.toast(f"{message}", icon="")
         elif type == "warning":
-            st.toast(f"⚠️ {message}", icon="⚠️")
+            st.toast(f"{message}", icon="")
         else:
-            st.toast(f"ℹ️ {message}", icon="ℹ️")
+            st.toast(f"{message}", icon="")
     except AttributeError:
         # Fallback for older Streamlit versions
         if type == "success":

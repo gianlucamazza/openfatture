@@ -48,7 +48,7 @@ DATABASE_URL=postgresql://user:password@host:5432/db?sslmode=require
 uv run python -c "
 from openfatture.storage.database.session import get_session
 session = next(get_session())
-print('✅ Database connection OK')
+print('Database connection OK')
 "
 ```
 
@@ -62,7 +62,7 @@ These details appear on every invoice and in SDI submissions.
 
 **Description:** Company name or full name
 **Type:** String
-**Required:** ✅
+**Required:**
 
 ```env
 CEDENTE_DENOMINAZIONE=Mario Rossi
@@ -81,7 +81,7 @@ CEDENTE_DENOMINAZIONE=Acme Consulting SRL
 
 **Description:** VAT number (11 digits)
 **Type:** String (11 characters)
-**Required:** ✅
+**Required:**
 
 ```env
 CEDENTE_PARTITA_IVA=12345678901
@@ -102,7 +102,7 @@ CEDENTE_PARTITA_IVA=12345678901
 
 **Description:** Italian tax code
 **Type:** String (16 alphanumeric characters)
-**Required:** ✅
+**Required:**
 
 ```env
 # Individual
@@ -163,7 +163,7 @@ CEDENTE_REGIME_FISCALE=RF02
 
 **Description:** Full street address
 **Type:** String
-**Required:** ✅
+**Required:**
 
 ```env
 CEDENTE_INDIRIZZO=Via Giuseppe Garibaldi 42
@@ -175,7 +175,7 @@ CEDENTE_INDIRIZZO=Via Giuseppe Garibaldi 42
 
 **Description:** Postal code (CAP)
 **Type:** String (5 digits)
-**Required:** ✅
+**Required:**
 
 ```env
 CEDENTE_CAP=00100
@@ -187,7 +187,7 @@ CEDENTE_CAP=00100
 
 **Description:** Municipality name
 **Type:** String
-**Required:** ✅
+**Required:**
 
 ```env
 CEDENTE_COMUNE=Roma
@@ -202,7 +202,7 @@ CEDENTE_COMUNE=Roma
 
 **Description:** Province code (2 letters)
 **Type:** String (2 characters)
-**Required:** ✅
+**Required:**
 
 ```env
 CEDENTE_PROVINCIA=RM
@@ -279,7 +279,7 @@ PEC (certified email) is required to deliver invoices to SDI.
 
 **Description:** PEC mailbox
 **Type:** String (email)
-**Required:** ✅
+**Required:**
 
 ```env
 PEC_ADDRESS=yourcompany@pec.it
@@ -296,14 +296,14 @@ PEC_ADDRESS=yourcompany@pec.it
 
 **Description:** PEC mailbox password
 **Type:** String
-**Required:** ✅
+**Required:**
 
 ```env
 PEC_PASSWORD=your_secure_password
 ```
 
 **Security checklist**
-- ⚠️ Never commit `.env` to Git
+- Never commit `.env` to Git
 - Use a strong password
 - Rotate regularly
 - Prefer environment variables or vaults in production
@@ -460,7 +460,7 @@ EMAIL_FOOTER_TEXT=© 2025 Acme SRL - VAT 12345678901 - All rights reserved
 
 **Description:** Inbox for SDI and automation alerts
 **Type:** String (email)
-**Required:** ✅ (for email features)
+**Required:** (for email features)
 
 ```env
 NOTIFICATION_EMAIL=admin@yourcompany.it
@@ -554,7 +554,7 @@ SIGNATURE_CERTIFICATE_PASSWORD=certificate_password
 ```
 
 **Security**
-- ⚠️ Never commit secrets to Git
+- Never commit secrets to Git
 - Use a strong password
 - Prefer vault/secret managers in production
 
@@ -616,7 +616,7 @@ AI_API_KEY=sk-ant-...
 
 **Notes**
 - Not required for local Ollama deployments
-- ⚠️ Never commit the key to Git repositories
+- Never commit the key to Git repositories
 
 ---
 
@@ -746,7 +746,7 @@ AI_LOG_PROMPTS=false  # (default) No prompt logging
 ```
 
 **Notes**
-- ⚠️ May expose sensitive data
+- May expose sensitive data
 - Enable only when debugging
 
 ---
@@ -1164,8 +1164,8 @@ uv run openfatture ai voice-chat --no-playback
 ```
 
 **Web UI Voice Chat**
-1. Navigate to **🤖 AI Assistant** page
-2. Select **🎤 Voice Chat** tab
+1. Navigate to **AI Assistant** page
+2. Select **Voice Chat** tab
 3. Click microphone button and speak
 4. Click **Invia e Processa** to process
 5. View transcription, AI response, and play audio
@@ -1177,7 +1177,7 @@ uv run openfatture ai voice-chat --no-playback
 **Audio not recording in CLI**
 ```bash
 # Check audio dependencies
-uv run python -c "import sounddevice; print('✓ sounddevice OK')"
+uv run python -c "import sounddevice; print('sounddevice OK')"
 
 # List available audio devices
 uv run python -c "import sounddevice as sd; print(sd.query_devices())"
@@ -1197,7 +1197,7 @@ print(f'Voice enabled: {s.voice_enabled}')
 uv run python -c "
 from openfatture.ai.voice import create_voice_provider
 provider = create_voice_provider()
-print(f'✓ Voice provider initialized: {provider.provider_name}')
+print(f'Voice provider initialized: {provider.provider_name}')
 "
 ```
 
@@ -1848,9 +1848,9 @@ sender = TemplatePECSender(settings=get_settings())
 success, error = sender.send_test_email()
 
 if success:
-    print('✅ PEC OK')
+    print('PEC OK')
 else:
-    print(f'❌ ERROR: {error}')
+    print(f'ERROR: {error}')
 "
 ```
 

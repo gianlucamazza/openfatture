@@ -48,9 +48,9 @@ class NotificationManager:
 
     def _send_console_notification(self, alert: dict[str, Any]) -> None:
         """Send notification to console."""
-        level_icons = {"info": "ℹ️", "warning": "⚠️", "error": "❌", "critical": "🚨"}
+        level_icons = {"info": "", "warning": "", "error": "", "critical": ""}
 
-        icon = level_icons.get(alert.get("level", "info"), "ℹ️")
+        icon = level_icons.get(alert.get("level", "info"), "")
         level = alert.get("level", "info").upper()
         title = alert.get("title", "Alert")
         message = alert.get("message", "")

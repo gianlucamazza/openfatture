@@ -32,11 +32,11 @@ class DateWindowMatcher(IMatcherStrategy):
     - More lenient amount tolerance
 
     Confidence Scoring:
-    - Same date → confidence 0.85
-    - ±1 day → confidence 0.80
-    - ±2-3 days → confidence 0.75
-    - ±4-5 days → confidence 0.70
-    - ±6-7 days → confidence 0.65
+    - Same date confidence 0.85
+    - ±1 day confidence 0.80
+    - ±2-3 days confidence 0.75
+    - ±4-5 days confidence 0.70
+    - ±6-7 days confidence 0.65
 
     Attributes:
         date_tolerance_days: Date window size (default 7 days)

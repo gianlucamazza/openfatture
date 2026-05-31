@@ -9,46 +9,46 @@
 
 ## Implementation Status
 
-### ✅ Completed (Phase 2 & Phase 4.1 & 4.2)
+### Completed (Phase 2 & Phase 4.1 & 4.2)
 
 **Phase 2: Tool System Resilience & Performance:**
-- ✅ Comprehensive error handling with retry logic and exponential backoff
-- ✅ Intelligent result caching with TTL and semantic similarity
-- ✅ Performance metrics collection and monitoring
-- ✅ Input validation and security hardening
-- ✅ Complete test coverage (98%+) with async mocking
+- Comprehensive error handling with retry logic and exponential backoff
+- Intelligent result caching with TTL and semantic similarity
+- Performance metrics collection and monitoring
+- Input validation and security hardening
+- Complete test coverage (98%+) with async mocking
 
 **Core Infrastructure:**
-- ✅ LLM provider abstraction (`openfatture/ai/providers/`)
+- LLM provider abstraction (`openfatture/ai/providers/`)
   - OpenAI provider with GPT-4, GPT-4o support
   - Anthropic provider with Claude 3.5 Sonnet support
   - Ollama provider for local models
   - Factory pattern for provider creation
-- ✅ Base agent protocol (`openfatture/ai/domain/agent.py`)
+- Base agent protocol (`openfatture/ai/domain/agent.py`)
   - AgentProtocol interface
   - BaseAgent implementation with common functionality
-- ✅ Domain models (`openfatture/ai/domain/`)
+- Domain models (`openfatture/ai/domain/`)
   - Message, Role, ConversationHistory
   - AgentContext, InvoiceContext, TaxContext, **ChatContext**
   - AgentResponse with structured outputs
-- ✅ Configuration management (`openfatture/ai/config/settings.py`)
+- Configuration management (`openfatture/ai/config/settings.py`)
 
 **AI Agents:**
-- ✅ Invoice Assistant Agent (`openfatture/ai/agents/invoice_assistant.py`)
-- ✅ Tax Advisor Agent (`openfatture/ai/agents/tax_advisor.py`)
-- ✅ **Chat Agent** (`openfatture/ai/agents/chat_agent.py`) - NEW!
+- Invoice Assistant Agent (`openfatture/ai/agents/invoice_assistant.py`)
+- Tax Advisor Agent (`openfatture/ai/agents/tax_advisor.py`)
+- **Chat Agent** (`openfatture/ai/agents/chat_agent.py`) - NEW!
   - Conversational AI with multi-turn context
   - Tool calling integration
   - Context enrichment
 
 **Tool System:** (NEW!)
-- ✅ Tool models (`openfatture/ai/tools/models.py`)
+- Tool models (`openfatture/ai/tools/models.py`)
   - Tool, ToolParameter, ToolResult
   - OpenAI and Anthropic format conversion
-- ✅ Tool registry (`openfatture/ai/tools/registry.py`)
+- Tool registry (`openfatture/ai/tools/registry.py`)
   - Centralized tool management
   - Async tool execution
-- ✅ **6 Built-in Tools:**
+- **6 Built-in Tools:**
   - `search_invoices` - Search invoices by criteria
   - `get_invoice_details` - Get invoice details
   - `get_invoice_stats` - Invoice statistics
@@ -57,72 +57,72 @@
   - `get_client_stats` - Client statistics
 
 **Tool System Resilience & Performance (Phase 2 Optimizations):**
-- ✅ **Retry Logic with Exponential Backoff**
+- **Retry Logic with Exponential Backoff**
   - Configurable retry attempts (default: 3)
   - Exponential backoff with jitter
   - Circuit breaker pattern for persistent failures
   - Per-tool retry policies
-- ✅ **Intelligent Result Caching**
+- **Intelligent Result Caching**
   - TTL-based caching (default: 300s)
   - Semantic similarity caching for search tools
   - Cache hit/miss metrics tracking
   - Memory-efficient LRU eviction
-- ✅ **Performance Metrics Collection**
+- **Performance Metrics Collection**
   - Tool execution latency tracking
   - Success/failure rates per tool
   - Cache hit rates and effectiveness
   - Error categorization and alerting
-- ✅ **Input Validation & Security**
+- **Input Validation & Security**
   - Comprehensive input sanitization
   - Length limits and type validation
   - SQL injection prevention
   - Rate limiting per tool type
-- ✅ **Comprehensive Test Coverage**
+- **Comprehensive Test Coverage**
   - Unit tests for all tools (98%+ coverage)
   - Async mocking patterns for external dependencies
   - Error condition testing
   - Performance benchmarking
 
 **Session Management:** (NEW!)
-- ✅ Session models (`openfatture/ai/session/models.py`)
+- Session models (`openfatture/ai/session/models.py`)
   - ChatSession, ChatMessage, SessionMetadata
   - Token and cost tracking
-- ✅ Session manager (`openfatture/ai/session/manager.py`)
+- Session manager (`openfatture/ai/session/manager.py`)
   - CRUD operations with atomic persistence
   - JSON-based storage
   - Session export (JSON/Markdown)
 
 **Context & Prompts:**
-- ✅ Context enrichment (`openfatture/ai/context/enrichment.py`)
+- Context enrichment (`openfatture/ai/context/enrichment.py`)
   - Automatic business data injection
   - Current year statistics
   - Recent invoices/clients summaries
-- ✅ YAML prompt templates (`openfatture/ai/prompts/`)
+- YAML prompt templates (`openfatture/ai/prompts/`)
   - invoice_assistant.yaml
   - tax_advisor.yaml
   - **chat_assistant.yaml** - NEW!
 
 **UI Integration:**
-- ✅ Interactive chat UI (`openfatture/cli/ui/chat.py`)
+- Interactive chat UI (`openfatture/cli/ui/chat.py`)
   - Rich terminal interface with markdown
   - Command system (/help, /save, /tools, etc.)
   - Real-time token/cost tracking
-- ✅ CLI commands (`openfatture/cli/commands/ai.py`)
+- CLI commands (`openfatture/cli/commands/ai.py`)
   - `ai describe` - Functional
   - `ai suggest-vat` - Functional
 - `ai forecast` - Functional (Prophet + XGBoost ensemble con modelli/versioni salvati)
   - `ai check` - Stub
 
-### 🚧 Partially Implemented
+### Partially Implemented
 
-- 🔄 RAG / Vector Store
+- RAG / Vector Store
   - ChromaDB persistence for invoices + knowledge base (`openfatture/ai/rag/**`)
   - Async enrichment pipeline (`enrich_with_rag`) for chat, invoice, and tax advisor agents
   - CLI management commands (`openfatture ai rag status|index|search`)
   - Knowledge base manifest (`openfatture/ai/rag/sources.json`) with dedicated indexer
   - Legal citations surfaced within Chat/Tax/Invoice agents
 
-### ⏳ Planned (Phase 4.3 & 4.4)
+### Planned (Phase 4.3 & 4.4)
 
 - [ ] Compliance Checker agent
 - [ ] LangGraph orchestration for multi-agent workflows
@@ -131,7 +131,7 @@
 - [ ] Advanced caching strategies
 - [ ] Metrics and observability dashboards
 
-### ✅ Cash Flow Predictor (v1.0.1)
+### Cash Flow Predictor (v1.0.1)
 
 - Prophet + XGBoost ensemble with tunable weights (`openfatture/ai/ml/models/ensemble.py`)
 - Persistent feature engineering pipeline (`FeaturePipeline`) with versioned schema
@@ -218,11 +218,11 @@ This document outlines the architecture for OpenFatture's AI-powered features, f
 openfatture/ai/
 ├── __init__.py                    # Public API exports
 │
-├── config/                        # ✅ Configuration management
+├── config/ # Configuration management
 │   ├── __init__.py
 │   └── settings.py               # AISettings (Pydantic)
 │
-├── domain/                        # ✅ Core domain models
+├── domain/ # Core domain models
 │   ├── __init__.py
 │   ├── agent.py                  # AgentProtocol, BaseAgent
 │   ├── message.py                # Message, Role enums
@@ -230,7 +230,7 @@ openfatture/ai/
 │   ├── context.py                # AgentContext, InvoiceContext, TaxContext, ChatContext
 │   └── response.py               # AgentResponse, structured outputs
 │
-├── providers/                     # ✅ LLM provider implementations
+├── providers/ # LLM provider implementations
 │   ├── __init__.py
 │   ├── base.py                   # BaseLLMProvider (ABC)
 │   ├── openai.py                 # OpenAIProvider
@@ -238,40 +238,40 @@ openfatture/ai/
 │   ├── ollama.py                 # OllamaProvider
 │   └── factory.py                # create_provider() factory
 │
-├── agents/                        # ✅ Agent implementations (3/4 complete)
+├── agents/ # Agent implementations (3/4 complete)
 │   ├── __init__.py
-│   ├── invoice_assistant.py      # ✅ InvoiceAssistantAgent
-│   ├── tax_advisor.py            # ✅ TaxAdvisorAgent
-│   ├── chat_agent.py             # ✅ ChatAgent (NEW!)
-│   ├── cash_flow_predictor.py    # ⏳ Planned
-│   └── compliance_checker.py     # ⏳ Planned
+│ ├── invoice_assistant.py # InvoiceAssistantAgent
+│ ├── tax_advisor.py # TaxAdvisorAgent
+│ ├── chat_agent.py # ChatAgent (NEW!)
+│ ├── cash_flow_predictor.py # Planned
+│ └── compliance_checker.py # Planned
 │
-├── session/                       # ✅ Session management (NEW!)
+├── session/ # Session management (NEW!)
 │   ├── __init__.py
 │   ├── models.py                 # ChatSession, ChatMessage, SessionMetadata
 │   └── manager.py                # SessionManager with CRUD operations
 │
-├── tools/                         # ✅ Function calling tools (NEW!)
+├── tools/ # Function calling tools (NEW!)
 │   ├── __init__.py
 │   ├── models.py                 # Tool, ToolParameter, ToolResult
 │   ├── registry.py               # ToolRegistry for centralized management
 │   ├── invoice_tools.py          # Invoice search/details/stats tools
 │   └── client_tools.py           # Client search/details/stats tools
 │
-├── context/                       # ✅ Context enrichment (NEW!)
+├── context/ # Context enrichment (NEW!)
 │   ├── __init__.py
 │   └── enrichment.py             # Automatic business data injection
 │
-├── prompts/                       # ✅ Prompt templates
+├── prompts/ # Prompt templates
 │   ├── __init__.py
 │   ├── invoice_assistant.yaml    # Invoice assistant prompts
 │   ├── tax_advisor.yaml          # Tax advisor prompts
-│   └── chat_assistant.yaml       # ✅ Chat assistant prompts (NEW!)
+│ └── chat_assistant.yaml # Chat assistant prompts (NEW!)
 │
-├── orchestration/                 # ⏳ Multi-agent workflows (Planned)
+├── orchestration/ # Multi-agent workflows (Planned)
 │   └── (LangGraph integration planned for Phase 4.4)
 │
-└── memory/                        # 🔄 Memory & vector store (Partial)
+└── memory/ # Memory & vector store (Partial)
     └── (ChromaDB integration planned)
 ```
 
@@ -724,7 +724,7 @@ class ReActOrchestrator:
     1. Build ReAct prompt with tool descriptions
     2. Send to LLM (with conversation history)
     3. Parse response (XML or legacy format)
-    4. If tool call: execute tool → add observation → loop
+    4. If tool call: execute tool add observation loop
     5. If final answer: return to user
     6. Enforce max_iterations to prevent infinite loops
     """
@@ -884,10 +884,10 @@ async def test_single_tool_call_invoice_stats(
 8. **Log all iterations** for debugging and optimization
 
 **Common Issues:**
-- **Low XML parse rate**: Model not generating XML → update prompt with more examples
-- **Infinite loops**: Tool not providing expected data → validate tool outputs
-- **Failed tool calls**: Invalid parameters → improve parameter descriptions
-- **Max iterations reached**: Query too complex → increase max_iterations or split query
+- **Low XML parse rate**: Model not generating XML update prompt with more examples
+- **Infinite loops**: Tool not providing expected data validate tool outputs
+- **Failed tool calls**: Invalid parameters improve parameter descriptions
+- **Max iterations reached**: Query too complex increase max_iterations or split query
 
 **Integration with Chat Agent:**
 The Chat Agent automatically uses ReActOrchestrator when:
@@ -926,7 +926,7 @@ For OpenAI/Anthropic, native function calling is used instead.
                                 │
          ┌──────────────────────▼──────────────────────┐
          │         VoiceAssistant                      │
-         │  (Orchestrates STT → Chat → TTS pipeline)   │
+         │ (Orchestrates STT Chat TTS pipeline) │
          └──┬───────────────┬──────────────┬───────────┘
             │               │              │
     ┌───────▼─────┐  ┌─────▼──────┐  ┌────▼────────┐
@@ -954,7 +954,7 @@ openfatture/ai/voice/
 
 openfatture/cli/commands/ai.py    # voice-chat CLI command
 openfatture/web/services/voice_service.py  # Web UI integration
-openfatture/web/pages/5_🤖_AI_Assistant.py  # Voice chat UI tab
+openfatture/web/pages/5_AI_Assistant.py # Voice chat UI tab
 ```
 
 **Key Components:**
@@ -1845,7 +1845,7 @@ logger.info(
 
 ## Implementation Phases
 
-### ✅ Phase 4.1: Foundation (COMPLETED)
+### Phase 4.1: Foundation (COMPLETED)
 - [x] Set up module structure
 - [x] Implement provider abstraction (OpenAI, Anthropic, Ollama)
 - [x] Create base agent classes (AgentProtocol, BaseAgent)
@@ -1853,7 +1853,7 @@ logger.info(
 - [x] Domain models (Message, Context, Response)
 - [x] Basic tests
 
-### ✅ Phase 4.2: Agents & Tools (COMPLETED)
+### Phase 4.2: Agents & Tools (COMPLETED)
 - [x] Invoice Assistant agent
 - [x] Tax Advisor agent
 - [x] **Chat Agent** (conversational AI)
@@ -1875,7 +1875,7 @@ logger.info(
 - [x] CLI integration (`ai describe`, `ai suggest-vat`)
 - [x] Agent tests
 
-### 🚧 Phase 4.3: Advanced Features (IN PROGRESS)
+### Phase 4.3: Advanced Features (IN PROGRESS)
 - [ ] Cash Flow Predictor (ML-based)
 - [ ] Compliance Checker agent
 - [x] Complete RAG implementation
@@ -1886,7 +1886,7 @@ logger.info(
 - [ ] Advanced caching strategies
 - [ ] Performance optimization
 
-### ⏳ Phase 4.4: Orchestration (PLANNED)
+### Phase 4.4: Orchestration (PLANNED)
 - [ ] LangGraph workflows
 - [ ] Multi-agent coordination
 - [ ] State management for complex workflows

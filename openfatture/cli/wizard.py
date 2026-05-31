@@ -23,12 +23,12 @@ def run_setup_wizard() -> None:
             "[bold blue]Welcome to OpenFatture![/bold blue]\n\n"
             "It looks like this is your first time running the application.\n"
             "Let's get you set up with some basic configuration.",
-            title="🚀 Setup Wizard",
+            title="Setup Wizard",
         )
     )
 
     # Company Information
-    console.print("\n[bold]🏢 Company Information[/bold]")
+    console.print("\n[bold]Company Information[/bold]")
     cedente_denominazione = questionary.text("Company Name / Denominazione:").ask()
 
     cedente_partita_iva = questionary.text(
@@ -47,7 +47,7 @@ def run_setup_wizard() -> None:
     cedente_provincia = questionary.text("Province / Provincia (2 chars):").ask()
 
     # PEC
-    console.print("\n[bold]📧 PEC Configuration[/bold]")
+    console.print("\n[bold]PEC Configuration[/bold]")
     pec_address = questionary.text(
         "Your PEC Address:",
         validate=lambda text: validate_pec_email(text) or "Invalid email format",
@@ -55,7 +55,7 @@ def run_setup_wizard() -> None:
     pec_password = questionary.password("PEC Password:").ask()
 
     # Email & Notifications
-    console.print("\n[bold]📬 Email & Notifications[/bold]")
+    console.print("\n[bold]Email & Notifications[/bold]")
     notification_email = questionary.text(
         "Notification Email (optional):",
         validate=lambda text: (
@@ -70,7 +70,7 @@ def run_setup_wizard() -> None:
         ).ask()
 
     # AI Configuration
-    console.print("\n[bold]🤖 AI Configuration[/bold]")
+    console.print("\n[bold]AI Configuration[/bold]")
     ai_provider = questionary.select(
         "Select AI Provider:", choices=["openai", "anthropic", "ollama"], default="openai"
     ).ask()

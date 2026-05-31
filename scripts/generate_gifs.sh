@@ -48,19 +48,19 @@ readonly MAX_SIZE_MB=5           # GitHub's comfortable embed size
 
 # Logging functions
 log_info() {
-    echo -e "${BLUE}ℹ${NC}  $*"
+    echo -e "${BLUE}${NC} $*"
 }
 
 log_success() {
-    echo -e "${GREEN}✓${NC}  $*"
+    echo -e "${GREEN}${NC} $*"
 }
 
 log_error() {
-    echo -e "${RED}✗${NC}  $*" >&2
+    echo -e "${RED}${NC} $*" >&2
 }
 
 log_warning() {
-    echo -e "${YELLOW}⚠${NC}  $*" >&2
+    echo -e "${YELLOW}${NC} $*" >&2
 }
 
 # Check dependencies
@@ -241,7 +241,7 @@ parse_args() {
 main() {
     cd "${ROOT_DIR}"
 
-    echo -e "${BLUE}🎞️  OpenFatture GIF Generation${NC}"
+    echo -e "${BLUE}OpenFatture GIF Generation${NC}"
     echo "=============================="
     echo ""
 
@@ -296,12 +296,12 @@ main() {
     done
 
     # Summary
-    echo -e "${GREEN}✅ GIF generation complete!${NC}"
+    echo -e "${GREEN}GIF generation complete!${NC}"
     echo ""
     echo "Output files:"
     ls -lh "${GIF_DIR}"/*.gif 2>/dev/null || echo "No GIFs generated"
     echo ""
-    echo "💡 Next steps:"
+    echo "Next steps:"
     echo "  - Review GIF quality in media/gifs/"
     echo "  - Embed in README.md with: ![Demo](media/gifs/scenario_a_onboarding.gif)"
     echo "  - For large files, consider hosting on GitHub Releases or external CDN"

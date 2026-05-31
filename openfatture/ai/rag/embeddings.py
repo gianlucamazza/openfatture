@@ -11,12 +11,24 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
-from sentence_transformers import SentenceTransformer
-
 from openfatture.ai.rag.config import RAGConfig
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _sentence_transformer(*args, **kwargs):
+    """Lazily import and instantiate SentenceTransformer.
+
+    The import lives here (not at module top) so importing this module — and the
+    AI/CLI stack that transitively reaches it — does not pull in
+    sentence-transformers/torch/transformers (~20s). It is also the single seam
+    tests patch, keeping mocking local to this module instead of monkeypatching
+    the third-party global.
+    """
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer(*args, **kwargs)
 
 
 class EmbeddingStrategy(ABC):
@@ -243,8 +255,8 @@ class SentenceTransformerEmbeddings(EmbeddingStrategy):
         self.model_name_str = model_name
         self.device = device
 
-        # Load model
-        self.model = SentenceTransformer(model_name, device=device)
+        # Load model via the lazy module-level seam (see _sentence_transformer).
+        self.model = _sentence_transformer(model_name, device=device)
 
         logger.info(
             "sentence_transformers_initialized",

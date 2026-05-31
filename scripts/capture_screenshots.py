@@ -52,7 +52,7 @@ def run_command(cmd: str, capture: bool = True, timeout: int = 30) -> dict[str, 
 
 def capture_cli_output(command: str, scenario: str, step: str, output_dir: Path) -> dict[str, Any]:
     """Capture CLI command output as text and metadata."""
-    print(f"  → Capturing: {command}")
+    print(f" Capturing: {command}")
 
     result = run_command(f"uv run {command}")
 
@@ -78,13 +78,13 @@ def capture_cli_output(command: str, scenario: str, step: str, output_dir: Path)
     meta_file = output_dir / f"{filename_base}.json"
     meta_file.write_text(json.dumps(metadata, indent=2))
 
-    print(f"    ✓ Saved: {text_file.name}")
+    print(f" Saved: {text_file.name}")
     return metadata
 
 
 def capture_scenario_a(output_dir: Path) -> list[dict[str, Any]]:
     """Capture screenshots for Scenario A - Onboarding & Setup."""
-    print("\n📸 Scenario A: Onboarding & Setup")
+    print("\nScenario A: Onboarding & Setup")
 
     captures = []
 
@@ -123,7 +123,7 @@ def capture_scenario_a(output_dir: Path) -> list[dict[str, Any]]:
 
 def capture_scenario_b(output_dir: Path) -> list[dict[str, Any]]:
     """Capture screenshots for Scenario B - Invoice Creation."""
-    print("\n📸 Scenario B: Invoice Creation")
+    print("\nScenario B: Invoice Creation")
 
     captures = []
 
@@ -162,7 +162,7 @@ def capture_scenario_b(output_dir: Path) -> list[dict[str, Any]]:
 
 def capture_scenario_c(output_dir: Path) -> list[dict[str, Any]]:
     """Capture screenshots for Scenario C - AI Assistant."""
-    print("\n📸 Scenario C: AI Assistant (Ollama)")
+    print("\nScenario C: AI Assistant (Ollama)")
 
     captures = []
 
@@ -177,14 +177,14 @@ def capture_scenario_c(output_dir: Path) -> list[dict[str, Any]]:
     )
 
     # Note: AI chat commands may take longer and depend on Ollama
-    print("    ⚠️  Skipping AI inference commands (require Ollama and can be slow)")
+    print(" Skipping AI inference commands (require Ollama and can be slow)")
 
     return captures
 
 
 def capture_scenario_d(output_dir: Path) -> list[dict[str, Any]]:
     """Capture screenshots for Scenario D - Batch Operations."""
-    print("\n📸 Scenario D: Batch Operations")
+    print("\nScenario D: Batch Operations")
 
     captures = []
 
@@ -203,7 +203,7 @@ def capture_scenario_d(output_dir: Path) -> list[dict[str, Any]]:
 
 def capture_scenario_e(output_dir: Path) -> list[dict[str, Any]]:
     """Capture screenshots for Scenario E - PEC & SDI."""
-    print("\n📸 Scenario E: PEC & SDI Notifications")
+    print("\nScenario E: PEC & SDI Notifications")
 
     captures = []
 
@@ -259,8 +259,8 @@ def main() -> int:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("🎬 OpenFatture Screenshot Automation")
-    print(f"📁 Output directory: {output_dir.absolute()}")
+    print("OpenFatture Screenshot Automation")
+    print(f"Output directory: {output_dir.absolute()}")
     print()
 
     # Determine scenarios to capture
@@ -283,10 +283,10 @@ def main() -> int:
 
     # Summary
     print()
-    print(f"✅ Captured {len(all_captures)} screenshots")
-    print(f"📊 Success rate: {sum(1 for c in all_captures if c['success'])}/{len(all_captures)}")
+    print(f"Captured {len(all_captures)} screenshots")
+    print(f"Success rate: {sum(1 for c in all_captures if c['success'])}/{len(all_captures)}")
     print()
-    print("💡 Next steps:")
+    print("Next steps:")
     print("  - Review text outputs in media/screenshots/v2025/")
     print("  - For rendered screenshots, use Playwright in browser mode (future enhancement)")
     print()

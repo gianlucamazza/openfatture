@@ -76,9 +76,9 @@ def template(
             )
 
             if result.returncode == 0:
-                console.print(f"[green]✓ Scenario {scenario} template is valid[/green]")
+                console.print(f"[green]Scenario {scenario} template is valid[/green]")
             else:
-                console.print(f"[red]✗ Scenario {scenario} template is invalid[/red]")
+                console.print(f"[red]Scenario {scenario} template is invalid[/red]")
                 if result.stderr:
                     console.print(f"[dim]{result.stderr.strip()}[/dim]")
                 raise typer.Exit(1)
@@ -102,7 +102,7 @@ def template(
                 for line in result.stdout.split("\n"):
                     if "Generated VHS tape:" in line:
                         output_path = line.split(": ")[1].strip()
-                        console.print(f"[green]✓ Generated VHS tape: {output_path}[/green]")
+                        console.print(f"[green]Generated VHS tape: {output_path}[/green]")
 
                         # Show file size
                         if Path(output_path).exists():
@@ -110,7 +110,7 @@ def template(
                             console.print(f"[dim]File size: {file_size:,} bytes[/dim]")
                         break
                 else:
-                    console.print("[green]✓ VHS tape generated successfully[/green]")
+                    console.print("[green]VHS tape generated successfully[/green]")
             else:
                 console.print("[red]Error generating VHS tape[/red]")
                 if result.stderr:
@@ -143,11 +143,11 @@ def check():
         result = subprocess.run(["vhs", "--version"], capture_output=True, text=True)
         if result.returncode == 0:
             vhs_available = True
-            console.print(f"[green]✓ VHS:[/green] {result.stdout.strip()}")
+            console.print(f"[green]VHS:[/green] {result.stdout.strip()}")
         else:
-            console.print("[red]✗ VHS: Not available[/red]")
+            console.print("[red]VHS: Not available[/red]")
     except FileNotFoundError:
-        console.print("[red]✗ VHS: Not installed[/red]")
+        console.print("[red]VHS: Not installed[/red]")
 
     # Check ffmpeg
     ffmpeg_available = False
@@ -156,40 +156,40 @@ def check():
         if result.returncode == 0:
             ffmpeg_available = True
             version_line = result.stdout.split("\n")[0]
-            console.print(f"[green]✓ ffmpeg:[/green] {version_line}")
+            console.print(f"[green]ffmpeg:[/green] {version_line}")
         else:
-            console.print("[red]✗ ffmpeg: Not available[/red]")
+            console.print("[red]ffmpeg: Not available[/red]")
     except FileNotFoundError:
-        console.print("[red]✗ ffmpeg: Not installed[/red]")
+        console.print("[red]ffmpeg: Not installed[/red]")
 
     # Check template engine
     template_dir = Path("media/automation/templates")
     if template_dir.exists():
-        console.print(f"[green]✓ Template directory:[/green] {template_dir}")
+        console.print(f"[green]Template directory:[/green] {template_dir}")
 
         # Count templates
         scenario_templates = list(template_dir.glob("scenarios/*.tape.j2"))
-        console.print(f"[green]✓ Scenario templates:[/green] {len(scenario_templates)} found")
+        console.print(f"[green]Scenario templates:[/green] {len(scenario_templates)} found")
 
         # Count components
         components = list(template_dir.glob("components/*.tapeinc"))
-        console.print(f"[green]✓ Components:[/green] {len(components)} found")
+        console.print(f"[green]Components:[/green] {len(components)} found")
 
         # Check variables file
         variables_file = template_dir / "variables.yaml"
         if variables_file.exists():
-            console.print("[green]✓ Variables file:[/green] Found")
+            console.print("[green]Variables file:[/green] Found")
         else:
-            console.print("[red]✗ Variables file: Missing[/red]")
+            console.print("[red]Variables file: Missing[/red]")
     else:
-        console.print("[red]✗ Template directory: Not found[/red]")
+        console.print("[red]Template directory: Not found[/red]")
 
     # Overall status
     console.print()
     if vhs_available and ffmpeg_available and template_dir.exists():
-        console.print("[green]🎬 Media automation is ready![/green]")
+        console.print("[green]Media automation is ready![/green]")
     else:
-        console.print("[yellow]⚠️  Some prerequisites are missing[/yellow]")
+        console.print("[yellow]Some prerequisites are missing[/yellow]")
         console.print("[dim]Run 'uv run openfatture media setup' to install missing tools[/dim]")
 
 
@@ -211,7 +211,7 @@ def setup():
 
     for dir_path in dirs_to_create:
         Path(dir_path).mkdir(parents=True, exist_ok=True)
-        console.print(f"[green]✓ Created directory:[/green] {dir_path}")
+        console.print(f"[green]Created directory:[/green] {dir_path}")
 
     # Check for required files
     required_files = [
@@ -221,12 +221,12 @@ def setup():
 
     for file_path in required_files:
         if Path(file_path).exists():
-            console.print(f"[green]✓ Found:[/green] {file_path}")
+            console.print(f"[green]Found:[/green] {file_path}")
         else:
-            console.print(f"[red]✗ Missing:[/red] {file_path}")
+            console.print(f"[red]Missing:[/red] {file_path}")
 
     console.print()
-    console.print("[green]✓ Media automation setup complete![/green]")
+    console.print("[green]Media automation setup complete![/green]")
     console.print()
     console.print("[dim]Next steps:[/dim]")
     console.print("  1. Install VHS: brew install vhs")

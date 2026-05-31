@@ -9,7 +9,7 @@ from openfatture.web.utils.i18n import get_translator
 
 t = get_translator()
 
-st.set_page_config(page_title=t("page-lightning-page-title"), page_icon="⚡", layout="wide")
+st.set_page_config(page_title=t("page-lightning-page-title"), page_icon="", layout="wide")
 
 st.title(t("page-lightning-title"))
 

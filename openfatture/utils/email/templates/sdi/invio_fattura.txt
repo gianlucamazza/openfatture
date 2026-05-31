@@ -1,7 +1,7 @@
 {% extends "base.txt" %}
 
 {% block content %}
-📨 {{ _('email.sdi.invio_fattura.title') }}
+{{ _('email.sdi.invio_fattura.title') }}
 
 {{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}
 

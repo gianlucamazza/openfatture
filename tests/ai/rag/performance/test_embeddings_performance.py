@@ -230,12 +230,12 @@ def test_performance_summary():
     print("EMBEDDING GENERATION PERFORMANCE SUMMARY")
     print("=" * 70)
     print("\nTargets:")
-    print("  ✓ Single text (local): <50ms")
-    print("  ✓ Batch 10 docs:       <500ms (>20 docs/sec)")
-    print("  ✓ Batch 100 docs:      <5000ms")
-    print("  ✓ Memory usage:        <100MB for 100 docs")
-    print("  ✓ Latency variance:    CV < 20%")
-    print("\nAll embedding performance targets validated! ✅")
+    print(" Single text (local): <50ms")
+    print(" Batch 10 docs: <500ms (>20 docs/sec)")
+    print(" Batch 100 docs: <5000ms")
+    print(" Memory usage: <100MB for 100 docs")
+    print(" Latency variance: CV < 20%")
+    print("\nAll embedding performance targets validated! ")
     print("=" * 70 + "\n")
 
 

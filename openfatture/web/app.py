@@ -23,14 +23,14 @@ t = get_translator()
 # Page configuration MUST be first Streamlit command
 st.set_page_config(
     page_title=t("web-app-title"),
-    page_icon="🧾",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
         "Get Help": "https://github.com/gianlucamazza/openfatture",
         "Report a bug": "https://github.com/gianlucamazza/openfatture/issues",
         "About": f"""
-        # OpenFatture 🧾
+        # OpenFatture
 
         {t("web-app-tagline")}
 
@@ -110,14 +110,14 @@ def render_sidebar() -> None:
 
         # Advanced operations
         st.subheader(t("web-sidebar-advanced-ops"))
-        if st.button(f"📦 {t('web-nav-batch')}", use_container_width=True):
-            st.switch_page("pages/8_📦_Batch.py")
-        if st.button(f"📊 {t('web-nav-reports')}", use_container_width=True):
-            st.switch_page("pages/9_📊_Reports.py")
-        if st.button(f"🪝 {t('web-nav-hooks')}", use_container_width=True):
-            st.switch_page("pages/10_🪝_Hooks.py")
-        if st.button(f"📋 {t('web-nav-events')}", use_container_width=True):
-            st.switch_page("pages/11_📋_Events.py")
+        if st.button(f"{t('web-nav-batch')}", use_container_width=True):
+            st.switch_page("pages/8_Batch.py")
+        if st.button(f"{t('web-nav-reports')}", use_container_width=True):
+            st.switch_page("pages/9_Reports.py")
+        if st.button(f"{t('web-nav-hooks')}", use_container_width=True):
+            st.switch_page("pages/10_Hooks.py")
+        if st.button(f"{t('web-nav-events')}", use_container_width=True):
+            st.switch_page("pages/11_Events.py")
 
 
 def render_home() -> None:
@@ -131,10 +131,10 @@ def render_home() -> None:
         ### {t("page-home-welcome")}
 
         {t("page-home-description")}
-        - ✨ **{t("page-home-feature-invoicing")}**
-        - 💰 **{t("page-home-feature-payments")}**
-        - 🤖 **{t("page-home-feature-ai")}**
-        - 📊 **{t("page-home-feature-batch")}**
+        - **{t("page-home-feature-invoicing")}**
+        - **{t("page-home-feature-payments")}**
+        - **{t("page-home-feature-ai")}**
+        - **{t("page-home-feature-batch")}**
         """
     )
 
@@ -155,7 +155,7 @@ def render_home() -> None:
             """
         )
         if st.button(t("page-home-feature-grid-invoices-button"), use_container_width=True):
-            st.switch_page("pages/2_🧾_Fatture.py")
+            st.switch_page("pages/2_Fatture.py")
 
     with col2:
         st.subheader(t("page-home-feature-grid-payments-title"))
@@ -169,7 +169,7 @@ def render_home() -> None:
             """
         )
         if st.button(t("page-home-feature-grid-payments-button"), use_container_width=True):
-            st.switch_page("pages/4_💰_Pagamenti.py")
+            st.switch_page("pages/4_Pagamenti.py")
 
     with col3:
         st.subheader(t("page-home-feature-grid-ai-title"))
@@ -183,7 +183,7 @@ def render_home() -> None:
             """
         )
         if st.button(t("page-home-feature-grid-ai-button"), use_container_width=True):
-            st.switch_page("pages/5_🤖_AI_Assistant.py")
+            st.switch_page("pages/5_AI_Assistant.py")
 
     st.markdown("---")
 
@@ -194,19 +194,19 @@ def render_home() -> None:
 
     with col_a:
         if st.button(t("page-home-action-new-invoice"), use_container_width=True):
-            st.switch_page("pages/2_🧾_Fatture.py")
+            st.switch_page("pages/2_Fatture.py")
 
     with col_b:
         if st.button(t("page-home-action-new-client"), use_container_width=True):
-            st.switch_page("pages/3_👥_Clienti.py")
+            st.switch_page("pages/3_Clienti.py")
 
     with col_c:
         if st.button(t("page-home-action-dashboard"), use_container_width=True):
-            st.switch_page("pages/1_📊_Dashboard.py")
+            st.switch_page("pages/1_Dashboard.py")
 
     with col_d:
         if st.button(t("page-home-action-batch"), use_container_width=True):
-            st.switch_page("pages/8_📦_Batch.py")
+            st.switch_page("pages/8_Batch.py")
 
     # Additional quick actions row
     st.markdown("---")
@@ -216,15 +216,15 @@ def render_home() -> None:
 
     with col_e:
         if st.button(t("page-home-advanced-reports"), use_container_width=True):
-            st.switch_page("pages/9_📊_Reports.py")
+            st.switch_page("pages/9_Reports.py")
 
     with col_f:
         if st.button(t("page-home-advanced-hooks"), use_container_width=True):
-            st.switch_page("pages/10_🪝_Hooks.py")
+            st.switch_page("pages/10_Hooks.py")
 
     with col_g:
         if st.button(t("page-home-advanced-events"), use_container_width=True):
-            st.switch_page("pages/11_📋_Events.py")
+            st.switch_page("pages/11_Events.py")
 
     st.markdown("---")
 
@@ -316,7 +316,7 @@ def main() -> None:
                 st.rerun()
         with col2:
             if st.button(t("web-error-goto-health")):
-                st.switch_page("pages/12_🏥_Health.py")
+                st.switch_page("pages/12_Health.py")
 
 
 if __name__ == "__main__":

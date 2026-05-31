@@ -19,19 +19,19 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 log_info() {
-    echo -e "${BLUE}ℹ${NC}  $*"
+    echo -e "${BLUE}${NC} $*"
 }
 
 log_success() {
-    echo -e "${GREEN}✓${NC}  $*"
+    echo -e "${GREEN}${NC} $*"
 }
 
 log_warning() {
-    echo -e "${YELLOW}⚠${NC}  $*"
+    echo -e "${YELLOW}${NC} $*"
 }
 
 log_error() {
-    echo -e "${RED}✗${NC}  $*" >&2
+    echo -e "${RED}${NC} $*" >&2
 }
 
 # Check if Ollama is installed
@@ -132,7 +132,7 @@ test_model_inference() {
 # Main execution
 main() {
     echo ""
-    echo "🤖 Ollama Health Check for Media Automation"
+    echo "Ollama Health Check for Media Automation"
     echo "==========================================="
     echo ""
 
@@ -173,9 +173,9 @@ main() {
 
     echo ""
     if [ $exit_code -eq 0 ]; then
-        echo "🎉 All checks passed! Ollama is ready for media automation."
+        echo "All checks passed! Ollama is ready for media automation."
     else
-        echo "⚠️  Some checks failed. Please review warnings above."
+        echo "Some checks failed. Please review warnings above."
     fi
     echo ""
 

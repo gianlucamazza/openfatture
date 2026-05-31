@@ -35,7 +35,7 @@ from .commands import (
 # Create main app and console
 app = typer.Typer(
     name="openfatture",
-    help="🧾 Open-source electronic invoicing for Italian freelancers",
+    help="Open-source electronic invoicing for Italian freelancers",
     add_completion=True,
     rich_markup_mode="rich",
     no_args_is_help=True,  # Show help when no command is provided
@@ -183,25 +183,25 @@ def main(
 
 
 # Register command groups
-app.add_typer(interactive.app, name="interactive", help="🎯 Interactive mode with menus")
-app.add_typer(init.app, name="init", help="🚀 Initialize OpenFatture")
-app.add_typer(config.app, name="config", help="⚙️  Manage configuration")
-app.add_typer(cliente.app, name="cliente", help="👤 Manage clients")
-app.add_typer(fattura.app, name="fattura", help="🧾 Manage invoices")
-app.add_typer(preventivo.app, name="preventivo", help="📋 Manage quotes/estimates")
-app.add_typer(pec.app, name="pec", help="📧 PEC configuration and testing")
-app.add_typer(email.app, name="email", help="📧 Email templates & testing")
-app.add_typer(notifiche.app, name="notifiche", help="📬 SDI notifications")
-app.add_typer(batch.app, name="batch", help="📦 Batch operations")
-app.add_typer(ai.app, name="ai", help="🤖 AI-powered assistance")
-app.add_typer(lightning.app, name="lightning", help="⚡ Lightning Network payments")
-app.add_typer(media.app, name="media", help="🎬 Media automation & VHS generation")
-app.add_typer(hooks.app, name="hooks", help="🪝 Manage lifecycle hooks")
-app.add_typer(events.app, name="events", help="📜 View event history & audit log")
-app.add_typer(report.app, name="report", help="📊 Generate reports")
-app.add_typer(web_scraper.app, name="web-scraper", help="🕷️ Regulatory web scraping")
-app.add_typer(plugin.app, name="plugin", help="🔌 Manage plugins")
-app.add_typer(payment_app, name="payment", help="💰 Payment tracking & reconciliation")
+app.add_typer(interactive.app, name="interactive", help="Interactive mode with menus")
+app.add_typer(init.app, name="init", help="Initialize OpenFatture")
+app.add_typer(config.app, name="config", help="Manage configuration")
+app.add_typer(cliente.app, name="cliente", help="Manage clients")
+app.add_typer(fattura.app, name="fattura", help="Manage invoices")
+app.add_typer(preventivo.app, name="preventivo", help="Manage quotes/estimates")
+app.add_typer(pec.app, name="pec", help="PEC configuration and testing")
+app.add_typer(email.app, name="email", help="Email templates & testing")
+app.add_typer(notifiche.app, name="notifiche", help="SDI notifications")
+app.add_typer(batch.app, name="batch", help="Batch operations")
+app.add_typer(ai.app, name="ai", help="AI-powered assistance")
+app.add_typer(lightning.app, name="lightning", help="Lightning Network payments")
+app.add_typer(media.app, name="media", help="Media automation & VHS generation")
+app.add_typer(hooks.app, name="hooks", help="Manage lifecycle hooks")
+app.add_typer(events.app, name="events", help="View event history & audit log")
+app.add_typer(report.app, name="report", help="Generate reports")
+app.add_typer(web_scraper.app, name="web-scraper", help="Regulatory web scraping")
+app.add_typer(plugin.app, name="plugin", help="Manage plugins")
+app.add_typer(payment_app, name="payment", help="Payment tracking & reconciliation")
 
 # Pre-load plugins and register their CLI commands
 try:

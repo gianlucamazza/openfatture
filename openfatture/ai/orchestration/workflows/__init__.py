@@ -4,9 +4,9 @@ This module contains workflow definitions that orchestrate multiple AI agents
 using LangGraph's state machine framework.
 
 Available workflows:
-- InvoiceCreationWorkflow: User input → Description → Tax → Compliance → Create
-- ComplianceCheckWorkflow: Load invoice → Multi-level checks → Report
-- CashFlowAnalysisWorkflow: Load unpaid → Predict → Aggregate → Insights
+- InvoiceCreationWorkflow: User input Description Tax Compliance Create
+- ComplianceCheckWorkflow: Load invoice Multi-level checks Report
+- CashFlowAnalysisWorkflow: Load unpaid Predict Aggregate Insights
 - BatchProcessingWorkflow: Parallel execution with rate limiting
 
 Architecture:

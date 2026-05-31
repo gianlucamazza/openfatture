@@ -671,9 +671,9 @@ async def status() -> None:
         info = await client.get_info()
         channels = await client.list_channels()
 
-        console.print(f"✅ LND Connected: {info.alias}")
-        console.print(f"📊 Channels: {len(channels)} total")
-        console.print(f"💰 Capacity: {sum(c.capacity for c in channels)} sats")
+        console.print(f"LND Connected: {info.alias}")
+        console.print(f"Channels: {len(channels)} total")
+        console.print(f"Capacity: {sum(c.capacity for c in channels)} sats")
 
 @app.command()
 async def invoice_create(
@@ -695,10 +695,10 @@ async def invoice_create(
         expiry_hours=expiry_hours
     )
 
-    console.print(f"⚡ Invoice created: {invoice.id}")
-    console.print(f"💰 Amount: {invoice.amount_eur} EUR ({invoice.amount_sats} sats)")
-    console.print(f"⏰ Expires: {invoice.expiry_time}")
-    console.print(f"📄 Payment Request: {invoice.payment_request}")
+    console.print(f"Invoice created: {invoice.id}")
+    console.print(f"Amount: {invoice.amount_eur} EUR ({invoice.amount_sats} sats)")
+    console.print(f"Expires: {invoice.expiry_time}")
+    console.print(f"Payment Request: {invoice.payment_request}")
 ```
 
 ### Lifespan Management

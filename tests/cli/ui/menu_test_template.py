@@ -20,10 +20,10 @@ Copy this template when adding a new menu, then:
 4. Add integration tests for your specific workflow
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
-from questionary import Choice
 
+import pytest
+from questionary import Choice
 
 # ============================================================================
 # EXAMPLE: Testing a New Menu Function
@@ -36,14 +36,15 @@ def show_example_menu() -> str:
     This demonstrates the CORRECT way to create a menu with Choice objects.
     """
     import questionary
+
     from openfatture.cli.ui.styles import openfatture_style
 
     choices: list[str | Choice] = [
-        Choice(title="➕ Create Item", value="action_create_item"),
-        Choice(title="📋 List Items", value="action_list_items"),
-        Choice(title="✏️  Edit Item", value="action_edit_item"),
+        Choice(title="Create Item", value="action_create_item"),
+        Choice(title="List Items", value="action_list_items"),
+        Choice(title="Edit Item", value="action_edit_item"),
         questionary.Separator(),
-        Choice(title="← Back", value="action_back"),
+        Choice(title="Back", value="action_back"),
     ]
 
     return questionary.select(
@@ -52,7 +53,7 @@ def show_example_menu() -> str:
         use_shortcuts=True,
         use_arrow_keys=True,
         style=openfatture_style,
-        instruction="(Use number keys or arrows ↑↓, ENTER to confirm)",
+        instruction="(Use number keys or arrows , ENTER to confirm)",
     ).ask()
 
 
@@ -104,7 +105,7 @@ class TestExampleMenuDisplay:
         """Test menu returns clean action value, not emoji-laden title.
 
         KEY POINT: The value should be a simple string like 'action_create_item',
-        NOT the full title with emojis like '➕ Create Item'.
+        NOT the full title with emojis like 'Create Item'.
         """
         with patch("questionary.select") as mock_select:
             # Mock questionary to return a clean value
@@ -115,7 +116,7 @@ class TestExampleMenuDisplay:
             # Assertions
             assert result == "action_create_item"
             assert isinstance(result, str)
-            assert "➕" not in result  # No emoji in value
+            assert "" not in result  # No emoji in value
             assert "Create" not in result  # No title text in value
 
     def test_show_example_menu_back_option(self):
@@ -359,12 +360,12 @@ class TestExampleMenuRegression:
 BEST PRACTICES FOR MENU TESTING:
 
 1. **Always Use Choice Objects with Explicit Values**
-   ✅ Choice(title="➕ Create", value="action_create")
-   ❌ "➕ Create" (plain string)
+   Choice(title="Create", value="action_create")
+   "Create" (plain string)
 
 2. **Use Exact Matching in Handlers**
-   ✅ if choice == "action_create":
-   ❌ if "Create" in choice:
+   if choice == "action_create":
+   if "Create" in choice:
 
 3. **Mock questionary.select for Display Tests**
    mock_select.return_value.ask.return_value = "action_value"
@@ -389,10 +390,10 @@ BEST PRACTICES FOR MENU TESTING:
    - Prevent the bug from returning
 
 8. **Use Descriptive Test Names**
-   ✅ test_routes_to_create_action
-   ✅ test_exits_on_none
-   ❌ test_menu_1
-   ❌ test_works
+   test_routes_to_create_action
+   test_exits_on_none
+   test_menu_1
+   test_works
 
 9. **Use Fixtures for Common Setup**
    - @pytest.fixture for mock_menu_select

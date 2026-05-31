@@ -102,7 +102,7 @@
     "console_strings": [
       {
         "id": "fattura.console.create_title",
-        "text": "[bold blue]🧾 Create New Invoice[/bold blue]",
+        "text": "[bold blue]Create New Invoice[/bold blue]",
         "line": 56,
         "type": "panel_title",
         "command": "crea"
@@ -123,7 +123,7 @@
       },
       {
         "id": "fattura.console.client_selected",
-        "text": "[green]✓ Client: {client_name}[/green]",
+        "text": "[green]Client: {client_name}[/green]",
         "line": 78,
         "type": "success",
         "command": "crea",
@@ -145,7 +145,7 @@
       },
       {
         "id": "fattura.console.item_added",
-        "text": "[green]✓ Added: {description} - €{total}[/green]",
+        "text": "[green]Added: {description} - €{total}[/green]",
         "line": 146,
         "type": "success",
         "command": "crea",
@@ -160,7 +160,7 @@
       },
       {
         "id": "fattura.console.created_success",
-        "text": "[bold green]✓ Invoice created successfully![/bold green]",
+        "text": "[bold green]Invoice created successfully![/bold green]",
         "line": 188,
         "type": "success",
         "command": "crea"
@@ -220,7 +220,7 @@
       },
       {
         "id": "fattura.console.xml_generation_title",
-        "text": "[bold blue]🔧 Generating FatturaPA XML[/bold blue]",
+        "text": "[bold blue]Generating FatturaPA XML[/bold blue]",
         "line": 406,
         "type": "panel_title",
         "command": "xml"
@@ -235,7 +235,7 @@
       },
       {
         "id": "fattura.console.xml_error",
-        "text": "[red]❌ Error: {error}[/red]",
+        "text": "[red]Error: {error}[/red]",
         "line": 439,
         "type": "error",
         "command": "xml",
@@ -250,7 +250,7 @@
       },
       {
         "id": "fattura.console.xml_saved",
-        "text": "[green]✓ XML saved to: {path}[/green]",
+        "text": "[green]XML saved to: {path}[/green]",
         "line": 457,
         "type": "success",
         "command": "xml",
@@ -258,7 +258,7 @@
       },
       {
         "id": "fattura.console.xml_generated",
-        "text": "[green]✓ XML generated successfully![/green]",
+        "text": "[green]XML generated successfully![/green]",
         "line": 461,
         "type": "success",
         "command": "xml"
@@ -272,7 +272,7 @@
       },
       {
         "id": "fattura.console.send_title",
-        "text": "[bold blue]📤 Sending Invoice to SDI[/bold blue]",
+        "text": "[bold blue]Sending Invoice to SDI[/bold blue]",
         "line": 506,
         "type": "panel_title",
         "command": "invia"
@@ -286,7 +286,7 @@
       },
       {
         "id": "fattura.console.xml_generated_step",
-        "text": "[green]✓ XML generated[/green]",
+        "text": "[green]XML generated[/green]",
         "line": 529,
         "type": "success",
         "command": "invia"
@@ -300,7 +300,7 @@
       },
       {
         "id": "fattura.console.signature_not_implemented",
-        "text": "[yellow]⚠ Digital signature not yet implemented[/yellow]",
+        "text": "[yellow]Digital signature not yet implemented[/yellow]",
         "line": 533,
         "type": "warning",
         "command": "invia"
@@ -321,7 +321,7 @@
       },
       {
         "id": "fattura.console.xml_gen_failed",
-        "text": "[red]❌ XML generation failed: {error}[/red]",
+        "text": "[red]XML generation failed: {error}[/red]",
         "line": 526,
         "type": "error",
         "command": "invia",
@@ -329,14 +329,14 @@
       },
       {
         "id": "fattura.console.sent_successfully",
-        "text": "[green]✓ Invoice sent to SDI via PEC with professional template[/green]",
+        "text": "[green]Invoice sent to SDI via PEC with professional template[/green]",
         "line": 556,
         "type": "success",
         "command": "invia"
       },
       {
         "id": "fattura.console.send_complete",
-        "text": "[bold green]✓ Invoice {invoice_number} sent successfully![/bold green]",
+        "text": "[bold green]Invoice {invoice_number} sent successfully![/bold green]",
         "line": 575,
         "type": "success",
         "command": "invia",
@@ -344,7 +344,7 @@
       },
       {
         "id": "fattura.console.professional_email_header",
-        "text": "[dim]📧 Professional email sent to SDI with:[/dim]",
+        "text": "[dim]Professional email sent to SDI with:[/dim]",
         "line": 577,
         "type": "info",
         "command": "invia"
@@ -374,7 +374,7 @@
       },
       {
         "id": "fattura.console.notifications_header",
-        "text": "[dim]📬 Automatic notifications:[/dim]",
+        "text": "[dim]Automatic notifications:[/dim]",
         "line": 581,
         "type": "info",
         "command": "invia"
@@ -410,7 +410,7 @@
       },
       {
         "id": "fattura.console.send_failed",
-        "text": "[red]❌ Failed to send: {error}[/red]",
+        "text": "[red]Failed to send: {error}[/red]",
         "line": 594,
         "type": "error",
         "command": "invia",
@@ -654,7 +654,7 @@
       },
       {
         "id": "cliente.console.added_success",
-        "text": "[green]✓ Client added successfully (ID: {id})[/green]",
+        "text": "[green]Client added successfully (ID: {id})[/green]",
         "line": 158,
         "type": "success",
         "variables": ["id"]
@@ -687,7 +687,7 @@
       },
       {
         "id": "cliente.console.deleted",
-        "text": "[green]✓ Client '{name}' deleted[/green]",
+        "text": "[green]Client '{name}' deleted[/green]",
         "line": 307,
         "type": "success",
         "variables": ["name"]
@@ -814,10 +814,10 @@
           "Hourly rate (€)",
           "Project name",
           "Technologies used (comma-separated)",
-          "[bold blue]🤖 AI Invoice Description Generator[/bold blue]",
-          "[bold]📄 Professional Description[/bold]",
-          "[bold cyan]📦 Deliverables:[/bold cyan]",
-          "[bold cyan]🔧 Technical Skills:[/bold cyan]"
+          "[bold blue]AI Invoice Description Generator[/bold blue]",
+          "[bold]Professional Description[/bold]",
+          "[bold cyan]Deliverables:[/bold cyan]",
+          "[bold cyan]Technical Skills:[/bold cyan]"
         ]
       },
       {
@@ -828,10 +828,10 @@
           "Client is Public Administration",
           "Foreign client",
           "Client country code (IT, FR, US, etc.)",
-          "[bold blue]🧾 AI Tax Advisor - Suggerimento Fiscale[/bold blue]",
-          "[bold]📊 Trattamento Fiscale[/bold]",
-          "[bold cyan]📋 Spiegazione:[/bold cyan]",
-          "[bold cyan]📜 Riferimento normativo:[/bold cyan]"
+          "[bold blue]AI Tax Advisor - Suggerimento Fiscale[/bold blue]",
+          "[bold]Trattamento Fiscale[/bold]",
+          "[bold cyan]Spiegazione:[/bold cyan]",
+          "[bold cyan]Riferimento normativo:[/bold cyan]"
         ]
       },
       {
@@ -841,10 +841,10 @@
           "Months to forecast",
           "Filter by client ID",
           "Force model retraining",
-          "[bold blue]💰 AI Cash Flow Forecasting[/bold blue]",
-          "[bold]📊 Cash Flow Summary[/bold]",
+          "[bold blue]AI Cash Flow Forecasting[/bold blue]",
+          "[bold]Cash Flow Summary[/bold]",
           "Monthly Forecast",
-          "[bold]🤖 AI Insights[/bold]"
+          "[bold]AI Insights[/bold]"
         ]
       },
       {
@@ -854,8 +854,8 @@
           "Invoice ID to check",
           "Check level: basic, standard, advanced",
           "[bold]Compliance Status[/bold]",
-          "[red]❌ Errors (Must Fix):[/red]",
-          "[bold yellow]⚠️  Warnings:[/bold yellow]",
+          "[red]Errors (Must Fix):[/red]",
+          "[bold yellow]Warnings:[/bold yellow]",
           "[bold]Next Steps:[/bold]"
         ]
       },
@@ -868,7 +868,7 @@
           "Invoice amount (€)",
           "Require human approval at each step",
           "Confidence threshold for auto-approval (0.0-1.0)",
-          "[bold green]✅ Invoice created successfully![/bold green]"
+          "[bold green]Invoice created successfully![/bold green]"
         ]
       },
       {
@@ -877,7 +877,7 @@
         "key_strings": [
           "Message to send (interactive if not provided)",
           "Enable streaming responses",
-          "[bold blue]🤖 OpenFatture AI Assistant[/bold blue]",
+          "[bold blue]OpenFatture AI Assistant[/bold blue]",
           "Type your questions about invoices, taxes, or business. Type 'exit' to quit.",
           "You:",
           "Assistant:"
@@ -891,8 +891,8 @@
           "Audio sample rate (Hz)",
           "Number of audio channels",
           "Interactive mode (press Enter to record)",
-          "[bold blue]🎤 Voice Chat Assistant[/bold blue]",
-          "[bold yellow]⚠️  Voice features are not enabled in settings.[/bold yellow]"
+          "[bold blue]Voice Chat Assistant[/bold blue]",
+          "[bold yellow]Voice features are not enabled in settings.[/bold yellow]"
         ]
       },
       {
@@ -910,8 +910,8 @@
         "name": "feedback stats",
         "description": "Show user feedback and prediction feedback statistics",
         "key_strings": [
-          "📊 User Feedback Statistics",
-          "🤖 ML Prediction Feedback Statistics",
+          "User Feedback Statistics",
+          "ML Prediction Feedback Statistics",
           "By Type:",
           "By Agent:",
           "By Prediction Type:",
@@ -922,7 +922,7 @@
         "name": "retrain status",
         "description": "Show retraining scheduler status",
         "key_strings": [
-          "🔄 Retraining Scheduler Status",
+          "Retraining Scheduler Status",
           "Enabled:",
           "Running:",
           "Feedback Status:",
@@ -934,7 +934,7 @@
         "name": "status",
         "description": "Show comprehensive self-learning system status",
         "key_strings": [
-          "🤖 Self-Learning System Dashboard",
+          "Self-Learning System Dashboard",
           "═══ RAG Auto-Update ═══",
           "═══ ML Model Retraining ═══",
           "═══ Feedback Collection ═══"
@@ -963,97 +963,97 @@
   "main_command_groups": [
     {
       "name": "interactive",
-      "help": "🎯 Interactive mode with menus",
+      "help": "Interactive mode with menus",
       "line": 186
     },
     {
       "name": "init",
-      "help": "🚀 Initialize OpenFatture",
+      "help": "Initialize OpenFatture",
       "line": 187
     },
     {
       "name": "config",
-      "help": "⚙️  Manage configuration",
+      "help": "Manage configuration",
       "line": 188
     },
     {
       "name": "cliente",
-      "help": "👤 Manage clients",
+      "help": "Manage clients",
       "line": 189
     },
     {
       "name": "fattura",
-      "help": "🧾 Manage invoices",
+      "help": "Manage invoices",
       "line": 190
     },
     {
       "name": "preventivo",
-      "help": "📋 Manage quotes/estimates",
+      "help": "Manage quotes/estimates",
       "line": 191
     },
     {
       "name": "pec",
-      "help": "📧 PEC configuration and testing",
+      "help": "PEC configuration and testing",
       "line": 192
     },
     {
       "name": "email",
-      "help": "📧 Email templates & testing",
+      "help": "Email templates & testing",
       "line": 193
     },
     {
       "name": "notifiche",
-      "help": "📬 SDI notifications",
+      "help": "SDI notifications",
       "line": 194
     },
     {
       "name": "batch",
-      "help": "📦 Batch operations",
+      "help": "Batch operations",
       "line": 195
     },
     {
       "name": "ai",
-      "help": "🤖 AI-powered assistance",
+      "help": "AI-powered assistance",
       "line": 196
     },
     {
       "name": "lightning",
-      "help": "⚡ Lightning Network payments",
+      "help": "Lightning Network payments",
       "line": 197
     },
     {
       "name": "media",
-      "help": "🎬 Media automation & VHS generation",
+      "help": "Media automation & VHS generation",
       "line": 198
     },
     {
       "name": "hooks",
-      "help": "🪝 Manage lifecycle hooks",
+      "help": "Manage lifecycle hooks",
       "line": 199
     },
     {
       "name": "events",
-      "help": "📜 View event history & audit log",
+      "help": "View event history & audit log",
       "line": 200
     },
     {
       "name": "report",
-      "help": "📊 Generate reports",
+      "help": "Generate reports",
       "line": 201
     },
     {
       "name": "web-scraper",
-      "help": "🕷️ Regulatory web scraping",
+      "help": "Regulatory web scraping",
       "line": 202
     },
     {
       "name": "plugin",
-      "help": "🔌 Manage plugins",
+      "help": "Manage plugins",
       "line": 203
     },
     {
       "name": "payment",
-      "help": "💰 Payment tracking & reconciliation",
+      "help": "Payment tracking & reconciliation",
       "line": 204
     }
   ]

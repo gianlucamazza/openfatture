@@ -66,9 +66,9 @@ success, error = sender.send_invoice_to_sdi(
 )
 
 if success:
-    print("✅ Invoice sent to SDI")
+    print("Invoice sent to SDI")
 else:
-    print(f"❌ Error: {error}")
+    print(f"Error: {error}")
 ```
 
 ### 3. Test PEC Configuration
@@ -79,7 +79,7 @@ sender = TemplatePECSender(settings=settings)
 success, error = sender.send_test_email()
 
 if success:
-    print("✅ PEC configuration working!")
+    print("PEC configuration working!")
 ```
 
 ### 4. Automatic SDI Notifications

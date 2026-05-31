@@ -8,27 +8,27 @@
 
 ---
 
-## 📊 Executive Summary
+## Executive Summary
 
 | Metric | Status | Target | Current | Progress |
 |--------|--------|--------|---------|----------|
-| Test Pass Rate | 🟡 | 100% | 91.8% (224/244 passing) | Good |
-| Code Coverage | 🔴 | 80% | 16% | Needs Improvement |
-| Linting Compliance | 🟡 | 100% | ~98% (7 files need formatting) | Good |
-| Security Vulnerabilities | ⏳ | 0 critical | TBD | Pending |
-| GitHub Workflows | ⏳ | 7/7 passing | TBD | Pending |
+| Test Pass Rate | | 100% | 91.8% (224/244 passing) | Good |
+| Code Coverage | | 80% | 16% | Needs Improvement |
+| Linting Compliance | | 100% | ~98% (7 files need formatting) | Good |
+| Security Vulnerabilities | | 0 critical | TBD | Pending |
+| GitHub Workflows | | 7/7 passing | TBD | Pending |
 
-**Overall Grade**: 🟡 **B+ (Functional, needs coverage improvement)**
+**Overall Grade**: **B+ (Functional, needs coverage improvement)**
 
 ---
 
-## ✅ Test Suite Results
+## Test Suite Results
 
 ### Summary
 - **Total Tests Collected**: 1,627 tests
-- **Tests Passed**: 224 ✅
-- **Tests Failed**: 20 ❌
-- **Tests Skipped**: 22 ⏭️
+- **Tests Passed**: 224
+- **Tests Failed**: 20
+- **Tests Skipped**: 22
 - **Execution Time**: 151.88s (2m 31s)
 
 ### Failure Breakdown
@@ -37,25 +37,25 @@
 - `test_latency_variance`: CV=36.45% (acceptable variation on dev machine)
 - `test_batch_indexing_small`: Throughput 4.73 ops/sec (system variability)
 
-**Status**: ✅ **Acceptable** - Performance tests are sensitive to system load
+**Status**: **Acceptable** - Performance tests are sensitive to system load
 
 #### 2. Invoice Workflows (2 failures - Missing pytest.mark.asyncio)
 - `test_invoice_creation_workflow_creates_invoice`: Pydantic validation error
 - `test_compliance_workflow_produces_report`: Pydantic validation error
 
-**Status**: ⚠️ **Fixable** - Need to add `@pytest.mark.asyncio` decorator
+**Status**: **Fixable** - Need to add `@pytest.mark.asyncio` decorator
 
 #### 3. OpenAI Integration Tests (16 failures - Expected)
 - All failures due to missing `OPENFATTURE_AI_OPENAI_API_KEY`
 - Tests are properly skippable with environment variable
 - Tests use `pytest.mark.skipif` but some decorators missing
 
-**Status**: ✅ **Expected** - API key not configured in test environment
+**Status**: **Expected** - API key not configured in test environment
 
 ### Critical Fixes Completed
 
 #### Lightning Network Tests
-**Status**: ✅ **FIXED**
+**Status**: **FIXED**
 
 **Problem**: 2 import errors preventing test collection
 - `MockBTCConverter` not found in `invoice_service.py`
@@ -64,40 +64,40 @@
 **Solution**: Created `tests/lightning/conftest.py` with proper test fixtures
 - Implemented `MockBTCConverter` with EUR/BTC conversion
 - Implemented `MockLNDClient` with valid 66-char hex pubkey
-- Fixed test API mismatches (description → descrizione)
+- Fixed test API mismatches (description descrizione)
 
 **Results**:
-- Collection errors: 14 → 0
-- Tests passing: 0 → 8
-- Tests failing: 0 → 4 (database-dependent, business logic)
-- Tests with errors: 14 → 2 (database initialization)
+- Collection errors: 14 0
+- Tests passing: 0 8
+- Tests failing: 0 4 (database-dependent, business logic)
+- Tests with errors: 14 2 (database initialization)
 
 ---
 
-## 🎯 Module-Specific Analysis
+## Module-Specific Analysis
 
 ### 1. AI Module (Priority: HIGH)
 
-#### RAG Performance Tests ✅
+#### RAG Performance Tests
 - **Status**: 48/48 passing (100%)
 - **Coverage**: Vector store, embeddings, indexing, retrieval, E2E
 - **Performance Targets**: All met (except environment-dependent variance)
 
-#### AI Feedback Service ✅
+#### AI Feedback Service
 - **Status**: 6/6 passing
 - **Coverage**: Feedback storage, predictions, processing
 
-#### AI Agents ✅
+#### AI Agents
 - **Status**: Core agents tested (Invoice Assistant, Ollama integration)
 - **Results**: 27/27 passing for unit tests
 
-#### Areas Needing Work ⚠️
+#### Areas Needing Work
 - OpenAI integration tests: Need API key or better skip decorators
 - Invoice workflows: Missing asyncio markers
 
 ### 2. Payment Module (Priority: HIGH)
 
-**Status**: ⏳ **Not yet tested in this run**
+**Status**: **Not yet tested in this run**
 
 **Previous Status**: 82-96% coverage (Production ready)
 - Matchers: Exact, Fuzzy, Date Window
@@ -108,7 +108,7 @@
 
 ### 3. Core Invoicing (Priority: CRITICAL)
 
-**Status**: ⏳ **Coverage analysis pending**
+**Status**: **Coverage analysis pending**
 
 **Expected Modules**:
 - FatturaPA XML generation
@@ -121,7 +121,7 @@
 
 ### 4. SDI Integration (Priority: CRITICAL)
 
-**Status**: ⏳ **Coverage analysis pending**
+**Status**: **Coverage analysis pending**
 
 **Expected Modules**:
 - PEC email sending
@@ -132,19 +132,19 @@
 
 ### 5. Event System (Priority: HIGH)
 
-**Status**: ✅ **Excellent coverage**
+**Status**: **Excellent coverage**
 
 **Previous Analysis**:
 - Event Persistence: 100% coverage (13 tests)
 - Event Repository: 91% coverage (27 tests)
 - Event Base: 88% coverage
-- Event Analytics: 15% coverage ⚠️ **Needs improvement**
+- Event Analytics: 15% coverage **Needs improvement**
 
-**Action Required**: Improve analytics coverage from 15% → 85%
+**Action Required**: Improve analytics coverage from 15% 85%
 
 ### 6. Web UI (Priority: MEDIUM)
 
-**Status**: ⏳ **Coverage analysis pending**
+**Status**: **Coverage analysis pending**
 
 **Previous Analysis**:
 - 17 tests
@@ -155,7 +155,7 @@
 
 ### 7. Lightning Network (Priority: LOW)
 
-**Status**: 🟡 **Partially functional**
+**Status**: **Partially functional**
 
 **Results**:
 - Tests passing: 8/14
@@ -169,11 +169,11 @@
 
 ---
 
-## 🔧 Code Quality
+## Code Quality
 
 ### Linting (Ruff)
 
-**Status**: 🟡 **98% Compliant**
+**Status**: **98% Compliant**
 
 **Issues Found**:
 1. `openfatture/ai/tools/pdf_tools.py`: Unused import `pathlib.Path`
@@ -184,30 +184,30 @@
 
 ### Formatting (Black)
 
-**Status**: 🟡 **~98% Formatted**
+**Status**: **~98% Formatted**
 
 **Files Needing Formatting (7)**:
 1. `openfatture/ai/tools/pdf_tools.py`
 2. `openfatture/lightning/application/events/handlers.py`
 3. `openfatture/lightning/infrastructure/repository.py`
-4. `openfatture/web/pages/10_🪝_Hooks.py`
-5. `openfatture/web/pages/11_📋_Events.py`
-6. `openfatture/web/pages/9_📊_Reports.py`
-7. `openfatture/web/pages/3_👥_Clienti.py`
+4. `openfatture/web/pages/10_Hooks.py`
+5. `openfatture/web/pages/11_Events.py`
+6. `openfatture/web/pages/9_Reports.py`
+7. `openfatture/web/pages/3_Clienti.py`
 
 **Fix**: Run `uv run black openfatture/`
 
 ### Type Checking (MyPy)
 
-**Status**: ⏳ **Pending**
+**Status**: **Pending**
 
 **Note**: Currently set to `continue-on-error` in CI
 
 ---
 
-## 🔒 Security
+## Security
 
-**Status**: ⏳ **Pending**
+**Status**: **Pending**
 
 **Required Scans**:
 - [ ] Bandit security linter
@@ -217,11 +217,11 @@
 
 ---
 
-## 📝 Recommendations
+## Recommendations
 
 ### Immediate Actions (This Week)
 
-1. ✅ **DONE**: Fix Lightning test import errors
+1. **DONE**: Fix Lightning test import errors
 2. **Format Code**: Run `black` on 7 files
 3. **Fix Linting**: Run `ruff check --fix`
 4. **Add asyncio markers**: Fix 2 invoice workflow tests
@@ -231,9 +231,9 @@
 ### Short Term (Next 2 Weeks)
 
 1. **Improve Core Coverage**:
-   - Core Invoicing: 16% → 90%
-   - SDI Integration: TBD → 85%
-   - Event Analytics: 15% → 85%
+   - Core Invoicing: 16% 90%
+   - SDI Integration: TBD 85%
+   - Event Analytics: 15% 85%
 
 2. **Fix Remaining Test Issues**:
    - Lightning database initialization (2 errors)
@@ -247,44 +247,44 @@
 
 ### Medium Term (Next Month)
 
-1. **Achieve Production Coverage**: 16% → 80%+
+1. **Achieve Production Coverage**: 16% 80%+
 2. **Type Safety**: Enable MyPy strict mode (remove continue-on-error)
 3. **GitHub Workflows**: Validate all 7 workflows passing
 4. **Performance Baselines**: Establish regression detection
 
 ---
 
-## 📋 Detailed Test Breakdown
+## Detailed Test Breakdown
 
 ### Tests Passing by Module
 
 | Module | Tests | Status |
 |--------|-------|--------|
-| AI Cache | 44 | ✅ |
-| AI Feedback | 6 | ✅ |
-| AI RAG | 42 | ✅ |
-| AI RAG Performance | 46 | 🟡 (2 env-dependent failures) |
-| AI Invoice Assistant | 32 | ✅ |
-| AI Ollama | 12 | ✅ |
-| Lightning Basic | 8 | 🟡 (5 pending DB, 1 API fix) |
-| Lightning Liquidity | 0 | ❌ (4 failures) |
-| Payment | - | ⏳ Not tested |
-| Core | - | ⏳ Coverage pending |
-| SDI | - | ⏳ Coverage pending |
-| Web UI | - | ⏳ Coverage pending |
+| AI Cache | 44 | |
+| AI Feedback | 6 | |
+| AI RAG | 42 | |
+| AI RAG Performance | 46 | (2 env-dependent failures) |
+| AI Invoice Assistant | 32 | |
+| AI Ollama | 12 | |
+| Lightning Basic | 8 | (5 pending DB, 1 API fix) |
+| Lightning Liquidity | 0 | (4 failures) |
+| Payment | - | Not tested |
+| Core | - | Coverage pending |
+| SDI | - | Coverage pending |
+| Web UI | - | Coverage pending |
 
 ---
 
-## 🎯 Success Criteria Progress
+## Success Criteria Progress
 
 ### Test Suite
 - [x] Collection: 100% (1,627 tests collected)
 - [ ] Passing: 100% (currently 91.8%)
-- [x] Lightning Import Errors: Fixed ✅
+- [x] Lightning Import Errors: Fixed
 
 ### Coverage
 - [ ] Global: ≥80% (currently 16%)
-- [ ] Payment: ≥80% (previously 82-96% ✅)
+- [ ] Payment: ≥80% (previously 82-96% )
 - [ ] Core Invoicing: ≥90% (TBD)
 - [ ] SDI Integration: ≥85% (TBD)
 - [ ] AI/RAG: ≥75% (TBD)
@@ -299,11 +299,11 @@
 
 ### CI/CD
 - [ ] GitHub Workflows: 7/7 passing (TBD)
-- [x] Performance Regression: Baseline established ✅
+- [x] Performance Regression: Baseline established
 
 ---
 
-## 📊 Next Steps
+## Next Steps
 
 ### Phase 1: Cleanup (Days 1-2)
 1. Run `black` and `ruff --fix`
@@ -331,22 +331,22 @@
 
 ---
 
-## ✅ Validation Report Conclusion
+## Validation Report Conclusion
 
 **Overall Assessment**: Project is **functionally solid** with good test infrastructure, but needs **coverage improvement** before production deployment.
 
 **Strengths**:
-- ✅ Comprehensive test infrastructure (1,627 tests)
-- ✅ RAG performance testing (48/48 passing)
-- ✅ Payment module (production-ready)
-- ✅ Event system (high coverage)
-- ✅ Fixed Lightning import errors
+- Comprehensive test infrastructure (1,627 tests)
+- RAG performance testing (48/48 passing)
+- Payment module (production-ready)
+- Event system (high coverage)
+- Fixed Lightning import errors
 
 **Areas for Improvement**:
-- 🔴 **Coverage**: 16% → 80% (CRITICAL)
-- 🟡 **Linting**: 7 files need formatting
-- ⏳ **Security**: Scan pending
-- ⏳ **Core/SDI**: Coverage unknown
+- **Coverage**: 16% 80% (CRITICAL)
+- **Linting**: 7 files need formatting
+- **Security**: Scan pending
+- **Core/SDI**: Coverage unknown
 
 **Recommendation**: **Proceed with coverage improvement plan** before v1.1.0 production deployment.
 

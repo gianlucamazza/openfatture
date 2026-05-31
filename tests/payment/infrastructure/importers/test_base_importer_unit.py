@@ -131,8 +131,10 @@ def test_import_transactions_parse_error_propagates(db_session: Session, bank_ac
         importer.import_transactions(bank_account)
 
 
-def test_import_transactions_without_bound_session(tmp_path, db_session, bank_account):
+def test_import_transactions_without_bound_session(tmp_path, db_session, bank_account, monkeypatch):
     """When the account is detached, importer should instantiate its own session."""
+    from contextlib import contextmanager
+
     from sqlalchemy.orm import sessionmaker
 
     from openfatture.payment.infrastructure.importers import base as importer_base
@@ -140,29 +142,35 @@ def test_import_transactions_without_bound_session(tmp_path, db_session, bank_ac
     engine = db_session.get_bind()
     session_factory = sessionmaker(bind=engine)
 
-    original_session_local = importer_base.SessionLocal
-    importer_base.SessionLocal = session_factory
+    @contextmanager
+    def fake_db_session():
+        session = session_factory()
+        try:
+            yield session
+        finally:
+            session.close()
 
-    try:
-        detached_account = type(bank_account)(
-            name="Detached",
-            iban="IT60X0542811101000000123457",
-            bic_swift="BCITITMM",
-            bank_name="Intesa Sanpaolo",
-        )
-        file_path = tmp_path / "standalone.csv"
-        file_path.write_text("header\n")
-        tx = _make_transaction(
-            detached_account,
-            amount="100.00",
-            description="Detached transaction",
-            tx_date=date.today(),
-        )
-        importer = DummyImporter(file_path, [tx])
-        result = importer.import_transactions(detached_account)
-        assert result.success_count == 1
-    finally:
-        importer_base.SessionLocal = original_session_local
+    # The importer now creates its own session via the db_session() context
+    # manager; redirect it to the test engine.
+    monkeypatch.setattr(importer_base, "db_session", fake_db_session)
+
+    detached_account = type(bank_account)(
+        name="Detached",
+        iban="IT60X0542811101000000123457",
+        bic_swift="BCITITMM",
+        bank_name="Intesa Sanpaolo",
+    )
+    file_path = tmp_path / "standalone.csv"
+    file_path.write_text("header\n")
+    tx = _make_transaction(
+        detached_account,
+        amount="100.00",
+        description="Detached transaction",
+        tx_date=date.today(),
+    )
+    importer = DummyImporter(file_path, [tx])
+    result = importer.import_transactions(detached_account)
+    assert result.success_count == 1
 
 
 def test_validate_file_errors(tmp_path, bank_account):

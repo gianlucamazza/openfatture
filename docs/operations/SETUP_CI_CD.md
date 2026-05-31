@@ -1,20 +1,20 @@
 # CI/CD Setup Instructions
 
-## ✅ Completed
+## Completed
 
 The following has been set up automatically:
 
-- ✓ Git LFS configuration (`.gitattributes`, `.gitignore`)
-- ✓ GitHub Actions workflows:
+- Git LFS configuration (`.gitattributes`, `.gitignore`)
+- GitHub Actions workflows:
   - `media-generation.yml` - Automated video generation with Anthropic Claude
   - `media-validation.yml` - PR validation for media files
   - `media-optimization.yml` - Post-processing (HD/SD/Mobile/GIF)
-- ✓ Documentation (`docs/CI_CD_MEDIA_AUTOMATION.md`)
-- ✓ Makefile target (`make media-ci`)
-- ✓ Environment example (`.env.demo`)
-- ✓ README badge
+- Documentation (`docs/CI_CD_MEDIA_AUTOMATION.md`)
+- Makefile target (`make media-ci`)
+- Environment example (`.env.demo`)
+- README badge
 
-## 🔧 Manual Steps Required
+## Manual Steps Required
 
 ### 1. Configure GitHub Secret
 
@@ -42,7 +42,7 @@ gh secret set ANTHROPIC_API_KEY
 For production safety, add manual approval requirements:
 
 ```bash
-# 1. Go to: Settings → Environments
+# 1. Go to: Settings Environments
 # 2. Create environment: "media-automation"
 # 3. Enable "Required reviewers"
 # 4. Add 1-2 reviewers
@@ -98,7 +98,7 @@ git commit -m "feat(ci): add CI/CD media automation with Anthropic Claude
 
 Cost: ~$1.50/month for nightly runs with prompt caching
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
@@ -118,7 +118,7 @@ gh workflow run media-generation.yml \
   -f skip_optimization=false
 
 # Option B: Using GitHub Web UI
-# 1. Go to: Actions → Media Generation
+# 1. Go to: Actions Media Generation
 # 2. Click "Run workflow"
 # 3. Select: scenario=A, skip_optimization=false
 # 4. Click "Run workflow"
@@ -126,7 +126,7 @@ gh workflow run media-generation.yml \
 # 6. Download artifacts from the run page
 ```
 
-## 📊 Monitoring
+## Monitoring
 
 ### Check Workflow Status
 
@@ -151,28 +151,28 @@ gh run download <RUN_ID>
 Check README.md for workflow status badges:
 - [![Media Generation](https://github.com/YOUR_USERNAME/openfatture/actions/workflows/media-generation.yml/badge.svg)](https://github.com/YOUR_USERNAME/openfatture/actions/workflows/media-generation.yml)
 
-## 📚 Documentation
+## Documentation
 
 For detailed information, see:
 - **CI/CD Guide**: [`docs/CI_CD_MEDIA_AUTOMATION.md`](docs/CI_CD_MEDIA_AUTOMATION.md)
 - **Media Automation**: [`media/automation/README.md`](media/automation/README.md)
 - **Workflows**: [`.github/workflows/`](.github/workflows/)
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Workflow fails with "ANTHROPIC_API_KEY not set"
-→ Make sure you added the secret in step 1
+Make sure you added the secret in step 1
 
 ### Videos not generated
-→ Check workflow logs: `gh run view <RUN_ID> --log`
+Check workflow logs: `gh run view <RUN_ID> --log`
 
 ### High costs
-→ Review `docs/CI_CD_MEDIA_AUTOMATION.md` for cost optimization tips
+Review `docs/CI_CD_MEDIA_AUTOMATION.md` for cost optimization tips
 
 ### Local testing fails
-→ Run `make media-check` to verify prerequisites
+Run `make media-check` to verify prerequisites
 
-## 🎉 What's Next
+## What's Next
 
 After completing these steps:
 

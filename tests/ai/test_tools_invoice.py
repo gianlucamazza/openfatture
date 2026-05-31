@@ -20,7 +20,7 @@ from openfatture.storage.database.models import Fattura, StatoFattura
 class TestSearchInvoices:
     """Test search_invoices tool function."""
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_search_invoices_basic(self, mock_get_session):
         """Test basic invoice search without filters."""
         # Mock database session
@@ -66,7 +66,7 @@ class TestSearchInvoices:
         mock_session.query.assert_called_once_with(Fattura)
         mock_session.close.assert_called_once()
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_search_invoices_with_query(self, mock_get_session):
         """Test invoice search with text query."""
         mock_session = MagicMock(spec=Session)
@@ -88,7 +88,7 @@ class TestSearchInvoices:
         assert mock_query.filter.call_count >= 1
         assert result["count"] == 0
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_search_invoices_with_year_filter(self, mock_get_session):
         """Test invoice search filtered by year."""
         mock_session = MagicMock(spec=Session)
@@ -108,7 +108,7 @@ class TestSearchInvoices:
         assert mock_query.filter.call_count >= 1
         assert result["count"] == 0
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_search_invoices_with_status_filter(self, mock_get_session):
         """Test invoice search filtered by status."""
         mock_session = MagicMock(spec=Session)
@@ -128,7 +128,7 @@ class TestSearchInvoices:
         assert mock_query.filter.call_count >= 1
         assert result["count"] == 0
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_search_invoices_database_error(self, mock_get_session):
         """Test invoice search with database error."""
         mock_session = MagicMock(spec=Session)
@@ -166,7 +166,7 @@ class TestSearchInvoices:
 class TestGetInvoiceDetails:
     """Test get_invoice_details tool function."""
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_get_invoice_details_success(self, mock_get_session):
         """Test successful invoice details retrieval."""
         # Mock database session
@@ -225,7 +225,7 @@ class TestGetInvoiceDetails:
 
         mock_session.close.assert_called_once()
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_get_invoice_details_not_found(self, mock_get_session):
         """Test invoice details for non-existent invoice."""
         mock_session = MagicMock(spec=Session)
@@ -243,7 +243,7 @@ class TestGetInvoiceDetails:
         assert "error" in result
         assert "Fattura 999 non trovata" in result["error"]
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_get_invoice_details_no_client(self, mock_get_session):
         """Test invoice details when invoice has no associated client."""
         mock_session = MagicMock(spec=Session)
@@ -283,7 +283,7 @@ class TestGetInvoiceDetails:
 class TestGetInvoiceStats:
     """Test get_invoice_stats tool function."""
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_get_invoice_stats_success(self, mock_get_session):
         """Test successful invoice statistics retrieval."""
         mock_session = MagicMock(spec=Session)
@@ -348,7 +348,7 @@ class TestGetInvoiceStats:
         assert result["per_stato"]["da_inviare"] == 3
         assert result["importo_totale"] == 3000.0
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_get_invoice_stats_current_year(self, mock_get_session):
         """Test invoice stats for current year when no year specified."""
         mock_session = MagicMock(spec=Session)
@@ -387,7 +387,7 @@ class TestGetInvoiceStats:
         assert "anno" in result
         # Should use current year (mocked datetime would be needed for full test)
 
-    @patch("openfatture.ai.tools.invoice_tools.get_session")
+    @patch("openfatture.ai.tools.invoice_tools._db.get_session")
     def test_get_invoice_stats_database_error(self, mock_get_session):
         """Test invoice stats with database error."""
         mock_session = MagicMock(spec=Session)

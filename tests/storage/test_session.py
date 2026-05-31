@@ -10,17 +10,16 @@ Tests cover:
 - Integration with actual database operations
 """
 
-import asyncio
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
+import pytest
+
+from openfatture.storage.database.models import Cliente
 from openfatture.storage.session import (
-    db_session,
     async_db_session,
+    db_session,
     get_db_session,
 )
-from openfatture.storage.database.models import Cliente
-
 
 # ============================================================================
 # db_session Context Manager Tests

@@ -39,7 +39,7 @@ class ReconciliationService:
 
     This service manages the complete lifecycle of payment reconciliation:
     - Validation of reconciliation operations
-    - State transitions (UNMATCHED → MATCHED → IGNORED)
+    - State transitions (UNMATCHED MATCHED IGNORED)
     - Payment amount updates
     - Domain event emission
     - Rollback capabilities

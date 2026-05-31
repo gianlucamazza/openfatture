@@ -375,33 +375,33 @@ class ComplianceChecker:
 
         if len(errors) > 0:
             report.recommendations.append(
-                f"⚠️  Correggere {len(errors)} errori critici prima dell'invio a SDI"
+                f"Correggere {len(errors)} errori critici prima dell'invio a SDI"
             )
 
         if len(warnings) > 5:
             report.recommendations.append(
-                f"⚡ Risolvere {len(warnings)} avvisi per ridurre il rischio di scarto"
+                f"Risolvere {len(warnings)} avvisi per ridurre il rischio di scarto"
             )
 
         if report.risk_score > 50:
             report.recommendations.append(
-                "🔍 Fattura ad alto rischio - revisione accurata consigliata"
+                "Fattura ad alto rischio - revisione accurata consigliata"
             )
 
         # Specific recommendations based on issue types
         issue_codes = {issue.code for issue in report.validation_issues}
 
         if "FPA012" in issue_codes or "FPA013" in issue_codes:
-            report.recommendations.append("📋 Verificare i dati fiscali del cliente (P.IVA/CF)")
+            report.recommendations.append("Verificare i dati fiscali del cliente (P.IVA/CF)")
 
         if "FPA018" in issue_codes:
-            report.recommendations.append("📬 Richiedere Codice Destinatario o PEC al cliente")
+            report.recommendations.append("Richiedere Codice Destinatario o PEC al cliente")
 
         if any("FPA03" in code for code in issue_codes):
-            report.recommendations.append("📅 Controllare le date (emissione, scadenza)")
+            report.recommendations.append("Controllare le date (emissione, scadenza)")
 
         if any("FPA04" in code or "FPA07" in code for code in issue_codes):
-            report.recommendations.append("💰 Ricalcolare gli importi e verificare i totali")
+            report.recommendations.append("Ricalcolare gli importi e verificare i totali")
 
     def _calculate_final_scores(self, report: ComplianceReport) -> None:
         """Calculate final compliance and risk scores."""

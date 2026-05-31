@@ -164,9 +164,11 @@ class TestPECSenderRetryLogic:
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
         """Test retry logic for transient SMTP errors with unified retry."""
+
         # Make mock_sleep async-compatible
         async def async_sleep(_):
             pass
+
         mock_sleep.side_effect = async_sleep
         # Arrange
         xml_path = tmp_path / "invoice.xml"
@@ -203,8 +205,10 @@ class TestPECSenderRetryLogic:
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
         """Test that authentication errors are not retried (modern retry)."""
+
         async def async_sleep(_):
             pass
+
         mock_sleep.side_effect = async_sleep
         # Arrange
         xml_path = tmp_path / "invoice.xml"
@@ -234,8 +238,10 @@ class TestPECSenderRetryLogic:
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
         """Test behavior when max retries are exceeded (modern retry)."""
+
         async def async_sleep(_):
             pass
+
         mock_sleep.side_effect = async_sleep
         # Arrange
         xml_path = tmp_path / "invoice.xml"
@@ -264,8 +270,10 @@ class TestPECSenderRetryLogic:
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
         """Test exponential backoff increases delay between retries (modern retry)."""
+
         async def async_sleep(_):
             pass
+
         mock_sleep.side_effect = async_sleep
         # Arrange
         xml_path = tmp_path / "invoice.xml"

@@ -9,17 +9,17 @@ cli-main-description = Sistema completo para gestionar facturas electrónicas Fa
 cli-main-version = Versión { $version }
 
 ### main - Command Groups
-cli-main-group-invoices = 📄 Gestión de Facturas
-cli-main-group-clients = 👥 Gestión de Clientes
-cli-main-group-products = 📦 Gestión de Productos
-cli-main-group-pec = 📧 PEC y SDI
-cli-main-group-batch = 📊 Operaciones por Lotes
-cli-main-group-ai = 🤖 Asistente IA
-cli-main-group-payments = 💰 Seguimiento de Pagos
-cli-main-group-preventivi = 📋 Presupuestos
-cli-main-group-events = 📅 Sistema de Eventos
-cli-main-group-lightning = ⚡ Red Lightning
-cli-main-group-web = 🌐 Interfaz Web
+cli-main-group-invoices = Gestión de Facturas
+cli-main-group-clients = Gestión de Clientes
+cli-main-group-products = Gestión de Productos
+cli-main-group-pec = PEC y SDI
+cli-main-group-batch = Operaciones por Lotes
+cli-main-group-ai = Asistente IA
+cli-main-group-payments = Seguimiento de Pagos
+cli-main-group-preventivi = Presupuestos
+cli-main-group-events = Sistema de Eventos
+cli-main-group-lightning = Red Lightning
+cli-main-group-web = Interfaz Web
 
 ## FATTURA Commands
 
@@ -42,12 +42,12 @@ cli-fattura-help-no-validate = Omitir validación XSD
 cli-fattura-help-pec = Enviar vía PEC
 
 ### fattura - Console Output
-cli-fattura-create-title = [bold blue]🧾 Crear Nueva Factura[/bold blue]
+cli-fattura-create-title = [bold blue]Crear Nueva Factura[/bold blue]
 cli-fattura-select-client-title = [bold cyan]Selección de Cliente[/bold cyan]
 cli-fattura-no-clients-error = [red]No se encontraron clientes. Añade uno primero con 'cliente add'[/red]
 cli-fattura-available-clients = [cyan]Clientes disponibles:[/cyan]
 cli-fattura-client-prompt = Número de cliente
-cli-fattura-client-selected = [green]✓ Cliente: { $client_name }[/green]
+cli-fattura-client-selected = [green]Cliente: { $client_name }[/green]
 cli-fattura-invalid-client-error = [red]Selección de cliente no válida[/red]
 
 cli-fattura-add-lines-title = [bold cyan]Líneas de Factura[/bold cyan]
@@ -55,7 +55,7 @@ cli-fattura-line-description-prompt = Descripción (vacío para terminar)
 cli-fattura-line-quantity-prompt = Cantidad
 cli-fattura-line-unit-price-prompt = Precio unitario (€)
 cli-fattura-line-vat-rate-prompt = Tasa de IVA (%)
-cli-fattura-line-added = [green]✓ Línea añadida: { $description } - € { $amount }[/green]
+cli-fattura-line-added = [green]Línea añadida: { $description } - € { $amount }[/green]
 
 cli-fattura-payment-terms-title = [bold cyan]Condiciones de Pago[/bold cyan]
 cli-fattura-payment-condition-prompt = Condición de pago (TP01=Por pagar, TP02=Pagado)
@@ -76,7 +76,7 @@ cli-fattura-summary-total = [bold]Total: € { $total }[/bold]
 cli-fattura-summary-stamp = Sello fiscal: € { $stamp }
 
 cli-fattura-confirm-prompt = [yellow]¿Confirmar creación?[/yellow]
-cli-fattura-created-success = [bold green]✓ Factura creada exitosamente![/bold green]
+cli-fattura-created-success = [bold green]Factura creada exitosamente![/bold green]
 cli-fattura-created-number = [green]Número de factura: { $numero }/{ $anno }[/green]
 cli-fattura-created-xml = [green]XML guardado: { $xml_path }[/green]
 
@@ -89,7 +89,7 @@ cli-fattura-show-not-found = [red]Factura no encontrada: { $numero }/{ $anno }[/
 cli-fattura-delete-confirm = [yellow]¿Eliminar factura { $numero }/{ $anno }?[/yellow]
 cli-fattura-delete-warning = [red]ADVERTENCIA: Esta operación no se puede deshacer[/red]
 cli-fattura-delete-status-restriction = [red]No se puede eliminar factura en estado '{ $status }'[/red]
-cli-fattura-delete-success = [green]✓ Factura { $numero }/{ $anno } eliminada[/green]
+cli-fattura-delete-success = [green]Factura { $numero }/{ $anno } eliminada[/green]
 cli-fattura-delete-cancelled = [yellow]Operación cancelada[/yellow]
 cli-fattura-delete-cannot-delete-sent = [red]No se pueden eliminar facturas en estado INVIATA o CONSEGNATA[/red]
 cli-fattura-cancelled = Cancelado.
@@ -100,15 +100,15 @@ cli-fattura-invalid-status = [red]Estado no válido: { $status }[/red]
 cli-fattura-line-items-header = Líneas de Factura
 cli-fattura-totals-header = Totales
 
-cli-fattura-xml-generation-title = [bold blue]🔧 Generación XML FatturaPA[/bold blue]
+cli-fattura-xml-generation-title = [bold blue]Generación XML FatturaPA[/bold blue]
 cli-fattura-generating-xml = Generando XML para factura { $numero }/{ $anno }...
-cli-fattura-xml-generated = [green]✓ XML generado con éxito![/green]
+cli-fattura-xml-generated = [green]XML generado con éxito![/green]
 
-cli-fattura-send-title = [bold blue]📤 Envío de Factura a SDI[/bold blue]
+cli-fattura-send-title = [bold blue]Envío de Factura a SDI[/bold blue]
 cli-fattura-send-step1-xml = [cyan]1. Generando XML...[/cyan]
-cli-fattura-sent-success-message = [bold green]✓ Factura { $numero }/{ $anno } enviada con éxito![/bold green]
+cli-fattura-sent-success-message = [bold green]Factura { $numero }/{ $anno } enviada con éxito![/bold green]
 
-cli-fattura-validate-success = [green]✓ XML válido[/green]
+cli-fattura-validate-success = [green]XML válido[/green]
 cli-fattura-validate-error = [red]Se encontraron errores de validación:[/red]
 
 cli-fattura-table-numero = Nº
@@ -153,10 +153,10 @@ cli-cliente-name-required = [red]Error: El nombre del cliente es obligatorio[/re
 cli-cliente-no-clients = [yellow]No se encontraron clientes. Añade uno con 'cliente add'[/yellow]
 cli-cliente-list-title = Clientes ({ $count })
 cli-cliente-list-empty = [yellow]No se encontraron clientes[/yellow]
-cli-cliente-added-success = [green]✓ Cliente añadido exitosamente (ID: { $id })[/green]
-cli-cliente-updated-success = [green]✓ Cliente actualizado exitosamente[/green]
-cli-cliente-deleted-success = [green]✓ Cliente eliminado exitosamente[/green]
-cli-cliente-deleted = [green]✓ Cliente '{ $name }' eliminado[/green]
+cli-cliente-added-success = [green]Cliente añadido exitosamente (ID: { $id })[/green]
+cli-cliente-updated-success = [green]Cliente actualizado exitosamente[/green]
+cli-cliente-deleted-success = [green]Cliente eliminado exitosamente[/green]
+cli-cliente-deleted = [green]Cliente '{ $name }' eliminado[/green]
 cli-cliente-cancelled = Cancelado.
 cli-cliente-not-found = [red]Cliente no encontrado: { $id }[/red]
 cli-cliente-has-invoices = [yellow]Advertencia: Este cliente tiene { $count } { $count ->
@@ -234,14 +234,14 @@ cli-batch-help-stato = Filtrar por estado
 cli-batch-help-limit = Número máximo de resultados
 
 ### batch - Console Output (import)
-cli-batch-import-title = [bold blue]📦 Importación por Lotes de Facturas[/bold blue]
-cli-batch-file-not-found = [red]❌ Archivo no encontrado: { $file }[/red]
+cli-batch-import-title = [bold blue]Importación por Lotes de Facturas[/bold blue]
+cli-batch-file-not-found = [red]Archivo no encontrado: { $file }[/red]
 cli-batch-file-info-name = [cyan]Archivo:[/cyan] { $name }
 cli-batch-file-info-size = [cyan]Tamaño:[/cyan] { $size } bytes
 cli-batch-mode-dry-run = [cyan]Modo:[/cyan] Dry run (solo validación)
 cli-batch-mode-import = [cyan]Modo:[/cyan] Importación
-cli-batch-dry-run-warning = [yellow]⚠ Modo dry run - no se guardarán datos[/yellow]
-cli-batch-warning-dry-run = [yellow]⚠ Modo dry run - no se guardarán datos[/yellow]
+cli-batch-dry-run-warning = [yellow]Modo dry run - no se guardarán datos[/yellow]
+cli-batch-warning-dry-run = [yellow]Modo dry run - no se guardarán datos[/yellow]
 
 cli-batch-results-title = [bold]Resultados de Importación:[/bold]
 cli-batch-metric-total = Filas totales
@@ -256,35 +256,35 @@ cli-batch-metric-value = Valor
 cli-batch-errors-title = [bold red]Errores:[/bold red]
 cli-batch-errors-more = [dim]... y { $count } errores más[/dim]
 
-cli-batch-success-all = [bold green]✓ ¡Todas las facturas importadas exitosamente![/bold green]
-cli-batch-warning-failed = [yellow]⚠ { $count } facturas no importadas[/yellow]
+cli-batch-success-all = [bold green]¡Todas las facturas importadas exitosamente![/bold green]
+cli-batch-warning-failed = [yellow]{ $count } facturas no importadas[/yellow]
 
 cli-batch-email-not-configured = [yellow]Notificación por correo no configurada.[/yellow]
 cli-batch-sending-email = [dim]Enviando resumen por correo...[/dim]
 cli-batch-email-sending = [dim]Enviando resumen por correo...[/dim]
-cli-batch-email-sent = [dim]📧 Resumen enviado a { $email }[/dim]
-cli-batch-email-failed = [yellow]⚠ Error al enviar resumen: { $error }[/yellow]
+cli-batch-email-sent = [dim]Resumen enviado a { $email }[/dim]
+cli-batch-email-failed = [yellow]Error al enviar resumen: { $error }[/yellow]
 
-cli-batch-error-general = [red]❌ Error: { $error }[/red]
+cli-batch-error-general = [red]Error: { $error }[/red]
 
 ### batch - Console Output (export)
-cli-batch-export-title = [bold blue]📦 Exportación por Lotes de Facturas[/bold blue]
+cli-batch-export-title = [bold blue]Exportación por Lotes de Facturas[/bold blue]
 cli-batch-filter-year = [cyan]Filtro:[/cyan] Año = { $anno }
 cli-batch-filter-status = [cyan]Filtro:[/cyan] Estado = { $stato }
 cli-batch-invalid-status = [red]Estado no válido: { $stato }[/red]
 cli-batch-no-invoices = [yellow]No se encontraron facturas[/yellow]
 cli-batch-invoices-count = [cyan]Facturas:[/cyan] { $count }
 
-cli-batch-export-success = [bold green]✓ ¡{ $count } facturas exportadas![/bold green]
+cli-batch-export-success = [bold green]¡{ $count } facturas exportadas![/bold green]
 cli-batch-export-file-path = [cyan]Archivo:[/cyan] { $path }
 cli-batch-export-file = [cyan]Archivo:[/cyan] { $path }
 cli-batch-export-file-size = [cyan]Tamaño:[/cyan] { $size } bytes
 cli-batch-export-size = [cyan]Tamaño:[/cyan] { $size } bytes
-cli-batch-export-failed = [red]❌ Exportación fallida[/red]
+cli-batch-export-failed = [red]Exportación fallida[/red]
 
 ### batch - Console Output (history)
-cli-batch-history-title = [bold blue]📦 Historial de Operaciones por Lotes[/bold blue]
-cli-batch-history-not-implemented = [yellow]⚠ Seguimiento de historial no implementado completamente aún[/yellow]
+cli-batch-history-title = [bold blue]Historial de Operaciones por Lotes[/bold blue]
+cli-batch-history-not-implemented = [yellow]Seguimiento de historial no implementado completamente aún[/yellow]
 cli-batch-history-future-features = [dim]En producción, mostrará:[/dim]
 cli-batch-history-will-show = [dim]En producción, mostrará:[/dim]
 cli-batch-history-feature-datetime = • Fecha/hora de la operación
@@ -325,12 +325,12 @@ cli-preventivo-help-tipo-documento = Tipo de documento de factura (TD01, TD06, e
 cli-preventivo-help-new-stato = Nuevo estado (borrador, enviado, aceptado, rechazado, vencido)
 
 ### preventivo - Console Output (crea)
-cli-preventivo-create-title = [bold blue]📋 Crear Nuevo Presupuesto[/bold blue]
+cli-preventivo-create-title = [bold blue]Crear Nuevo Presupuesto[/bold blue]
 cli-preventivo-no-clients = [red]No se encontraron clientes. Agregue primero un cliente con 'openfatture cliente add'[/red]
 cli-preventivo-select-client = [cyan]Clientes disponibles:[/cyan]
 cli-preventivo-client-id-prompt = Seleccione ID del cliente
 cli-preventivo-client-not-found = [red]Cliente { $id } no encontrado[/red]
-cli-preventivo-client-selected = [green]✓ Cliente: { $name }[/green]
+cli-preventivo-client-selected = [green]Cliente: { $name }[/green]
 cli-preventivo-validity-info = [dim]Validez: { $days } días (vencimiento: { $date })[/dim]
 
 cli-preventivo-add-items-title = [bold]Agregar líneas[/bold]
@@ -340,7 +340,7 @@ cli-preventivo-item-quantity-prompt = Cantidad
 cli-preventivo-item-price-prompt = Precio unitario (€)
 cli-preventivo-item-vat-prompt = Tasa de IVA (%)
 cli-preventivo-item-unit-prompt = Unidad de medida
-cli-preventivo-item-added = [green]✓ Agregado: { $desc } - €{ $total }[/green]
+cli-preventivo-item-added = [green]Agregado: { $desc } - €{ $total }[/green]
 
 cli-preventivo-no-items = [yellow]No se agregaron líneas. Creación de presupuesto cancelada.[/yellow]
 cli-preventivo-add-notes-prompt = ¿Agregar notas?
@@ -348,8 +348,8 @@ cli-preventivo-notes-prompt = Notas
 cli-preventivo-add-conditions-prompt = ¿Agregar términos y condiciones?
 cli-preventivo-conditions-prompt = Términos y condiciones
 
-cli-preventivo-error-general = [red]❌ Error: { $error }[/red]
-cli-preventivo-created-success = [bold green]✓ ¡Presupuesto creado exitosamente![/bold green]
+cli-preventivo-error-general = [red]Error: { $error }[/red]
+cli-preventivo-created-success = [bold green]¡Presupuesto creado exitosamente![/bold green]
 cli-preventivo-next-convert = [dim]Siguiente: openfatture preventivo converti { $id } (para crear factura)[/dim]
 
 ### preventivo - Console Output (lista)
@@ -376,7 +376,7 @@ cli-preventivo-field-expiration = Fecha de vencimiento
 cli-preventivo-field-validity = Validez
 cli-preventivo-field-validity-days = { $days } días
 cli-preventivo-field-status = Estado
-cli-preventivo-warning-expired = [red]⚠ ADVERTENCIA[/red]
+cli-preventivo-warning-expired = [red]ADVERTENCIA[/red]
 cli-preventivo-expired = [red]¡Vencido![/red]
 
 cli-preventivo-line-items-title = [bold]Líneas:[/bold]
@@ -398,10 +398,10 @@ cli-preventivo-conditions-title = [bold]Términos y Condiciones:[/bold]
 ### preventivo - Console Output (delete)
 cli-preventivo-confirm-delete = ¿Eliminar presupuesto { $numero }/{ $anno }?
 cli-preventivo-cancelled = Cancelado.
-cli-preventivo-deleted = [green]✓ Presupuesto { $numero }/{ $anno } eliminado[/green]
+cli-preventivo-deleted = [green]Presupuesto { $numero }/{ $anno } eliminado[/green]
 
 ### preventivo - Console Output (converti)
-cli-preventivo-convert-title = [bold blue]🔄 Conversión de Presupuesto a Factura[/bold blue]
+cli-preventivo-convert-title = [bold blue]Conversión de Presupuesto a Factura[/bold blue]
 cli-preventivo-convert-summary-numero = [cyan]Presupuesto: { $numero }/{ $anno }[/cyan]
 cli-preventivo-convert-summary-client = [cyan]Cliente: { $name }[/cyan]
 cli-preventivo-convert-summary-total = [cyan]Total: €{ $total }[/cyan]
@@ -409,7 +409,7 @@ cli-preventivo-invalid-doc-type = [red]Tipo de documento no válido: { $tipo }[/
 cli-preventivo-valid-doc-types = Válidos: TD01, TD06, etc.
 cli-preventivo-confirm-convert = ¿Convertir a factura?
 cli-preventivo-convert-cancelled = [yellow]Cancelado.[/yellow]
-cli-preventivo-converted-success = [bold green]✓ ¡Presupuesto convertido exitosamente![/bold green]
+cli-preventivo-converted-success = [bold green]¡Presupuesto convertido exitosamente![/bold green]
 
 cli-preventivo-invoice-title = Factura { $numero }/{ $anno }
 cli-preventivo-invoice-field-client = Cliente
@@ -425,7 +425,7 @@ cli-preventivo-original-preventivo-info = [dim]Presupuesto original: { $numero }
 cli-preventivo-next-send = [dim]Siguiente: openfatture fattura invia { $id } --pec[/dim]
 
 ### preventivo - Console Output (aggiorna-stato)
-cli-preventivo-status-updated = [green]✓ Estado del presupuesto actualizado: { $stato }[/green]
+cli-preventivo-status-updated = [green]Estado del presupuesto actualizado: { $stato }[/green]
 
 ## AI Commands
 
@@ -477,7 +477,7 @@ cli-ai-help-ateco-code = Código ATECO
 cli-ai-help-chat-message = Mensaje a enviar al chat
 
 ### ai - Console Output (describe)
-cli-ai-describe-title = [bold cyan]🤖 Generación de Descripción de Factura con IA[/bold cyan]
+cli-ai-describe-title = [bold cyan]Generación de Descripción de Factura con IA[/bold cyan]
 cli-ai-describe-input-prompt = [cyan]Ingrese descripción breve:[/cyan]
 cli-ai-describe-processing = [yellow]Procesando con IA...[/yellow]
 cli-ai-describe-result-title = [bold green]Descripción Generada:[/bold green]
@@ -499,18 +499,18 @@ cli-ai-describe-input-amount = Importe
 cli-ai-describe-input-ateco = Código ATECO
 
 ### ai - Console Output (suggest-vat)
-cli-ai-vat-title = [bold cyan]🧾 Sugerencia de Tasa de IVA con IA[/bold cyan]
+cli-ai-vat-title = [bold cyan]Sugerencia de Tasa de IVA con IA[/bold cyan]
 cli-ai-vat-input-prompt = [cyan]Descripción del servicio/producto:[/cyan]
 cli-ai-vat-processing = [yellow]Analizando con IA...[/yellow]
 cli-ai-vat-result-title = [bold green]Tasa de IVA Sugerida:[/bold green]
 cli-ai-vat-rate = [white]{ $rate }%[/white]
 cli-ai-vat-reasoning-title = [bold yellow]Razonamiento:[/bold yellow]
 cli-ai-vat-reasoning-text = [white]{ $reasoning }[/white]
-cli-ai-vat-warning = [yellow]⚠️  Siempre verifique con un asesor fiscal para casos complejos[/yellow]
+cli-ai-vat-warning = [yellow]Siempre verifique con un asesor fiscal para casos complejos[/yellow]
 cli-ai-vat-error = [red]Error al sugerir tasa de IVA: { $error }[/red]
 cli-ai-vat-query = Consulta: [yellow]{ $query }[/yellow]
 cli-ai-vat-analyzing = Analizando normativa IVA...
-cli-ai-vat-disclaimer = [yellow]⚠ Esta es una sugerencia. Consulte siempre a un contador.[/yellow]
+cli-ai-vat-disclaimer = [yellow]Esta es una sugerencia. Consulte siempre a un contador.[/yellow]
 cli-ai-vat-processing = Procesando sugerencia de IVA...
 cli-ai-vat-input-service = Servicio
 cli-ai-vat-input-client-pa = Cliente PA
@@ -528,27 +528,27 @@ cli-ai-vat-result-warnings = Advertencias
 cli-ai-vat-result-note = Nota adicional
 
 ### ai - Console Output (chat)
-cli-ai-chat-title = [bold cyan]💬 Chat con IA[/bold cyan]
+cli-ai-chat-title = [bold cyan]Chat con IA[/bold cyan]
 cli-ai-chat-welcome = [cyan]¡Bienvenido al Asistente de IA de OpenFatture![/cyan]
 cli-ai-chat-welcome-help = [dim]Escriba sus preguntas o 'exit' para salir[/dim]
-cli-ai-chat-session-loaded = [green]✓ Sesión cargada: { $session_id }[/green]
-cli-ai-chat-session-created = [green]✓ Nueva sesión creada: { $session_id }[/green]
+cli-ai-chat-session-loaded = [green]Sesión cargada: { $session_id }[/green]
+cli-ai-chat-session-created = [green]Nueva sesión creada: { $session_id }[/green]
 cli-ai-chat-prompt = [bold cyan]Usted:[/bold cyan]
 cli-ai-chat-assistant-prefix = [bold green]Asistente:[/bold green]
 cli-ai-chat-thinking = [yellow]Pensando...[/yellow]
 cli-ai-chat-tool-calling = [yellow]Ejecutando herramienta: { $tool_name }[/yellow]
 cli-ai-chat-tool-result = [dim]Resultado de herramienta: { $result }[/dim]
-cli-ai-chat-session-saved = [green]✓ Sesión guardada[/green]
+cli-ai-chat-session-saved = [green]Sesión guardada[/green]
 cli-ai-chat-goodbye = [cyan]¡Adiós! Sesión guardada.[/cyan]
 cli-ai-chat-error = [red]Error: { $error }[/red]
 cli-ai-chat-cost-info = [dim]Tokens: { $tokens } | Costo: €{ $cost }[/dim]
 cli-ai-chat-assistant-response = [bold cyan]Asistente:[/bold cyan]
 cli-ai-chat-you = [bold green]Usted:[/bold green]
 cli-ai-chat-instructions = Instrucciones: Haga preguntas sobre facturas, clientes, IVA o gestión fiscal
-cli-ai-chat-invalid-session = [red]❌ Sesión no encontrada: { $session_id }[/red]
+cli-ai-chat-invalid-session = [red]Sesión no encontrada: { $session_id }[/red]
 cli-ai-chat-no-sessions = [yellow]No hay sesiones disponibles[/yellow]
-cli-ai-chat-exported = [green]✓ Conversación exportada: { $path }[/green]
-cli-ai-chat-export-error = [red]❌ Error de exportación: { $error }[/red]
+cli-ai-chat-exported = [green]Conversación exportada: { $path }[/green]
+cli-ai-chat-export-error = [red]Error de exportación: { $error }[/red]
 
 ### Métricas de IA
 cli-ai-metrics-provider = Proveedor
@@ -563,10 +563,10 @@ cli-ai-error-provider-init = Error de inicialización del proveedor de IA: { $er
 cli-ai-error-context-load = Error al cargar contexto empresarial: { $error }
 
 ### ai - Console Output (voice-chat)
-cli-ai-voice-title = [bold cyan]🎤 Chat de Voz con IA[/bold cyan]
+cli-ai-voice-title = [bold cyan]Chat de Voz con IA[/bold cyan]
 cli-ai-voice-welcome = [cyan]¡Bienvenido al Chat de Voz![/cyan]
 cli-ai-voice-recording-prompt = [yellow]Presione ENTER para comenzar a grabar ({ $duration }s)...[/yellow]
-cli-ai-voice-recording = [bold yellow]🔴 Grabando...[/bold yellow]
+cli-ai-voice-recording = [bold yellow]Grabando...[/bold yellow]
 cli-ai-voice-processing = [yellow]Procesando audio...[/yellow]
 cli-ai-voice-transcription-title = [bold green]Usted dijo:[/bold green]
 cli-ai-voice-transcription-text = [white]{ $text }[/white]
@@ -574,19 +574,19 @@ cli-ai-voice-language-detected = [dim]Idioma: { $language }[/dim]
 cli-ai-voice-thinking = [yellow]Asistente pensando...[/yellow]
 cli-ai-voice-response-title = [bold green]Asistente:[/bold green]
 cli-ai-voice-response-text = [white]{ $text }[/white]
-cli-ai-voice-playing = [cyan]🔊 Reproduciendo respuesta...[/cyan]
+cli-ai-voice-playing = [cyan]Reproduciendo respuesta...[/cyan]
 cli-ai-voice-audio-saved = [dim]Audio guardado: { $path }[/dim]
 cli-ai-voice-goodbye = [cyan]¡Adiós![/cyan]
 cli-ai-voice-error = [red]Error: { $error }[/red]
 
 ### ai - Console Output (forecast)
-cli-ai-forecast-title = [bold cyan]📊 Pronóstico de Flujo de Caja con IA[/bold cyan]
+cli-ai-forecast-title = [bold cyan]Pronóstico de Flujo de Caja con IA[/bold cyan]
 cli-ai-forecast-loading-data = [yellow]Cargando datos históricos...[/yellow]
 cli-ai-forecast-data-stats = [cyan]Facturas: { $invoices } | Pagos: { $payments }[/cyan]
 cli-ai-forecast-training = [yellow]Entrenando modelos ML...[/yellow]
 cli-ai-forecast-training-progress = [yellow]{ $progress }%[/yellow]
 cli-ai-forecast-predicting = [yellow]Generando pronóstico...[/yellow]
-cli-ai-forecast-results-title = [bold green]📊 Pronóstico de Flujo de Caja - Próximos { $months } { $months ->
+cli-ai-forecast-results-title = [bold green]Pronóstico de Flujo de Caja - Próximos { $months } { $months ->
     [one] mes
    *[other] meses
 }[/bold green]
@@ -603,7 +603,7 @@ cli-ai-forecast-insufficient-data = [yellow]Datos insuficientes. Se necesitan al
 cli-ai-forecast-error = [red]Error de pronóstico: { $error }[/red]
 
 ### ai - Console Output (intelligence)
-cli-ai-intelligence-title = [bold cyan]🧠 Análisis de Inteligencia de Negocio[/bold cyan]
+cli-ai-intelligence-title = [bold cyan]Análisis de Inteligencia de Negocio[/bold cyan]
 cli-ai-intelligence-analyzing = [yellow]Analizando datos de negocio...[/yellow]
 cli-ai-intelligence-report-title = [bold green]Perspectivas de Negocio:[/bold green]
 cli-ai-intelligence-section = [bold yellow]{ $section }[/bold yellow]
@@ -611,14 +611,14 @@ cli-ai-intelligence-insight = • { $insight }
 cli-ai-intelligence-error = [red]Error de análisis: { $error }[/red]
 
 ### ai - Console Output (compliance)
-cli-ai-compliance-title = [bold cyan]✅ Verificación de Cumplimiento[/bold cyan]
+cli-ai-compliance-title = [bold cyan]Verificación de Cumplimiento[/bold cyan]
 cli-ai-compliance-checking = [yellow]Verificando factura { $numero }/{ $anno }...[/yellow]
-cli-ai-compliance-passed = [bold green]✓ Todas las verificaciones de cumplimiento pasadas[/bold green]
-cli-ai-compliance-warnings = [yellow]⚠️  { $count } { $count ->
+cli-ai-compliance-passed = [bold green]Todas las verificaciones de cumplimiento pasadas[/bold green]
+cli-ai-compliance-warnings = [yellow]{ $count } { $count ->
     [one] advertencia encontrada
    *[other] advertencias encontradas
 }[/yellow]
-cli-ai-compliance-errors = [red]❌ { $count } { $count ->
+cli-ai-compliance-errors = [red]{ $count } { $count ->
     [one] error encontrado
    *[other] errores encontrados
 }[/red]
@@ -626,9 +626,9 @@ cli-ai-compliance-check-item = [{ $status }] { $message }
 cli-ai-compliance-error = [red]Error de verificación de cumplimiento: { $error }[/red]
 
 ### ai - Console Output (rag)
-cli-ai-rag-title = [bold cyan]📚 Búsqueda de Documentos RAG[/bold cyan]
+cli-ai-rag-title = [bold cyan]Búsqueda de Documentos RAG[/bold cyan]
 cli-ai-rag-indexing = [yellow]Indexando documentos...[/yellow]
-cli-ai-rag-indexed = [green]✓ { $count } { $count ->
+cli-ai-rag-indexed = [green]{ $count } { $count ->
     [one] documento indexado
    *[other] documentos indexados
 }[/green]
@@ -640,10 +640,10 @@ cli-ai-rag-no-results = [yellow]No se encontraron resultados[/yellow]
 cli-ai-rag-error = [red]Error de RAG: { $error }[/red]
 
 ### ai - Console Output (feedback)
-cli-ai-feedback-title = [bold cyan]📝 Comentarios de IA[/bold cyan]
+cli-ai-feedback-title = [bold cyan]Comentarios de IA[/bold cyan]
 cli-ai-feedback-prompt-rating = [cyan]Calificar respuesta (1-5):[/cyan]
 cli-ai-feedback-prompt-comment = [cyan]Comentario (opcional):[/cyan]
-cli-ai-feedback-thanks = [green]✓ ¡Gracias por sus comentarios![/green]
+cli-ai-feedback-thanks = [green]¡Gracias por sus comentarios![/green]
 cli-ai-feedback-saved = [green]Comentarios guardados en sesión { $session_id }[/green]
 cli-ai-feedback-error = [red]Error de comentarios: { $error }[/red]
 
@@ -754,16 +754,16 @@ cli-events-trends-summary = [dim]Total: { $total } eventos | Promedio: { $avg } 
 ## ============================================================================
 
 ### Help Texts - Comandos y Opciones
-cli-lightning-help = ⚡ Gestión de pagos Lightning Network
-cli-lightning-report-help = 📊 Generar informes de cumplimiento
-cli-lightning-aml-help = 🔍 Gestión Anti-Blanqueo de Capitales
+cli-lightning-help = Gestión de pagos Lightning Network
+cli-lightning-report-help = Generar informes de cumplimiento
+cli-lightning-aml-help = Gestión Anti-Blanqueo de Capitales
 
 ### Status Command
-cli-lightning-status-title = ⚡ Estado Lightning Network
-cli-lightning-status-disabled = Estado: ❌ Deshabilitado
+cli-lightning-status-title = Estado Lightning Network
+cli-lightning-status-disabled = Estado: Deshabilitado
 cli-lightning-status-disabled-hint-env = Establezca lightning_enabled=true en .env para habilitar pagos Lightning
 cli-lightning-status-disabled-hint-cmd = Use 'openfatture config set lightning_enabled true' para habilitar
-cli-lightning-status-enabled = Estado: ✅ Habilitado
+cli-lightning-status-enabled = Estado: Habilitado
 cli-lightning-status-host = Host: { $host }
 cli-lightning-status-timeout = Tiempo de espera: { $timeout }s
 cli-lightning-status-max-retries = Máx. reintentos: { $max_retries }
@@ -777,16 +777,16 @@ cli-lightning-liquidity-enabled = Habilitado
 cli-lightning-liquidity-disabled = Deshabilitado
 
 ### Invoice Command
-cli-lightning-disabled-error = ❌ Lightning está deshabilitado. Habilite con: openfatture config set lightning_enabled true
-cli-lightning-invoice-title = ⚡ Creación de Factura Lightning
+cli-lightning-disabled-error = Lightning está deshabilitado. Habilite con: openfatture config set lightning_enabled true
+cli-lightning-invoice-title = Creación de Factura Lightning
 cli-lightning-invoice-not-available = Función aún no disponible - Integración Lightning en desarrollo
 
 ### Channels Command
-cli-lightning-channels-title = ⚡ Canales Lightning
+cli-lightning-channels-title = Canales Lightning
 cli-lightning-channels-not-available = No hay canales configurados - Integración Lightning en desarrollo
 
 ### Liquidity Command
-cli-lightning-liquidity-title = ⚡ Liquidez de Canales
+cli-lightning-liquidity-title = Liquidez de Canales
 cli-lightning-liquidity-not-available = Monitoreo de liquidez no disponible - Integración Lightning en desarrollo
 
 ### Compliance Check Command
@@ -795,70 +795,70 @@ cli-lightning-compliance-opt-verbose = Mostrar información detallada
 
 cli-lightning-compliance-title =
 
-    [bold cyan]🔍 Verificación de Cumplimiento Lightning - { $year }[/bold cyan]
+    [bold cyan]Verificación de Cumplimiento Lightning - { $year }[/bold cyan]
 
-cli-lightning-compliance-summary-title = [bold]📊 Resumen del Año Fiscal[/bold]
+cli-lightning-compliance-summary-title = [bold]Resumen del Año Fiscal[/bold]
 cli-lightning-compliance-summary-payments = Número de pagos:
 cli-lightning-compliance-summary-revenue = Ingresos totales (EUR):
 cli-lightning-compliance-summary-gains = Ganancias de capital totales (EUR):
 cli-lightning-compliance-summary-tax = Impuestos estimados (EUR):
 
-cli-lightning-compliance-aml-title = [bold]🛡️ Cumplimiento Anti-Blanqueo (Umbral: 5.000 EUR)[/bold]
+cli-lightning-compliance-aml-title = [bold]Cumplimiento Anti-Blanqueo (Umbral: 5.000 EUR)[/bold]
 cli-lightning-compliance-aml-total = Total sobre el umbral:
 cli-lightning-compliance-aml-verified = Verificados:
 cli-lightning-compliance-aml-unverified = No verificados:
-cli-lightning-compliance-aml-status-ok = ✅ OK
-cli-lightning-compliance-aml-status-require = ⚠️  { $count } REQUIEREN VERIFICACIÓN
+cli-lightning-compliance-aml-status-ok = OK
+cli-lightning-compliance-aml-status-require = { $count } REQUIEREN VERIFICACIÓN
 
-cli-lightning-compliance-quadro-title = [bold]📋 Declaración Quadro RW (Obligatorio desde 2025)[/bold]
+cli-lightning-compliance-quadro-title = [bold]Declaración Quadro RW (Obligatorio desde 2025)[/bold]
 cli-lightning-compliance-quadro-count = Facturas que requieren declaración:
 cli-lightning-compliance-action-required = Acción requerida:
-cli-lightning-compliance-quadro-action = [yellow]⚠️  Declarar todas las tenencias crypto en Quadro RW[/yellow]
+cli-lightning-compliance-quadro-action = [yellow]Declarar todas las tenencias crypto en Quadro RW[/yellow]
 cli-lightning-compliance-status = Estado:
-cli-lightning-compliance-quadro-status-ok = [green]✅ No se requieren declaraciones[/green]
+cli-lightning-compliance-quadro-status-ok = [green]No se requieren declaraciones[/green]
 
-cli-lightning-compliance-data-quality-title = [bold]⚠️  Calidad de Datos[/bold]
+cli-lightning-compliance-data-quality-title = [bold]Calidad de Datos[/bold]
 cli-lightning-compliance-data-quality-missing = Facturas con datos fiscales faltantes:
-cli-lightning-compliance-data-quality-action = [red]❌ Agregar tasa BTC/EUR e importe EUR para cumplimiento fiscal[/red]
-cli-lightning-compliance-data-quality-status-ok = [green]✅ Todas las facturas liquidadas tienen datos fiscales[/green]
+cli-lightning-compliance-data-quality-action = [red]Agregar tasa BTC/EUR e importe EUR para cumplimiento fiscal[/red]
+cli-lightning-compliance-data-quality-status-ok = [green]Todas las facturas liquidadas tienen datos fiscales[/green]
 
 cli-lightning-compliance-issue-aml = { $count } pago(s) Anti-Blanqueo no verificado(s)
 cli-lightning-compliance-issue-missing-data = { $count } factura(s) sin datos fiscales
-cli-lightning-compliance-issues-found = [bold red]❌ Problemas de Cumplimiento Encontrados: { $issues }[/bold red]
+cli-lightning-compliance-issues-found = [bold red]Problemas de Cumplimiento Encontrados: { $issues }[/bold red]
 
-cli-lightning-compliance-passed = [bold green]✅ Todas las Verificaciones de Cumplimiento Pasadas[/bold green]
+cli-lightning-compliance-passed = [bold green]Todas las Verificaciones de Cumplimiento Pasadas[/bold green]
 
 cli-lightning-compliance-verbose-title = [bold]Pagos Anti-Blanqueo No Verificados:[/bold]
 cli-lightning-compliance-verbose-item =   • { $hash }... - { $amount } EUR - Liquidado: { $date }
 
-cli-lightning-compliance-error = [bold red]❌ Error al ejecutar la verificación de cumplimiento: { $error }[/bold red]
+cli-lightning-compliance-error = [bold red]Error al ejecutar la verificación de cumplimiento: { $error }[/bold red]
 
 ### Report Commands - Common Options
 cli-lightning-report-opt-tax-year = Año fiscal para el informe
 cli-lightning-report-opt-format = Formato de salida: json o csv
 cli-lightning-report-opt-output = Ruta del archivo de salida (opcional, imprime en stdout si no se proporciona)
 
-cli-lightning-report-invalid-format = [bold red]❌ Formato no válido. Use 'json' o 'csv'[/bold red]
-cli-lightning-report-saved = [green]✅ Informe guardado en: { $path }[/green]
+cli-lightning-report-invalid-format = [bold red]Formato no válido. Use 'json' o 'csv'[/bold red]
+cli-lightning-report-saved = [green]Informe guardado en: { $path }[/green]
 
-cli-lightning-report-summary = [cyan]📊 Total de facturas en el informe: { $count }[/cyan]
+cli-lightning-report-summary = [cyan]Total de facturas en el informe: { $count }[/cyan]
 
 ### Quadro RW Report
 cli-lightning-report-quadro-title =
 
-    [bold cyan]📋 Generando Informe Quadro RW - { $year } ({ $format })[/bold cyan]
+    [bold cyan]Generando Informe Quadro RW - { $year } ({ $format })[/bold cyan]
 
-cli-lightning-report-quadro-error = [bold red]❌ Error al generar el informe Quadro RW: { $error }[/bold red]
+cli-lightning-report-quadro-error = [bold red]Error al generar el informe Quadro RW: { $error }[/bold red]
 
 ### Capital Gains Report
 cli-lightning-report-gains-title =
 
-    [bold cyan]💰 Generando Informe de Ganancias de Capital - { $year } ({ $format })[/bold cyan]
+    [bold cyan]Generando Informe de Ganancias de Capital - { $year } ({ $format })[/bold cyan]
 
-cli-lightning-report-gains-summary-count = [cyan]📊 Total de facturas con ganancias: { $count }[/cyan]
-cli-lightning-report-gains-summary-total = [yellow]💰 Ganancias de capital totales: { $total } EUR[/yellow]
-cli-lightning-report-gains-summary-tax = [red]💸 Impuestos estimados ({ $rate }%): { $tax } EUR[/red]
-cli-lightning-report-gains-error = [bold red]❌ Error al generar el informe de ganancias de capital: { $error }[/bold red]
+cli-lightning-report-gains-summary-count = [cyan]Total de facturas con ganancias: { $count }[/cyan]
+cli-lightning-report-gains-summary-total = [yellow]Ganancias de capital totales: { $total } EUR[/yellow]
+cli-lightning-report-gains-summary-tax = [red]Impuestos estimados ({ $rate }%): { $tax } EUR[/red]
+cli-lightning-report-gains-error = [bold red]Error al generar el informe de ganancias de capital: { $error }[/bold red]
 
 ### AML Report
 cli-lightning-aml-opt-threshold = Umbral Anti-Blanqueo en EUR
@@ -867,27 +867,27 @@ cli-lightning-aml-opt-verbose = Mostrar información detallada
 
 cli-lightning-aml-report-title =
 
-    [bold cyan]🛡️ Generando Informe de Cumplimiento Anti-Blanqueo (Umbral: { $threshold } EUR)[/bold cyan]
+    [bold cyan]Generando Informe de Cumplimiento Anti-Blanqueo (Umbral: { $threshold } EUR)[/bold cyan]
 
-cli-lightning-aml-report-summary-total = [cyan]📊 Total sobre el umbral: { $total }[/cyan]
-cli-lightning-aml-report-summary-verified = [green]✅ Verificados: { $verified }[/green]
-cli-lightning-aml-report-summary-unverified-ok = ✅ No verificados: 0
-cli-lightning-aml-report-summary-unverified-warning = ⚠️  No verificados: { $count }
-cli-lightning-aml-report-summary-rate = [yellow]📈 Tasa de cumplimiento: { $rate }%[/yellow]
+cli-lightning-aml-report-summary-total = [cyan]Total sobre el umbral: { $total }[/cyan]
+cli-lightning-aml-report-summary-verified = [green]Verificados: { $verified }[/green]
+cli-lightning-aml-report-summary-unverified-ok = No verificados: 0
+cli-lightning-aml-report-summary-unverified-warning = No verificados: { $count }
+cli-lightning-aml-report-summary-rate = [yellow]Tasa de cumplimiento: { $rate }%[/yellow]
 
 cli-lightning-aml-report-action-required =
 
-    [bold yellow]⚠️  Acción Requerida: Verificar pagos no verificados con proceso Anti-Blanqueo[/bold yellow]
+    [bold yellow]Acción Requerida: Verificar pagos no verificados con proceso Anti-Blanqueo[/bold yellow]
 cli-lightning-aml-report-action-hint = [dim]Use: openfatture lightning aml list-unverified para ver detalles[/dim]
 
-cli-lightning-aml-report-error = [bold red]❌ Error al generar el informe Anti-Blanqueo: { $error }[/bold red]
+cli-lightning-aml-report-error = [bold red]Error al generar el informe Anti-Blanqueo: { $error }[/bold red]
 
 ### AML List Unverified Command
 cli-lightning-aml-list-title =
 
-    [bold cyan]🔍 Pagos Anti-Blanqueo No Verificados (Umbral: { $threshold } EUR)[/bold cyan]
+    [bold cyan]Pagos Anti-Blanqueo No Verificados (Umbral: { $threshold } EUR)[/bold cyan]
 
-cli-lightning-aml-list-empty = [green]✅ No se encontraron pagos no verificados[/green]
+cli-lightning-aml-list-empty = [green]No se encontraron pagos no verificados[/green]
 
 cli-lightning-aml-list-table-title = Pagos No Verificados ({ $count } totales)
 cli-lightning-aml-list-col-hash = Hash de Pago
@@ -897,10 +897,10 @@ cli-lightning-aml-list-col-fattura = ID Factura
 cli-lightning-aml-list-col-client = ID Cliente
 cli-lightning-aml-list-col-description = Descripción
 
-cli-lightning-aml-list-action-required = [bold yellow]⚠️  Acción Requerida: Estos pagos requieren verificación de identidad del cliente[/bold yellow]
+cli-lightning-aml-list-action-required = [bold yellow]Acción Requerida: Estos pagos requieren verificación de identidad del cliente[/bold yellow]
 cli-lightning-aml-list-action-hint = [dim]Use: openfatture lightning aml verify <payment-hash> --verified-by <email>[/dim]
 
-cli-lightning-aml-list-error = [bold red]❌ Error al listar pagos no verificados: { $error }[/bold red]
+cli-lightning-aml-list-error = [bold red]Error al listar pagos no verificados: { $error }[/bold red]
 
 ### AML Verify Command
 cli-lightning-aml-verify-arg-hash = Hash del pago a verificar
@@ -910,12 +910,12 @@ cli-lightning-aml-verify-opt-client = ID Cliente (opcional)
 
 cli-lightning-aml-verify-title =
 
-    [bold cyan]✅ Verificando Pago Anti-Blanqueo: { $hash }...[/bold cyan]
+    [bold cyan]Verificando Pago Anti-Blanqueo: { $hash }...[/bold cyan]
 
-cli-lightning-aml-verify-not-found = [bold red]❌ Factura no encontrada: { $hash }[/bold red]
-cli-lightning-aml-verify-already-verified = [yellow]⚠️  Pago ya verificado el { $date }[/yellow]
-cli-lightning-aml-verify-below-threshold = [yellow]⚠️  El pago no supera el umbral Anti-Blanqueo, pero se marca como verificado de todos modos[/yellow]
-cli-lightning-aml-verify-success = [green]✅ Pago verificado con éxito[/green]
+cli-lightning-aml-verify-not-found = [bold red]Factura no encontrada: { $hash }[/bold red]
+cli-lightning-aml-verify-already-verified = [yellow]Pago ya verificado el { $date }[/yellow]
+cli-lightning-aml-verify-below-threshold = [yellow]El pago no supera el umbral Anti-Blanqueo, pero se marca como verificado de todos modos[/yellow]
+cli-lightning-aml-verify-success = [green]Pago verificado con éxito[/green]
 
 cli-lightning-aml-verify-label-hash = Hash de Pago:
 cli-lightning-aml-verify-label-amount = Importe (EUR):
@@ -924,7 +924,7 @@ cli-lightning-aml-verify-label-by = Verificado Por:
 cli-lightning-aml-verify-label-at = Verificado El:
 cli-lightning-aml-verify-label-notes = Notas:
 
-cli-lightning-aml-verify-error = [bold red]❌ Error al verificar el pago: { $error }[/bold red]
+cli-lightning-aml-verify-error = [bold red]Error al verificar el pago: { $error }[/bold red]
 
 ## ============================================================================
 ## REPORT Commands - Informes y Estadísticas
@@ -939,7 +939,7 @@ cli-report-scadenze-help-finestra = Número de días considerados "próximo a ve
 ### Titles and Headers - VAT Report
 cli-report-iva-title =
 
-    [bold blue]📊 Informe de IVA - { $anno }[/bold blue]
+    [bold blue]Informe de IVA - { $anno }[/bold blue]
 
 cli-report-iva-quarter =
 
@@ -957,14 +957,14 @@ cli-report-iva-breakdown-title =
 ### Titles and Headers - Client Report
 cli-report-clienti-title =
 
-    [bold blue]📊 Informe de Facturación de Clientes - { $anno }[/bold blue]
+    [bold blue]Informe de Facturación de Clientes - { $anno }[/bold blue]
 
 cli-report-clienti-table-title = Principales Clientes - { $anno }
 
 ### Titles and Headers - Due Dates Report
 cli-report-scadenze-title =
 
-    [bold blue]📅 Resumen de Fechas de Vencimiento[/bold blue]
+    [bold blue]Resumen de Fechas de Vencimiento[/bold blue]
 
 ### Table Columns - VAT Report
 cli-report-iva-column-metric = Métrica
@@ -1010,7 +1010,7 @@ cli-report-clienti-total-revenue =
 ### Messages - Due Dates Report
 cli-report-scadenze-no-outstanding =
 
-    [green]✅ No hay pagos pendientes. ¡Todas las facturas están liquidadas![/green]
+    [green]No hay pagos pendientes. ¡Todas las facturas están liquidadas![/green]
 
 cli-report-scadenze-hidden-upcoming =
 
@@ -1021,9 +1021,9 @@ cli-report-scadenze-total-outstanding =
     [bold]Saldo pendiente total: { $totale }[/bold]
 
 ### Section Titles - Due Dates Report
-cli-report-scadenze-section-overdue = [red]🔥 Vencidos[/red]
-cli-report-scadenze-section-due-soon = [yellow]⏰ Próximo a vencer (<= { $finestra } días)[/yellow]
-cli-report-scadenze-section-upcoming = [cyan]📆 Próximos pagos[/cyan]
+cli-report-scadenze-section-overdue = [red]Vencidos[/red]
+cli-report-scadenze-section-due-soon = [yellow]Próximo a vencer (<= { $finestra } días)[/yellow]
+cli-report-scadenze-section-upcoming = [cyan]Próximos pagos[/cyan]
 
 cli-report-scadenze-section-total = [bold { $color }]Total pendiente: { $totale } • Pagos: { $count }[/]
 
@@ -1037,8 +1037,8 @@ cli-report-scadenze-status-due = Por pagar
 ## ============================================================================
 
 ### Titles
-cli-pec-test-title = [bold blue]🧪 Prueba de Configuración PEC[/bold blue]
-cli-pec-info-title = [bold blue]📧 Configuración PEC[/bold blue]
+cli-pec-test-title = [bold blue]Prueba de Configuración PEC[/bold blue]
+cli-pec-info-title = [bold blue]Configuración PEC[/bold blue]
 
 ### Labels
 cli-pec-label-address = [cyan]Dirección PEC:[/cyan]
@@ -1054,14 +1054,14 @@ cli-pec-table-setting = Configuración
 cli-pec-table-value = Valor
 
 ### Error Messages
-cli-pec-error-no-address = [red]❌ Dirección PEC no configurada[/red]
+cli-pec-error-no-address = [red]Dirección PEC no configurada[/red]
 cli-pec-error-no-address-hint = Ejecuta: [cyan]openfatture init[/cyan] para configurar
-cli-pec-error-no-password = [red]❌ Contraseña PEC no configurada[/red]
+cli-pec-error-no-password = [red]Contraseña PEC no configurada[/red]
 cli-pec-error-no-password-hint = Configúrala en tu archivo .env: PEC_PASSWORD=tu_contraseña
 
 ### Test Messages
 cli-pec-sending-test = Enviando email de prueba con plantilla profesional...
-cli-pec-test-success = [bold green]✓ Email de prueba enviado correctamente![/bold green]
+cli-pec-test-success = [bold green]Email de prueba enviado correctamente![/bold green]
 cli-pec-test-check-inbox = Revisa tu bandeja PEC: { $pec_address }
 cli-pec-test-email-includes = [dim]El email incluye:[/dim]
 cli-pec-test-feature-html = • HTML profesional + texto plano
@@ -1072,7 +1072,7 @@ cli-pec-test-cmd-email-test = [cyan]openfatture email test[/cyan]  - Prueba comp
 cli-pec-test-cmd-email-preview = [cyan]openfatture email preview[/cyan] - Vista previa de plantillas
 
 cli-pec-test-failed =
-    [red]❌ Prueba fallida: { $error }[/red]
+    [red]Prueba fallida: { $error }[/red]
 cli-pec-test-common-issues = [yellow]Problemas comunes:[/yellow]
 cli-pec-issue-credentials = • Credenciales PEC incorrectas
 cli-pec-issue-smtp = • Servidor SMTP incorrecto
@@ -1095,8 +1095,8 @@ cli-notifiche-help-limit = Número máximo de resultados
 cli-notifiche-help-notification-id = ID de Notificación
 
 ### Titles
-cli-notifiche-process-title = [bold blue]📬 Procesando Notificación SDI[/bold blue]
-cli-notifiche-list-title = [bold blue]📬 Notificaciones SDI[/bold blue]
+cli-notifiche-process-title = [bold blue]Procesando Notificación SDI[/bold blue]
+cli-notifiche-list-title = [bold blue]Notificaciones SDI[/bold blue]
 cli-notifiche-show-title = [bold blue]{ $emoji } Notificación { $id }: { $tipo }[/bold blue]
 
 ### Table Headers
@@ -1124,19 +1124,19 @@ cli-notifiche-label-description = Descripción
 cli-notifiche-label-xml-path = Ruta XML
 
 ### Messages
-cli-notifiche-file-not-found = [red]❌ Archivo no encontrado: { $file_path }[/red]
+cli-notifiche-file-not-found = [red]Archivo no encontrado: { $file_path }[/red]
 cli-notifiche-file-label = [cyan]Archivo:[/cyan] { $name }
 cli-notifiche-size-label = [cyan]Tamaño:[/cyan] { $size } bytes
 cli-notifiche-auto-email-enabled =
-    [dim]📧 Email automático habilitado → { $email }[/dim]
+    [dim]Email automático habilitado { $email }[/dim]
 
 cli-notifiche-processing = Procesando notificación...
 cli-notifiche-error =
-    [red]❌ Error: { $error }[/red]
-cli-notifiche-success = [bold green]✓ Notificación procesada correctamente![/bold green]
+    [red]Error: { $error }[/red]
+cli-notifiche-success = [bold green]Notificación procesada correctamente![/bold green]
 cli-notifiche-errors-count = { $count } error(es)
 cli-notifiche-email-sent =
-    [dim]📧 Notificación por email enviada a { $email }[/dim]
+    [dim]Notificación por email enviada a { $email }[/dim]
 
 cli-notifiche-no-notifications = [yellow]No se encontraron notificaciones[/yellow]
 cli-notifiche-process-hint = [dim]Procesa notificaciones con:[/dim]
@@ -1215,8 +1215,8 @@ cli-config-all-tools = todas
 cli-config-tools-count = { $count } herramientas
 
 ### Messages
-cli-config-reload-success = [green]✓ Configuración recargada[/green]
-cli-config-set-success = [green]✓ Configurado { $key } = { $value }[/green]
+cli-config-reload-success = [green]Configuración recargada[/green]
+cli-config-set-success = [green]Configurado { $key } = { $value }[/green]
 cli-config-saved-to = [dim]Guardado en { $path }[/dim]
 cli-config-invalid-key = [red]Clave de configuración inválida: { $key }[/red]
 cli-config-error = [red]Error: { $error }[/red]

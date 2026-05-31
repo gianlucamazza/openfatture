@@ -1,9 +1,9 @@
 {% extends "base.txt" %}
 
 {% block content %}
-🧪 {{ _('email.test.title') }}
+{{ _('email.test.title') }}
 
-✅ {{ _('email.test.success') }}
+{{ _('email.test.success') }}
 
 {{ _('email.test.intro') }}
 
@@ -18,5 +18,5 @@
 
 ---
 
-✅ Configurazione PEC funzionante!
+Configurazione PEC funzionante!
 {% endblock %}

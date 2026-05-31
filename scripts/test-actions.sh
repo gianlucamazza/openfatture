@@ -13,11 +13,11 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🧪 Testing GitHub Actions locally with act...${NC}\n"
+echo -e "${BLUE}Testing GitHub Actions locally with act...${NC}\n"
 
 # Check if act is installed
 if ! command -v act &> /dev/null; then
-    echo -e "${RED}❌ Error: act is not installed${NC}"
+    echo -e "${RED}Error: act is not installed${NC}"
     echo "Install with: brew install act (macOS) or visit https://github.com/nektos/act"
     exit 1
 fi
@@ -28,16 +28,16 @@ if [ -f scripts/setup-act-secrets.sh ]; then
     ./scripts/setup-act-secrets.sh
     echo ""
 else
-    echo -e "${YELLOW}⚠️  Warning: setup-act-secrets.sh not found${NC}"
+    echo -e "${YELLOW}Warning: setup-act-secrets.sh not found${NC}"
     # Fallback to old behavior
     if [ ! -f .secrets ]; then
-        echo -e "${YELLOW}⚠️  Warning: .secrets file not found${NC}"
+        echo -e "${YELLOW}Warning: .secrets file not found${NC}"
         echo "Copying from .secrets.example..."
         if [ -f .secrets.example ]; then
             cp .secrets.example .secrets
-            echo -e "${GREEN}✓ Created .secrets from template${NC}\n"
+            echo -e "${GREEN}Created .secrets from template${NC}\n"
         else
-            echo -e "${RED}❌ Error: .secrets.example not found${NC}"
+            echo -e "${RED}Error: .secrets.example not found${NC}"
             exit 1
         fi
     fi
@@ -78,14 +78,14 @@ case "$JOB" in
 
     all)
         echo -e "${BLUE}Running all test workflow jobs...${NC}"
-        echo -e "${YELLOW}⚠️  This may take several minutes${NC}\n"
+        echo -e "${YELLOW}This may take several minutes${NC}\n"
         act push -W .github/workflows/test.yml
         ;;
 
     release)
         echo -e "${BLUE}Running release workflow...${NC}"
         if [ ! -f test-event.json ]; then
-            echo -e "${RED}❌ Error: test-event.json not found${NC}"
+            echo -e "${RED}Error: test-event.json not found${NC}"
             exit 1
         fi
         act push -W .github/workflows/release.yml --eventpath test-event.json
@@ -103,7 +103,7 @@ case "$JOB" in
 esac
 
 echo ""
-echo -e "${GREEN}✅ Test completed!${NC}"
+echo -e "${GREEN}Test completed!${NC}"
 echo -e "${BLUE}Usage examples:${NC}"
 echo "  ./scripts/test-actions.sh lint              # Fast lint check"
 echo "  ./scripts/test-actions.sh test              # Run tests on Python 3.12"

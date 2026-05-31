@@ -112,9 +112,9 @@ def main():
         content = generate_ftl_content(data, locale)
 
         output_file.write_text(content, encoding="utf-8")
-        print(f"✅ Written {len(content.splitlines())} lines to {output_file}")
+        print(f"Written {len(content.splitlines())} lines to {output_file}")
 
-    print("\n✅ Italian CLI translations generated!")
+    print("\nItalian CLI translations generated!")
     print("\nNext steps:")
     print("1. Review openfatture/i18n/locales/it/cli.ftl")
     print("2. Translate to EN, ES, FR, DE (manually or via translation service)")

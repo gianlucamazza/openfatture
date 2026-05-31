@@ -1,5 +1,12 @@
 """Payment tracking CLI commands."""
 
-__all__ = ["app"]
+from . import (  # noqa: F401  (imported for command registration side effects)
+    accounts,
+    reconciliation,
+    reminders,
+    reporting,
+    transactions,
+)
+from ._app import app
 
-from .payment_cli import app
+__all__ = ["app"]

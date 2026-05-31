@@ -14,7 +14,7 @@ t = get_translator()
 # Page configuration
 st.set_page_config(
     page_title=t("page-health-page-title"),
-    page_icon="🏥",
+    page_icon="",
     layout="wide",
 )
 

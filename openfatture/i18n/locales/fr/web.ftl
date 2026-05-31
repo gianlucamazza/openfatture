@@ -108,9 +108,9 @@ web-validation-max-value = Valeur maximale : { $value }
 
 ### Error Messages
 web-error-generic = Une erreur inattendue s'est produite
-web-error-unexpected = 🚨 Une erreur inattendue s'est produite. Veuillez réessayer plus tard.
-web-error-reload-page = 🔄 Recharger la Page
-web-error-goto-health = 🏥 Aller au Tableau de Bord Santé
+web-error-unexpected = Une erreur inattendue s'est produite. Veuillez réessayer plus tard.
+web-error-reload-page = Recharger la Page
+web-error-goto-health = Aller au Tableau de Bord Santé
 web-error-network = Erreur de connexion
 web-error-timeout = Délai d'attente dépassé
 web-error-unauthorized = Non autorisé
@@ -123,23 +123,23 @@ web-error-saving = Erreur lors de l'enregistrement
 web-error-deleting = Erreur lors de la suppression
 
 ### Sidebar
-web-sidebar-quick-stats = 📊 Statistiques Rapides
+web-sidebar-quick-stats = Statistiques Rapides
 web-sidebar-invoices = Factures
 web-sidebar-clients = Clients
 web-sidebar-revenue = Chiffre d'Affaires
 web-sidebar-pending = En Attente
-web-sidebar-configuration = ⚙️ Configuration
+web-sidebar-configuration = Configuration
 web-sidebar-company = Entreprise
 web-sidebar-vat-number = N° TVA
 web-sidebar-tax-regime = Régime
-web-sidebar-ai-enabled = 🤖 IA Activée
+web-sidebar-ai-enabled = IA Activée
 web-sidebar-ai-disabled = IA Non Configurée
 web-sidebar-ai-provider = Fournisseur
-web-sidebar-advanced-ops = 🔧 Opérations Avancées
+web-sidebar-advanced-ops = Opérations Avancées
 web-sidebar-error-loading-stats = Erreur de chargement des stats : { $error }
 
 ### Language Selector
-web-lang-selector-title = 🌍 Langue
+web-lang-selector-title = Langue
 web-lang-selector-italian = Italiano
 web-lang-selector-english = English
 web-lang-selector-spanish = Español

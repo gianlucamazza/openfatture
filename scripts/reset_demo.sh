@@ -45,29 +45,29 @@ export AI_CHAT_ENABLED="${AI_CHAT_ENABLED:-true}"
 export AI_TOOLS_ENABLED="${AI_TOOLS_ENABLED:-false}"
 
 if ! command -v uv >/dev/null 2>&1; then
-  echo "❌ uv is required. Install from https://astral.sh/uv/ and retry." >&2
+  echo "uv is required. Install from https://astral.sh/uv/ and retry." >&2
   exit 1
 fi
 
 # Check Ollama if using ollama provider
 if [ "${AI_PROVIDER}" = "ollama" ]; then
-  echo "🤖 Checking Ollama availability..."
+  echo "Checking Ollama availability..."
   if [ -f "${SCRIPT_DIR}/check_ollama.sh" ]; then
     SKIP_INFERENCE_TEST=1 "${SCRIPT_DIR}/check_ollama.sh" "${AI_MODEL}" || {
-      echo "⚠️  Ollama check failed. Demo will continue but AI features may not work." >&2
+      echo "Ollama check failed. Demo will continue but AI features may not work." >&2
     }
   else
-    echo "⚠️  check_ollama.sh not found. Skipping Ollama health check." >&2
+    echo "check_ollama.sh not found. Skipping Ollama health check." >&2
   fi
   echo ""
 fi
 
-echo "🔄 Resetting demo dataset at ${DB_URL}"
+echo "Resetting demo dataset at ${DB_URL}"
 
 (
   cd "${PROJECT_ROOT}"
   uv run python scripts/reset_demo.py
 )
 
-echo "✅ Demo environment ready."
+echo "Demo environment ready."
 echo "   Database file: ${PROJECT_ROOT}/${DB_FILE}"

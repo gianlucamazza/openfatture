@@ -10,7 +10,7 @@
 #   - OPENFATTURE_MESSAGE: Notification message
 #   - OPENFATTURE_SDI_IDENTIFIER: SDI identifier
 
-echo "📬 SDI Notification Received"
+echo "SDI Notification Received"
 echo "================================"
 echo "Type: ${OPENFATTURE_NOTIFICATION_TYPE}"
 echo "Invoice: ${OPENFATTURE_INVOICE_NUMBER} (ID: ${OPENFATTURE_INVOICE_ID})"
@@ -21,31 +21,31 @@ echo "================================"
 # Decode notification type
 case "${OPENFATTURE_NOTIFICATION_TYPE}" in
     "RC")
-        echo "✅ Ricevuta Consegna - Invoice delivered successfully"
+        echo "Ricevuta Consegna - Invoice delivered successfully"
         ;;
     "NS")
-        echo "❌ Notifica Scarto - Invoice rejected by SDI"
-        echo "⚠️  ACTION REQUIRED: Review and fix issues"
+        echo "Notifica Scarto - Invoice rejected by SDI"
+        echo "ACTION REQUIRED: Review and fix issues"
         ;;
     "MC")
-        echo "⚠️  Mancata Consegna - Delivery failed"
+        echo "Mancata Consegna - Delivery failed"
         echo "ACTION REQUIRED: Check recipient data"
         ;;
     "DT")
-        echo "📧 Decorrenza Termini - Terms expired (5 days)"
+        echo "Decorrenza Termini - Terms expired (5 days)"
         ;;
     "NE")
         esito=$(echo "${OPENFATTURE_MESSAGE}" | grep -o "EC[0-9]*" || echo "unknown")
         if [[ "$esito" == "EC01" ]]; then
-            echo "✅ Notifica Esito - Invoice ACCEPTED by recipient"
+            echo "Notifica Esito - Invoice ACCEPTED by recipient"
         elif [[ "$esito" == "EC02" ]]; then
-            echo "❌ Notifica Esito - Invoice REJECTED by recipient"
+            echo "Notifica Esito - Invoice REJECTED by recipient"
         else
-            echo "ℹ️  Notifica Esito - Outcome notification received"
+            echo "Notifica Esito - Outcome notification received"
         fi
         ;;
     *)
-        echo "ℹ️  Unknown notification type"
+        echo "Unknown notification type"
         ;;
 esac
 
@@ -57,7 +57,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${OPENFATTURE_NOTIFICATION_TYPE} - Invoice 
 # Send alerts for critical notifications (NS, MC, NE with EC02)
 if [[ "${OPENFATTURE_NOTIFICATION_TYPE}" == "NS" ]] || [[ "${OPENFATTURE_NOTIFICATION_TYPE}" == "MC" ]]; then
     echo ""
-    echo "🚨 CRITICAL: Sending alert for failed notification"
+    echo "CRITICAL: Sending alert for failed notification"
 
     # Example: Send email alert
     # echo "SDI ${OPENFATTURE_NOTIFICATION_TYPE} for invoice ${OPENFATTURE_INVOICE_NUMBER}: ${OPENFATTURE_MESSAGE}" | \
@@ -67,7 +67,7 @@ if [[ "${OPENFATTURE_NOTIFICATION_TYPE}" == "NS" ]] || [[ "${OPENFATTURE_NOTIFIC
     # curl -X POST "https://hooks.slack.com/services/YOUR/WEBHOOK/URL" \
     #     -H "Content-Type: application/json" \
     #     -d "{
-    #         \"text\": \"🚨 SDI Notification Alert\",
+    # \"text\": \"SDI Notification Alert\",
     #         \"attachments\": [{
     #             \"color\": \"danger\",
     #             \"fields\": [
@@ -90,5 +90,5 @@ if [[ "${OPENFATTURE_NOTIFICATION_TYPE}" == "NS" ]] || [[ "${OPENFATTURE_NOTIFIC
 fi
 
 echo ""
-echo "✅ Notification processed and logged"
-echo "📝 Log: ${log_file}"
+echo "Notification processed and logged"
+echo "Log: ${log_file}"

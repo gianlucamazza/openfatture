@@ -34,14 +34,14 @@ email-sdi-invio-next-steps = Prossimi Passi
 email-sdi-invio-next-steps-text = Riceverai una notifica quando la fattura sarà consegnata al destinatario. Il processo può richiedere alcune ore.
 
 ## SDI - Notifica Attestazione (RC)
-email-sdi-attestazione-subject = 📨 Fattura { $numero }/{ $anno } - Trasmissione Confermata
+email-sdi-attestazione-subject = Fattura { $numero }/{ $anno } - Trasmissione Confermata
 email-sdi-attestazione-title = Attestazione di Trasmissione
 email-sdi-attestazione-intro = Il Sistema di Interscambio (SDI) conferma la ricezione della fattura.
 email-sdi-attestazione-message = La fattura è stata accettata dal sistema e verrà inoltrata al destinatario.
 email-sdi-attestazione-sdi-id = Identificativo SDI
 
 ## SDI - Notifica Consegna (NS)
-email-sdi-consegna-subject = ✅ Fattura { $numero }/{ $anno } Consegnata
+email-sdi-consegna-subject = Fattura { $numero }/{ $anno } Consegnata
 email-sdi-consegna-title = Fattura Consegnata con Successo
 email-sdi-consegna-intro = La fattura è stata consegnata con successo al destinatario.
 email-sdi-consegna-message = Il Sistema di Interscambio ha confermato la consegna della fattura al sistema del cliente.
@@ -49,7 +49,7 @@ email-sdi-consegna-delivered-at = Consegnata il
 email-sdi-consegna-next-steps = Attendi ora l'esito da parte del committente (accettazione o rifiuto).
 
 ## SDI - Notifica Scarto (NS rifiuto)
-email-sdi-scarto-subject = ❌ Fattura { $numero }/{ $anno } Scartata da SDI
+email-sdi-scarto-subject = Fattura { $numero }/{ $anno } Scartata da SDI
 email-sdi-scarto-title = Fattura Scartata
 email-sdi-scarto-intro = La fattura è stata scartata dal Sistema di Interscambio a causa di errori di validazione.
 email-sdi-scarto-error-list = Lista Errori
@@ -61,7 +61,7 @@ email-sdi-scarto-error-count = { $count ->
 }
 
 ## SDI - Mancata Consegna (MC)
-email-sdi-mancata-consegna-subject = ⚠️ Fattura { $numero }/{ $anno } - Mancata Consegna
+email-sdi-mancata-consegna-subject = Fattura { $numero }/{ $anno } - Mancata Consegna
 email-sdi-mancata-consegna-title = Mancata Consegna
 email-sdi-mancata-consegna-intro = Il Sistema di Interscambio non è riuscito a consegnare la fattura al destinatario.
 email-sdi-mancata-consegna-reason = Motivo
@@ -69,7 +69,7 @@ email-sdi-mancata-consegna-action-required = Azione Richiesta
 email-sdi-mancata-consegna-action-text = Verifica i dati del destinatario (PEC o Codice Destinatario) e reinvia la fattura con le informazioni corrette.
 
 ## SDI - Esito Committente Accettata (EC01)
-email-sdi-esito-accettata-subject = ✅ Fattura { $numero }/{ $anno } Accettata dal Cliente
+email-sdi-esito-accettata-subject = Fattura { $numero }/{ $anno } Accettata dal Cliente
 email-sdi-esito-accettata-title = Fattura Accettata
 email-sdi-esito-accettata-intro = Il committente ha accettato la fattura.
 email-sdi-esito-accettata-message = La fattura è stata validata e accettata dal destinatario. Il processo di fatturazione è completato con successo.
@@ -77,7 +77,7 @@ email-sdi-esito-accettata-outcome = Esito Committente
 email-sdi-esito-accettata-accepted = Accettata (EC01)
 
 ## SDI - Esito Committente Rifiutata (EC02)
-email-sdi-esito-rifiutata-subject = ⚠️ Fattura { $numero }/{ $anno } Rifiutata dal Cliente
+email-sdi-esito-rifiutata-subject = Fattura { $numero }/{ $anno } Rifiutata dal Cliente
 email-sdi-esito-rifiutata-title = Fattura Rifiutata
 email-sdi-esito-rifiutata-intro = Il committente ha rifiutato la fattura.
 email-sdi-esito-rifiutata-message = Il destinatario ha respinto la fattura. Contatta il cliente per chiarimenti.

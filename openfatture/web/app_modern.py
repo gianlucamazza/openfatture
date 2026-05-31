@@ -34,14 +34,14 @@ from openfatture.web.utils.state import init_state
 # Page configuration MUST be first Streamlit command
 st.set_page_config(
     page_title="OpenFatture - Fatturazione Elettronica",
-    page_icon="🧾",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
         "Get Help": "https://github.com/gianlucamazza/openfatture",
         "Report a bug": "https://github.com/gianlucamazza/openfatture/issues",
         "About": """
-        # OpenFatture 🧾
+        # OpenFatture
 
         Open-source electronic invoicing for Italian freelancers.
 
@@ -106,8 +106,8 @@ if __name__ == "__main__":
 #   openfatture/web/
 #   ├── app.py                     # Home page
 #   └── pages/
-#       ├── 1_📊_Dashboard.py      # Auto-discovered
-#       ├── 2_🧾_Fatture.py
+# ├── 1__Dashboard.py # Auto-discovered
+# ├── 2__Fatture.py
 #       └── ...
 #
 # New pattern (st.Page + st.navigation):

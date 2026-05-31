@@ -89,7 +89,7 @@ class TestCompositeMatcherBasic:
             )
         ]
 
-        # Equal weights → average should be 0.75
+        # Equal weights average should be 0.75
         composite = CompositeMatcher(
             strategies=[strategy1, strategy2],
             weights=[Decimal("0.5"), Decimal("0.5")],

@@ -8,131 +8,141 @@ dynamic = ["version"]
 description = "Open-source electronic invoicing for Italian freelancers - CLI-first with AI workflows"
 readme = "README.md"
 requires-python = ">=3.12"
-license = {text = "MIT"}
-authors = [
-    {name = "Gianluca Mazza", email = "info@gianlucamazza.it"}
+license = { text = "MIT" }
+authors = [{ name = "Gianluca Mazza", email = "info@gianlucamazza.it" }]
+keywords = [
+  "fattura-elettronica",
+  "sdi",
+  "fatturapa",
+  "freelance",
+  "invoicing",
+  "cli",
+  "ai",
 ]
-keywords = ["fattura-elettronica", "sdi", "fatturapa", "freelance", "invoicing", "cli", "ai"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Intended Audience :: End Users/Desktop",
-    "Topic :: Office/Business :: Financial :: Accounting",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "Topic :: Office/Business :: Financial :: Accounting",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [
-    # CLI Framework
-    "typer[all]>=0.12.0",
-    "rich>=13.7.0",
-    "questionary>=2.0.0", # Interactive prompts and menus
-    # Database & ORM
-    "sqlalchemy>=2.0.25",
-    "alembic>=1.13.1",
-    # Data Validation
-    "pydantic>=2.6.0",
-    "pydantic-settings>=2.1.0",
-    # XML Processing & Financial Formats
-    "lxml>=5.1.0",
-    "xmlschema>=3.0.1",
-    "ofxparse>=0.21", # OFX/QFX bank statement parsing
-    # Cryptography & Digital Signatures
-    "cryptography>=42.0.2",
-    "asn1crypto>=1.5.1",
-    "pyasn1>=0.5.0",
-    "pyasn1-modules>=0.3.0",
-    # HTTP & Email (for PEC)
-    "requests>=2.31.0",
-    "httpx>=0.26.0",
-    # Email Templates
-    "jinja2>=3.1.0",
-    # AI & LLM Integration
-    "langchain>=0.1.6",
-    "langchain-core>=0.1.20",
-    "langchain-community>=0.0.17",
-    "langgraph>=0.0.20",
-    "openai>=2.2.0",
-    "anthropic>=0.18.0",
-    "tiktoken>=0.8.0", # Accurate token counting for OpenAI
-    # Vector Store & Embeddings
-    "chromadb>=0.4.22",
-    "sentence-transformers>=2.6.0",
-    "prophet>=1.1.5",
-    "xgboost>=2.1.0",
-    # Date & Time
-    "python-dateutil>=2.8.2",
-    # Fuzzy String Matching
-    "rapidfuzz>=3.0.0", # Fast fuzzy string matching for payment reconciliation
-    # Configuration
-    "python-dotenv>=1.0.0",
-    "platformdirs>=4.0.0",
-    # Logging & Observability
-    "structlog>=24.1.0",
-    # PDF Generation
-    "reportlab>=4.0.9",
-    # Web Scraping (Regulatory Updates)
-    "playwright>=1.40.0",
-    "beautifulsoup4>=4.12.0",
-    "pypdf>=4.0.0",
-    # Rate Limiting
-    "aiolimiter>=1.1.0",
-    # Scheduling
-    "apscheduler>=3.10.4",
-    # Utilities
-    "click>=8.1.7",
-    "pandas>=2.3.3",
-    "plotly>=6.3.1",
-    # Audio Processing (for voice features)
-    "sounddevice>=0.4.6",  # Audio recording and playback
-    "numpy>=1.26.0",  # Required by sounddevice
-    # Internationalization (i18n)
-    "fluent-runtime>=0.4.0",  # Mozilla Fluent for advanced i18n
-    "babel>=2.14.0",  # Locale data, date/number formatting
+  # CLI Framework
+  "typer[all]>=0.12.0",
+  "rich>=13.7.0",
+  "questionary>=2.0.0", # Interactive prompts and menus
+  # Database & ORM
+  "sqlalchemy>=2.0.25",
+  "alembic>=1.13.1",
+  # Data Validation
+  "pydantic>=2.6.0",
+  "pydantic-settings>=2.1.0",
+  # XML Processing & Financial Formats
+  "lxml>=5.1.0",
+  "xmlschema>=3.0.1",
+  "ofxparse>=0.21",   # OFX/QFX bank statement parsing
+  # Cryptography & Digital Signatures
+  "cryptography>=42.0.2",
+  "asn1crypto>=1.5.1",
+  "pyasn1>=0.5.0",
+  "pyasn1-modules>=0.3.0",
+  # HTTP & Email (for PEC)
+  "requests>=2.31.0",
+  "httpx>=0.26.0",
+  # Email Templates
+  "jinja2>=3.1.0",
+  # AI & LLM Integration
+  # NOTE: langgraph powers the StateGraph orchestration workflows under
+  # openfatture/ai/orchestration/workflows/ (imported dynamically). The legacy
+  # langchain/langchain-core/langchain-community packages are intentionally NOT
+  # declared: they have zero references in the codebase.
+  "langgraph>=0.6",
+  "openai>=2.4.0",
+  "anthropic>=0.71.0",
+  "tiktoken>=0.8.0",   # Accurate token counting for OpenAI
+  # Vector Store & Embeddings
+  "chromadb>=0.4.22",
+  "sentence-transformers>=2.6.0",
+  "prophet>=1.1.5",
+  "xgboost>=2.1.0",
+  # Date & Time
+  "python-dateutil>=2.8.2",
+  # Fuzzy String Matching
+  "rapidfuzz>=3.0.0", # Fast fuzzy string matching for payment reconciliation
+  # Configuration
+  "python-dotenv>=1.0.0",
+  "platformdirs>=4.0.0",
+  # Logging & Observability
+  "structlog>=24.1.0",
+  # PDF Generation
+  "reportlab>=4.0.9",
+  # Web Scraping (Regulatory Updates)
+  "playwright>=1.40.0",
+  "beautifulsoup4>=4.12.0",
+  "pypdf>=4.0.0",
+  # Rate Limiting
+  "aiolimiter>=1.1.0",
+  # Scheduling
+  "apscheduler>=3.10.4",
+  # Utilities
+  "click>=8.1.7",
+  "pandas>=2.3.3",
+  "plotly>=6.3.1",
+  # Audio Processing (for voice features)
+  "sounddevice>=0.4.6", # Audio recording and playback
+  "numpy>=1.26.0",      # Required by sounddevice
+  # Internationalization (i18n)
+  "fluent-runtime>=0.4.0", # Mozilla Fluent for advanced i18n
+  "babel>=2.14.0",         # Locale data, date/number formatting
 ]
 
 [project.optional-dependencies]
 dev = [
-    # Testing
-    "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.23.3",
-    "pytest-mock>=3.12.0",
-    "pytest-benchmark>=4.0.0",
-    "hypothesis>=6.98.0",
+  # Testing
+  "pytest>=8.0.0",
+  "pytest-cov>=4.1.0",
+  "pytest-asyncio>=0.23.3",
+  "pytest-mock>=3.12.0",
+  "pytest-benchmark>=4.0.0",
+  "hypothesis>=6.98.0",
 
-    # Code Quality
-    "black>=25.9.0",
-    "ruff>=0.14.0",
-    "mypy>=1.8.0",
-    "isort>=5.13.2",
+  # Code Quality
+  # Cap the formatter/linter to their pre-commit-pinned series: black's yearly
+  # "stable style" (26.x) and new ruff rule sets reformat/flag code differently,
+  # which made CI (fresh-resolved) disagree with the locked/pre-commit versions.
+  "black>=25.9.0,<26",
+  "ruff>=0.14.0,<0.15",
+  "mypy>=1.8.0",
+  "isort>=5.13.2",
 
-    # Pre-commit hooks
-    "pre-commit>=3.6.0",
+  # Pre-commit hooks
+  "pre-commit>=3.6.0",
 
-    # Version Management
-    "bump-my-version>=0.18.0",
+  # Version Management
+  "bump-my-version>=0.18.0",
 
-    # Type stubs
-    "types-requests>=2.31.0",
-    "types-reportlab>=4.0.0",
-    "types-PyYAML>=6.0.0",
-    "types-pyasn1>=0.5.0",
-    "types-grpcio>=1.0.0",
-    "pandas-stubs>=2.0.0",
+  # Type stubs
+  "types-requests>=2.31.0",
+  "types-reportlab>=4.0.0",
+  "types-PyYAML>=6.0.0",
+  "types-pyasn1>=0.5.0",
+  "types-grpcio>=1.0.0",
+  "pandas-stubs>=2.0.0",
 ]
 
 web = [
-    # Web UI Framework
-    "streamlit>=1.30.0",
+  # Web UI Framework
+  "streamlit>=1.30.0",
 
-    # Enhanced UI Components
-    "streamlit-aggrid>=0.3.4",  # Advanced tables with filtering/sorting
-    "streamlit-extras>=0.3.6",  # Additional utility components
+  # Enhanced UI Components
+  "streamlit-aggrid>=0.3.4", # Advanced tables with filtering/sorting
+  "streamlit-extras>=0.3.6", # Additional utility components
 
-    # Visualization (note: plotly already in main deps)
-    "altair>=5.2.0",  # Declarative charts for Streamlit
+  # Visualization (note: plotly already in main deps)
+  "altair>=5.2.0", # Declarative charts for Streamlit
 ]
 
 [project.scripts]
@@ -154,23 +164,23 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "C",  # flake8-comprehensions
-    "B",  # flake8-bugbear
-    "UP", # pyupgrade
+  "E",  # pycodestyle errors
+  "W",  # pycodestyle warnings
+  "F",  # pyflakes
+  "I",  # isort
+  "C",  # flake8-comprehensions
+  "B",  # flake8-bugbear
+  "UP", # pyupgrade
 ]
 ignore = [
-    "E501",  # line too long (handled by black)
-    "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
-    "B904",  # raise from err (TODO: fix in future)
-    "F841",  # unused variable (TODO: fix in future)
-    "E731",  # lambda assignment (TODO: fix in future)
-    "E402",  # module level import (test files)
-    "B007",  # unused loop variable (TODO: fix in future)
+  "E501", # line too long (handled by black)
+  "B008", # do not perform function calls in argument defaults
+  "C901", # too complex
+  "B904", # raise from err (TODO: fix in future)
+  "F841", # unused variable (TODO: fix in future)
+  "E731", # lambda assignment (TODO: fix in future)
+  "E402", # module level import (test files)
+  "B007", # unused loop variable (TODO: fix in future)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -218,8 +228,8 @@ disable_error_code = ["call-overload", "arg-type", "assignment"]
 # Attualmente si usa: openfatture.payment.infrastructure.importers.ofx_importer
 [[tool.mypy.overrides]]
 module = [
-    "openfatture.payment.application.services.bank_import_service",
-    "openfatture.payment.infrastructure.ofx_parser"
+  "openfatture.payment.application.services.bank_import_service",
+  "openfatture.payment.infrastructure.ofx_parser",
 ]
 ignore_missing_imports = true
 
@@ -229,12 +239,12 @@ addopts = "-ra -q --cov=openfatture --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
-    "streaming: tests that exercise streaming-capable components",
-    "e2e: end-to-end tests that require external services",
-    "ollama: tests that require Ollama LLM service to be running",
-    "performance: performance benchmarks and load tests",
-    "slow: slow tests that may take >5 seconds",
-    "benchmark: pytest-benchmark tests (legacy marker)",
+  "streaming: tests that exercise streaming-capable components",
+  "e2e: end-to-end tests that require external services",
+  "ollama: tests that require Ollama LLM service to be running",
+  "performance: performance benchmarks and load tests",
+  "slow: slow tests that may take >5 seconds",
+  "benchmark: pytest-benchmark tests (legacy marker)",
 ]
 
 [tool.coverage.run]
@@ -243,12 +253,12 @@ omit = ["*/tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
 exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:",
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
 ]
 
 # Hatchling configuration for dynamic versioning

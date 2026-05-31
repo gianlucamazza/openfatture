@@ -185,10 +185,10 @@ def run_server(port=8000, host="localhost"):
     server_address = (host, port)
     httpd = HTTPServer(server_address, MediaDashboardHandler)
 
-    print("🚀 Starting Media Dashboard API Server...")
-    print(f"📊 Serving metrics from: {METRICS_DIR}")
-    print(f"🌐 Dashboard available at: http://{host}:{port}")
-    print("📡 API endpoints:")
+    print("Starting Media Dashboard API Server...")
+    print(f"Serving metrics from: {METRICS_DIR}")
+    print(f"Dashboard available at: http://{host}:{port}")
+    print("API endpoints:")
     print(f"  - GET http://{host}:{port}/ (dashboard)")
     print(f"  - GET http://{host}:{port}/api/metrics/costs")
     print(f"  - GET http://{host}:{port}/api/metrics/performance")
@@ -200,7 +200,7 @@ def run_server(port=8000, host="localhost"):
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n🛑 Server stopped")
+        print("\nServer stopped")
         httpd.shutdown()
 
 

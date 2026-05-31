@@ -34,14 +34,14 @@
         "next_steps_text": "You will receive a notification when the invoice is delivered to the recipient. The process may take a few hours."
       },
       "notifica_attestazione": {
-        "subject": "📨 Invoice {{numero}}/{{anno}} - Transmission Confirmed",
+        "subject": "Invoice {{numero}}/{{anno}} - Transmission Confirmed",
         "title": "Transmission Attestation",
         "intro": "The Exchange System (SDI) confirms receipt of the invoice.",
         "message": "The invoice has been accepted by the system and will be forwarded to the recipient.",
         "sdi_id": "SDI Identifier"
       },
       "notifica_consegna": {
-        "subject": "✅ Invoice {{numero}}/{{anno}} Delivered",
+        "subject": "Invoice {{numero}}/{{anno}} Delivered",
         "title": "Invoice Delivered Successfully",
         "intro": "The invoice has been successfully delivered to the recipient.",
         "message": "The Exchange System has confirmed delivery of the invoice to the customer's system.",
@@ -49,7 +49,7 @@
         "next_steps": "Now wait for the customer's outcome (acceptance or rejection)."
       },
       "notifica_scarto": {
-        "subject": "❌ Invoice {{numero}}/{{anno}} Rejected by SDI",
+        "subject": "Invoice {{numero}}/{{anno}} Rejected by SDI",
         "title": "Invoice Rejected",
         "intro": "The invoice has been rejected by the Exchange System due to validation errors.",
         "error_list": "Error List",
@@ -58,7 +58,7 @@
         "error_count": "{{count}} error(s) detected"
       },
       "notifica_mancata_consegna": {
-        "subject": "⚠️ Invoice {{numero}}/{{anno}} - Failed Delivery",
+        "subject": "Invoice {{numero}}/{{anno}} - Failed Delivery",
         "title": "Failed Delivery",
         "intro": "The Exchange System was unable to deliver the invoice to the recipient.",
         "reason": "Reason",
@@ -66,7 +66,7 @@
         "action_text": "Verify recipient details (PEC or Recipient Code) and resend the invoice with correct information."
       },
       "notifica_esito_accettata": {
-        "subject": "✅ Invoice {{numero}}/{{anno}} Accepted by Customer",
+        "subject": "Invoice {{numero}}/{{anno}} Accepted by Customer",
         "title": "Invoice Accepted",
         "intro": "The customer has accepted the invoice.",
         "message": "The invoice has been validated and accepted by the recipient. The invoicing process is successfully completed.",
@@ -74,7 +74,7 @@
         "accepted": "Accepted (EC01)"
       },
       "notifica_esito_rifiutata": {
-        "subject": "⚠️ Invoice {{numero}}/{{anno}} Rejected by Customer",
+        "subject": "Invoice {{numero}}/{{anno}} Rejected by Customer",
         "title": "Invoice Rejected",
         "intro": "The customer has rejected the invoice.",
         "message": "The recipient has rejected the invoice. Contact the customer for clarification.",

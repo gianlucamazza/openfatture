@@ -12,7 +12,12 @@ from typing import TYPE_CHECKING, Any, cast
 from anthropic import AnthropicError, AsyncAnthropic, RateLimitError
 
 from openfatture.ai.domain.message import Message, Role
-from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
+from openfatture.ai.domain.response import (
+    AgentResponse,
+    ResponseStatus,
+    ToolCall,
+    UsageMetrics,
+)
 from openfatture.ai.providers.base import (
     BaseLLMProvider,
     ProviderAuthError,
@@ -143,10 +148,20 @@ class AnthropicProvider(BaseLLMProvider):
                 **kwargs,
             )
 
-            # Extract content
+            # Extract content and tool calls
             content = ""
+            tool_calls: list[ToolCall] = []
             for block in response.content:
-                if hasattr(block, "text"):
+                block_type = getattr(block, "type", None)
+                if block_type == "tool_use":
+                    tool_calls.append(
+                        ToolCall(
+                            id=block.id,
+                            name=block.name,
+                            arguments=(dict(block.input) if isinstance(block.input, dict) else {}),
+                        )
+                    )
+                elif hasattr(block, "text"):
                     content += block.text
 
             # Calculate usage
@@ -175,14 +190,20 @@ class AnthropicProvider(BaseLLMProvider):
                 stop_reason=response.stop_reason,
             )
 
-            return AgentResponse(
+            agent_response = AgentResponse(
                 content=content,
                 status=ResponseStatus.SUCCESS,
                 model=self.model,
                 provider=self.provider_name,
                 usage=usage,
                 latency_ms=latency_ms,
+                tool_calls=tool_calls,
             )
+
+            if response.stop_reason:
+                agent_response.metadata["stop_reason"] = response.stop_reason
+
+            return agent_response
 
         except RateLimitError as e:
             logger.warning("anthropic_rate_limit", error=str(e))
@@ -348,8 +369,10 @@ class AnthropicProvider(BaseLLMProvider):
 
     @property
     def supports_tools(self) -> bool:
-        """Anthropic Claude 3 supports tool use."""
-        return "claude-3" in self.model
+        """Anthropic Claude 3+ models support native tool use."""
+        # Claude 3, Claude 4.x and later all support native tool calling.
+        # Only the legacy Claude 2 series lacks it.
+        return "claude-2" not in self.model
 
     def _prepare_claude_messages(self, messages: list[Message]) -> list[MessageParam]:
         """

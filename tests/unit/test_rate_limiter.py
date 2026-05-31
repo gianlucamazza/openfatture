@@ -179,7 +179,7 @@ class TestExponentialBackoff:
 
         # All should be around 4.0 but with variation
         for delay in delays:
-            assert 2.0 <= delay <= 6.0  # base=1, attempt=2 → 4 * [0.5, 1.5]
+            assert 2.0 <= delay <= 6.0  # base=1, attempt=2 4 * [0.5, 1.5]
 
         # Should have some variation
         assert len(set(delays)) > 1

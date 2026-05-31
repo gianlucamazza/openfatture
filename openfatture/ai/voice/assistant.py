@@ -87,7 +87,7 @@ class VoiceAssistant:
         save_audio: Path | None = None,
     ) -> VoiceResponse:
         """
-        Process voice input through complete STT → LLM → TTS pipeline.
+        Process voice input through complete STT LLM TTS pipeline.
 
         Args:
             audio: Audio input (bytes, file path, or file-like object)

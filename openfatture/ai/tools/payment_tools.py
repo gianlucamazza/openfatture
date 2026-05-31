@@ -327,8 +327,6 @@ def reconcile_payment(
     Returns:
         Dictionary with reconciliation result
     """
-    import asyncio
-
     from openfatture.cli.lifespan import get_event_bus
     from openfatture.payment.application.services.reconciliation_service import (
         ReconciliationService,
@@ -337,6 +335,7 @@ def reconcile_payment(
         BankTransactionRepository,
         PaymentRepository,
     )
+    from openfatture.utils.async_bridge import run_async
 
     # Validate inputs
     payment_id = validate_integer_input(payment_id, min_value=1)
@@ -390,7 +389,7 @@ def reconcile_payment(
         )
 
         # Perform reconciliation
-        transaction = asyncio.run(
+        transaction = run_async(
             reconciliation_service.reconcile(
                 transaction_id=tx_uuid,
                 payment_id=payment_id,
@@ -739,7 +738,6 @@ def import_bank_transactions(
     Returns:
         Dictionary with import result
     """
-    import asyncio
     from pathlib import Path
 
     # NOTE: These imports are for planned/future modules (bank import refactoring)
@@ -749,6 +747,7 @@ def import_bank_transactions(
     from openfatture.payment.domain.models import BankAccount
     from openfatture.payment.infrastructure.ofx_parser import OFXParser
     from openfatture.payment.infrastructure.repository import BankTransactionRepository
+    from openfatture.utils.async_bridge import run_async
 
     db = get_session()
     try:
@@ -773,7 +772,7 @@ def import_bank_transactions(
         tx_repo = BankTransactionRepository(db)
         import_service = BankImportService(parser=parser, tx_repo=tx_repo)
 
-        result = asyncio.run(import_service.import_from_file(str(file), account.id))
+        result = run_async(import_service.import_from_file(str(file), account.id))
 
         db.commit()
 

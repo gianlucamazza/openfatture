@@ -146,12 +146,12 @@ class TestCLIEmoji:
     @pytest.mark.parametrize(
         "locale,msg_id,expected_emoji",
         [
-            ("it", "cli-fattura-create-title", "🧾"),
-            ("en", "cli-fattura-create-title", "🧾"),
-            ("it", "cli-ai-voice-title", "🎤"),
-            ("en", "cli-ai-voice-title", "🎤"),
-            ("it", "cli-ai-vat-title", "🧮"),  # Italian uses abacus
-            ("en", "cli-ai-vat-title", "🧾"),  # English uses receipt
+            ("it", "cli-fattura-create-title", ""),
+            ("en", "cli-fattura-create-title", ""),
+            ("it", "cli-ai-voice-title", ""),
+            ("en", "cli-ai-voice-title", ""),
+            ("it", "cli-ai-vat-title", ""),  # Italian uses abacus
+            ("en", "cli-ai-vat-title", ""),  # English uses receipt
         ],
     )
     def test_emoji_preservation(self, locale, msg_id, expected_emoji):

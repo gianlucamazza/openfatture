@@ -111,12 +111,12 @@ TOTAL:            21 strings
 | Category | Count | Examples |
 |----------|-------|----------|
 | **Help Strings** | 59 | "Client ID", "Filter by status", "Service description" |
-| **Console Output** | 180+ | "[bold blue]🧾 Create New Invoice[/bold blue]", success/error messages |
+| **Console Output** | 180+ | "[bold blue]Create New Invoice[/bold blue]", success/error messages |
 | **Prompts** | 60 | "Invoice number", "Unit price (€)", confirmation dialogs |
 | **Table Titles** | 16 | "Invoice {number}/{year}", "Clients ({count})" |
 | **Column Headers** | 20 | "ID", "Field", "Value", "Status" |
 | **Row Labels** | 10+ | "Client", "Total", "Imponibile", "IVA" |
-| **Emoji + Text** | 30+ | "📧 Professional email", "🔧 Technical Skills" |
+| **Emoji + Text** | 30+ | "Professional email", "Technical Skills" |
 
 ---
 
@@ -136,7 +136,7 @@ All f-string variables documented:
 
 ### Emoji Handling
 All emoji preserved as-is:
-- 🧾 🤖 📤 🔧 📧 📬 ⚡ 🎯 👤 📋 💰 etc.
+- etc.
 - Context provided for readability
 
 ### Line Numbers
@@ -187,17 +187,17 @@ Every string includes exact line number for:
 - **Tables**: 95% (all titles, columns, and key row labels extracted)
 
 ### Verification Status
-- ✅ All line numbers verified against source files
-- ✅ All strings are user-facing (not debug/internal logging)
-- ✅ All variables and placeholders identified
-- ✅ All Rich markup preserved
-- ✅ All emoji and special characters preserved
+- All line numbers verified against source files
+- All strings are user-facing (not debug/internal logging)
+- All variables and placeholders identified
+- All Rich markup preserved
+- All emoji and special characters preserved
 
 ### Format Validation
-- ✅ Markdown: Proper formatting and links
-- ✅ JSON: Valid structure, parseable by tools
-- ✅ Text: Organized tables, line-width appropriate
-- ✅ Links: All relative paths valid within repository
+- Markdown: Proper formatting and links
+- JSON: Valid structure, parseable by tools
+- Text: Organized tables, line-width appropriate
+- Links: All relative paths valid within repository
 
 ---
 
@@ -239,8 +239,8 @@ openfatture/
 
 ### Supported Locales
 Currently planning for:
-- **English (en)**: Fallback language ✅
-- **Italian (it)**: Primary language ✅
+- **English (en)**: Fallback language
+- **Italian (it)**: Primary language
 - **Future**: Spanish (es), French (fr), German (de)
 
 ### Rich Markup
@@ -263,7 +263,7 @@ All preserved as-is:
 ## Next Actions
 
 ### Immediate (This Week)
-1. ✅ Extract all strings (COMPLETED)
+1. Extract all strings (COMPLETED)
 2. Share extraction with team for review
 3. Get approval on migration approach
 

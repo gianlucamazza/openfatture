@@ -130,12 +130,12 @@ def get_localization(locale: str) -> FluentLocalization:
         locale: Preferred language code
 
     Returns:
-        FluentLocalization with locale → en → it fallback
+        FluentLocalization with locale en it fallback
     """
     cache_key = locale
 
     if cache_key not in _localization_cache:
-        # Build fallback chain: requested → en (if not requested) → it
+        # Build fallback chain: requested en (if not requested) it
         locales = [locale]
         if locale != "en" and locale != FALLBACK_LOCALE:
             locales.append("en")

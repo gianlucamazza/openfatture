@@ -1,11 +1,13 @@
 """Conversational Chat Agent with tool calling capabilities."""
 
+import json
 from collections.abc import AsyncIterator
 from typing import Any
 
 from openfatture.ai.domain import AgentConfig, BaseAgent, Message, Role
 from openfatture.ai.domain.context import ChatContext
-from openfatture.ai.domain.response import AgentResponse
+from openfatture.ai.domain.response import AgentResponse, ResponseStatus
+from openfatture.ai.orchestration.native_tools import NativeToolOrchestrator
 from openfatture.ai.orchestration.react import ReActOrchestrator
 from openfatture.ai.providers import BaseLLMProvider
 from openfatture.ai.streaming import StreamEvent
@@ -113,15 +115,39 @@ class ChatAgent(BaseAgent[ChatContext]):
         return True, None
 
     async def execute(self, context: ChatContext, **kwargs: Any) -> AgentResponse:
-        """Execute chat agent, injecting tool schemas when native tool calling is available."""
+        """Execute chat agent, dispatching to native tool calling or ReAct.
+
+        Dispatch logic:
+        - Native tool calling (NativeToolOrchestrator) when the provider
+          supports tools and tools are available.
+        - ReAct (prompt-engineered) when the provider does not support native
+          tool calling but tools are available.
+        - Plain generation otherwise.
+
+        If ``self.config.output_schema`` is set and the provider supports
+        native tools, a forced structured-output call is performed instead.
+        """
         collector = get_metrics_collector()
 
         with MetricsTimer("chat_agent_execute", {"agent": self.config.name}):
             try:
-                if self.enable_tools and self.provider.supports_tools and context.available_tools:
-                    tool_kwargs = dict(kwargs)
-                    tool_kwargs.setdefault("tools", self.get_tools_schema())
-                    response = await super().execute(context, **tool_kwargs)
+                use_tools = (
+                    self.enable_tools
+                    and self.provider.supports_tools
+                    and bool(context.available_tools)
+                )
+                use_react = (
+                    self.enable_tools
+                    and not self.provider.supports_tools
+                    and bool(context.available_tools)
+                )
+
+                if self.config.output_schema and self.provider.supports_tools:
+                    response = await self._execute_structured(context, **kwargs)
+                elif use_tools:
+                    response = await self._execute_native_tools(context, **kwargs)
+                elif use_react:
+                    response = await self._execute_react(context, **kwargs)
                 else:
                     response = await super().execute(context, **kwargs)
 
@@ -146,6 +172,171 @@ class ChatAgent(BaseAgent[ChatContext]):
                 )
                 collector.record_error("chat_agent_error", str(e), {"agent": self.config.name})
                 raise
+
+    async def _execute_native_tools(self, context: ChatContext, **kwargs: Any) -> AgentResponse:
+        """Run the native tool-calling loop via NativeToolOrchestrator."""
+        logger.info(
+            "using_native_tool_calling",
+            agent=self.config.name,
+            provider=self.provider.provider_name,
+            tools_count=len(context.available_tools),
+        )
+
+        is_valid, error_msg = await self.validate_input(context)
+        if not is_valid:
+            return AgentResponse(
+                content="",
+                status=ResponseStatus.ERROR,
+                agent_name=self.config.name,
+                error=error_msg,
+            )
+
+        messages = await self._build_prompt(context)
+        orchestrator = NativeToolOrchestrator(
+            provider=self.provider,
+            tool_registry=self.tool_registry,
+            max_iterations=5,
+            debug_config=self.debug_config,
+        )
+
+        response = await orchestrator.execute(
+            context=context,
+            messages=messages,
+            system_prompt=self.config.system_prompt,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            **kwargs,
+        )
+
+        response.agent_name = self.config.name
+        response.metadata["orchestrator"] = "native_tools"
+        response.metadata["orchestrator_metrics"] = orchestrator.get_metrics()
+        return await self._parse_response(response, context)
+
+    async def _execute_react(self, context: ChatContext, **kwargs: Any) -> AgentResponse:
+        """Run the ReAct loop and wrap the string result in an AgentResponse."""
+        logger.info(
+            "using_react_orchestration",
+            agent=self.config.name,
+            provider=self.provider.provider_name,
+            tools_count=len(context.available_tools),
+        )
+
+        is_valid, error_msg = await self.validate_input(context)
+        if not is_valid:
+            return AgentResponse(
+                content="",
+                status=ResponseStatus.ERROR,
+                agent_name=self.config.name,
+                error=error_msg,
+            )
+
+        orchestrator = ReActOrchestrator(
+            provider=self.provider,
+            tool_registry=self.tool_registry,
+            max_iterations=5,
+            debug_config=self.debug_config,
+        )
+
+        final_answer = await orchestrator.execute(context)
+
+        response = AgentResponse(
+            content=final_answer,
+            status=ResponseStatus.SUCCESS,
+            agent_name=self.config.name,
+            model=self.provider.model,
+            provider=self.provider.provider_name,
+        )
+        response.metadata["orchestrator"] = "react"
+        response.metadata["orchestrator_metrics"] = orchestrator.get_metrics()
+        return await self._parse_response(response, context)
+
+    async def _execute_structured(self, context: ChatContext, **kwargs: Any) -> AgentResponse:
+        """Run a forced structured-output call against a tool-capable provider.
+
+        Uses provider-native structured output:
+        - Anthropic: a single forced tool whose ``input_schema`` is the desired
+          schema (``tool_choice={'type': 'tool', 'name': ...}``).
+        - OpenAI: ``response_format={'type': 'json_schema', ...}``.
+
+        The validated payload is placed in ``response.metadata['structured']``.
+        Falls back to post-hoc JSON parsing of ``response.content`` if the
+        provider returns plain text.
+        """
+        schema = self.config.output_schema
+        assert schema is not None  # guarded by caller
+
+        is_valid, error_msg = await self.validate_input(context)
+        if not is_valid:
+            return AgentResponse(
+                content="",
+                status=ResponseStatus.ERROR,
+                agent_name=self.config.name,
+                error=error_msg,
+            )
+
+        messages = await self._build_prompt(context)
+        schema_name = schema.get("title") or schema.get("name") or "structured_output"
+
+        structured_kwargs = dict(kwargs)
+        if self.provider.provider_name == "anthropic":
+            structured_kwargs["tools"] = [
+                {
+                    "name": schema_name,
+                    "description": schema.get(
+                        "description", "Return the answer in the required structure."
+                    ),
+                    "input_schema": schema,
+                }
+            ]
+            structured_kwargs["tool_choice"] = {"type": "tool", "name": schema_name}
+        else:
+            structured_kwargs["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_name,
+                    "schema": schema,
+                    "strict": True,
+                },
+            }
+
+        response = await self.provider.generate(
+            messages=messages,
+            system_prompt=self.config.system_prompt,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            **structured_kwargs,
+        )
+
+        structured = self._extract_structured_payload(response)
+        if structured is not None:
+            response.metadata["structured"] = structured
+            response.metadata["is_structured"] = True
+        else:
+            response.metadata["is_structured"] = False
+
+        response.agent_name = self.config.name
+        return await self._parse_response(response, context)
+
+    @staticmethod
+    def _extract_structured_payload(response: AgentResponse) -> dict[str, Any] | None:
+        """Extract the structured payload from a provider response.
+
+        Prefers a forced tool call (Anthropic), then falls back to parsing
+        ``response.content`` as JSON (OpenAI json_schema / post-hoc).
+        """
+        if response.tool_calls:
+            return response.tool_calls[0].arguments
+
+        if response.content:
+            try:
+                parsed = json.loads(response.content)
+                if isinstance(parsed, dict):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                return None
+
+        return None
 
     async def execute_stream(  # type: ignore[override]
         self, context: ChatContext, **kwargs: Any
@@ -431,7 +622,7 @@ class ChatAgent(BaseAgent[ChatContext]):
                 accumulated_content_length=len(accumulated_content),
             )
             # Emit error as StreamEvent
-            yield StreamEvent.content(f"\n\n❌ Errore durante l'esecuzione: {str(e)}")
+            yield StreamEvent.content(f"\n\nErrore durante l'esecuzione: {str(e)}")
 
     async def _build_prompt(self, context: ChatContext) -> list[Message]:
         """

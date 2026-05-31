@@ -4,7 +4,7 @@ This service handles all tax-related calculations for Lightning Network payments
 in accordance with Italian fiscal regulations (2025+).
 
 Key responsibilities:
-- Calculate capital gains/losses on BTC → EUR conversions
+- Calculate capital gains/losses on BTC EUR conversions
 - Check Anti-Money Laundering (AML) thresholds
 - Generate Quadro RW data for tax declarations
 - Publish tax-related domain events
@@ -215,7 +215,7 @@ class TaxCalculationService:
 
         for invoice in invoices:
             if invoice.eur_amount_declared:
-                # Lightning payments are outflows (BTC → EUR)
+                # Lightning payments are outflows (BTC EUR)
                 total_outflows += invoice.eur_amount_declared
 
         # For Lightning, we receive BTC by creating invoices

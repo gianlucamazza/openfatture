@@ -36,3 +36,10 @@ repos:
             types-PyYAML,
           ]
         args: [--ignore-missing-imports]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        args: ["-ll", "-r"]
+        files: ^openfatture/

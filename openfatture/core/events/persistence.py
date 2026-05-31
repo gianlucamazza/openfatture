@@ -91,10 +91,10 @@ class EventPersistenceListener:
         """Extract entity type and ID from event attributes.
 
         Looks for common patterns in event attributes:
-        - invoice_id, fattura_id → invoice
-        - client_id, cliente_id → client
-        - payment_id, pagamento_id → payment
-        - batch_id → batch
+        - invoice_id, fattura_id invoice
+        - client_id, cliente_id client
+        - payment_id, pagamento_id payment
+        - batch_id batch
         - etc.
 
         Args:
@@ -104,7 +104,7 @@ class EventPersistenceListener:
         Returns:
             Tuple of (entity_type, entity_id) or (None, None) if not found
         """
-        # Common entity field patterns (field_name → entity_type)
+        # Common entity field patterns (field_name entity_type)
         entity_mappings = {
             "invoice_id": "invoice",
             "fattura_id": "invoice",

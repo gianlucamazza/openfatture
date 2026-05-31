@@ -26,8 +26,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy.orm import Session
 
-from openfatture.storage.session import db_session
 from openfatture.storage.database.models import Fattura
+from openfatture.storage.session import db_session
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)

@@ -268,9 +268,9 @@ flowchart TD
 
 **Supported Entities:**
 
-- Clients (CSV → Cliente table)
-- Products (CSV → Prodotto table)
-- Invoices (CSV → Fattura + Riga tables)
+- Clients (CSV Cliente table)
+- Products (CSV Prodotto table)
+- Invoices (CSV Fattura + Riga tables)
 
 ---
 
@@ -357,10 +357,10 @@ erDiagram
 
 **Key Relationships:**
 
-- **Fattura → Cliente:** Many-to-one (many invoices per client)
-- **Fattura → Riga:** One-to-many (invoice lines)
-- **Riga → Prodotto:** Many-to-one (optional product reference)
-- **Fattura → Notifica_SDI:** One-to-many (SDI responses)
+- **Fattura Cliente:** Many-to-one (many invoices per client)
+- **Fattura Riga:** One-to-many (invoice lines)
+- **Riga Prodotto:** Many-to-one (optional product reference)
+- **Fattura Notifica_SDI:** One-to-many (SDI responses)
 
 **Invoice Lifecycle:**
 
@@ -560,8 +560,8 @@ stateDiagram-v2
     HalfOpen --> Closed: LND responds to test request
     HalfOpen --> Open: Test request fails
 
-    Closed --> Closed: Success → reset failure count
-    Closed --> Closed: Failure → increment counter
+    Closed --> Closed: Success reset failure count
+    Closed --> Closed: Failure increment counter
 
     note right of Closed
         Normal operation:
@@ -580,8 +580,8 @@ stateDiagram-v2
     note right of HalfOpen
         Recovery testing:
         - Single test request
-        - If success → Closed
-        - If failure → Open
+        - If success Closed
+        - If failure Open
     end note
 ```
 
@@ -634,7 +634,7 @@ flowchart TD
 
 **Rate Provider Features:**
 
-- **Primary/Secondary providers:** CoinGecko → CoinMarketCap → Fallback
+- **Primary/Secondary providers:** CoinGecko CoinMarketCap Fallback
 - **Caching:** 5-minute TTL reduces API calls and improves performance
 - **Error handling:** Graceful fallback when providers are unavailable
 - **API keys:** Optional authentication for higher rate limits

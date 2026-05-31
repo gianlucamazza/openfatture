@@ -27,10 +27,10 @@ def main():
     cost_usd = float(os.environ.get("OPENFATTURE_COST_USD", "0.0"))
     latency_ms = float(os.environ.get("OPENFATTURE_LATENCY_MS", "0.0"))
 
-    print("🤖 AI Command Completed")
+    print("AI Command Completed")
     print("=" * 50)
     print(f"Command: {command}")
-    print(f"Status: {'✅ Success' if success else '❌ Failed'}")
+    print(f"Status: {'Success' if success else 'Failed'}")
     print(f"Tokens: {tokens_used:,}")
     print(f"Cost: ${cost_usd:.6f}")
     print(f"Latency: {latency_ms:.2f}ms")
@@ -59,7 +59,7 @@ def main():
 
     # Check for high costs and send alerts
     if cost_usd > 0.10:  # Alert if single command costs > $0.10
-        print(f"\n⚠️  WARNING: High cost detected: ${cost_usd:.6f}")
+        print(f"\nWARNING: High cost detected: ${cost_usd:.6f}")
         print("Consider reviewing AI provider settings or usage patterns.")
 
         # Example: Send alert to monitoring system
@@ -77,7 +77,7 @@ def main():
     # Generate daily summary if needed
     generate_daily_summary(usage_log)
 
-    print(f"\n✅ Usage tracked to: {usage_log}")
+    print(f"\nUsage tracked to: {usage_log}")
 
 
 def generate_daily_summary(usage_log):
@@ -101,7 +101,7 @@ def generate_daily_summary(usage_log):
                     command_counts[command] = command_counts.get(command, 0) + 1
 
         if total_tokens > 0:
-            print("\n📊 Today's Summary:")
+            print("\nToday's Summary:")
             print(f"Total Commands: {sum(command_counts.values())}")
             print(f"Total Tokens: {total_tokens:,}")
             print(f"Total Cost: ${total_cost:.4f}")

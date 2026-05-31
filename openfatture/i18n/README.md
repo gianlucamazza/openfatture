@@ -4,11 +4,11 @@ Modern multi-language support for OpenFatture using **Mozilla Fluent**.
 
 ## Supported Languages
 
-- 🇮🇹 **Italian (it)** - Default locale
-- 🇬🇧 **English (en)**
-- 🇪🇸 **Spanish (es)**
-- 🇫🇷 **French (fr)**
-- 🇩🇪 **German (de)**
+- **Italian (it)** - Default locale
+- **English (en)**
+- **Spanish (es)**
+- **French (fr)**
+- **German (de)**
 
 ## Quick Start
 
@@ -134,8 +134,8 @@ format_date_localized(date(2024, 3, 15), "long", "en")  # "March 15, 2024"
 Edit the appropriate .ftl file (e.g., `locales/it/cli.ftl`):
 
 ```fluent
-cli-fattura-create-title = 🧾 Crea Nuova Fattura
-cli-fattura-created = ✅ Fattura { $numero } creata con successo!
+cli-fattura-create-title = Crea Nuova Fattura
+cli-fattura-created = Fattura { $numero } creata con successo!
 ```
 
 ### 2. Translate to All Locales
@@ -144,12 +144,12 @@ Add the same message ID to all locale files:
 
 ```fluent
 # locales/en/cli.ftl
-cli-fattura-create-title = 🧾 Create New Invoice
-cli-fattura-created = ✅ Invoice { $numero } created successfully!
+cli-fattura-create-title = Create New Invoice
+cli-fattura-created = Invoice { $numero } created successfully!
 
 # locales/es/cli.ftl
-cli-fattura-create-title = 🧾 Crear Nueva Factura
-cli-fattura-created = ✅ Factura { $numero } creada con éxito!
+cli-fattura-create-title = Crear Nueva Factura
+cli-fattura-created = Factura { $numero } creada con éxito!
 ```
 
 ### 3. Use in Code
@@ -171,7 +171,7 @@ from openfatture.i18n import _, get_locale, set_locale
 
 # Locale selector in sidebar
 locale = st.sidebar.selectbox(
-    "🌐 Language",
+    "Language",
     options=["it", "en", "es", "fr", "de"],
     index=["it", "en", "es", "fr", "de"].index(get_locale()),
 )
@@ -265,7 +265,7 @@ uv run python openfatture/i18n/migrations/email_json_to_ftl.py
 
 ## Best Practices
 
-1. **Use kebab-case for message IDs**: `cli-fattura-create-title` ✅
+1. **Use kebab-case for message IDs**: `cli-fattura-create-title`
 2. **Namespace by module**: `cli-*`, `web-*`, `email-*`, `errors-*`
 3. **Preserve Italian legal terms**: Always use "IVA", "reverse charge" + Italian translation
 4. **Test all locales**: Ensure keys exist in all .ftl files
@@ -283,12 +283,12 @@ uv run python openfatture/i18n/migrations/email_json_to_ftl.py
 ```
 Translation not found: cli-fattura-new (locale: en)
 ```
-→ Add the message ID to `locales/en/cli.ftl`
+Add the message ID to `locales/en/cli.ftl`
 
 **Locale not changing**:
 ```python
 # Ensure you're using set_locale(), not just updating Settings
-set_locale("en")  # ✅
+set_locale("en") #
 ```
 
 **Variables not interpolating**:

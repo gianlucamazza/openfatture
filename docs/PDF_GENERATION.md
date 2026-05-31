@@ -2,9 +2,9 @@
 
 **Professional PDF generation for Italian electronic invoices with legal compliance.**
 
-> **📦 Module**: `openfatture.services.pdf`
+> **Module**: `openfatture.services.pdf`
 > **Engine**: ReportLab 4.0+
-> **Status**: ✅ Production-ready (implemented in Phase 3)
+> **Status**: Production-ready (implemented in Phase 3)
 
 ---
 
@@ -40,13 +40,13 @@ OpenFatture's **PDF Generation** module creates professional, legally-compliant 
 
 ### Key Features
 
-✅ **3 Professional Templates** - Minimalist, Professional, Branded
-✅ **PDF/A-3 Compliance** - Legal archiving (Agenzia delle Entrate approved)
-✅ **QR Code Support** - SEPA instant payment (pagoPa planned)
-✅ **Automatic Pagination** - Multi-page invoices handled automatically
-✅ **Reusable Components** - Modular design for easy customization
-✅ **Type-Safe Config** - Pydantic-based configuration
-✅ **Italian Standards** - Full FatturaPA compliance
+**3 Professional Templates** - Minimalist, Professional, Branded
+**PDF/A-3 Compliance** - Legal archiving (Agenzia delle Entrate approved)
+**QR Code Support** - SEPA instant payment (pagoPa planned)
+**Automatic Pagination** - Multi-page invoices handled automatically
+**Reusable Components** - Modular design for easy customization
+**Type-Safe Config** - Pydantic-based configuration
+**Italian Standards** - Full FatturaPA compliance
 
 ---
 
@@ -125,7 +125,7 @@ with get_session() as session:
     # 4. Generate PDF
     pdf_path = generator.generate(fattura, output_path="fattura_001_2025.pdf")
 
-print(f"✓ PDF generated: {pdf_path}")
+print(f"PDF generated: {pdf_path}")
 ```
 
 ### CLI Usage
@@ -209,7 +209,7 @@ generator = PDFGenerator(config)
 │ [LOGO]  YOUR COMPANY NAME              │
 │         P.IVA: 12345678901             │
 │         Via Roma 123, Milano, MI       │
-│         ☎ +39 02 1234567               │
+│ +39 02 1234567 │
 │         @ info@yourcompany.it          │
 ├────────────────────────────────────────┤
 │                                        │
@@ -626,9 +626,9 @@ config = PDFGeneratorConfig(
 
 | Level | Description | OpenFatture |
 |-------|-------------|-------------|
-| PDF/A-1 | Basic archiving | ❌ Not used |
-| PDF/A-2 | Enhanced (layers) | ❌ Not used |
-| PDF/A-3 | With attachments | ✅ **Used** |
+| PDF/A-1 | Basic archiving | Not used |
+| PDF/A-2 | Enhanced (layers) | Not used |
+| PDF/A-3 | With attachments | **Used** |
 
 **Why PDF/A-3?** Allows embedding the original XML invoice inside the PDF.
 
@@ -765,7 +765,7 @@ for fattura in invoices:
     filename = f"fattura_{fattura.numero}_{fattura.anno}.pdf"
     output_path = output_dir / filename
     generator.generate(fattura, output_path)
-    print(f"✓ {filename}")
+    print(f"{filename}")
 ```
 
 ---
@@ -851,10 +851,10 @@ def draw_custom_badge(canvas: Canvas, x: float, y: float, text: str):
 
 ### 3. QR Code Usage
 
-- ✅ **Enable for B2C**: Makes payment easier for consumers
-- ✅ **Enable for recurring clients**: Faster payment processing
-- ❌ **Disable for PA**: Public administration uses different systems
-- ❌ **Disable for large amounts**: Prefer manual verification
+- **Enable for B2C**: Makes payment easier for consumers
+- **Enable for recurring clients**: Faster payment processing
+- **Disable for PA**: Public administration uses different systems
+- **Disable for large amounts**: Prefer manual verification
 
 ### 4. Watermarks
 
@@ -969,12 +969,12 @@ verapdf --format text fattura.pdf
 ```python
 # Slow (creates new generator each time)
 for fattura in invoices:
-    generator = PDFGenerator(config)  # ❌
+    generator = PDFGenerator(config) #
     generator.generate(fattura)
 
 # Fast (reuse generator)
 generator = PDFGenerator(config)
-for fattura in invoices:  # ✅
+for fattura in invoices: #
     generator.generate(fattura)
 ```
 

@@ -38,7 +38,7 @@ Required columns:
 | `totale` | Gross total. | `610.00` |
 | `note` | Optional – free-form notes. | `Consulting January` |
 
-> **Tip:** If you need detailed lines, load them separately with a custom script or add them manually using `openfatture fattura show` → `fattura righe add` (planned feature). The current importer creates invoices with pre-calculated totals.
+> **Tip:** If you need detailed lines, load them separately with a custom script or add them manually using `openfatture fattura show` `fattura righe add` (planned feature). The current importer creates invoices with pre-calculated totals.
 
 ### CSV Example
 
@@ -74,8 +74,8 @@ numero,anno,data_emissione,cliente_id,imponibile,iva,totale,note
 ### Common Errors
 
 - `Client X not found`: create the customer first or fix the ID in the CSV.
-- `Row N: ... invalid literal`: numbers with commas → use `.` as decimal separator.
-- `Import failed: ...`: unreadable file or wrong encoding → save as UTF-8 (without BOM).
+- `Row N: ... invalid literal`: numbers with commas use `.` as decimal separator.
+- `Import failed: ...`: unreadable file or wrong encoding save as UTF-8 (without BOM).
 
 ---
 
@@ -110,4 +110,4 @@ uv run openfatture batch export export_2025.csv --anno 2025 --stato inviata
 
 ---
 
-Questions or edge cases? Open an issue on GitHub or reach out through the batch channel referenced in the README. Happy importing! 📦
+Questions or edge cases? Open an issue on GitHub or reach out through the batch channel referenced in the README. Happy importing!

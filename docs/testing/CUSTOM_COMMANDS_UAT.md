@@ -30,7 +30,7 @@ Type `/custom` to list all available custom commands.
 
 **Expected Output:**
 ```
-📚 CUSTOM COMMANDS
+CUSTOM COMMANDS
 
 Invoicing (2 commands):
   /fattura-rapida (aliases: fr, fattura)
@@ -54,7 +54,7 @@ Reporting (1 command):
 Total: 5 custom commands loaded
 ```
 
-**✅ Pass Criteria:**
+**Pass Criteria:**
 - All 5 example commands are listed
 - Commands are grouped by category
 - Aliases are shown correctly
@@ -83,7 +83,7 @@ Total: 5 custom commands loaded
 - [ ] Command expands correctly with all 3 arguments
 - [ ] AI generates professional Italian description
 - [ ] IVA suggestion is appropriate (22% for services)
-- [ ] Compliance status is indicated (✅ or ⚠️)
+- [ ] Compliance status is indicated (or )
 - [ ] Response is formatted clearly with sections
 
 **Edge Cases:**
@@ -174,7 +174,7 @@ Total: 5 custom commands loaded
 **Verification:**
 - [ ] Command expands correctly
 - [ ] All 5 check sections are present
-- [ ] Each check shows status (✅/⚠️/❌)
+- [ ] Each check shows status (//)
 - [ ] Issues are clearly explained with solutions
 - [ ] Acceptance probability is provided (0-100%)
 - [ ] Final status is clear (READY/REQUIRES FIXES/NON-COMPLIANT)
@@ -337,7 +337,7 @@ Total: 5 custom commands loaded
 
 The Custom Commands feature is **ACCEPTED** if:
 
-### Functional Requirements ✅
+### Functional Requirements
 - [ ] All 5 example commands load and execute correctly
 - [ ] Command aliases work identically to main command names
 - [ ] Command expansion shows preview before AI processing
@@ -345,20 +345,20 @@ The Custom Commands feature is **ACCEPTED** if:
 - [ ] Session context is maintained across commands
 - [ ] Hot-reload works without restarting chat
 
-### Usability Requirements ✅
+### Usability Requirements
 - [ ] Commands are easy to discover (`/custom`, `/help`)
 - [ ] Error messages are clear and actionable
 - [ ] Response formatting is clear and professional
 - [ ] Italian language responses are grammatically correct
 - [ ] Visual aids (emojis, tables, bullets) enhance readability
 
-### Performance Requirements ✅
+### Performance Requirements
 - [ ] Command expansion < 5ms (measured in benchmarks)
 - [ ] Registry loading < 100ms for 50 commands
 - [ ] No noticeable lag in interactive use
 - [ ] Memory usage stays under 50MB for typical session
 
-### Quality Requirements ✅
+### Quality Requirements
 - [ ] No crashes or unhandled exceptions
 - [ ] Special characters handled safely
 - [ ] No security vulnerabilities (XSS, injection)
@@ -413,7 +413,7 @@ After completing UAT, the feature should demonstrate:
 
 **Tester**: ___________________________
 **Date**: ___________________________
-**Result**: ⬜ PASS  ⬜ PASS WITH ISSUES  ⬜ FAIL
+**Result**: PASS PASS WITH ISSUES FAIL
 **Notes**: ___________________________
 
 ---

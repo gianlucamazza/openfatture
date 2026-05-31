@@ -94,7 +94,7 @@ The CI/CD media automation pipeline generates demonstration videos, GIFs, and th
 
 #### Required Secrets
 
-Navigate to: `Repository Settings → Secrets and variables → Actions`
+Navigate to: `Repository Settings Secrets and variables Actions`
 
 | Secret Name | Value | Usage |
 |------------|-------|-------|
@@ -119,7 +119,7 @@ Value: sk-ant-api03-...  # Your Anthropic API key
 For production environments, add manual approval requirements:
 
 ```bash
-# 1. Go to Settings → Environments
+# 1. Go to Settings Environments
 https://github.com/YOUR_USERNAME/openfatture/settings/environments
 
 # 2. Create "media-automation" environment
@@ -219,12 +219,12 @@ AI_TOOLS_ENABLED=true
   - `.github/workflows/media-*.yml`
 
 **Validation Checks**:
-- ✓ Tape file syntax (Output, Set Shell, Set Theme directives)
-- ✓ Shell script syntax (`bash -n`)
-- ✓ No hardcoded API keys
-- ✓ No absolute file paths
-- ✓ Supported themes only (e.g., not "Solarized Dark")
-- ✓ Sleep commands have time units (ms/s)
+- Tape file syntax (Output, Set Shell, Set Theme directives)
+- Shell script syntax (`bash -n`)
+- No hardcoded API keys
+- No absolute file paths
+- Supported themes only (e.g., not "Solarized Dark")
+- Sleep commands have time units (ms/s)
 
 **Outputs**:
 - PR comment with validation results
@@ -268,7 +268,7 @@ Format: JPEG
 #### Generate All Scenarios
 ```bash
 # Via GitHub Actions UI
-1. Go to Actions → Media Generation
+1. Go to Actions Media Generation
 2. Click "Run workflow"
 3. Select branch: main
 4. Scenario: all
@@ -407,7 +407,7 @@ With prompt caching: ~$0.012 (67% savings)
    https://console.anthropic.com/settings/usage
 
    # Set up billing alerts
-   # Settings → Billing → Usage notifications
+   # Settings Billing Usage notifications
    ```
 
 5. **Use Lower-Cost Models for Testing**:
@@ -421,7 +421,7 @@ With prompt caching: ~$0.012 (67% savings)
 Set up GitHub Actions spending limits:
 
 ```bash
-# Repository Settings → Billing → Spending limits
+# Repository Settings Billing Spending limits
 1. Set monthly spending limit: $10
 2. Enable email notifications at 75%, 90%, 100%
 3. Monitor Actions minutes usage
@@ -448,7 +448,7 @@ gh secret list | grep ANTHROPIC
 gh secret set ANTHROPIC_API_KEY
 
 # Or via UI:
-Repository Settings → Secrets → Actions → New secret
+Repository Settings Secrets Actions New secret
 ```
 
 #### 2. VHS Recording Hangs

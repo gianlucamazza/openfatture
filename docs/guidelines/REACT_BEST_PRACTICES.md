@@ -11,10 +11,10 @@
 This guide provides best practices for implementing and deploying ReAct (Reasoning + Acting) orchestration for tool calling with Ollama models in OpenFatture. ReAct enables local LLMs without native function calling to use the same tools as cloud providers (OpenAI, Anthropic).
 
 **Key Benefits:**
-- ✅ Local inference (no API costs, privacy-preserving)
-- ✅ Same tool ecosystem as cloud providers
-- ✅ 80%+ success rate with proper configuration
-- ✅ Full observability with metrics tracking
+- Local inference (no API costs, privacy-preserving)
+- Same tool ecosystem as cloud providers
+- 80%+ success rate with proper configuration
+- Full observability with metrics tracking
 
 **Files:**
 - `openfatture/ai/orchestration/react.py` - ReActOrchestrator implementation
@@ -49,10 +49,10 @@ OPENFATTURE_AI_OLLAMA_BASE_URL=http://localhost:11434
 # Test with different temperatures
 from openfatture.ai.providers.ollama import OllamaProvider
 
-# ❌ BAD: Non-deterministic, inconsistent format
+# BAD: Non-deterministic, inconsistent format
 provider_bad = OllamaProvider(model="qwen3:8b", temperature=0.7)
 
-# ✅ GOOD: Deterministic, consistent tool calls
+# GOOD: Deterministic, consistent tool calls
 provider_good = OllamaProvider(model="qwen3:8b", temperature=0.0)
 ```
 
@@ -843,13 +843,13 @@ OPENFATTURE_AI_METRICS_EXPORT=prometheus
 ### Configuration Checklist
 
 ```bash
-✅ Temperature = 0.0 (CRITICAL)
-✅ Model = qwen3:8b
-✅ Max iterations = 5-8
-✅ XML format in prompts
-✅ Few-shot examples (2-3 per tool)
-✅ Metrics tracking enabled
-✅ Structured logging enabled
+Temperature = 0.0 (CRITICAL)
+Model = qwen3:8b
+Max iterations = 5-8
+XML format in prompts
+Few-shot examples (2-3 per tool)
+Metrics tracking enabled
+Structured logging enabled
 ```
 
 ### Key Metrics Targets

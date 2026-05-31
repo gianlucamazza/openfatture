@@ -136,7 +136,7 @@ def create_sample_invoice(session: Session, numero: str = "001", year: int = 202
     session.add(pagamento)
     session.commit()
 
-    print(f"✅ Created sample invoice: {numero}/{year}")
+    print(f"Created sample invoice: {numero}/{year}")
 
     return fattura
 
@@ -176,10 +176,10 @@ def example_1_minimalist_template():
         output_dir = Path(mkdtemp())
         pdf_path = generator.generate(fattura, output_path=output_dir / "minimalist.pdf")
 
-        print("📄 Template: Minimalist")
+        print("Template: Minimalist")
         print("   Features: Clean design, black & white, essential info")
         print("   Use case: Simple invoices, minimal branding")
-        print(f"\n✅ PDF generated: {pdf_path}")
+        print(f"\nPDF generated: {pdf_path}")
         print(f"   File size: {pdf_path.stat().st_size / 1024:.1f} KB")
 
     finally:
@@ -223,15 +223,15 @@ def example_2_professional_template():
         output_dir = Path(mkdtemp())
         pdf_path = generator.generate(fattura, output_path=output_dir / "professional.pdf")
 
-        print("📄 Template: Professional")
+        print("Template: Professional")
         print("   Features: Logo, branded colors, polished layout")
         print("   Use case: Standard business invoices")
-        print(f"\n✅ PDF generated: {pdf_path}")
+        print(f"\nPDF generated: {pdf_path}")
         print(f"   File size: {pdf_path.stat().st_size / 1024:.1f} KB")
 
         # Note about logo
         if not config.logo_path:
-            print("\n💡 Tip: Add your company logo:")
+            print("\nTip: Add your company logo:")
             print("   config = PDFGeneratorConfig(..., logo_path='./logo.png')")
 
     finally:
@@ -277,16 +277,16 @@ def example_3_branded_template():
         output_dir = Path(mkdtemp())
         pdf_path = generator.generate(fattura, output_path=output_dir / "branded.pdf")
 
-        print("📄 Template: Branded")
+        print("Template: Branded")
         print("   Features: Custom colors, watermark, full branding")
         print(f"   Primary color: {config.primary_color} (Deep Blue)")
         print(f"   Secondary color: {config.secondary_color} (Light Blue)")
         print(f"   Watermark: {config.watermark_text}")
         print("   Use case: Corporate invoices, established brands")
-        print(f"\n✅ PDF generated: {pdf_path}")
+        print(f"\nPDF generated: {pdf_path}")
         print(f"   File size: {pdf_path.stat().st_size / 1024:.1f} KB")
 
-        print("\n💡 Color customization examples:")
+        print("\nColor customization examples:")
         print("   • Tech brand:  primary='#0066CC', secondary='#00CCFF'")
         print("   • Eco brand:   primary='#2D5016', secondary='#8BC34A'")
         print("   • Luxury:      primary='#8B4513', secondary='#D4AF37'")
@@ -331,20 +331,20 @@ def example_4_qr_code_integration():
         output_dir = Path(mkdtemp())
         pdf_path = generator.generate(fattura, output_path=output_dir / "invoice_with_qr.pdf")
 
-        print("📄 PDF with QR Code generated")
+        print("PDF with QR Code generated")
         print("   QR Type: SEPA EPC (European Payment Council)")
         print("   Standard: ISO 20022")
-        print("\n✅ Features:")
+        print("\nFeatures:")
         print("   • Instant payment via mobile banking app")
         print("   • Automatic IBAN, amount, reference pre-fill")
         print("   • Reduces payment errors")
         print("   • Faster payment processing")
-        print("\n💡 How clients use it:")
+        print("\nHow clients use it:")
         print("   1. Open mobile banking app")
         print("   2. Scan QR code on invoice")
         print("   3. Confirm pre-filled payment")
         print("   4. Done! Payment sent instantly")
-        print(f"\n📄 Generated: {pdf_path}")
+        print(f"\nGenerated: {pdf_path}")
         print(f"   File size: {pdf_path.stat().st_size / 1024:.1f} KB")
 
     finally:
@@ -384,19 +384,19 @@ def example_5_pdfa_compliance():
         output_dir = Path(mkdtemp())
         pdf_path = generator.generate(fattura, output_path=output_dir / "invoice_pdfa.pdf")
 
-        print("📄 PDF/A-3 Compliant Invoice")
-        print("\n✅ Compliance features:")
+        print("PDF/A-3 Compliant Invoice")
+        print("\nCompliance features:")
         print("   • ISO 19005-3:2012 standard")
         print("   • 10-year legal archiving guaranteed")
         print("   • Embedded fonts for consistent rendering")
         print("   • Color profile embedded (sRGB)")
         print("   • Can embed XML invoice (FatturaPA)")
-        print("\n💡 Why PDF/A-3?")
+        print("\nWhy PDF/A-3?")
         print("   • Italian law requires 10-year invoice storage")
         print("   • PDF/A guarantees readability for decades")
         print("   • Can embed XML for electronic invoicing")
         print("   • Accepted by tax authorities (Agenzia delle Entrate)")
-        print(f"\n📄 Generated: {pdf_path}")
+        print(f"\nGenerated: {pdf_path}")
         print(f"   File size: {pdf_path.stat().st_size / 1024:.1f} KB")
 
     finally:
@@ -420,7 +420,7 @@ def example_6_batch_generation():
 
     try:
         # Create multiple sample invoices
-        print("📝 Creating sample invoices...")
+        print("Creating sample invoices...")
 
         invoices = []
         for i in range(1, 6):  # Create 5 invoices
@@ -441,7 +441,7 @@ def example_6_batch_generation():
         output_dir = Path(mkdtemp()) / "batch_invoices"
         output_dir.mkdir(exist_ok=True)
 
-        print(f"\n🔄 Generating {len(invoices)} PDFs...")
+        print(f"\nGenerating {len(invoices)} PDFs...")
 
         generated_files: list[Path] = []
 
@@ -458,13 +458,13 @@ def example_6_batch_generation():
         # Summary
         total_size = sum(f.stat().st_size for f in generated_files)
 
-        print("\n✅ Batch generation complete!")
+        print("\nBatch generation complete!")
         print(f"   Total PDFs: {len(generated_files)}")
         print(f"   Output directory: {output_dir}")
         print(f"   Total size: {total_size / 1024:.1f} KB")
         print(f"   Average size: {total_size / len(generated_files) / 1024:.1f} KB")
 
-        print("\n💡 Production tip:")
+        print("\nProduction tip:")
         print("   Use async for large batches (100+ invoices)")
         print("   Implement progress bar with tqdm library")
 
@@ -513,14 +513,14 @@ def example_7_custom_configuration():
             footer_text="VenereLabs S.r.l. - P.IVA IT12345678901 - REA MI-1234567 - Capitale Sociale €10.000",
         )
 
-        print("📋 Configuration summary:")
+        print("Configuration summary:")
         print(f"   Template: {config.template}")
         print(f"   Company: {config.company_name}")
         print(f"   Colors: {config.primary_color} / {config.secondary_color}")
-        print(f"   QR Code: {'✅ Enabled' if config.enable_qr_code else '❌ Disabled'}")
-        print(f"   PDF/A: {'✅ Enabled' if config.enable_pdfa else '❌ Disabled'}")
+        print(f" QR Code: {'Enabled' if config.enable_qr_code else 'Disabled'}")
+        print(f" PDF/A: {'Enabled' if config.enable_pdfa else 'Disabled'}")
         print(f"   Watermark: {config.watermark_text or 'None'}")
-        print(f"   Custom footer: {'✅ Yes' if config.footer_text else '❌ No'}")
+        print(f" Custom footer: {'Yes' if config.footer_text else 'No'}")
 
         generator = PDFGenerator(config)
 
@@ -528,10 +528,10 @@ def example_7_custom_configuration():
         output_dir = Path(mkdtemp())
         pdf_path = generator.generate(fattura, output_path=output_dir / "advanced.pdf")
 
-        print(f"\n✅ PDF generated: {pdf_path}")
+        print(f"\nPDF generated: {pdf_path}")
         print(f"   File size: {pdf_path.stat().st_size / 1024:.1f} KB")
 
-        print("\n💡 Configuration tips:")
+        print("\nConfiguration tips:")
         print("   • Use watermark for drafts/copies (BOZZA, COPIA)")
         print("   • Always enable PDF/A for legal compliance")
         print("   • QR codes increase payment speed by 70%")
@@ -562,7 +562,7 @@ def example_8_template_comparison():
         output_dir = Path(mkdtemp()) / "template_comparison"
         output_dir.mkdir(exist_ok=True)
 
-        print("📄 Generating same invoice with all 3 templates...\n")
+        print("Generating same invoice with all 3 templates...\n")
 
         templates_config = [
             {
@@ -605,12 +605,12 @@ def example_8_template_comparison():
 
             file_size = pdf_path.stat().st_size / 1024
 
-            print(f"✅ {tmpl['name']:<15} - {file_size:>6.1f} KB - {tmpl['description']}")
+            print(f"{tmpl['name']:<15} - {file_size:>6.1f} KB - {tmpl['description']}")
 
             generated.append({"name": tmpl["name"], "path": pdf_path, "size": file_size})
 
-        print(f"\n📁 All templates generated in: {output_dir}")
-        print("\n💡 Use case guide:")
+        print(f"\nAll templates generated in: {output_dir}")
+        print("\nUse case guide:")
         print("   Minimalist:    Simple services, freelancers")
         print("   Professional:  SMEs, standard business invoices")
         print("   Branded:       Corporations, agencies, established brands")
@@ -636,9 +636,9 @@ def example_9_error_handling():
     try:
         config = PDFGeneratorConfig(template="invalid_template")
         generator = PDFGenerator(config)
-        print("   ❌ Should have raised ValueError")
+        print(" Should have raised ValueError")
     except ValueError as e:
-        print(f"   ✅ Caught expected error: {e}")
+        print(f" Caught expected error: {e}")
 
     # Test 2: Missing invoice data (handled gracefully)
     print("\nTest 2: Template configuration validation")
@@ -648,7 +648,7 @@ def example_9_error_handling():
         company_name="",  # Empty company name (will use default)
     )
 
-    print("   ✅ Handles empty company_name gracefully")
+    print(" Handles empty company_name gracefully")
     print("      Falls back to: 'OpenFatture'")
 
     # Test 3: Valid configuration
@@ -661,16 +661,16 @@ def example_9_error_handling():
     )
 
     generator = PDFGenerator(config)
-    print("   ✅ Generator created successfully")
+    print(" Generator created successfully")
     print(f"      Template: {config.template}")
     print(f"      Company: {config.company_name}")
 
-    print("\n✅ All error handling tests completed")
+    print("\nAll error handling tests completed")
 
 
 def main():
     """Run all PDF generation examples."""
-    print("\n📄 OpenFatture - PDF Generation Examples")
+    print("\nOpenFatture - PDF Generation Examples")
     print("=" * 80)
     print()
     print("This demo showcases the complete PDF generation system:")
@@ -697,10 +697,10 @@ def main():
     example_9_error_handling()
 
     print("\n" + "=" * 80)
-    print("✅ All examples completed!")
+    print("All examples completed!")
     print("=" * 80)
     print()
-    print("📚 Next steps:")
+    print("Next steps:")
     print("  • Read full documentation: docs/PDF_GENERATION.md")
     print("  • Customize templates: openfatture/services/pdf/templates/")
     print("  • Add your logo: config = PDFGeneratorConfig(logo_path='./logo.png')")
@@ -731,11 +731,11 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         import traceback
 
         traceback.print_exc()
-        print("\n💡 Troubleshooting:")
+        print("\nTroubleshooting:")
         print("  1. Make sure database is initialized: openfatture db init")
         print("  2. Ensure ReportLab is installed: uv sync --all-extras")
         print("  3. Check file permissions for output directory")

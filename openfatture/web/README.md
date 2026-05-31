@@ -1,22 +1,22 @@
-# OpenFatture Web UI 🌐
+# OpenFatture Web UI
 
 Web interface moderna per OpenFatture basata su **Streamlit**.
 
-## Funzionalità ✨
+## Funzionalità
 
 ### Implementate
 
-- **🏠 Home** - Landing page con link rapidi e getting started
-- **📊 Dashboard** - KPI real-time, grafici interattivi (Plotly), statistiche business
-- **🧾 Fatture** - Lista, filtri, dettaglio, generazione XML
-- **🤖 AI Assistant** - Chat interattivo, generazione descrizioni, suggerimenti IVA
-- **⚙️ Impostazioni** - Visualizzazione configurazione sistema
+- **Home** - Landing page con link rapidi e getting started
+- **Dashboard** - KPI real-time, grafici interattivi (Plotly), statistiche business
+- **Fatture** - Lista, filtri, dettaglio, generazione XML
+- **AI Assistant** - Chat interattivo, generazione descrizioni, suggerimenti IVA
+- **Impostazioni** - Visualizzazione configurazione sistema
 
 ### In Sviluppo
 
-- **📈 Analytics** - Grafici avanzati, export report
+- **Analytics** - Grafici avanzati, export report
 
-## Installazione 📦
+## Installazione
 
 ### 1. Installa dipendenze web
 
@@ -55,7 +55,7 @@ Vedi `.env.example` o `docs/CONFIGURATION.md` per la configurazione completa.
 uv run python -c "from openfatture.storage.database.session import init_db; init_db()"
 ```
 
-## Lancio 🚀
+## Lancio
 
 ### Modalità Sviluppo
 
@@ -84,18 +84,18 @@ uv run streamlit run openfatture/web/app.py --server.fileWatcherType none
 uv run streamlit run openfatture/web/app.py --theme.base dark
 ```
 
-## Architettura 🏗️
+## Architettura
 
 ```
 openfatture/web/
 ├── app.py                      # Entry point / Home page
 ├── pages/                      # Multi-page app
-│   ├── 1_📊_Dashboard.py
-│   ├── 2_🧾_Fatture.py
-│   ├── 3_👥_Clienti.py
-│   ├── 4_💰_Pagamenti.py
-│   ├── 5_🤖_AI_Assistant.py
-│   └── 6_⚙️_Impostazioni.py
+│ ├── 1__Dashboard.py
+│ ├── 2__Fatture.py
+│ ├── 3__Clienti.py
+│ ├── 4__Pagamenti.py
+│ ├── 5__AI_Assistant.py
+│ └── 6__Impostazioni.py
 ├── services/                   # Adapter services
 │   ├── invoice_service.py     # Business logic wrapper con caching
 │   └── ai_service.py          # AI providers async/sync bridge
@@ -106,7 +106,7 @@ openfatture/web/
 └── components/                 # Reusable UI components (future)
 ```
 
-## Best Practices 📚
+## Best Practices
 
 ### Caching
 
@@ -149,13 +149,13 @@ ai_service = get_ai_service()  # già gestisce async/sync
 response = ai_service.chat(message, history)
 ```
 
-## Integrazione con CLI 🔄
+## Integrazione con CLI
 
 La Web UI **non sostituisce** la CLI, ma la **complementa**:
 
-✅ **Coesistono perfettamente** - Condividono stesso database e business logic
-✅ **Stesso .env** - Configurazione unica
-✅ **Dati sincronizzati** - Modifiche CLI visibili in Web UI e viceversa
+**Coesistono perfettamente** - Condividono stesso database e business logic
+**Stesso .env** - Configurazione unica
+**Dati sincronizzati** - Modifiche CLI visibili in Web UI e viceversa
 
 ### Workflow Ibrido
 
@@ -170,7 +170,7 @@ uv run streamlit run openfatture/web/app.py
 # (disponibile sia in CLI che Web UI)
 ```
 
-## Troubleshooting 🔧
+## Troubleshooting
 
 ### Errore: "ModuleNotFoundError: No module named 'streamlit'"
 
@@ -192,7 +192,7 @@ st.cache_data.clear()  # Pulisci cache
 st.rerun()             # Ricarica page
 ```
 
-Oppure usa il pulsante "🔄 Aggiorna" nelle pagine.
+Oppure usa il pulsante "Aggiorna" nelle pagine.
 
 ### AI Assistant non funziona
 
@@ -208,7 +208,7 @@ Oppure usa il pulsante "🔄 Aggiorna" nelle pagine.
 
 3. Check logs per errori dettagliati
 
-## Performance Tips 🚄
+## Performance Tips
 
 ### Caching Aggressivo
 
@@ -234,29 +234,29 @@ if st.button("Mostra Dettaglio"):
 invoices = get_invoices(limit=50)
 ```
 
-## Roadmap 🗺️
+## Roadmap
 
-### Phase 1 (Completato) ✅
+### Phase 1 (Completato)
 - [x] Struttura base multi-page
 - [x] Dashboard con KPI e grafici
 - [x] Lista fatture con filtri
 - [x] AI Assistant (chat, descrizioni, tax)
 - [x] Utilities (cache, async, state)
 
-### Phase 2 (Next) 🔨
+### Phase 2 (Next)
 - [x] Wizard creazione fattura
 - [x] Gestione clienti (CRUD completo)
 - [x] Upload estratti conto
 - [x] Matching pagamenti interattivo
 
-### Phase 3 (Future) 🚀
+### Phase 3 (Future)
 - [ ] Cash flow forecast visualization
 - [ ] Compliance checker UI
 - [ ] Export report (PDF, Excel)
 - [ ] Advanced analytics
 - [ ] User authentication
 
-## Contributing 🤝
+## Contributing
 
 Per contribuire alla Web UI:
 
@@ -266,7 +266,7 @@ Per contribuire alla Web UI:
 4. Testa su browser diversi
 5. Mantieni compatibilità CLI
 
-## Support & Docs 📖
+## Support & Docs
 
 - **Main README:** `../../README.md`
 - **Configuration:** `../../docs/CONFIGURATION.md`
@@ -276,4 +276,4 @@ Per contribuire alla Web UI:
 
 ---
 
-Made with ❤️ using Streamlit
+Made with using Streamlit

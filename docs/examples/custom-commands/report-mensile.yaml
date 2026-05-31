@@ -12,7 +12,7 @@ version: "1.0"
 template: |
   Genera un report completo per il mese di {{ arg1 | default('questo mese') }}{% if arg2 %} {{ arg2 }}{% endif %}:
 
-  **📊 REPORT MENSILE - {{ arg1 | default('MESE CORRENTE') | upper }}{% if arg2 %} {{ arg2 }}{% endif %}**
+  **REPORT MENSILE - {{ arg1 | default('MESE CORRENTE') | upper }}{% if arg2 %} {{ arg2 }}{% endif %}**
 
   Includi le seguenti sezioni:
 

@@ -31,7 +31,7 @@ class ChatRenderer:
     def show_welcome(self, provider_name: str, model_name: str) -> None:
         """Show welcome header."""
         header = Panel.fit(
-            "[bold blue]🤖 OpenFatture AI Assistant[/bold blue]\n"
+            "[bold blue]OpenFatture AI Assistant[/bold blue]\n"
             f"[dim]Sessione attiva • Provider: {provider_name} • Modello: {model_name}[/dim]\n"
             "[dim]Comandi: /help /tools /stats /save /clear /exit[/dim]",
             border_style="blue",
@@ -42,7 +42,7 @@ class ChatRenderer:
 
     def show_goodbye(self) -> None:
         """Show goodbye message."""
-        self.console.print("\n[blue]Grazie per aver usato OpenFatture AI. A presto! 👋[/blue]\n")
+        self.console.print("\n[blue]Grazie per aver usato OpenFatture AI. A presto! [/blue]\n")
 
     def display_user_message(self, message: str) -> None:
         """Display user message in bubble."""
@@ -51,7 +51,7 @@ class ChatRenderer:
             f"[bold white]{message}[/bold white]",
             border_style="blue",
             padding=(0, 1),
-            title=f"[dim]👤 Tu • {timestamp}[/dim]",
+            title=f"[dim]Tu • {timestamp}[/dim]",
             title_align="right",
             width=self.panel_width,
         )
@@ -69,7 +69,7 @@ class ChatRenderer:
             md,
             border_style="green",
             padding=(0, 1),
-            title=f"[dim]🤖 AI • {timestamp}[/dim]",
+            title=f"[dim]AI • {timestamp}[/dim]",
             title_align="left",
             width=self.panel_width,
         )
@@ -79,12 +79,12 @@ class ChatRenderer:
     def display_error(self, error_message: str, context: str = "Errore") -> None:
         """Display error message."""
         error_bubble = Panel(
-            f"[red]❌ {context}:[/red] {error_message}\n\n"
-            "[yellow]💡 Suggerimenti:[/yellow]\n"
+            f"[red]{context}:[/red] {error_message}\n\n"
+            "[yellow]Suggerimenti:[/yellow]\n"
             "• Riprova il messaggio\n"
             "• Usa /help per assistenza\n"
             "• Controlla la connessione",
-            title="🚨 Errore Rilevato",
+            title="Errore Rilevato",
             border_style="red",
             padding=(1, 2),
             width=self.panel_width,
@@ -132,7 +132,7 @@ class ChatRenderer:
             group,
             border_style="green",
             padding=(0, 1),
-            title=f"[dim]🤖 AI • {timestamp}[/dim]",
+            title=f"[dim]AI • {timestamp}[/dim]",
             title_align="left",
             width=self.panel_width,
         )
@@ -141,10 +141,10 @@ class ChatRenderer:
         """Create initial thinking panel."""
         timestamp = datetime.now().strftime("%H:%M")
         return Panel(
-            "🤖 AI sta pensando...",
+            "AI sta pensando...",
             border_style="green",
             padding=(0, 1),
-            title=f"[dim]🤖 AI • {timestamp}[/dim]",
+            title=f"[dim]AI • {timestamp}[/dim]",
             title_align="left",
             width=self.panel_width,
         )

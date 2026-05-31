@@ -182,7 +182,7 @@ async def example_4_batch_descriptions():
 
         if response.metadata.get("is_structured"):
             model = response.metadata["parsed_model"]
-            print(f"\n✅ {service['servizio'].upper()}")
+            print(f"\n{service['servizio'].upper()}")
             print(f"   Ore: {service['ore']}h")
             print(f"   Deliverables: {len(model['deliverables'])}")
             print(f"   Competenze: {', '.join(model['competenze'][:3])}...")
@@ -191,14 +191,14 @@ async def example_4_batch_descriptions():
     total_tokens = sum(r.usage.total_tokens for r in results)
     total_cost = sum(r.usage.estimated_cost_usd for r in results)
 
-    print("\n📊 Batch Statistics:")
+    print("\nBatch Statistics:")
     print(f"   Total requests: {len(results)}")
     print(f"   Total tokens: {total_tokens}")
     print(f"   Total cost: ${total_cost:.4f}")
 
     # Show agent metrics
     metrics = agent.get_metrics()
-    print("\n🤖 Agent Metrics:")
+    print("\nAgent Metrics:")
     print(f"   Avg tokens/request: {metrics['avg_tokens_per_request']:.0f}")
     print(f"   Avg cost/request: ${metrics['avg_cost_per_request']:.4f}")
 
@@ -254,7 +254,7 @@ async def example_5_error_handling():
 
 async def main():
     """Run all examples."""
-    print("\n🤖 Invoice Assistant - Usage Examples")
+    print("\nInvoice Assistant - Usage Examples")
     print("=" * 80)
 
     # Run examples
@@ -265,7 +265,7 @@ async def main():
     await example_5_error_handling()
 
     print("\n" + "=" * 80)
-    print("✅ All examples completed!")
+    print("All examples completed!")
     print("=" * 80 + "\n")
 
 
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         print("\nMake sure you have set the required environment variables:")
         print("  OPENFATTURE_AI_PROVIDER (openai, anthropic, or ollama)")
         print("  OPENFATTURE_AI_OPENAI_API_KEY or OPENFATTURE_AI_ANTHROPIC_API_KEY")

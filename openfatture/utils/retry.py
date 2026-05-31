@@ -33,7 +33,7 @@ Usage:
     )
 
 Migration from old patterns:
-    # OLD (web/pages/5_🤖_AI_Assistant.py)
+    # OLD (web/pages/5_AI_Assistant.py)
     for attempt in range(max_retries):
         try:
             return await func()
@@ -128,7 +128,7 @@ class RetryConfig:
         return delay
 
 
-async def retry_async(
+async def retry_async[T](
     func: Callable[[], Awaitable[T]],
     config: RetryConfig | None = None,
     on_retry: Callable[[Exception, int], Awaitable[None]] | None = None,
@@ -231,7 +231,7 @@ async def retry_async(
     raise RuntimeError("retry_async: unexpected code path")
 
 
-def retry_sync(
+def retry_sync[T](
     func: Callable[[], T],
     config: RetryConfig | None = None,
     on_retry: Callable[[Exception, int], None] | None = None,

@@ -16,11 +16,11 @@ logger = get_logger(__name__)
 
 # Available languages
 AVAILABLE_LANGUAGES = {
-    "it": "🇮🇹 Italiano",
-    "en": "🇬🇧 English",
-    "es": "🇪🇸 Español",
-    "fr": "🇫🇷 Français",
-    "de": "🇩🇪 Deutsch",
+    "it": "Italiano",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
 }
 
 DEFAULT_LANGUAGE = "it"

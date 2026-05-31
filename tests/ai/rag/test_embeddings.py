@@ -195,7 +195,7 @@ class TestSentenceTransformerEmbeddings:
 
     async def test_sentence_transformer_initialization(self):
         """Test SentenceTransformer initializes correctly."""
-        with patch("openfatture.ai.rag.embeddings.SentenceTransformer"):
+        with patch("openfatture.ai.rag.embeddings._sentence_transformer"):
             embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
             assert embeddings.model_name == "all-MiniLM-L6-v2"
@@ -203,7 +203,7 @@ class TestSentenceTransformerEmbeddings:
 
     async def test_embed_text_sentence_transformer(self):
         """Test embedding generation with SentenceTransformer."""
-        with patch("openfatture.ai.rag.embeddings.SentenceTransformer") as mock_st:
+        with patch("openfatture.ai.rag.embeddings._sentence_transformer") as mock_st:
             # Mock model encode method
             import numpy as np
 
@@ -225,7 +225,7 @@ class TestSentenceTransformerEmbeddings:
 
     async def test_embed_batch_sentence_transformer(self):
         """Test batch embedding with SentenceTransformer."""
-        with patch("openfatture.ai.rag.embeddings.SentenceTransformer") as mock_st:
+        with patch("openfatture.ai.rag.embeddings._sentence_transformer") as mock_st:
             import numpy as np
 
             mock_model = MagicMock()
@@ -276,7 +276,7 @@ class TestEmbeddingFactory:
             embedding_model="all-MiniLM-L6-v2",
         )
 
-        with patch("openfatture.ai.rag.embeddings.SentenceTransformer"):
+        with patch("openfatture.ai.rag.embeddings._sentence_transformer"):
             embeddings = create_embeddings(config)
 
             assert isinstance(embeddings, SentenceTransformerEmbeddings)

@@ -51,7 +51,7 @@ install_bash() {
 
     for dir in "${bash_completion_dirs[@]}"; do
         if [ -d "$dir" ] && [ -w "$dir" ]; then
-            echo -e "  ${GREEN}✓${RESET} Installing to $dir"
+            echo -e " ${GREEN}${RESET} Installing to $dir"
             cp "$SCRIPT_DIR/_openfatture.bash" "$dir/openfatture"
             installed=true
             break
@@ -62,7 +62,7 @@ install_bash() {
         # Install to user directory
         local user_dir="$HOME/.local/share/bash-completion/completions"
         mkdir -p "$user_dir"
-        echo -e "  ${GREEN}✓${RESET} Installing to $user_dir (user directory)"
+        echo -e " ${GREEN}${RESET} Installing to $user_dir (user directory)"
         cp "$SCRIPT_DIR/_openfatture.bash" "$user_dir/openfatture"
         installed=true
 
@@ -70,17 +70,17 @@ install_bash() {
         if ! grep -q "bash-completion/completions" "$HOME/.bashrc" 2>/dev/null; then
             echo -e "\n# Enable bash completion" >> "$HOME/.bashrc"
             echo "[ -d \"\$HOME/.local/share/bash-completion/completions\" ] && export BASH_COMPLETION_USER_DIR=\"\$HOME/.local/share/bash-completion/completions\"" >> "$HOME/.bashrc"
-            echo -e "  ${YELLOW}→${RESET} Added completion path to ~/.bashrc"
+            echo -e " ${YELLOW}${RESET} Added completion path to ~/.bashrc"
         fi
     fi
 
     if [ "$installed" = true ]; then
-        echo -e "  ${GREEN}✓${RESET} Bash completion installed successfully!"
-        echo -e "  ${YELLOW}→${RESET} Run: ${BOLD}source ~/.bashrc${RESET} or restart your shell"
+        echo -e " ${GREEN}${RESET} Bash completion installed successfully!"
+        echo -e " ${YELLOW}${RESET} Run: ${BOLD}source ~/.bashrc${RESET} or restart your shell"
         return 0
     else
-        echo -e "  ${YELLOW}⚠${RESET}  Could not find a suitable bash completion directory"
-        echo -e "  ${YELLOW}→${RESET} Manual installation: source ${SCRIPT_DIR}/_openfatture.bash in your .bashrc"
+        echo -e " ${YELLOW}${RESET} Could not find a suitable bash completion directory"
+        echo -e " ${YELLOW}${RESET} Manual installation: source ${SCRIPT_DIR}/_openfatture.bash in your .bashrc"
         return 1
     fi
 }
@@ -109,7 +109,7 @@ install_zsh() {
 
     for dir in "${zsh_completion_dirs[@]}"; do
         if [ -d "$dir" ] && [ -w "$dir" ]; then
-            echo -e "  ${GREEN}✓${RESET} Installing to $dir"
+            echo -e " ${GREEN}${RESET} Installing to $dir"
             cp "$SCRIPT_DIR/_openfatture.zsh" "$dir/_openfatture"
             installed=true
             break
@@ -120,7 +120,7 @@ install_zsh() {
         # Install to user directory
         local user_dir="$HOME/.local/share/zsh/site-functions"
         mkdir -p "$user_dir"
-        echo -e "  ${GREEN}✓${RESET} Installing to $user_dir (user directory)"
+        echo -e " ${GREEN}${RESET} Installing to $user_dir (user directory)"
         cp "$SCRIPT_DIR/_openfatture.zsh" "$user_dir/_openfatture"
         installed=true
 
@@ -129,17 +129,17 @@ install_zsh() {
             echo -e "\n# Enable zsh completion" >> "$HOME/.zshrc"
             echo "fpath=(\$HOME/.local/share/zsh/site-functions \$fpath)" >> "$HOME/.zshrc"
             echo "autoload -Uz compinit && compinit" >> "$HOME/.zshrc"
-            echo -e "  ${YELLOW}→${RESET} Added completion path to ~/.zshrc"
+            echo -e " ${YELLOW}${RESET} Added completion path to ~/.zshrc"
         fi
     fi
 
     if [ "$installed" = true ]; then
-        echo -e "  ${GREEN}✓${RESET} Zsh completion installed successfully!"
-        echo -e "  ${YELLOW}→${RESET} Run: ${BOLD}exec zsh${RESET} or restart your shell"
+        echo -e " ${GREEN}${RESET} Zsh completion installed successfully!"
+        echo -e " ${YELLOW}${RESET} Run: ${BOLD}exec zsh${RESET} or restart your shell"
         return 0
     else
-        echo -e "  ${YELLOW}⚠${RESET}  Could not find a suitable zsh completion directory"
-        echo -e "  ${YELLOW}→${RESET} Manual installation: add to your .zshrc:"
+        echo -e " ${YELLOW}${RESET} Could not find a suitable zsh completion directory"
+        echo -e " ${YELLOW}${RESET} Manual installation: add to your .zshrc:"
         echo -e "      fpath=($SCRIPT_DIR \$fpath)"
         echo -e "      autoload -Uz compinit && compinit"
         return 1

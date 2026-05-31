@@ -12,7 +12,7 @@ from openfatture.web.utils.i18n import get_translator
 
 t = get_translator()
 
-st.set_page_config(page_title=t("page-invoices-title"), page_icon="🧾", layout="wide")
+st.set_page_config(page_title=t("page-invoices-title"), page_icon="", layout="wide")
 
 # Title
 st.title(t("page-invoices-title"))
@@ -111,18 +111,18 @@ try:
 
         # Status emoji mapping
         status_emoji = {
-            "bozza": "📝",
-            "da_inviare": "📤",
-            "inviata": "✉️",
-            "accettata": "✅",
-            "consegnata": "✅",
-            "rifiutata": "❌",
-            "scartata": "❌",
-            "errore": "⚠️",
+            "bozza": "",
+            "da_inviare": "",
+            "inviata": "",
+            "accettata": "",
+            "consegnata": "",
+            "rifiutata": "",
+            "scartata": "",
+            "errore": "",
         }
 
         df["stato_display"] = df["stato"].apply(
-            lambda x: f"{status_emoji.get(x, '📄')} {x.replace('_', ' ').title()}"
+            lambda x: f"{status_emoji.get(x, '')} {x.replace('_', ' ').title()}"
         )
 
         # Reorder and rename columns for display

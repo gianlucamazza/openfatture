@@ -46,7 +46,7 @@ This guide documents the security improvements implemented as part of the Stream
 
 ### 1. AI Assistant Page - File Upload (IN PROGRESS)
 
-**File**: `openfatture/web/pages/5_🤖_AI_Assistant.py`
+**File**: `openfatture/web/pages/5_AI_Assistant.py`
 
 **Location**: Line ~263 (File upload section)
 
@@ -59,7 +59,7 @@ if uploaded_file:
         "type": uploaded_file.type,
         "size": uploaded_file.size,
     }
-    st.success(f"📄 File caricato...")
+    st.success(f"File caricato...")
     # ... store in session state
 
 # AFTER (with security):
@@ -79,20 +79,20 @@ if uploaded_file:
     )
 
     if not is_valid:
-        st.error(f"⚠️ {error_msg}")
+        st.error(f"{error_msg}")
     else:
         file_details = {
             "name": uploaded_file.name,
             "type": uploaded_file.type,
             "size": uploaded_file.size,
         }
-        st.success(f"📄 File caricato...")
+        st.success(f"File caricato...")
         # ... store in session state
 ```
 
 ### 2. AI Assistant Page - Rate Limiting
 
-**File**: `openfatture/web/pages/5_🤖_AI_Assistant.py`
+**File**: `openfatture/web/pages/5_AI_Assistant.py`
 
 **Location**: Line ~332 (Chat input processing)
 
@@ -101,7 +101,7 @@ if uploaded_file:
 if user_input:
     # Rate limiting (Best Practice 2025: prevent abuse)
     if not check_rate_limit("ai_chat", max_calls=10, window_seconds=60):
-        st.error("⏱️ Limite di richieste raggiunto. Riprova tra un minuto.")
+        st.error("Limite di richieste raggiunto. Riprova tra un minuto.")
         st.stop()
 
     # Handle slash commands first
@@ -111,18 +111,18 @@ if user_input:
 
 ### 3. Client Management Page - Input Validation
 
-**File**: `openfatture/web/pages/3_👥_Clienti.py`
+**File**: `openfatture/web/pages/3_Clienti.py`
 
 **Required Changes**:
 ```python
 # When creating/editing clients
 if partita_iva:
     if not validate_partita_iva(partita_iva):
-        st.error("⚠️ Partita IVA non valida (deve essere 11 cifre)")
+        st.error("Partita IVA non valida (deve essere 11 cifre)")
 
 if email:
     if not validate_email(email):
-        st.error("⚠️ Formato email non valido")
+        st.error("Formato email non valido")
 ```
 
 ### 4. Invoice Creation - Filename Sanitization
@@ -190,11 +190,11 @@ def test_check_rate_limit_enforcement():
 
 ## Status
 
-- ✅ Security utilities module created
-- ⏸️ AI Assistant integration (file modification conflicts)
-- ⏳ Pending: Client page validation
-- ⏳ Pending: Invoice filename sanitization
-- ⏳ Pending: Unit tests creation
+- Security utilities module created
+- AI Assistant integration (file modification conflicts)
+- Pending: Client page validation
+- Pending: Invoice filename sanitization
+- Pending: Unit tests creation
 
 ## Next Steps
 

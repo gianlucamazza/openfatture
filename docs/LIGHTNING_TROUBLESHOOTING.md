@@ -15,11 +15,11 @@ Run this first when encountering issues:
 openfatture lightning status
 
 # Expected healthy output:
-✅ LND Connection: OK (alias: MyNode)
-📊 Channels: 3 active, 2.5M sats capacity
-💰 Balance: 1.2M sats local, 800k sats remote
-⚡ Rate: 45,000 EUR/BTC (CoinGecko, 2m ago)
-🔄 Liquidity: OK (target: 50%, current: 48%)
+LND Connection: OK (alias: MyNode)
+Channels: 3 active, 2.5M sats capacity
+Balance: 1.2M sats local, 800k sats remote
+Rate: 45,000 EUR/BTC (CoinGecko, 2m ago)
+Liquidity: OK (target: 50%, current: 48%)
 ```
 
 ### Configuration Validation
@@ -36,7 +36,7 @@ lncli getinfo
 
 ## Connection Issues
 
-### ❌ "Failed to connect to LND"
+### "Failed to connect to LND"
 
 **Symptoms:**
 - `openfatture lightning status` shows connection error
@@ -96,7 +96,7 @@ openssl x509 -in ~/.lnd/tls.cert -text -noout | grep "Not After"
 lncli unlock  # If wallet is locked
 ```
 
-### ❌ "Macaroon authentication failed"
+### "Macaroon authentication failed"
 
 **Symptoms:**
 - Connection succeeds but authentication fails
@@ -143,7 +143,7 @@ print('Macaroon permissions would be listed here')
 "
 ```
 
-### ❌ "Circuit breaker is open"
+### "Circuit breaker is open"
 
 **Symptoms:**
 - Commands fail with circuit breaker error
@@ -182,7 +182,7 @@ Restart OpenFatture to reset circuit breaker state:
 
 ## Invoice Issues
 
-### ❌ "Invoice creation failed"
+### "Invoice creation failed"
 
 **Symptoms:**
 - `openfatture lightning invoice create` fails
@@ -221,7 +221,7 @@ openfatture lightning channels
 lncli listchannels | jq '.channels[] | select(.active == true) | .remote_balance'
 ```
 
-### ❌ "Invoice expired before payment"
+### "Invoice expired before payment"
 
 **Symptoms:**
 - Invoice shows as expired
@@ -253,7 +253,7 @@ openfatture lightning invoice cancel <invoice_id>
 
 ## Payment Issues
 
-### ❌ "Payment not settling"
+### "Payment not settling"
 
 **Symptoms:**
 - Invoice shows as open after payment attempt
@@ -291,7 +291,7 @@ lncli getinfo | jq '.synced_to_chain'
 tail -f ~/.lnd/logs/bitcoin/mainnet/lnd.log | grep "Caught up to chain"
 ```
 
-### ❌ "Rate conversion failed"
+### "Rate conversion failed"
 
 **Symptoms:**
 - Invoice creation fails with rate error
@@ -336,7 +336,7 @@ openfatture config set lightning_cmc_api_key YOUR_API_KEY
 
 ## Liquidity Issues
 
-### ❌ "No inbound liquidity"
+### "No inbound liquidity"
 
 **Symptoms:**
 - Cannot receive payments
@@ -374,7 +374,7 @@ lncli sendpayment --pay_req=<invoice> --fee_limit=1000
 - **Lightning Labs**: Channel opening services
 - **Local liquidity providers**
 
-### ❌ "Liquidity ratio too high/low"
+### "Liquidity ratio too high/low"
 
 **Symptoms:**
 - Warnings about liquidity ratios
@@ -405,7 +405,7 @@ openfatture lightning invoice create --amount 50.00 --description "Rebalancing"
 
 ## Webhook Issues
 
-### ❌ "Webhook not receiving notifications"
+### "Webhook not receiving notifications"
 
 **Symptoms:**
 - Payments settle but no webhook calls
@@ -441,7 +441,7 @@ tail -f ~/.openfatture/logs/openfatture.log | grep webhook
 # Look for webhook delivery errors
 ```
 
-### ❌ "Invalid webhook signature"
+### "Invalid webhook signature"
 
 **Symptoms:**
 - Webhook requests rejected due to signature verification
@@ -476,7 +476,7 @@ print(f"Expected signature: {signature}")
 
 ## Performance Issues
 
-### ❌ "Slow invoice creation"
+### "Slow invoice creation"
 
 **Symptoms:**
 - Invoice creation takes > 5 seconds
@@ -501,7 +501,7 @@ openfatture config set lightning_rate_cache_ttl 600  # 10 minutes
 openfatture config set lightning_rate_cache_ttl 1800  # 30 minutes
 ```
 
-### ❌ "High memory usage"
+### "High memory usage"
 
 **Symptoms:**
 - OpenFatture using excessive memory
@@ -533,7 +533,7 @@ lncli getinfo | jq '.num_peers, .num_channels'
 
 ## Database Issues
 
-### ❌ "Lightning data not persisting"
+### "Lightning data not persisting"
 
 **Symptoms:**
 - Invoices/payments not saved to database
@@ -548,7 +548,7 @@ lncli getinfo | jq '.num_peers, .num_channels'
 python -c "
 from openfatture.storage.database.session import get_session
 session = next(get_session())
-print('✅ Database OK')
+print('Database OK')
 "
 ```
 

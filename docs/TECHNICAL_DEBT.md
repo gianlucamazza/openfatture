@@ -6,10 +6,10 @@ This document tracks known technical debt, TODOs, and planned improvements in th
 
 ---
 
-## Critical (RESOLVED ✅)
+## Critical (RESOLVED )
 
 ### ~~Missing prodotto_id Field~~
-- **Status**: ✅ **RESOLVED in Phase 1.5**
+- **Status**: **RESOLVED in Phase 1.5**
 - **Files**: `openfatture/storage/database/models.py`, `openfatture/ai/tools/prodotto_tools.py`
 - **Resolution**: Added `RigaFattura.prodotto_id` field via Alembic migration `692d8837`
 - **Impact**: Product analytics and AI suggestions now functional
@@ -105,20 +105,20 @@ This document tracks known technical debt, TODOs, and planned improvements in th
 
 ## Resolved Issues (History)
 
-### Phase 1.1 ✅
+### Phase 1.1
 - Retry logic utility implementation
 
-### Phase 1.2 ✅
+### Phase 1.2
 - Async bridge utility for sync/async interop
 
-### Phase 1.3 ✅
+### Phase 1.3
 - Database session management migration (CLI + AI/ML + workflows)
 
-### Phase 1.4 ✅
+### Phase 1.4
 - Logging standardization (Lightning modules)
 - Removed all production `print()` statements
 
-### Phase 1.5 ✅
+### Phase 1.5
 - Database migration system (Alembic)
 - Added `prodotto_id` field to `RigaFattura`
 - Fixed OFX importer logging
@@ -151,10 +151,10 @@ This document tracks known technical debt, TODOs, and planned improvements in th
 
 ## Priority Guidelines
 
-- **Critical**: Blocking features or causing bugs → Immediate action
-- **High**: Important integrations or major features → Next 2-4 weeks
-- **Medium**: Nice-to-have improvements → Next 1-2 months
-- **Low**: Polish and optimizations → Backlog
+- **Critical**: Blocking features or causing bugs Immediate action
+- **High**: Important integrations or major features Next 2-4 weeks
+- **Medium**: Nice-to-have improvements Next 1-2 months
+- **Low**: Polish and optimizations Backlog
 
 ---
 

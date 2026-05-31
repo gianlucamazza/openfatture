@@ -107,7 +107,7 @@ class AgentResponse(BaseModel):
 
     def __str__(self) -> str:
         """String representation for logging."""
-        status_emoji = "✓" if self.success else "✗"
+        status_emoji = "" if self.success else ""
         preview = self.content[:100] + "..." if len(self.content) > 100 else self.content
         return f"{status_emoji} [{self.agent_name}] {preview}"
 

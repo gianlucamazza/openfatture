@@ -113,7 +113,7 @@ def compliance_check(
         False, "--verbose", "-v", help=_("cli-lightning-compliance-opt-verbose")
     ),
 ):
-    """🔍 Run comprehensive compliance check for Italian tax and AML regulations.
+    """Run comprehensive compliance check for Italian tax and AML regulations.
 
     This command checks:
     - Capital gains tax compliance (26% in 2025, 33% from 2026)
@@ -276,7 +276,7 @@ def generate_quadro_rw_report(
         None, "--output", "-o", help=_("cli-lightning-report-opt-output")
     ),
 ):
-    """📋 Generate Quadro RW declaration report.
+    """Generate Quadro RW declaration report.
 
     Quadro RW is mandatory for all crypto holdings from 2025 onwards (Italian law).
     This report includes all settled Lightning invoices with EUR amounts for the tax year.
@@ -343,7 +343,7 @@ def generate_capital_gains_report(
         None, "--output", "-o", help=_("cli-lightning-report-opt-output")
     ),
 ):
-    """💰 Generate capital gains tax report.
+    """Generate capital gains tax report.
 
     Capital gains tax rate:
     - 26% for 2025
@@ -428,7 +428,7 @@ def generate_aml_report(
         None, "--output", "-o", help=_("cli-lightning-report-opt-output")
     ),
 ):
-    """🛡️ Generate Anti-Money Laundering compliance report.
+    """Generate Anti-Money Laundering compliance report.
 
     Italian AML threshold: 5,000 EUR (D.Lgs. 231/2007)
 
@@ -527,7 +527,7 @@ def list_unverified_aml_payments(
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help=_("cli-lightning-aml-opt-verbose")),
 ):
-    """🔍 List all unverified AML payments exceeding threshold.
+    """List all unverified AML payments exceeding threshold.
 
     Shows all payments over the AML threshold (default: 5,000 EUR) that
     require client identity verification according to Italian AML law (D.Lgs. 231/2007).
@@ -610,7 +610,7 @@ def verify_aml_payment(
         None, "--client-id", "-c", help=_("cli-lightning-aml-verify-opt-client")
     ),
 ):
-    """✅ Mark an AML payment as verified.
+    """Mark an AML payment as verified.
 
     Records that client identity has been verified according to AML regulations.
     This should only be done after proper KYC (Know Your Customer) procedures.

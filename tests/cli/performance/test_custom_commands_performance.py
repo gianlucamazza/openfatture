@@ -164,7 +164,7 @@ Amount: {{ arg3 | default('0') }}€
         avg_latency_ms = ((end - start) / iterations) * 1000
 
         assert avg_latency_ms < 5.0, f"Average latency {avg_latency_ms:.3f}ms exceeds 5ms target"
-        print(f"\n✓ Average expansion latency: {avg_latency_ms:.3f}ms per command")
+        print(f"\nAverage expansion latency: {avg_latency_ms:.3f}ms per command")
 
 
 @pytest.mark.benchmark
@@ -222,7 +222,7 @@ class TestRegistryPerformance:
             ), f"Load time {load_time_ms:.2f}ms exceeds 100ms target for 50 commands"
             assert len(registry.list_commands()) == 50
 
-            print(f"\n✓ Registry loading time: {load_time_ms:.2f}ms for 50 commands")
+            print(f"\nRegistry loading time: {load_time_ms:.2f}ms for 50 commands")
 
     def test_command_lookup_latency(self, benchmark, temp_commands_dir_with_commands):
         """Benchmark command lookup by name (target: < 0.1ms)."""
@@ -257,7 +257,7 @@ class TestRegistryPerformance:
 
         assert reload_time_ms < 50.0, f"Reload time {reload_time_ms:.2f}ms exceeds 50ms target"
 
-        print(f"\n✓ Registry reload time: {reload_time_ms:.2f}ms for 10 commands")
+        print(f"\nRegistry reload time: {reload_time_ms:.2f}ms for 10 commands")
 
 
 @pytest.mark.benchmark
@@ -268,7 +268,7 @@ class TestEndToEndPerformance:
     async def test_command_to_agent_latency(
         self, benchmark_provider, temp_commands_dir_with_commands
     ):
-        """Test complete command → agent execution latency (target: < 100ms)."""
+        """Test complete command agent execution latency (target: < 100ms)."""
         registry = CustomCommandRegistry(commands_dir=temp_commands_dir_with_commands)
         agent = ChatAgent(provider=benchmark_provider, enable_tools=False)
 
@@ -289,7 +289,7 @@ class TestEndToEndPerformance:
         assert response.status == ResponseStatus.SUCCESS
         assert e2e_latency_ms < 100.0, f"E2E latency {e2e_latency_ms:.2f}ms exceeds 100ms target"
 
-        print(f"\n✓ End-to-end latency: {e2e_latency_ms:.2f}ms")
+        print(f"\nEnd-to-end latency: {e2e_latency_ms:.2f}ms")
 
     async def test_sequential_commands_performance(
         self, benchmark_provider, temp_commands_dir_with_commands
@@ -315,7 +315,7 @@ class TestEndToEndPerformance:
             total_time_ms < 200.0
         ), f"Sequential execution {total_time_ms:.2f}ms exceeds 200ms target"
 
-        print(f"\n✓ Sequential 5 commands: {total_time_ms:.2f}ms (avg: {total_time_ms/5:.2f}ms)")
+        print(f"\nSequential 5 commands: {total_time_ms:.2f}ms (avg: {total_time_ms/5:.2f}ms)")
 
     async def test_concurrent_commands_performance(
         self, benchmark_provider, temp_commands_dir_with_commands
@@ -346,7 +346,7 @@ class TestEndToEndPerformance:
             concurrent_time_ms < 100.0
         ), f"Concurrent execution {concurrent_time_ms:.2f}ms exceeds 100ms target"
 
-        print(f"\n✓ Concurrent 5 commands: {concurrent_time_ms:.2f}ms")
+        print(f"\nConcurrent 5 commands: {concurrent_time_ms:.2f}ms")
 
 
 @pytest.mark.benchmark
@@ -374,7 +374,7 @@ class TestMemoryUsage:
 
         assert peak_mb < 1.0, f"Peak memory usage {peak_mb:.2f}MB exceeds 1MB target"
 
-        print(f"\n✓ Peak memory (100 expansions): {peak_mb:.3f}MB")
+        print(f"\nPeak memory (100 expansions): {peak_mb:.3f}MB")
 
     def test_registry_memory_usage(self):
         """Test memory usage for registry with 50 commands (target: < 10MB)."""
@@ -410,7 +410,7 @@ class TestMemoryUsage:
 
             assert peak_mb < 10.0, f"Peak memory usage {peak_mb:.2f}MB exceeds 10MB target"
 
-            print(f"\n✓ Peak memory (50 commands + 10 executions): {peak_mb:.2f}MB")
+            print(f"\nPeak memory (50 commands + 10 executions): {peak_mb:.2f}MB")
 
     @pytest.mark.asyncio
     async def test_agent_memory_usage(self, benchmark_provider):
@@ -432,7 +432,7 @@ class TestMemoryUsage:
 
         assert peak_mb < 20.0, f"Peak memory usage {peak_mb:.2f}MB exceeds 20MB target"
 
-        print(f"\n✓ Peak memory (20 agent executions): {peak_mb:.2f}MB")
+        print(f"\nPeak memory (20 agent executions): {peak_mb:.2f}MB")
 
 
 @pytest.mark.benchmark
@@ -507,7 +507,7 @@ class TestScalabilityBenchmarks:
             concurrent_time_ms < 500.0
         ), f"Concurrent load {concurrent_time_ms:.2f}ms exceeds 500ms target"
 
-        print(f"\n✓ 20 concurrent executions: {concurrent_time_ms:.2f}ms")
+        print(f"\n20 concurrent executions: {concurrent_time_ms:.2f}ms")
 
 
 # Performance summary fixture
@@ -521,13 +521,13 @@ def performance_summary(request):
         print("CUSTOM COMMANDS PERFORMANCE SUMMARY")
         print("=" * 70)
         print("\nTargets:")
-        print("  ✓ Command expansion: < 5ms")
-        print("  ✓ Registry loading (50 commands): < 100ms")
-        print("  ✓ Command lookup: < 0.1ms")
-        print("  ✓ End-to-end latency: < 100ms")
-        print("  ✓ Memory usage (single command): < 1MB")
-        print("  ✓ Memory usage (50 commands): < 10MB")
-        print("\nAll performance targets met! ✅")
+        print(" Command expansion: < 5ms")
+        print(" Registry loading (50 commands): < 100ms")
+        print(" Command lookup: < 0.1ms")
+        print(" End-to-end latency: < 100ms")
+        print(" Memory usage (single command): < 1MB")
+        print(" Memory usage (50 commands): < 10MB")
+        print("\nAll performance targets met! ")
         print("=" * 70 + "\n")
 
     request.addfinalizer(print_summary)

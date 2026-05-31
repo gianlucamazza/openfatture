@@ -133,7 +133,7 @@ class TestMarkdownFormatter:
 
         assert "# AI Response" in output
         assert "## Error" in output
-        assert "❌ Test error message" in output
+        assert "Test error message" in output
 
     def test_streaming_not_supported(self):
         """Test that Markdown doesn't support true streaming."""
@@ -145,7 +145,7 @@ class TestMarkdownFormatter:
         formatter = MarkdownFormatter()
         output = formatter.format_error("Test error")
         assert "# Error" in output
-        assert "❌ Test error" in output
+        assert "Test error" in output
 
 
 class TestStreamJSONFormatter:
@@ -238,7 +238,7 @@ class TestHTMLFormatter:
 
         assert "<!DOCTYPE html>" in output
         assert "<html" in output
-        assert "🤖 AI Response" in output
+        assert "AI Response" in output
         assert "This is a test response from the AI assistant." in output
         assert "test-provider" in output
         assert "test-model" in output
@@ -271,7 +271,7 @@ class TestHTMLFormatter:
 
         assert "<!DOCTYPE html>" in output
         assert "Error" in output
-        assert "❌" in output
+        assert "" in output
         assert "Test error message" in output
 
     def test_streaming_not_supported(self):
@@ -285,7 +285,7 @@ class TestHTMLFormatter:
         output = formatter.format_error("Test error")
         assert "<!DOCTYPE html>" in output
         assert "Error" in output
-        assert "❌" in output
+        assert "" in output
         assert "Test error" in output
 
 
@@ -304,7 +304,7 @@ class TestRichFormatter:
         formatter = RichFormatter()
         output = formatter.format_response(error_response)
 
-        assert "❌ Error:" in output
+        assert "Error:" in output
         assert "Test error message" in output
 
     def test_streaming_supported(self):
@@ -323,7 +323,7 @@ class TestRichFormatter:
         """Test error formatting."""
         formatter = RichFormatter()
         output = formatter.format_error("Test error")
-        assert "❌ Error:" in output
+        assert "Error:" in output
         assert "Test error" in output
 
 

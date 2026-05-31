@@ -15,7 +15,7 @@
 | 6 | 0:25 | Terminal: `openfatture notifiche process ...RC_*.xml` | “Process SDI notifications and update invoice status” | Show status change |
 | 7 | 0:20 | Inbox view | “Demonstrate automatic notification to NOTIFICATION_EMAIL” | Emphasise audit trail |
 | 8 | 0:18 | Terminal: `openfatture fattura show 1` | “Verify status and timeline in the CLI” | Highlight history section |
-| 9 | 0:11 | Summary slide | “PEC test → send → process notifications → audit” | Reminder to archive XML/PEC receipts |
+| 9 | 0:11 | Summary slide | “PEC test send process notifications audit” | Reminder to archive XML/PEC receipts |
 |10 | 0:10 | Outro | “Explore more automations in the docs” | Link to documentation hub |
 
 ## Production Notes

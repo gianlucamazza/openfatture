@@ -62,10 +62,10 @@ OpenFatture uses **[act](https://github.com/nektos/act)** to test GitHub Actions
 
 ### Why act?
 
-✅ **Fast feedback**: Test workflows before pushing
-✅ **Debug locally**: No trial-and-error on GitHub
-✅ **Cost savings**: Zero GitHub Actions minutes consumed
-✅ **CI/CD confidence**: Validate workflows work correctly
+**Fast feedback**: Test workflows before pushing
+**Debug locally**: No trial-and-error on GitHub
+**Cost savings**: Zero GitHub Actions minutes consumed
+**CI/CD confidence**: Validate workflows work correctly
 
 ### Installing act
 
@@ -105,10 +105,10 @@ gh auth login
 ```
 
 **What happens automatically:**
-- ✅ GITHUB_TOKEN extracted from `gh auth token`
-- ✅ `.secrets` file created/updated automatically
-- ✅ Token always up-to-date (no manual management)
-- ✅ Zero configuration needed
+- GITHUB_TOKEN extracted from `gh auth token`
+- `.secrets` file created/updated automatically
+- Token always up-to-date (no manual management)
+- Zero configuration needed
 
 #### Option 2: Manual Setup
 
@@ -160,10 +160,10 @@ If you don't have GitHub CLI, you can configure secrets manually:
 ```
 
 This script:
-1. ✅ Checks workflow syntax
-2. ✅ Dry-runs test workflow
-3. ✅ Dry-runs release workflow
-4. ✅ Warns about missing secrets
+1. Checks workflow syntax
+2. Dry-runs test workflow
+3. Dry-runs release workflow
+4. Warns about missing secrets
 
 #### List All Jobs
 
@@ -273,7 +273,7 @@ docker logs <container-id>
 
 ### act Limitations
 
-⚠️ **Important limitations to be aware of**:
+**Important limitations to be aware of**:
 
 1. **GitHub Actions require authentication**:
    - Remote actions (like `astral-sh/setup-uv@v1`) need a real GITHUB_TOKEN
@@ -491,7 +491,7 @@ openfatture/web/
 2. **Add navigation** in `openfatture/web/navigation.py`
    ```python
    pages = {
-       "📊 Business": [dashboard, invoices, clients, new_feature],
+       "Business": [dashboard, invoices, clients, new_feature],
        # ...
    }
    ```
@@ -514,11 +514,11 @@ Use the **reusable component library**:
 from openfatture.web.components import metric_card, data_table, success_alert
 
 # Metric card with delta
-metric_card("Revenue", "€10,000", delta="+15%", icon="💰")
+metric_card("Revenue", "€10,000", delta="+15%", icon="")
 
 # Data table with actions
 data_table(data, columns=["name", "value"],
-          actions=[{"icon": "✏️", "callback": edit_item}])
+          actions=[{"icon": "", "callback": edit_item}])
 
 # Success notification
 success_alert("Operation completed successfully!")
@@ -687,13 +687,13 @@ git commit -m "docs: update quickstart guide"
 OpenFatture uses **bump-my-version** for automated version management.
 
 ```bash
-# Bump patch version (1.0.0 → 1.0.1)
+# Bump patch version (1.0.0 1.0.1)
 uv run bump-my-version bump patch
 
-# Bump minor version (1.0.0 → 1.1.0)
+# Bump minor version (1.0.0 1.1.0)
 uv run bump-my-version bump minor
 
-# Bump major version (1.0.0 → 2.0.0)
+# Bump major version (1.0.0 2.0.0)
 uv run bump-my-version bump major
 
 # Dry-run to preview changes
@@ -701,10 +701,10 @@ uv run bump-my-version bump patch --dry-run --verbose
 ```
 
 This automatically:
-1. ✅ Updates `__version__` in `openfatture/__init__.py`
-2. ✅ Updates `CHANGELOG.md`
-3. ✅ Creates git commit
-4. ✅ Creates git tag `v<new-version>`
+1. Updates `__version__` in `openfatture/__init__.py`
+2. Updates `CHANGELOG.md`
+3. Creates git commit
+4. Creates git tag `v<new-version>`
 
 ### Pre-release Checklist
 
@@ -835,6 +835,6 @@ uv run python -m pytest --durations=10
 
 ## Getting Help
 
-- 💬 [GitHub Discussions](https://github.com/gianlucamazza/openfatture/discussions)
-- 🐛 [GitHub Issues](https://github.com/gianlucamazza/openfatture/issues)
-- 📧 Email: info@gianlucamazza.it
+- [GitHub Discussions](https://github.com/gianlucamazza/openfatture/discussions)
+- [GitHub Issues](https://github.com/gianlucamazza/openfatture/issues)
+- Email: info@gianlucamazza.it

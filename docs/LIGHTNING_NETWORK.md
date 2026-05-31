@@ -7,10 +7,10 @@ OpenFatture integrates with the Lightning Network to enable instant, low-fee Bit
 ## Overview
 
 The Lightning Network is a layer-2 scaling solution for Bitcoin that enables:
-- ⚡ **Instant payments** - Settle in seconds instead of hours
-- 💰 **Low fees** - Typically 0.1-1 EUR per transaction
-- 🌍 **Global reach** - Pay anyone with a Lightning wallet
-- 🔒 **Secure** - Built on Bitcoin's security model
+- **Instant payments** - Settle in seconds instead of hours
+- **Low fees** - Typically 0.1-1 EUR per transaction
+- **Global reach** - Pay anyone with a Lightning wallet
+- **Secure** - Built on Bitcoin's security model
 
 ### Key Features
 
@@ -94,9 +94,9 @@ openfatture config set lightning_macaroon_path ~/.lnd/data/chain/bitcoin/mainnet
 openfatture lightning status
 
 # Expected output:
-# ✅ LND Connection: OK
-# 📊 Channels: 3 active, 2.5M sats capacity
-# 💰 Balance: 1.2M sats local, 800k sats remote
+# LND Connection: OK
+# Channels: 3 active, 2.5M sats capacity
+# Balance: 1.2M sats local, 800k sats remote
 ```
 
 ### 3. Create Your First Lightning Invoice
@@ -106,11 +106,11 @@ openfatture lightning status
 openfatture lightning invoice create --numero INV-001 --amount 500.00
 
 # Output:
-# ⚡ Lightning Invoice Created
-# 📄 Invoice: INV-001-LN
-# 💰 Amount: 500.00 EUR (11,111 sats @ 45,000 EUR/BTC)
-# ⏰ Expires: 2025-01-15 10:30:00
-# 🔗 Payment Request: lnbc111110n1...
+# Lightning Invoice Created
+# Invoice: INV-001-LN
+# Amount: 500.00 EUR (11,111 sats @ 45,000 EUR/BTC)
+# Expires: 2025-01-15 10:30:00
+# Payment Request: lnbc111110n1...
 ```
 
 ### 4. Check Payment Status
@@ -244,7 +244,7 @@ openfatture lightning payments show <payment_hash>
 
 ### Lightning Dashboard
 
-Access the Lightning dashboard at: **http://localhost:8501** → ⚡ Lightning
+Access the Lightning dashboard at: **http://localhost:8501** Lightning
 
 The dashboard shows:
 - Connection status

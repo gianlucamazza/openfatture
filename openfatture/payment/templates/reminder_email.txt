@@ -14,15 +14,15 @@ Amount due:          € {{ "%.2f"|format(payment.importo_da_pagare) }}
 {{ '-' * 60 }}
 
 {% if days_to_due < 0 %}
-⚠️  ATTENTION: The payment is {{ -days_to_due }} days overdue.
+ATTENTION: The payment is {{ -days_to_due }} days overdue.
    Please arrange payment as soon as possible.
 {% elif days_to_due == 0 %}
-⏰ DUE TODAY: The payment falls due today.
+DUE TODAY: The payment falls due today.
    Kindly proceed with the transfer.
 {% elif days_to_due <= 3 %}
-📅 The payment is due in {{ days_to_due }} days.
+The payment is due in {{ days_to_due }} days.
 {% else %}
-ℹ️  The payment is due in {{ days_to_due }} days.
+The payment is due in {{ days_to_due }} days.
 {% endif %}
 
 {% if payment.istruzioni_pagamento %}

@@ -487,9 +487,7 @@ def show_dashboard(
         # Add trend indicator
         trends = summary["trends"]
         trend_icon = (
-            "📈"
-            if trends["trend"] == "increasing"
-            else "📉" if trends["trend"] == "decreasing" else "➡️"
+            "" if trends["trend"] == "increasing" else "" if trends["trend"] == "decreasing" else ""
         )
         trend_color = (
             "green"

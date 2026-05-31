@@ -47,10 +47,10 @@ def example_1_send_invoice():
     success, error = sender.send_invoice_to_sdi(fattura=fattura, xml_path=xml_path, signed=False)
 
     if success:
-        print(f"✅ Invoice {fattura.numero}/{fattura.anno} sent to SDI")
+        print(f"Invoice {fattura.numero}/{fattura.anno} sent to SDI")
         print(f"   Status: {fattura.stato.value}")
     else:
-        print(f"❌ Error: {error}")
+        print(f"Error: {error}")
 
 
 def example_2_preview_template():
@@ -93,7 +93,7 @@ def example_2_preview_template():
         output_path=Path("/tmp/email_preview.html"),
     )
 
-    print(f"📧 Preview generated: file://{preview_path}")
+    print(f"Preview generated: file://{preview_path}")
     print("   Open the file in your browser to see the email template")
 
 
@@ -126,13 +126,13 @@ def example_3_batch_summary():
         )
 
         if success:
-            print(f"✅ Batch summary sent to {settings.notification_email}")
+            print(f"Batch summary sent to {settings.notification_email}")
             print(f"   Success rate: {result.success_rate:.1f}%")
             print(f"   Duration: {result.duration:.2f}s")
         else:
-            print(f"❌ Error: {error}")
+            print(f"Error: {error}")
     else:
-        print("⚠️  Notification email not configured")
+        print("Notification email not configured")
         print("   Set NOTIFICATION_EMAIL in .env file")
 
 
@@ -147,12 +147,12 @@ def example_4_test_configuration():
     success, error = sender.send_test_email()
 
     if success:
-        print("✅ PEC configuration is working!")
+        print("PEC configuration is working!")
         print(f"   SMTP: {settings.pec_smtp_server}:{settings.pec_smtp_port}")
         print(f"   PEC: {settings.pec_address}")
         print("\n   Check your inbox for the test email.")
     else:
-        print(f"❌ PEC configuration error: {error}")
+        print(f"PEC configuration error: {error}")
         print("\n   Troubleshooting:")
         print("   1. Check PEC credentials in .env file")
         print("   2. Verify SMTP server and port")
@@ -178,7 +178,7 @@ def example_5_custom_branding():
         footer_text="© 2025 My Company - All rights reserved",
     )
 
-    print("🎨 Custom branding configured:")
+    print("Custom branding configured:")
     print(f"   Primary color: {branding.primary_color}")
     print(f"   Logo URL: {branding.logo_url}")
     print(f"   Footer: {branding.footer_text}")
@@ -190,7 +190,7 @@ def example_5_custom_branding():
         branding=branding,
     )
 
-    print("\n✅ Renderer created with custom branding")
+    print("\nRenderer created with custom branding")
     print("   All emails will use these colors and branding")
 
 
@@ -202,13 +202,13 @@ def example_6_multi_language():
 
     # Italian
     renderer_it = TemplateRenderer(settings=settings, locale="it")
-    print(f"🇮🇹 Italian: {renderer_it.translations['email']['common']['invoice']}")
+    print(f"Italian: {renderer_it.translations['email']['common']['invoice']}")
 
     # English
     renderer_en = TemplateRenderer(settings=settings, locale="en")
-    print(f"🇬🇧 English: {renderer_en.translations['email']['common']['invoice']}")
+    print(f"English: {renderer_en.translations['email']['common']['invoice']}")
 
-    print("\n✅ Multi-language support ready")
+    print("\nMulti-language support ready")
     print("   Switch locale in Settings or per-renderer")
 
 

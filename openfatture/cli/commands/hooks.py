@@ -50,7 +50,7 @@ def list_hooks(
     table.add_column("Description", style="white")
 
     for hook in hooks:
-        enabled_icon = "✓" if hook.enabled else "✗"
+        enabled_icon = "" if hook.enabled else ""
         enabled_color = "green" if hook.enabled else "red"
 
         table.add_row(
@@ -79,7 +79,7 @@ def enable_hook(
     registry = get_hook_registry()
 
     if registry.enable_hook(name):
-        console.print(f"[green]✓ Hook '{name}' enabled[/green]")
+        console.print(f"[green]Hook '{name}' enabled[/green]")
     else:
         console.print(f"[red]Hook '{name}' not found[/red]")
         console.print("\n[dim]Available hooks:[/dim]")
@@ -170,9 +170,9 @@ def test_hook(
 
         # Display result
         if result.success:
-            console.print("[bold green]✓ Hook executed successfully![/bold green]\n")
+            console.print("[bold green]Hook executed successfully![/bold green]\n")
         else:
-            console.print(f"[bold red]✗ Hook failed (exit code {result.exit_code})[/bold red]\n")
+            console.print(f"[bold red]Hook failed (exit code {result.exit_code})[/bold red]\n")
 
         # Result details
         details = Table(show_header=False, box=None)
@@ -256,7 +256,7 @@ def create_hook(
     if extension == ".sh":
         script_path.chmod(0o755)
 
-    console.print(f"[green]✓ Hook created: {name}[/green]\n")
+    console.print(f"[green]Hook created: {name}[/green]\n")
     console.print(f"[cyan]Path:[/cyan] {script_path}")
     console.print(f"[cyan]Template:[/cyan] {template}")
     console.print("\n[dim]Edit the hook script to customize its behavior.[/dim]")
@@ -293,7 +293,7 @@ def hook_info(
     info.add_column("Value", style="white")
 
     info.add_row("Script Path", str(hook_config.script_path))
-    info.add_row("Enabled", "✓ Yes" if hook_config.enabled else "✗ No")
+    info.add_row("Enabled", "Yes" if hook_config.enabled else "No")
     info.add_row("Timeout", f"{hook_config.timeout_seconds}s")
     info.add_row("Fail on Error", "Yes" if hook_config.fail_on_error else "No")
 

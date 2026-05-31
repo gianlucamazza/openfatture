@@ -214,14 +214,14 @@ async def example_7_batch_analysis():
 
         if response.metadata.get("is_structured"):
             model = response.metadata["parsed_model"]
-            print(f"\n✅ {service['tipo'].upper()}")
+            print(f"\n{service['tipo'].upper()}")
             print(f"   Aliquota: {model['aliquota_iva']}%")
             print(f"   Reverse charge: {'SI' if model['reverse_charge'] else 'NO'}")
             print(f"   Natura: {model.get('codice_natura', 'N/A')}")
 
     # Aggregate stats
     total_cost = sum(r.usage.estimated_cost_usd for r in results)
-    print(f"\n📊 Total analysis cost: ${total_cost:.4f}")
+    print(f"\nTotal analysis cost: ${total_cost:.4f}")
 
 
 async def example_8_complex_scenario():
@@ -246,33 +246,33 @@ async def example_8_complex_scenario():
     if response.metadata.get("is_structured"):
         model = response.metadata["parsed_model"]
 
-        print("🧾 ANALISI FISCALE DETTAGLIATA")
+        print("ANALISI FISCALE DETTAGLIATA")
         print("-" * 80)
         print(f"\nAliquota IVA:        {model['aliquota_iva']}%")
-        print(f"Reverse Charge:      {'✓ SI' if model['reverse_charge'] else '✗ NO'}")
+        print(f"Reverse Charge: {'SI' if model['reverse_charge'] else 'NO'}")
         print(f"Codice Natura:       {model.get('codice_natura', 'N/A')}")
         print(f"Regime Speciale:     {model.get('regime_speciale', 'N/A')}")
         print(f"Confidence:          {int(model['confidence'] * 100)}%")
 
-        print("\n📋 SPIEGAZIONE:")
+        print("\nSPIEGAZIONE:")
         print(model["spiegazione"])
 
-        print("\n📜 RIFERIMENTO NORMATIVO:")
+        print("\nRIFERIMENTO NORMATIVO:")
         print(model["riferimento_normativo"])
 
         if model.get("note_fattura"):
-            print("\n📝 NOTA PER FATTURA:")
+            print("\nNOTA PER FATTURA:")
             print(f'"{model["note_fattura"]}"')
 
         if model.get("raccomandazioni"):
-            print("\n💡 RACCOMANDAZIONI:")
+            print("\nRACCOMANDAZIONI:")
             for racc in model["raccomandazioni"]:
                 print(f"  • {racc}")
 
 
 async def main():
     """Run all examples."""
-    print("\n🧾 Tax Advisor - Usage Examples")
+    print("\nTax Advisor - Usage Examples")
     print("=" * 80)
 
     # Run examples
@@ -286,7 +286,7 @@ async def main():
     await example_8_complex_scenario()
 
     print("\n" + "=" * 80)
-    print("✅ All examples completed!")
+    print("All examples completed!")
     print("=" * 80 + "\n")
 
 
@@ -302,7 +302,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         print("\nMake sure you have set the required environment variables:")
         print("  OPENFATTURE_AI_PROVIDER (openai, anthropic, or ollama)")
         print("  OPENFATTURE_AI_OPENAI_API_KEY or OPENFATTURE_AI_ANTHROPIC_API_KEY")

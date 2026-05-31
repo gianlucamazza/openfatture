@@ -1,10 +1,10 @@
 # OpenFatture i18n Extraction - Complete Index
 
-## 📋 Document Index
+## Document Index
 
 All i18n extraction files are located in the repository root:
 
-### 1. **I18N_EXTRACTION_SUMMARY.md** (11 KB) ⭐ START HERE
+### 1. **I18N_EXTRACTION_SUMMARY.md** (11 KB) START HERE
 **Overview of the entire extraction and project**
 - High-level summary of what was extracted
 - 345+ total strings identified
@@ -21,7 +21,7 @@ All i18n extraction files are located in the repository root:
 
 ---
 
-### 2. **I18N_STRINGS_EXTRACTION.md** (22 KB) 📖 DETAILED REFERENCE
+### 2. **I18N_STRINGS_EXTRACTION.md** (22 KB) DETAILED REFERENCE
 **Comprehensive extraction with full context**
 
 #### Structure:
@@ -59,7 +59,7 @@ All i18n extraction files are located in the repository root:
 
 ---
 
-### 3. **I18N_STRINGS_STRUCTURED.json** (28 KB) 🔧 MACHINE-PARSEABLE
+### 3. **I18N_STRINGS_STRUCTURED.json** (28 KB) MACHINE-PARSEABLE
 **JSON format for tool integration**
 
 #### Structure:
@@ -95,7 +95,7 @@ All i18n extraction files are located in the repository root:
 
 ---
 
-### 4. **I18N_MIGRATION_GUIDE.md** (19 KB) 🛠️ IMPLEMENTATION PLAN
+### 4. **I18N_MIGRATION_GUIDE.md** (19 KB) IMPLEMENTATION PLAN
 **Step-by-step guide for implementation**
 
 #### Phases:
@@ -141,7 +141,7 @@ All i18n extraction files are located in the repository root:
 
 ---
 
-### 5. **I18N_REFERENCE_QUICK.txt** (20 KB) 🚀 QUICK LOOKUP
+### 5. **I18N_REFERENCE_QUICK.txt** (20 KB) QUICK LOOKUP
 **Fast reference for all 345+ strings**
 
 #### Organized by:
@@ -169,7 +169,7 @@ Item {num} description                                           (115)
 
 ---
 
-## 📊 Extraction Statistics
+## Extraction Statistics
 
 | Metric | Value |
 |--------|-------|
@@ -184,7 +184,7 @@ Item {num} description                                           (115)
 
 ---
 
-## 🎯 Recommended Reading Order
+## Recommended Reading Order
 
 ### For Project Managers
 1. **I18N_EXTRACTION_SUMMARY.md** - Scope & timeline
@@ -212,53 +212,53 @@ Item {num} description                                           (115)
 
 ---
 
-## 🔍 How to Find Something
+## How to Find Something
 
 ### If you want to...
 
 **Translate a specific command**
-→ Open **I18N_STRINGS_EXTRACTION.md**
-→ Find command name (fattura crea, cliente add, ai describe, etc.)
-→ Copy all help_strings, console_strings, prompts for that section
+Open **I18N_STRINGS_EXTRACTION.md**
+Find command name (fattura crea, cliente add, ai describe, etc.)
+Copy all help_strings, console_strings, prompts for that section
 
 **Integrate with translation tool**
-→ Open **I18N_STRINGS_STRUCTURED.json**
-→ Parse JSON and import into Crowdin/POEditor
-→ Use "id" field as translation key
+Open **I18N_STRINGS_STRUCTURED.json**
+Parse JSON and import into Crowdin/POEditor
+Use "id" field as translation key
 
 **Implement FluentManager**
-→ Open **I18N_MIGRATION_GUIDE.md**
-→ Go to Phase 3: Code Integration
-→ Follow code samples and recommendations
+Open **I18N_MIGRATION_GUIDE.md**
+Go to Phase 3: Code Integration
+Follow code samples and recommendations
 
 **Create Fluent files**
-→ Open **I18N_MIGRATION_GUIDE.md**
-→ Go to Phase 2: Fluent File Creation
-→ Use provided examples (English and Italian)
-→ Cross-reference with **I18N_STRINGS_EXTRACTION.md** for completeness
+Open **I18N_MIGRATION_GUIDE.md**
+Go to Phase 2: Fluent File Creation
+Use provided examples (English and Italian)
+Cross-reference with **I18N_STRINGS_EXTRACTION.md** for completeness
 
 **Verify extraction quality**
-→ Open **I18N_REFERENCE_QUICK.txt**
-→ Check if string is listed with line number
-→ Verify against source file
+Open **I18N_REFERENCE_QUICK.txt**
+Check if string is listed with line number
+Verify against source file
 
 **Understand the project scope**
-→ Read **I18N_EXTRACTION_SUMMARY.md**
-→ Review quality metrics section
-→ Check integration points
+Read **I18N_EXTRACTION_SUMMARY.md**
+Review quality metrics section
+Check integration points
 
 ---
 
-## 📁 File Organization
+## File Organization
 
 ```
 openfatture/
-├── I18N_EXTRACTION_SUMMARY.md      ← START HERE
-├── I18N_STRINGS_EXTRACTION.md      ← Detailed reference
-├── I18N_STRINGS_STRUCTURED.json    ← Tool integration
-├── I18N_MIGRATION_GUIDE.md         ← Implementation plan
-├── I18N_REFERENCE_QUICK.txt        ← Quick lookup
-├── I18N_INDEX.md                   ← This file
+├── I18N_EXTRACTION_SUMMARY.md START HERE
+├── I18N_STRINGS_EXTRACTION.md Detailed reference
+├── I18N_STRINGS_STRUCTURED.json Tool integration
+├── I18N_MIGRATION_GUIDE.md Implementation plan
+├── I18N_REFERENCE_QUICK.txt Quick lookup
+├── I18N_INDEX.md This file
 │
 └── [After implementation:]
     ├── openfatture/
@@ -285,20 +285,20 @@ openfatture/
 
 ---
 
-## ✅ Quality Assurance
+## Quality Assurance
 
 ### Verification Completed
-- ✅ All help strings from typer.Option and typer.Argument
-- ✅ All user-facing console.print() output
-- ✅ All prompts (Prompt.ask, IntPrompt, FloatPrompt, Confirm)
-- ✅ All table titles, columns, and labels
-- ✅ All variables and placeholders identified
-- ✅ All Rich markup preserved
-- ✅ All emoji and special characters preserved
-- ✅ Line numbers verified against source files
-- ✅ No debug/internal logging included (only user-facing)
-- ✅ JSON structure validated
-- ✅ Markdown formatting verified
+- All help strings from typer.Option and typer.Argument
+- All user-facing console.print() output
+- All prompts (Prompt.ask, IntPrompt, FloatPrompt, Confirm)
+- All table titles, columns, and labels
+- All variables and placeholders identified
+- All Rich markup preserved
+- All emoji and special characters preserved
+- Line numbers verified against source files
+- No debug/internal logging included (only user-facing)
+- JSON structure validated
+- Markdown formatting verified
 
 ### Coverage by File
 - **fattura.py**: 100% (71/71 strings)
@@ -308,7 +308,7 @@ openfatture/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Immediate Next Steps
 1. [ ] Share **I18N_EXTRACTION_SUMMARY.md** with stakeholders
@@ -335,7 +335,7 @@ openfatture/
 
 ---
 
-## 📞 Support & Questions
+## Support & Questions
 
 ### For questions about extraction:
 - See **I18N_EXTRACTION_SUMMARY.md** "Questions & Support" section
@@ -355,7 +355,7 @@ openfatture/
 
 ---
 
-## 📝 Document Versions
+## Document Versions
 
 - **I18N_EXTRACTION_SUMMARY.md**: v1.0 (Dec 2, 2024)
 - **I18N_STRINGS_EXTRACTION.md**: v1.0 (Dec 2, 2024)
@@ -366,7 +366,7 @@ openfatture/
 
 ---
 
-## 🎓 Learning Resources
+## Learning Resources
 
 ### Fluent Syntax
 - https://projectfluent.org/
@@ -387,4 +387,4 @@ openfatture/
 **All strings**: Verified, contextualized, line-numbered
 **Ready for**: Technical review, implementation, translation
 
-**Next step**: Share with team → Schedule kickoff → Begin Phase 1
+**Next step**: Share with team Schedule kickoff Begin Phase 1

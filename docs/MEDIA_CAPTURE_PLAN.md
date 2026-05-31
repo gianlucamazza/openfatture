@@ -49,7 +49,7 @@
   1. Present CSVs (zoom on key columns).
   2. `openfatture batch import examples/batch/invoices.csv --dry-run`.
   3. Full import (without `--dry-run`) showing summaries/errors.
-  4. Show interactive dashboard (`openfatture interactive` → “Report & Analytics”).
+  4. Show interactive dashboard (`openfatture interactive` “Report & Analytics”).
 - **Screenshots:** CSV in spreadsheet, dry-run vs applied output.
 
 ### Scenario E · PEC Delivery & SDI Notifications
@@ -85,7 +85,7 @@
    - Light colour grading, audio denoise, final compression to -1 LUFS short-term.
 4. **Accessibility:** generate transcript with WhisperX, review manually, export SRT/WEBVTT.
 5. **QA:** checklist (section 7), technical review (dev lead) + brand review (design).
-6. **Distribution:** export master ProRes + H.264 1080p, vertical 1080×1920 cut. Upload to CDN/YouTube (unlisted) → embed in docs.
+6. **Distribution:** export master ProRes + H.264 1080p, vertical 1080×1920 cut. Upload to CDN/YouTube (unlisted) embed in docs.
 7. **Versioning:** tag folder `media/v2025.1`, update `docs/QUICKSTART.md` and README with new links/screenshots.
 
 ## 6. Roles & Responsibilities
@@ -118,7 +118,7 @@
 
 ## 10. Script Validation & Role Assignment (Reference: Feb 2025 Sprint)
 - **Script reviews:** validated 3 Feb 2025 with Product, Backend, Content; log major updates in `docs/storyboards/`.
-- **Scenario owners:** A → Product; B → Backend Guild; C → AI/ML; D → Operations; E → Compliance & PEC (see storyboard files for leads/backups).
+- **Scenario owners:** A Product; B Backend Guild; C AI/ML; D Operations; E Compliance & PEC (see storyboard files for leads/backups).
 - **Role matrix:** Producer, Technical Host, Narrator, Editor, Accessibility Reviewer, QA Lead (assign primary + backup per sprint).
 - **Change control:** storyboard updates >3 modifications require cross-approval (Producer + QA Lead) before capture.
 - **Operational channels:** Slack `#openfatture-media` for daily comms; Linear board `MED-2025` for tracking.

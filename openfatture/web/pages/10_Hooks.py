@@ -10,7 +10,7 @@ from openfatture.web.utils.i18n import get_translator
 
 t = get_translator()
 
-st.set_page_config(page_title=t("page-hooks-page-title"), page_icon="🪝", layout="wide")
+st.set_page_config(page_title=t("page-hooks-page-title"), page_icon="", layout="wide")
 
 # Title
 st.title(t("page-hooks-title"))
@@ -63,25 +63,25 @@ with tab_overview:
 
         for event_type, event_hooks in event_types.items():
             with st.expander(
-                f"{'🎯' if event_type == 'pre' else '✅' if event_type == 'post' else '👀'} {event_type.upper()}-hooks ({len(event_hooks)})",
+                f"{'' if event_type == 'pre' else '' if event_type == 'post' else ''} {event_type.upper()}-hooks ({len(event_hooks)})",
                 expanded=True,
             ):
                 for hook in event_hooks:
                     col_a, col_b, col_c, col_d = st.columns([3, 2, 1, 1])
 
                     with col_a:
-                        status_icon = "✅" if hook["enabled"] else "⏸️"
+                        status_icon = "" if hook["enabled"] else ""
                         st.write(f"{status_icon} **{hook['name']}**")
                         if hook["description"]:
                             st.caption(hook["description"])
 
                     with col_b:
-                        st.caption(f"📁 {hook['path'].split('/')[-1]}")
+                        st.caption(f"{hook['path'].split('/')[-1]}")
                         if hook["author"]:
-                            st.caption(f"👤 {hook['author']}")
+                            st.caption(f"{hook['author']}")
 
                     with col_c:
-                        st.caption(f"⏱️ {hook['timeout']}s")
+                        st.caption(f"{hook['timeout']}s")
 
                     with col_d:
                         if hook["enabled"]:
@@ -209,10 +209,10 @@ with tab_create:
                 )
 
                 if success:
-                    st.success(f"✅ {message}")
+                    st.success(f"{message}")
                     st.info(t("page-hooks-reload-page-info"))
                 else:
-                    st.error(f"❌ {message}")
+                    st.error(f"{message}")
 
 with tab_test:
     st.subheader(t("page-hooks-test-title"))
@@ -271,7 +271,7 @@ with tab_test:
                             )
                             st.metric(t("page-hooks-executable-metric"), executable)
 
-                        st.info(f"💡 {result['result']['message']}")
+                        st.info(f"{result['result']['message']}")
                 else:
                     st.error(t("page-hooks-validation-error", error=result["error"]))
 

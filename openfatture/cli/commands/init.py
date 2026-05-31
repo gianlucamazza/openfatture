@@ -37,7 +37,7 @@ def init(
         openfatture init                    # Interactive setup wizard
         openfatture init --no-interactive   # Automated setup with defaults
     """
-    console.print("\n[bold blue]🚀 OpenFatture Setup[/bold blue]\n")
+    console.print("\n[bold blue]OpenFatture Setup[/bold blue]\n")
 
     settings = get_settings()
 
@@ -46,16 +46,16 @@ def init(
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     settings.archivio_dir.mkdir(parents=True, exist_ok=True)
     settings.certificates_dir.mkdir(parents=True, exist_ok=True)
-    console.print("  ✓ Data directories created\n")
+    console.print(" Data directories created\n")
 
     # Initialize database
     console.print("[cyan]Initializing database...[/cyan]")
     init_db(str(settings.database_url))
-    console.print(f"  ✓ Database initialized at: {settings.database_url}\n")
+    console.print(f" Database initialized at: {settings.database_url}\n")
 
     # Interactive configuration
     if interactive:
-        console.print("[bold yellow]📝 Let's configure your company data[/bold yellow]\n")
+        console.print("[bold yellow]Let's configure your company data[/bold yellow]\n")
 
         env_file = Path(".env")
         env_content = []
@@ -111,7 +111,7 @@ def init(
         locale = Prompt.ask("Locale (it/en)", default="it")
 
         # AI Configuration (optional)
-        console.print("\n[bold]🤖 AI Configuration (Optional)[/bold]")
+        console.print("\n[bold]AI Configuration (Optional)[/bold]")
         console.print(
             "[dim]Configure AI features for smart invoice descriptions, tax suggestions, and chat assistant.[/dim]"
         )
@@ -247,16 +247,16 @@ def init(
         env_lines.extend(ai_lines)
 
         env_file.write_text("\n".join(env_lines))
-        console.print(f"\n  ✓ Configuration saved to: {env_file.absolute()}\n")
+        console.print(f"\n Configuration saved to: {env_file.absolute()}\n")
 
     # Success message
     panel = Panel(
-        "[bold green]✓ OpenFatture is ready to use![/bold green]\n\n"
+        "[bold green]OpenFatture is ready to use![/bold green]\n\n"
         "Next steps:\n"
         "  • Add a client: [cyan]openfatture cliente add[/cyan]\n"
         "  • Create an invoice: [cyan]openfatture fattura crea[/cyan]\n"
         "  • View help: [cyan]openfatture --help[/cyan]",
-        title="🎉 Setup Complete",
+        title="Setup Complete",
         border_style="green",
     )
     console.print(panel)

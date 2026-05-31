@@ -2,7 +2,7 @@
 
 Implements the ReAct pattern for LLM providers that don't support
 native function calling (like Ollama). Uses prompt engineering to
-guide the LLM through a Thought → Action → Observation loop.
+guide the LLM through a Thought Action Observation loop.
 
 Reference: https://arxiv.org/abs/2210.03629
 """
@@ -460,7 +460,7 @@ class ReActOrchestrator:
 
         prompt = f"""Sei un assistente AI per OpenFatture, sistema di fatturazione elettronica italiana.
 
-⚠️ CRITICAL: Devi SEMPRE usare i tools disponibili per ottenere dati reali. NON INVENTARE MAI dati.
+CRITICAL: Devi SEMPRE usare i tools disponibili per ottenere dati reali. NON INVENTARE MAI dati.
 
 USA QUESTO FORMATO ESATTO con tag XML:
 
@@ -479,7 +479,7 @@ TOOLS DISPONIBILI:
 ESEMPI COMPLETI:
 ═══════════════════════════════════════════════════════════════
 
-📋 ESEMPIO 1: Statistiche fatture
+ESEMPIO 1: Statistiche fatture
 User: Quante fatture ho emesso quest'anno?
 
 <thought>Devo ottenere le statistiche delle fatture per l'anno corrente 2025 usando il tool get_invoice_stats</thought>
@@ -498,7 +498,7 @@ Distribuzione per stato:
 
 ═══════════════════════════════════════════════════════════════
 
-📋 ESEMPIO 2: Ricerca fatture
+ESEMPIO 2: Ricerca fatture
 User: Mostrami le ultime 3 fatture
 
 <thought>Devo cercare le fatture più recenti usando search_invoices con limit=3</thought>
@@ -519,23 +519,23 @@ Observation: [{{"numero": "003/2025", "cliente": "Acme Corp", "totale": 1200.0, 
 ═══════════════════════════════════════════════════════════════
 
 REGOLE CRITICHE:
-✅ USA SEMPRE i tools - non inventare dati
-✅ Segui ESATTAMENTE il formato XML
-✅ JSON valido in <action_input>
-✅ Rispondi in italiano
-✅ Formatta con tabelle/liste quando appropriato
+USA SEMPRE i tools - non inventare dati
+Segui ESATTAMENTE il formato XML
+JSON valido in <action_input>
+Rispondi in italiano
+Formatta con tabelle/liste quando appropriato
 
-❌ NON inventare numeri fattura
-❌ NON inventare nomi clienti
-❌ NON inventare importi
-❌ NON rispondere senza usare tools quando sono disponibili
+NON inventare numeri fattura
+NON inventare nomi clienti
+NON inventare importi
+NON rispondere senza usare tools quando sono disponibili
 
 Ora rispondi alla domanda dell'utente seguendo gli esempi sopra."""
 
         # Add business context if available
         if context.current_year_stats:
             stats = context.current_year_stats
-            prompt += "\n\n📊 CONTESTO SISTEMA:\n"
+            prompt += "\n\nCONTESTO SISTEMA:\n"
             prompt += f"- Anno corrente: {stats.get('anno', 'N/A')}\n"
             prompt += f"- Fatture totali YTD: {stats.get('totale_fatture', 0)}\n"
             prompt += f"- Importo totale YTD: €{stats.get('importo_totale', 0):.2f}\n"

@@ -1,10 +1,8 @@
 """Fixtures for storage layer tests."""
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 
-from openfatture.storage.database.base import Base, init_db, engine, SessionLocal
+from openfatture.storage.database.base import engine, init_db
 
 
 @pytest.fixture(scope="function", autouse=True)

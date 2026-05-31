@@ -34,14 +34,14 @@ email-sdi-invio-next-steps = Next Steps
 email-sdi-invio-next-steps-text = You will receive a notification when the invoice is delivered to the recipient. The process may take a few hours.
 
 ## SDI - Notifica Attestazione (RC)
-email-sdi-attestazione-subject = 📨 Invoice { $numero }/{ $anno } - Transmission Confirmed
+email-sdi-attestazione-subject = Invoice { $numero }/{ $anno } - Transmission Confirmed
 email-sdi-attestazione-title = Transmission Attestation
 email-sdi-attestazione-intro = The Exchange System (SDI) confirms receipt of the invoice.
 email-sdi-attestazione-message = The invoice has been accepted by the system and will be forwarded to the recipient.
 email-sdi-attestazione-sdi-id = SDI Identifier
 
 ## SDI - Notifica Consegna (NS)
-email-sdi-consegna-subject = ✅ Invoice { $numero }/{ $anno } Delivered
+email-sdi-consegna-subject = Invoice { $numero }/{ $anno } Delivered
 email-sdi-consegna-title = Invoice Delivered Successfully
 email-sdi-consegna-intro = The invoice has been successfully delivered to the recipient.
 email-sdi-consegna-message = The Exchange System has confirmed delivery of the invoice to the customer's system.
@@ -49,7 +49,7 @@ email-sdi-consegna-delivered-at = Delivered on
 email-sdi-consegna-next-steps = Now wait for the customer's outcome (acceptance or rejection).
 
 ## SDI - Notifica Scarto (NS rifiuto)
-email-sdi-scarto-subject = ❌ Invoice { $numero }/{ $anno } Rejected by SDI
+email-sdi-scarto-subject = Invoice { $numero }/{ $anno } Rejected by SDI
 email-sdi-scarto-title = Invoice Rejected
 email-sdi-scarto-intro = The invoice has been rejected by the Exchange System due to validation errors.
 email-sdi-scarto-error-list = Error List
@@ -61,7 +61,7 @@ email-sdi-scarto-error-count = { $count ->
 }
 
 ## SDI - Mancata Consegna (MC)
-email-sdi-mancata-consegna-subject = ⚠️ Invoice { $numero }/{ $anno } - Failed Delivery
+email-sdi-mancata-consegna-subject = Invoice { $numero }/{ $anno } - Failed Delivery
 email-sdi-mancata-consegna-title = Failed Delivery
 email-sdi-mancata-consegna-intro = The Exchange System was unable to deliver the invoice to the recipient.
 email-sdi-mancata-consegna-reason = Reason
@@ -69,7 +69,7 @@ email-sdi-mancata-consegna-action-required = Action Required
 email-sdi-mancata-consegna-action-text = Verify recipient details (PEC or Recipient Code) and resend the invoice with correct information.
 
 ## SDI - Esito Committente Accettata (EC01)
-email-sdi-esito-accettata-subject = ✅ Invoice { $numero }/{ $anno } Accepted by Customer
+email-sdi-esito-accettata-subject = Invoice { $numero }/{ $anno } Accepted by Customer
 email-sdi-esito-accettata-title = Invoice Accepted
 email-sdi-esito-accettata-intro = The customer has accepted the invoice.
 email-sdi-esito-accettata-message = The invoice has been validated and accepted by the recipient. The invoicing process is successfully completed.
@@ -77,7 +77,7 @@ email-sdi-esito-accettata-outcome = Customer Outcome
 email-sdi-esito-accettata-accepted = Accepted (EC01)
 
 ## SDI - Esito Committente Rifiutata (EC02)
-email-sdi-esito-rifiutata-subject = ⚠️ Invoice { $numero }/{ $anno } Rejected by Customer
+email-sdi-esito-rifiutata-subject = Invoice { $numero }/{ $anno } Rejected by Customer
 email-sdi-esito-rifiutata-title = Invoice Rejected
 email-sdi-esito-rifiutata-intro = The customer has rejected the invoice.
 email-sdi-esito-rifiutata-message = The recipient has rejected the invoice. Contact the customer for clarification.

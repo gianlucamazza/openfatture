@@ -265,7 +265,7 @@ class TestToolResult:
             data="Hello World",
             tool_name="greeter",
         )
-        assert result.to_string() == "✓ greeter: Hello World"
+        assert result.to_string() == "greeter: Hello World"
 
     def test_tool_result_to_string_failure(self):
         """Test converting failed result to string."""
@@ -274,4 +274,4 @@ class TestToolResult:
             error="Network error",
             tool_name="fetcher",
         )
-        assert result.to_string() == "✗ fetcher: Network error"
+        assert result.to_string() == "fetcher: Network error"

@@ -108,9 +108,9 @@ web-validation-max-value = Maximalwert: { $value }
 
 ### Error Messages
 web-error-generic = Ein unerwarteter Fehler ist aufgetreten
-web-error-unexpected = 🚨 Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.
-web-error-reload-page = 🔄 Seite Neu Laden
-web-error-goto-health = 🏥 Zum Gesundheits-Dashboard Gehen
+web-error-unexpected = Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.
+web-error-reload-page = Seite Neu Laden
+web-error-goto-health = Zum Gesundheits-Dashboard Gehen
 web-error-network = Verbindungsfehler
 web-error-timeout = Zeitüberschreitung der Anfrage
 web-error-unauthorized = Nicht autorisiert
@@ -123,23 +123,23 @@ web-error-saving = Fehler beim Speichern
 web-error-deleting = Fehler beim Löschen
 
 ### Sidebar
-web-sidebar-quick-stats = 📊 Schnellstatistiken
+web-sidebar-quick-stats = Schnellstatistiken
 web-sidebar-invoices = Rechnungen
 web-sidebar-clients = Kunden
 web-sidebar-revenue = Umsatz
 web-sidebar-pending = Ausstehend
-web-sidebar-configuration = ⚙️ Konfiguration
+web-sidebar-configuration = Konfiguration
 web-sidebar-company = Unternehmen
 web-sidebar-vat-number = USt-IdNr.
 web-sidebar-tax-regime = Steuersystem
-web-sidebar-ai-enabled = 🤖 KI Aktiviert
+web-sidebar-ai-enabled = KI Aktiviert
 web-sidebar-ai-disabled = KI Nicht Konfiguriert
 web-sidebar-ai-provider = Anbieter
-web-sidebar-advanced-ops = 🔧 Erweiterte Funktionen
+web-sidebar-advanced-ops = Erweiterte Funktionen
 web-sidebar-error-loading-stats = Fehler beim Laden der Statistiken: { $error }
 
 ### Language Selector
-web-lang-selector-title = 🌍 Sprache
+web-lang-selector-title = Sprache
 web-lang-selector-italian = Italiano
 web-lang-selector-english = English
 web-lang-selector-spanish = Español

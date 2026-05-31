@@ -36,11 +36,11 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
     - Reference fields contain invoice numbers with prefixes/suffixes
 
     Confidence Scoring:
-    - 95%+ similarity → confidence 0.95
-    - 90-95% similarity → confidence 0.90
-    - 85-90% similarity → confidence 0.85
-    - 80-85% similarity → confidence 0.80
-    - <80% similarity → confidence 0.70 (minimum)
+    - 95%+ similarity confidence 0.95
+    - 90-95% similarity confidence 0.90
+    - 85-90% similarity confidence 0.85
+    - 80-85% similarity confidence 0.80
+    - <80% similarity confidence 0.70 (minimum)
 
     Attributes:
         min_similarity: Minimum similarity threshold (default 85%)
@@ -202,7 +202,7 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
             payment: Payment record
 
         Returns:
-            Dictionary of field name → similarity percentage (0-100)
+            Dictionary of field name similarity percentage (0-100)
         """
         scores: dict[str, float] = {}
 
@@ -345,12 +345,12 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         """Convert similarity percentage (0-100) to confidence score (0.0-1.0).
 
         Mapping:
-        - 95-100% → 0.95
-        - 90-95% → 0.90
-        - 85-90% → 0.85
-        - 80-85% → 0.80
-        - 75-80% → 0.75
-        - <75% → 0.70 (minimum)
+        - 95-100% 0.95
+        - 90-95% 0.90
+        - 85-90% 0.85
+        - 80-85% 0.80
+        - 75-80% 0.75
+        - <75% 0.70 (minimum)
 
         Args:
             similarity: Similarity percentage (0-100)
@@ -377,7 +377,7 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         """Build human-readable explanation of the fuzzy match.
 
         Args:
-            similarity_scores: Dictionary of field → similarity percentage
+            similarity_scores: Dictionary of field similarity percentage
             max_similarity: Maximum similarity found
 
         Returns:

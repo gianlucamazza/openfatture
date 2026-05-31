@@ -178,7 +178,7 @@ class LightningPaymentTaxableEvent(BaseEvent):
 
     From 2025:
     - All capital gains are taxable (no 2,000 EUR threshold)
-    - Tax rate: 26% (2025) → 33% (2026+)
+    - Tax rate: 26% (2025) 33% (2026+)
     - Must be declared in Quadro RT (redditi diversi)
     """
 

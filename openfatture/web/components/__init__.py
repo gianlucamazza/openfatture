@@ -10,7 +10,7 @@ Component Categories:
 
 Usage:
     >>> from openfatture.web.components import metric_card, success_alert
-    >>> metric_card("Revenue", "€10,000", delta="+15%", icon="💰")
+    >>> metric_card("Revenue", "€10,000", delta="+15%", icon="")
     >>> success_alert("Invoice created successfully!")
 """
 

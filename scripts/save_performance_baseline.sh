@@ -14,7 +14,7 @@ BASELINE_NAME="${1:-baseline}"
 BASELINE_DIR=".performance-baselines"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-echo "📊 Running performance tests to establish baseline: $BASELINE_NAME"
+echo "Running performance tests to establish baseline: $BASELINE_NAME"
 echo ""
 
 # Create baseline directory
@@ -45,11 +45,11 @@ EOF
 ln -sf "${BASELINE_NAME}_${TIMESTAMP}.json" "$BASELINE_DIR/latest.json"
 
 echo ""
-echo "✅ Baseline saved:"
+echo "Baseline saved:"
 echo "   - File: $BASELINE_DIR/${BASELINE_NAME}_${TIMESTAMP}.json"
 echo "   - Git commit: $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
 echo "   - Branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
 echo ""
-echo "📝 To compare with this baseline in the future:"
+echo "To compare with this baseline in the future:"
 echo "   export PERFORMANCE_BASELINE=$BASELINE_NAME"
 echo "   make test-performance"

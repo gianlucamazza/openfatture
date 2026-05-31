@@ -128,15 +128,15 @@ Example: `openfatture/locales/en/cli/fattura.ftl`
 
 ```fluent
 # Invoice creation strings
-invoice-create-title = [bold blue]🧾 Create New Invoice[/bold blue]
+invoice-create-title = [bold blue]Create New Invoice[/bold blue]
 invoice-no-clients-error = [red]No clients found. Add one first with 'cliente add'[/red]
 invoice-available-clients = [cyan]Available clients:[/cyan]
-invoice-client-selected = [green]✓ Client: { $client_name }[/green]
+invoice-client-selected = [green]Client: { $client_name }[/green]
 invoice-add-line-items-header = [bold]Add line items[/bold]
 invoice-empty-description-hint = [dim]Enter empty description to finish[/dim]
-invoice-item-added = [green]✓ Added: { $description } - €{ $total }[/green]
+invoice-item-added = [green]Added: { $description } - €{ $total }[/green]
 invoice-no-items-cancelled = [yellow]No items added. Invoice creation cancelled.[/yellow]
-invoice-created-success = [bold green]✓ Invoice created successfully![/bold green]
+invoice-created-success = [bold green]Invoice created successfully![/bold green]
 invoice-select-client-prompt = Select client ID
 invoice-number-prompt = Invoice number
 invoice-date-prompt = Issue date (YYYY-MM-DD)
@@ -149,20 +149,20 @@ invoice-ritenuta-rate-prompt = Ritenuta rate (%)
 invoice-bollo-confirm = Add bollo (€2.00)?
 invoice-delete-confirm = Delete invoice { $invoice_number }?
 invoice-send-confirm = Send invoice to SDI now?
-invoice-send-title = [bold blue]📤 Sending Invoice to SDI[/bold blue]
+invoice-send-title = [bold blue]Sending Invoice to SDI[/bold blue]
 invoice-send-step-1 = [cyan]1. Generating XML...[/cyan]
-invoice-xml-generated-step = [green]✓ XML generated[/green]
-invoice-xml-generation-title = [bold blue]🔧 Generating FatturaPA XML[/bold blue]
-invoice-xml-saved = [green]✓ XML saved to: { $path }[/green]
-invoice-xml-generated-success = [green]✓ XML generated successfully![/green]
+invoice-xml-generated-step = [green]XML generated[/green]
+invoice-xml-generation-title = [bold blue]Generating FatturaPA XML[/bold blue]
+invoice-xml-saved = [green]XML saved to: { $path }[/green]
+invoice-xml-generated-success = [green]XML generated successfully![/green]
 invoice-xml-preview = [dim]Preview (first 500 chars):[/dim]
-invoice-sent-success = [green]✓ Invoice sent to SDI via PEC with professional template[/green]
-invoice-send-complete = [bold green]✓ Invoice { $invoice_number } sent successfully![/bold green]
-invoice-professional-email = [dim]📧 Professional email sent to SDI with:[/dim]
+invoice-sent-success = [green]Invoice sent to SDI via PEC with professional template[/green]
+invoice-send-complete = [bold green]Invoice { $invoice_number } sent successfully![/bold green]
+invoice-professional-email = [dim]Professional email sent to SDI with:[/dim]
 invoice-email-format = • HTML + plain text format
 invoice-email-branding = • Company branding ({ $color })
 invoice-email-language = • Language: { $locale }
-invoice-notifications-header = [dim]📬 Automatic notifications:[/dim]
+invoice-notifications-header = [dim]Automatic notifications:[/dim]
 invoice-notification-email = • SDI responses will be emailed to: { $email }
 invoice-monitor-pec = [dim]Monitor your PEC inbox for SDI notifications.[/dim]
 
@@ -198,15 +198,15 @@ Example: `openfatture/locales/it/cli/fattura.ftl`
 
 ```fluent
 # Invoice creation strings
-invoice-create-title = [bold blue]🧾 Crea Nuova Fattura[/bold blue]
+invoice-create-title = [bold blue]Crea Nuova Fattura[/bold blue]
 invoice-no-clients-error = [red]Nessun cliente trovato. Aggiungine uno con 'cliente add'[/red]
 invoice-available-clients = [cyan]Clienti disponibili:[/cyan]
-invoice-client-selected = [green]✓ Cliente: { $client_name }[/green]
+invoice-client-selected = [green]Cliente: { $client_name }[/green]
 invoice-add-line-items-header = [bold]Aggiungi righe[/bold]
 invoice-empty-description-hint = [dim]Inserisci una descrizione vuota per terminare[/dim]
-invoice-item-added = [green]✓ Aggiunto: { $description } - €{ $total }[/green]
+invoice-item-added = [green]Aggiunto: { $description } - €{ $total }[/green]
 invoice-no-items-cancelled = [yellow]Nessuna riga aggiunta. Creazione fattura annullata.[/yellow]
-invoice-created-success = [bold green]✓ Fattura creata con successo![/bold green]
+invoice-created-success = [bold green]Fattura creata con successo![/bold green]
 invoice-select-client-prompt = Seleziona ID cliente
 invoice-number-prompt = Numero fattura
 invoice-date-prompt = Data emissione (YYYY-MM-DD)
@@ -219,20 +219,20 @@ invoice-ritenuta-rate-prompt = Aliquota ritenuta (%)
 invoice-bollo-confirm = Aggiungere bollo (€2.00)?
 invoice-delete-confirm = Eliminare fattura { $invoice_number }?
 invoice-send-confirm = Inviare fattura all'SDI ora?
-invoice-send-title = [bold blue]📤 Invio Fattura all'SDI[/bold blue]
+invoice-send-title = [bold blue]Invio Fattura all'SDI[/bold blue]
 invoice-send-step-1 = [cyan]1. Generazione XML...[/cyan]
-invoice-xml-generated-step = [green]✓ XML generato[/green]
-invoice-xml-generation-title = [bold blue]🔧 Generazione FatturaPA XML[/bold blue]
-invoice-xml-saved = [green]✓ XML salvato in: { $path }[/green]
-invoice-xml-generated-success = [green]✓ XML generato con successo![/green]
+invoice-xml-generated-step = [green]XML generato[/green]
+invoice-xml-generation-title = [bold blue]Generazione FatturaPA XML[/bold blue]
+invoice-xml-saved = [green]XML salvato in: { $path }[/green]
+invoice-xml-generated-success = [green]XML generato con successo![/green]
 invoice-xml-preview = [dim]Anteprima (primi 500 caratteri):[/dim]
-invoice-sent-success = [green]✓ Fattura inviata all'SDI via PEC con template professionale[/green]
-invoice-send-complete = [bold green]✓ Fattura { $invoice_number } inviata con successo![/bold green]
-invoice-professional-email = [dim]📧 Email professionale inviata all'SDI con:[/dim]
+invoice-sent-success = [green]Fattura inviata all'SDI via PEC con template professionale[/green]
+invoice-send-complete = [bold green]Fattura { $invoice_number } inviata con successo![/bold green]
+invoice-professional-email = [dim]Email professionale inviata all'SDI con:[/dim]
 invoice-email-format = • Formato HTML + testo semplice
 invoice-email-branding = • Branding aziendale ({ $color })
 invoice-email-language = • Lingua: { $locale }
-invoice-notifications-header = [dim]📬 Notifiche automatiche:[/dim]
+invoice-notifications-header = [dim]Notifiche automatiche:[/dim]
 invoice-notification-email = • Le risposte dell'SDI verranno inviate a: { $email }
 invoice-monitor-pec = [dim]Monitora la tua casella PEC per le notifiche SDI.[/dim]
 
@@ -270,7 +270,7 @@ fattura-help-pec = Invia via PEC
 
 ```python
 # openfatture/cli/commands/fattura.py - BEFORE
-console.print("\n[bold blue]🧾 Create New Invoice[/bold blue]\n")
+console.print("\n[bold blue]Create New Invoice[/bold blue]\n")
 console.print("[red]No clients found. Add one first with 'cliente add'[/red]")
 
 # AFTER
@@ -350,13 +350,13 @@ def test_fluent_manager_english():
     fm = get_fluent_manager()
     text = fm.t("en", "invoice-create-title")
     assert "Create New Invoice" in text
-    assert "🧾" in text
+    assert "" in text
 
 def test_fluent_manager_italian():
     fm = get_fluent_manager()
     text = fm.t("it", "invoice-create-title")
     assert "Crea Nuova Fattura" in text
-    assert "🧾" in text
+    assert "" in text
 
 def test_fluent_variable_substitution():
     fm = get_fluent_manager()
@@ -432,13 +432,13 @@ OPENFATTURE_LOCALE=en  # Supported: en, it
 
 ## Migration Checklist
 
-### Phase 1: Infrastructure ✓
+### Phase 1: Infrastructure
 - [ ] Add fluent.runtime dependency to pyproject.toml
 - [ ] Create `openfatture/i18n/` module structure
 - [ ] Implement FluentManager
 - [ ] Create directory structure for `.ftl` files
 
-### Phase 2: Content Creation ✓
+### Phase 2: Content Creation
 - [ ] Create English Fluent files (en/*.ftl)
 - [ ] Create Italian Fluent files (it/*.ftl)
 - [ ] Validate Fluent syntax

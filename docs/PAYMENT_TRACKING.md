@@ -2,9 +2,9 @@
 
 **Complete guide to OpenFatture's payment tracking system with automated bank reconciliation.**
 
-> **📦 Module**: `openfatture.payment`
+> **Module**: `openfatture.payment`
 > **Architecture**: Domain-Driven Design (DDD) + Hexagonal Architecture
-> **Status**: ✅ Production-ready (implemented in Phase 5.3)
+> **Status**: Production-ready (implemented in Phase 5.3)
 
 ---
 
@@ -28,11 +28,11 @@
 
 OpenFatture's **Payment Tracking** module provides enterprise-grade automated bank reconciliation with:
 
-- 🏦 **Multi-Bank Support** - Import from CSV, OFX, QIF formats
-- 🤖 **AI-Powered Matching** - 5 fuzzy matching strategies with confidence scoring
-- 📧 **Automated Reminders** - Smart notification system with 4 strategies
-- 🔄 **Auto-Reconciliation** - Match transactions to invoices automatically
-- 🎯 **High Accuracy** - 95%+ matching accuracy with composite matcher
+- **Multi-Bank Support** - Import from CSV, OFX, QIF formats
+- **AI-Powered Matching** - 5 fuzzy matching strategies with confidence scoring
+- **Automated Reminders** - Smart notification system with 4 strategies
+- **Auto-Reconciliation** - Match transactions to invoices automatically
+- **High Accuracy** - 95%+ matching accuracy with composite matcher
 
 ### Use Cases
 
@@ -467,7 +467,7 @@ for result in results:
 - Uses `fuzz.ratio` and `fuzz.partial_ratio` from RapidFuzz
 - Compares transaction description against payment fields (description, cliente name, fattura number)
 - Early termination when ≥95% similarity found for faster matching
-- Confidence scoring: 95%+ → 0.95, 90-95% → 0.90, 85-90% → 0.85, etc.
+- Confidence scoring: 95%+ 0.95, 90-95% 0.90, 85-90% 0.85, etc.
 
 **Performance**: Typical latency <20ms per match with 10 payments, >10 tx/s throughput
 
@@ -559,11 +559,11 @@ results = service.reconcile_unmatched_transactions()
 
 for result in results:
     if result.matched:
-        print(f"✓ Matched: Transaction {result.transaction.id} → "
+        print(f"Matched: Transaction {result.transaction.id} "
               f"Invoice {result.payment.numero_fattura} "
               f"(confidence: {result.confidence:.2%})")
     else:
-        print(f"✗ No match for transaction {result.transaction.id}")
+        print(f"No match for transaction {result.transaction.id}")
 
 # Reconcile specific transaction
 transaction = session.query(BankTransaction).filter_by(id=uuid).first()
@@ -635,9 +635,9 @@ results = notifier.process_pending_reminders()
 
 for result in results:
     if result.success:
-        print(f"✓ Sent reminder for invoice {result.reminder.payment.numero_fattura}")
+        print(f"Sent reminder for invoice {result.reminder.payment.numero_fattura}")
     else:
-        print(f"✗ Failed: {result.error}")
+        print(f"Failed: {result.error}")
 ```
 
 ### CLI Command Reference
@@ -736,7 +736,7 @@ uv run openfatture payment stats
 
 See `examples/payment_examples.py` for complete examples:
 
-1. **Basic Workflow**: Import → Reconcile → Send Reminders
+1. **Basic Workflow**: Import Reconcile Send Reminders
 2. **Custom Matcher**: Build custom matching logic
 3. **Batch Processing**: Process thousands of transactions
 4. **Multi-Account**: Handle multiple bank accounts
@@ -809,7 +809,7 @@ CREATE INDEX IF NOT EXISTS ix_payment_allocations_payment_id ON payment_allocati
 CREATE INDEX IF NOT EXISTS ix_payment_allocations_transaction_id ON payment_allocations (transaction_id);
 ```
 
-> ℹ️  If you rely on SQLite for local testing, run the same statements using the `sqlite3` CLI. SQLite will ignore the index names and `SERIAL` keyword automatically.
+> If you rely on SQLite for local testing, run the same statements using the `sqlite3` CLI. SQLite will ignore the index names and `SERIAL` keyword automatically.
 
 ### Enabling AI Payment Insight
 

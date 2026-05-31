@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>📨 {{ _('email.sdi.invio_fattura.title') }}</h1>
+<h1>{{ _('email.sdi.invio_fattura.title') }}</h1>
 
 <div class="alert alert-info">
     <strong>{{ _('email.common.invoice') }} n. {{ fattura.numero }}/{{ fattura.anno }}</strong><br/>
@@ -46,7 +46,7 @@
 
 <h3>{{ _('email.sdi.invio_fattura.attached_file') }}</h3>
 <p>
-    📄 <strong>{{ xml_filename }}</strong>
+    <strong>{{ xml_filename }}</strong>
     {% if is_signed %}<span class="badge badge-success">Firmato digitalmente</span>{% endif %}
 </p>
 

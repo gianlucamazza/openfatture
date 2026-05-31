@@ -249,7 +249,7 @@ class InteractiveChatUI:
 
         # Get input with better prompt
         user_input = await questionary.text(
-            "💬 Messaggio:",
+            "Messaggio:",
             style=openfatture_style,
             qmark="",
             instruction="\n(Digita il tuo messaggio o usa /comando. Premi Ctrl+C per uscire)",
@@ -325,7 +325,7 @@ class InteractiveChatUI:
                     # Tool started - show progress
                     if isinstance(event.data, dict):
                         tool_name = event.data.get("tool_name", "unknown")
-                        progress_acc.add(f"🔧 Avvio {tool_name}...")
+                        progress_acc.add(f"Avvio {tool_name}...")
                         live.update(
                             self.renderer.create_live_content(
                                 content_acc.get_text(), progress_acc.get_chunks()
@@ -340,7 +340,7 @@ class InteractiveChatUI:
                         # Truncate long results
                         if len(result) > 200:
                             result = result[:200] + "..."
-                        progress_acc.add(f"✅ {tool_name}: {result}")
+                        progress_acc.add(f"{tool_name}: {result}")
                         live.update(
                             self.renderer.create_live_content(
                                 content_acc.get_text(), progress_acc.get_chunks()
@@ -352,7 +352,7 @@ class InteractiveChatUI:
                     if isinstance(event.data, dict):
                         tool_name = event.data.get("tool_name", "unknown")
                         error = event.data.get("error", "Errore sconosciuto")
-                        progress_acc.add(f"❌ {tool_name}: {error}")
+                        progress_acc.add(f"{tool_name}: {error}")
                         live.update(
                             self.renderer.create_live_content(
                                 content_acc.get_text(), progress_acc.get_chunks()
@@ -366,7 +366,7 @@ class InteractiveChatUI:
                         successful = event.data.get("successful_tools", 0)
                         failed = event.data.get("failed_tools", 0)
                         progress_acc.add(
-                            f"📊 Completato: {successful} OK, {failed} errori ({exec_time:.1f}s)"
+                            f"Completato: {successful} OK, {failed} errori ({exec_time:.1f}s)"
                         )
                         live.update(
                             self.renderer.create_live_content(
@@ -391,7 +391,7 @@ class InteractiveChatUI:
                         md,
                         border_style="green",
                         padding=(0, 1),
-                        title=f"[dim]🤖 AI • {timestamp}[/dim]",
+                        title=f"[dim]AI • {timestamp}[/dim]",
                         title_align="left",
                         width=self.renderer.panel_width,
                     )
@@ -550,7 +550,7 @@ class InteractiveChatUI:
                 expanded = self.custom_commands.execute(cmd.lstrip("/"), args=args)
 
                 # Display expansion preview
-                console.print("\n[dim]🔧 Custom command expanded:[/dim]")
+                console.print("\n[dim]Custom command expanded:[/dim]")
                 from rich.panel import Panel
 
                 preview = expanded[:200] + "..." if len(expanded) > 200 else expanded
@@ -561,7 +561,7 @@ class InteractiveChatUI:
                 await self._process_message(expanded)
 
             except ValueError as e:
-                console.print(f"[red]❌ Command error: {e}[/red]")
+                console.print(f"[red]Command error: {e}[/red]")
 
             return None
 
@@ -617,7 +617,7 @@ Use /custom to see available custom commands
             style=openfatture_style,
         ).ask_async():
             self.session.clear_messages(keep_system=True)
-            console.print("[green]✓ Chat cleared[/green]\n")
+            console.print("[green]Chat cleared[/green]\n")
         return None
 
     async def _save_session(self) -> None:
@@ -626,9 +626,9 @@ Use /custom to see available custom commands
         if isinstance(self.session, ChatSession) and self.session_manager.save_session(
             self.session
         ):
-            console.print(f"[green]✓ Session saved: {self.session.id[:8]}...[/green]\n")
+            console.print(f"[green]Session saved: {self.session.id[:8]}...[/green]\n")
         else:
-            console.print("[red]✗ Error while saving[/red]\n")
+            console.print("[red]Error while saving[/red]\n")
         return None
 
     async def _export_session(self) -> None:
@@ -641,9 +641,9 @@ Use /custom to see available custom commands
         )
 
         if output_path:
-            console.print(f"[green]✓ Exported to: {output_path}[/green]\n")
+            console.print(f"[green]Exported to: {output_path}[/green]\n")
         else:
-            console.print("[red]✗ Error during export[/red]\n")
+            console.print("[red]Error during export[/red]\n")
 
         return None
 
@@ -711,9 +711,9 @@ Use /custom to see available custom commands
         try:
             self.custom_commands.reload()
             count = len(self.custom_commands.list_commands())
-            console.print(f"[green]✓ Custom commands reloaded: {count} available[/green]\n")
+            console.print(f"[green]Custom commands reloaded: {count} available[/green]\n")
         except Exception as e:
-            console.print(f"[red]✗ Error reloading commands: {e}[/red]\n")
+            console.print(f"[red]Error reloading commands: {e}[/red]\n")
 
         return None
 
@@ -737,7 +737,7 @@ Use /custom to see available custom commands
             console.print("[yellow]Nessun messaggio AI recente da valutare[/yellow]\n")
             return None
 
-        console.print("\n[bold cyan]📝 Feedback Dettagliato[/bold cyan]\n")
+        console.print("\n[bold cyan]Feedback Dettagliato[/bold cyan]\n")
 
         # Ask for feedback type
         feedback_type_choice = await questionary.select(
@@ -754,7 +754,7 @@ Use /custom to see available custom commands
             # Rating feedback
             rating = await questionary.select(
                 "Rating:",
-                choices=["1 ⭐", "2 ⭐⭐", "3 ⭐⭐⭐", "4 ⭐⭐⭐⭐", "5 ⭐⭐⭐⭐⭐"],
+                choices=["1 ", "2 ", "3 ", "4 ", "5 "],
                 style=openfatture_style,
             ).ask_async()
 
@@ -830,9 +830,9 @@ Use /custom to see available custom commands
         # Save feedback
         try:
             self.feedback_service.create_user_feedback(feedback)
-            console.print("[green]✓ Feedback salvato! Grazie per aiutarci a migliorare.[/green]\n")
+            console.print("[green]Feedback salvato! Grazie per aiutarci a migliorare.[/green]\n")
         except Exception as e:
-            console.print(f"[red]✗ Errore nel salvataggio: {e}[/red]\n")
+            console.print(f"[red]Errore nel salvataggio: {e}[/red]\n")
             logger.error("feedback_save_error", error=str(e))
 
         return None
@@ -842,7 +842,7 @@ Use /custom to see available custom commands
         summary = self.session.get_summary()
 
         goodbye_text = f"""
-[bold green]👋 Thanks for using OpenFatture AI![/bold green]
+[bold green]Thanks for using OpenFatture AI![/bold green]
 
 [bold]Conversation summary:[/bold]
 {summary}

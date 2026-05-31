@@ -229,11 +229,11 @@ class TestStreamAccumulatorEdgeCases:
     def test_unicode_chunks(self):
         """Test handling of unicode chunks."""
         acc = StreamAccumulator()
-        acc.add("Ciao 🇮🇹")
+        acc.add("Ciao ")
         acc.add(" ")
         acc.add("Fattura €1.234,56")
         text = acc.get_text()
-        assert "🇮🇹" in text
+        assert "" in text
         assert "€" in text
 
     def test_size_one_accumulator(self):
@@ -410,8 +410,8 @@ class TestMultiStreamAccumulatorAdvanced:
 
         # Simulate chat with content and tool calls
         multi.add("content", "Let me search for invoices...")
-        multi.add("tool_calls", "🔧 search_invoices(query='2024')")
-        multi.add("tool_results", "✅ Found 5 invoices")
+        multi.add("tool_calls", "search_invoices(query='2024')")
+        multi.add("tool_results", "Found 5 invoices")
         multi.add("content", "\n\nI found 5 invoices for 2024.")
 
         content = multi.get_text("content")

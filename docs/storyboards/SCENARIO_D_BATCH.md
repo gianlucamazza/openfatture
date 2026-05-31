@@ -14,7 +14,7 @@
 | 5 | 0:25 | Terminal: `openfatture batch import ...` | “Apply the import and review the results” | Display success/failure counters |
 | 6 | 0:18 | Terminal: `openfatture batch export export_2025.csv --anno 2025` | “Export invoices for BI/Excel analysis” | Show output path |
 | 7 | 0:18 | TUI dashboard (report section) | “Visualise KPIs in the interactive dashboard” | Focus on charts/metrics |
-| 8 | 0:12 | Summary slide | “Dry-run → import → verify → export” | Reminder to keep CSV backup |
+| 8 | 0:12 | Summary slide | “Dry-run import verify export” | Reminder to keep CSV backup |
 | 9 | 0:08 | Outro | “Scenario E: PEC & SDI notifications” | Link to Scenario E |
 
 ## Production Notes

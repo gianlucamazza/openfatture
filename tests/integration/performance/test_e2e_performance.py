@@ -1,8 +1,8 @@
 """End-to-end performance tests for complete workflows.
 
 Benchmarks for:
-- Invoice creation → indexing → retrieval flow
-- Search query → retrieve → format pipeline
+- Invoice creation indexing retrieval flow
+- Search query retrieve format pipeline
 - Concurrent multi-client operations
 - Full system integration performance
 
@@ -27,7 +27,7 @@ class TestEndToEndWorkflowPerformance:
     """Test complete end-to-end workflow performance."""
 
     async def test_invoice_creation_to_retrieval_flow(self, e2e_system_indexed, e2e_retriever):
-        """Test complete flow: create invoice → index → retrieve (target: <1s)."""
+        """Test complete flow: create invoice index retrieve (target: <1s)."""
         session, clienti, fatture, indexer = e2e_system_indexed
 
         # Pick a test invoice
@@ -283,13 +283,13 @@ def test_performance_summary():
     print("END-TO-END PERFORMANCE SUMMARY")
     print("=" * 70)
     print("\nTargets:")
-    print("  ✓ Full flow (create→index→retrieve): <1s")
-    print("  ✓ Search query end-to-end:           <300ms")
-    print("  ✓ Batch index + search (200 inv):    <15s")
-    print("  ✓ Concurrent searches (5):            <500ms")
-    print("  ✓ Memory (batch 200):                 <400MB")
-    print("  ✓ Memory (concurrent):                <200MB")
-    print("\nAll E2E performance targets validated! ✅")
+    print(" Full flow (createindexretrieve): <1s")
+    print(" Search query end-to-end: <300ms")
+    print(" Batch index + search (200 inv): <15s")
+    print(" Concurrent searches (5): <500ms")
+    print(" Memory (batch 200): <400MB")
+    print(" Memory (concurrent): <200MB")
+    print("\nAll E2E performance targets validated! ")
     print("=" * 70 + "\n")
 
 

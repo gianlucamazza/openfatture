@@ -60,9 +60,9 @@ class MockProvider(BaseLLMProvider):
 **Importo:** 500€
 
 Ecco i dettagli generati:
-1. ✓ Descrizione: Consulenza professionale per sviluppo applicazione web
-2. ✓ IVA: 22% (servizi professionali standard)
-3. ✓ Compliance: Verificata - pronta per SDI
+1. Descrizione: Consulenza professionale per sviluppo applicazione web
+2. IVA: 22% (servizi professionali standard)
+3. Compliance: Verificata - pronta per SDI
 """
         elif "cliente" in last_message.content.lower():
             content = """Informazioni cliente trovate:

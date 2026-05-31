@@ -28,18 +28,18 @@ def test_email() -> None:
     - Email templates render correctly
     - Notification email receives messages
     """
-    console.print("\n[bold blue]📧 Testing Email Configuration[/bold blue]\n")
+    console.print("\n[bold blue]Testing Email Configuration[/bold blue]\n")
 
     settings = get_settings()
 
     # Check configuration
     if not settings.pec_address:
-        console.print("[red]❌ PEC address not configured[/red]")
+        console.print("[red]PEC address not configured[/red]")
         console.print("Run: [cyan]openfatture init[/cyan] to configure")
         raise typer.Exit(1)
 
     if not settings.notification_email:
-        console.print("[red]❌ Notification email not configured[/red]")
+        console.print("[red]Notification email not configured[/red]")
         console.print("Add NOTIFICATION_EMAIL to your .env file")
         raise typer.Exit(1)
 
@@ -54,7 +54,7 @@ def test_email() -> None:
     success, error = sender.send_test_email()
 
     if success:
-        console.print("\n[bold green]✓ Test email sent successfully![/bold green]")
+        console.print("\n[bold green]Test email sent successfully![/bold green]")
         console.print(f"Check inbox: {settings.notification_email}")
         console.print("\n[dim]The email includes:[/dim]")
         console.print("  • Professional HTML + plain text")
@@ -62,7 +62,7 @@ def test_email() -> None:
         console.print(f"  • Language: {settings.locale.upper()}")
         console.print(f"  • Primary color: {settings.email_primary_color}")
     else:
-        console.print(f"\n[red]❌ Test failed: {error}[/red]")
+        console.print(f"\n[red]Test failed: {error}[/red]")
         console.print("\n[yellow]Troubleshooting:[/yellow]")
         console.print("  1. Check PEC credentials in .env")
         console.print("  2. Verify SMTP server and port")
@@ -93,7 +93,7 @@ def preview_template(
         openfatture email preview --template sdi/invio_fattura
         openfatture email preview --template batch/riepilogo_batch -o /tmp/preview.html
     """
-    console.print("\n[bold blue]🎨 Email Template Preview[/bold blue]\n")
+    console.print("\n[bold blue]Email Template Preview[/bold blue]\n")
 
     settings = get_settings()
     renderer = TemplateRenderer(settings=settings, locale=settings.locale)
@@ -133,7 +133,7 @@ def preview_template(
                 xml_filename="IT12345678901_00001.xml",
             )
         else:
-            console.print("[yellow]⚠ Preview for this template type not yet supported[/yellow]")
+            console.print("[yellow]Preview for this template type not yet supported[/yellow]")
             console.print("[dim]Supported: sdi/* templates[/dim]")
             return
 
@@ -145,20 +145,20 @@ def preview_template(
             output_path=output_path,
         )
 
-        console.print("\n[bold green]✓ Preview generated![/bold green]")
+        console.print("\n[bold green]Preview generated![/bold green]")
         console.print(f"[cyan]File:[/cyan] file://{preview_path}")
         console.print(f"[cyan]Size:[/cyan] {preview_path.stat().st_size} bytes")
         console.print("\n[dim]Open in browser to view the rendered template[/dim]")
 
     except Exception as e:
-        console.print(f"\n[red]❌ Error: {e}[/red]")
+        console.print(f"\n[red]Error: {e}[/red]")
         raise typer.Exit(1)
 
 
 @app.command("info")
 def email_info() -> None:
     """Show email templates configuration and available templates."""
-    console.print("\n[bold blue]📧 Email Templates Configuration[/bold blue]\n")
+    console.print("\n[bold blue]Email Templates Configuration[/bold blue]\n")
 
     settings = get_settings()
 
@@ -190,15 +190,15 @@ def email_info() -> None:
     console.print("\n[bold]Available Templates:[/bold]\n")
 
     templates_info = [
-        ("📤 sdi/invio_fattura", "Invoice submission to SDI"),
-        ("✅ sdi/notifica_consegna", "Delivery confirmation (RC)"),
-        ("❌ sdi/notifica_scarto", "Rejection notification (NS)"),
-        ("📨 sdi/notifica_attestazione", "Transmission attestation (AT)"),
-        ("⚠️  sdi/notifica_mancata_consegna", "Failed delivery (MC)"),
-        ("✅ sdi/notifica_esito_accettata", "Customer acceptance (NE-EC01)"),
-        ("❌ sdi/notifica_esito_rifiutata", "Customer rejection (NE-EC02)"),
-        ("📊 batch/riepilogo_batch", "Batch operation summary"),
-        ("🧪 test/test_email", "Test email template"),
+        ("sdi/invio_fattura", "Invoice submission to SDI"),
+        ("sdi/notifica_consegna", "Delivery confirmation (RC)"),
+        ("sdi/notifica_scarto", "Rejection notification (NS)"),
+        ("sdi/notifica_attestazione", "Transmission attestation (AT)"),
+        ("sdi/notifica_mancata_consegna", "Failed delivery (MC)"),
+        ("sdi/notifica_esito_accettata", "Customer acceptance (NE-EC01)"),
+        ("sdi/notifica_esito_rifiutata", "Customer rejection (NE-EC02)"),
+        ("batch/riepilogo_batch", "Batch operation summary"),
+        ("test/test_email", "Test email template"),
     ]
 
     for name, desc in templates_info:

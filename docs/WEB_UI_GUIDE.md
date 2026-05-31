@@ -1,4 +1,4 @@
-# OpenFatture Web UI - Guida Utente 🌐
+# OpenFatture Web UI - Guida Utente
 
 Guida completa all'utilizzo dell'interfaccia web di OpenFatture.
 
@@ -14,11 +14,11 @@ Guida completa all'utilizzo dell'interfaccia web di OpenFatture.
 
 La **Web UI di OpenFatture** è un'interfaccia moderna e intuitiva costruita con Streamlit che permette di:
 
-- 📊 Visualizzare dashboard real-time con KPI e grafici
-- 🧾 Gestire fatture in modo visuale
-- 🤖 Interagire con l'AI Assistant per descrizioni e consulenza fiscale
-- 💰 Monitorare pagamenti e riconciliazioni
-- ⚙️ Verificare la configurazione del sistema
+- Visualizzare dashboard real-time con KPI e grafici
+- Gestire fatture in modo visuale
+- Interagire con l'AI Assistant per descrizioni e consulenza fiscale
+- Monitorare pagamenti e riconciliazioni
+- Verificare la configurazione del sistema
 
 La Web UI **coesiste** con la CLI tradizionale, permettendo di scegliere lo strumento più adatto per ogni task.
 
@@ -117,7 +117,7 @@ docker run -p 8501:8501 -v $(pwd)/.env:/app/.env openfatture-web
 
 ## Tour delle Pagine
 
-### 🏠 Home
+### Home
 
 **Funzionalità:**
 - Overview funzionalità disponibili
@@ -130,7 +130,7 @@ docker run -p 8501:8501 -v $(pwd)/.env:/app/.env openfatture-web
 - Click su card per accedere alle sezioni
 - Usa sidebar per menu di navigazione
 
-### 📊 Dashboard
+### Dashboard
 
 **Funzionalità:**
 - **KPI Cards:** Fatture totali, clienti, fatturato (totale/anno/mese)
@@ -150,7 +150,7 @@ docker run -p 8501:8501 -v $(pwd)/.env:/app/.env openfatture-web
 - Identifica subito fatture in sospeso e scadenze critiche
 - Monitora trend fatturato per prendere decisioni
 
-### 🧾 Fatture
+### Fatture
 
 **Funzionalità:**
 - **Lista Fatture** con filtri (anno, stato)
@@ -175,11 +175,11 @@ docker run -p 8501:8501 -v $(pwd)/.env:/app/.env openfatture-web
 - Invio SDI: usa CLI (`openfatture fattura invia <id>`)
 - Modifica: usa CLI o database direttamente
 
-### 🤖 AI Assistant
+### AI Assistant
 
 **4 Tab Principali:**
 
-#### 💬 Chat Assistente
+#### Chat Assistente
 
 **Funzionalità:**
 - Chat interattivo con streaming real-time
@@ -202,7 +202,7 @@ docker run -p 8501:8501 -v $(pwd)/.env:/app/.env openfatture-web
 - "Cosa succede se una fattura viene rifiutata da SDI?"
 - "Come gestisco una fattura con split payment?"
 
-#### 🎙️ Voice Chat
+#### Voice Chat
 
 **Funzionalità:**
 - **Interazione vocale** hands-free con l'AI Assistant
@@ -214,12 +214,12 @@ docker run -p 8501:8501 -v $(pwd)/.env:/app/.env openfatture-web
 
 **Come Usare:**
 1. Assicurati che il microfono sia abilitato nel browser
-2. Click sul pulsante "🎙️ Registra Audio" e concedi permessi microfono
+2. Click sul pulsante "Registra Audio" e concedi permessi microfono
 3. Parla la tua domanda (es. "Quale IVA per consulenza web?")
 4. Attendi elaborazione:
-   - 🎤 Trascrizione audio → testo
-   - 🤖 Elaborazione risposta AI
-   - 🔊 Sintesi vocale risposta
+   - Trascrizione audio testo
+   - Elaborazione risposta AI
+   - Sintesi vocale risposta
 5. Ascolta la risposta audio automaticamente
 6. Visualizza trascrizione e risposta testuale
 7. Continua la conversazione vocale (mantiene contesto)
@@ -249,7 +249,7 @@ VOICE_TTS_FORMAT=mp3              # Formato: mp3, opus, aac, flac
 
 | Voce | Genere | Caratteristiche | Consigliato per |
 |------|--------|-----------------|-----------------|
-| **nova** | Femminile | Calda, conversazionale | **Italiano, uso generale** ⭐ |
+| **nova** | Femminile | Calda, conversazionale | **Italiano, uso generale** |
 | alloy | Neutro | Bilanciata, professionale | Inglese, tecnico |
 | echo | Maschile | Chiara, articolata | Presentazioni |
 | fable | Maschile | British, espressivo | Storytelling |
@@ -258,7 +258,7 @@ VOICE_TTS_FORMAT=mp3              # Formato: mp3, opus, aac, flac
 
 **Workflow Tipico:**
 
-1. **Prima volta:** Verifica configurazione in Impostazioni → Voice Config
+1. **Prima volta:** Verifica configurazione in Impostazioni Voice Config
 2. **Registra domanda:** Click "Registra" e parla naturalmente
 3. **Rivedi trascrizione:** Controlla che il testo sia corretto
 4. **Ascolta risposta:** Audio riprodotto automaticamente
@@ -266,22 +266,22 @@ VOICE_TTS_FORMAT=mp3              # Formato: mp3, opus, aac, flac
 6. **Reset:** Click "Cancella" per nuova conversazione
 
 **Esempi Domande Vocali:**
-- 🇮🇹 "Crea una fattura per consulenza web di tre ore"
-- 🇮🇹 "Quale aliquota IVA devo usare per formazione online?"
-- 🇮🇹 "Quante fatture ho emesso questo mese?"
-- 🇬🇧 "How does reverse charge work in Italy?"
-- 🇪🇸 "¿Qué IVA aplico a servicios digitales?"
+- "Crea una fattura per consulenza web di tre ore"
+- "Quale aliquota IVA devo usare per formazione online?"
+- "Quante fatture ho emesso questo mese?"
+- "How does reverse charge work in Italy?"
+- "¿Qué IVA aplico a servicios digitales?"
 
 **Supporto Lingue:**
 
 Whisper rileva automaticamente oltre 100 lingue, tra cui:
-- 🇮🇹 Italiano (it)
-- 🇬🇧 Inglese (en)
-- 🇪🇸 Spagnolo (es)
-- 🇫🇷 Francese (fr)
-- 🇩🇪 Tedesco (de)
-- 🇵🇹 Portoghese (pt)
-- 🇳🇱 Olandese (nl)
+- Italiano (it)
+- Inglese (en)
+- Spagnolo (es)
+- Francese (fr)
+- Tedesco (de)
+- Portoghese (pt)
+- Olandese (nl)
 
 **Costi Indicativi:**
 
@@ -322,18 +322,18 @@ uv run openfatture ai voice-chat --interactive
 
 **Vantaggi Voice Chat:**
 
-✅ **Hands-Free:** Ideale per multitasking o mobilità
-✅ **Accessibilità:** Supporto per utenti con disabilità visive
-✅ **Multilingua:** Cambia lingua on-the-fly senza configurazione
-✅ **Naturale:** Conversazione più fluida rispetto a testo
-✅ **Mobile-Friendly:** Ottimo per smartphone e tablet
+**Hands-Free:** Ideale per multitasking o mobilità
+**Accessibilità:** Supporto per utenti con disabilità visive
+**Multilingua:** Cambia lingua on-the-fly senza configurazione
+**Naturale:** Conversazione più fluida rispetto a testo
+**Mobile-Friendly:** Ottimo per smartphone e tablet
 
 **Limitazioni Attuali:**
 
-⚠️ Richiede connessione internet (API OpenAI)
-⚠️ Latenza ~5s per risposta completa
-⚠️ Costi API per ogni interazione
-⚠️ Qualità dipende da microfono e ambiente
+Richiede connessione internet (API OpenAI)
+Latenza ~5s per risposta completa
+Costi API per ogni interazione
+Qualità dipende da microfono e ambiente
 
 **Alternative CLI:**
 
@@ -349,7 +349,7 @@ uv run openfatture ai voice-chat --interactive
 uv run openfatture ai voice-chat --save-audio --interactive
 ```
 
-#### 📝 Genera Descrizione
+#### Genera Descrizione
 
 **Funzionalità:**
 - Genera descrizioni professionali per fatture
@@ -369,7 +369,7 @@ uv run openfatture ai voice-chat --save-audio --interactive
 
 **Suggerimento:** Più dettagli fornisci, migliore sarà l'output!
 
-#### 🧾 Suggerimento IVA
+#### Suggerimento IVA
 
 **Funzionalità:**
 - Analizza servizio/prodotto
@@ -389,9 +389,9 @@ uv run openfatture ai voice-chat --save-audio --interactive
 4. Click "Ottieni Suggerimento"
 5. Leggi analisi AI
 
-**Importante:** ⚠️ L'AI è uno strumento di supporto, non sostituisce un commercialista!
+**Importante:** L'AI è uno strumento di supporto, non sostituisce un commercialista!
 
-### 👥 Clienti (Placeholder)
+### Clienti (Placeholder)
 
 **Status:** In sviluppo
 
@@ -406,7 +406,7 @@ uv run openfatture cliente add "Nome" --interactive
 uv run openfatture cliente show <id>
 ```
 
-### 💰 Pagamenti (Placeholder)
+### Pagamenti (Placeholder)
 
 **Status:** In sviluppo
 
@@ -421,7 +421,7 @@ uv run openfatture payment reconcile --account 1
 uv run openfatture payment queue --interactive
 ```
 
-### ⚡ Lightning
+### Lightning
 
 **Funzionalità:**
 - **Status Connessione:** Verifica connessione LND e stato canali
@@ -476,7 +476,7 @@ uv run openfatture lightning liquidity status
 - **Rate Conversione:** Controlla connessione internet e API provider
 - **Invoice Scaduta:** Crea nuova invoice con expiry più lungo
 
-### ⚙️ Impostazioni
+### Impostazioni
 
 **Funzionalità:**
 - Visualizza configurazione attuale (read-only)
@@ -497,7 +497,7 @@ uv run openfatture lightning liquidity status
 
 ```
 1. Apri Web UI: uv run streamlit run openfatture/web/app.py
-2. Vai su Dashboard (1_📊_Dashboard.py)
+2. Vai su Dashboard (1__Dashboard.py)
 3. Controlla KPI: fatturato mese, fatture in sospeso
 4. Verifica scadenze pagamenti
 5. Identifica clienti top
@@ -510,33 +510,33 @@ uv run openfatture lightning liquidity status
 uv run openfatture fattura crea
 
 # Web UI per monitoring
-1. Vai su Fatture (2_🧾_Fatture.py)
+1. Vai su Fatture (2__Fatture.py)
 2. Filtra per anno corrente
 3. Trova fattura appena creata
-4. Mostra dettaglio → Genera XML
+4. Mostra dettaglio Genera XML
 5. Torna alla CLI per invio SDI
 ```
 
 ### 3. Assistenza AI per Fattura Complessa
 
 ```
-1. Vai su AI Assistant (5_🤖_AI_Assistant.py)
+1. Vai su AI Assistant (5__AI_Assistant.py)
 2. Tab "Genera Descrizione"
 3. Compila: "Sviluppo API REST con Python e PostgreSQL"
    - Ore: 40
    - Tariffa: 50
    - Progetto: "Sistema Gestionale XYZ"
    - Tecnologie: "Python, FastAPI, PostgreSQL, Docker"
-4. Genera → Copia descrizione
+4. Genera Copia descrizione
 5. Tab "Suggerimento IVA"
-6. Descrivi servizio → Verifica aliquota consigliata
+6. Descrivi servizio Verifica aliquota consigliata
 7. Usa info per creare fattura
 ```
 
 ### 4. Consulenza Fiscale Rapida
 
 ```
-1. AI Assistant → Tab Chat
+1. AI Assistant Tab Chat
 2. Domanda: "Cliente francese, consulenza IT, devo applicare IVA?"
 3. AI risponde con analisi dettagliata
 4. Follow-up: "Come lo indico in fattura?"
@@ -546,9 +546,9 @@ uv run openfatture fattura crea
 ### 5. Analisi Trend
 
 ```
-1. Dashboard → Grafico fatturato 6 mesi
+1. Dashboard Grafico fatturato 6 mesi
 2. Identifica trend (crescita/decrescita)
-3. Top Clienti → Vedi chi genera più fatturato
+3. Top Clienti Vedi chi genera più fatturato
 4. Usa insight per strategie business
 ```
 
@@ -556,7 +556,7 @@ uv run openfatture fattura crea
 
 ### Come aggiorno i dati nella Dashboard?
 
-**R:** La Dashboard usa cache con TTL 30s. Attendi 30s e ricarica la pagina, oppure clicca "🔄 Aggiorna Dati".
+**R:** La Dashboard usa cache con TTL 30s. Attendi 30s e ricarica la pagina, oppure clicca "Aggiorna Dati".
 
 ### Posso creare fatture dalla Web UI?
 
@@ -576,7 +576,7 @@ uv run openfatture fattura crea
 
 ### Come attivo il tema dark?
 
-**R:** `--theme.base dark` oppure cambia in Settings (⋮) → Theme nel browser.
+**R:** `--theme.base dark` oppure cambia in Settings (⋮) Theme nel browser.
 
 ### L'app è lenta, come ottimizzo?
 

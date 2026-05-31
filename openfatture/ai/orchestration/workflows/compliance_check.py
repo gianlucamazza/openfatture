@@ -27,8 +27,6 @@ Example:
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy.orm import Session
-
 from openfatture.ai.agents.compliance import (
     ComplianceChecker,
     ComplianceLevel,
@@ -115,9 +113,9 @@ class ComplianceCheckWorkflow:
         """Build LangGraph state machine.
 
         Graph structure:
-        START → load_invoice → rules_check → [conditional] → sdi_patterns
-              → [conditional] → ai_analysis → aggregate_results → [conditional]
-              → human_review → END
+        START load_invoice rules_check [conditional] sdi_patterns
+              [conditional] ai_analysis aggregate_results [conditional]
+              human_review END
 
         Conditional routing:
         - Skip SDI patterns if level=BASIC
@@ -138,10 +136,10 @@ class ComplianceCheckWorkflow:
         # Entry point
         workflow.set_entry_point("load_invoice")
 
-        # Sequential: load → rules
+        # Sequential: load rules
         workflow.add_edge("load_invoice", "rules_check")
 
-        # Conditional: rules → sdi_patterns or skip
+        # Conditional: rules sdi_patterns or skip
         workflow.add_conditional_edges(
             "rules_check",
             self._should_check_sdi_patterns,
@@ -152,7 +150,7 @@ class ComplianceCheckWorkflow:
             },
         )
 
-        # Conditional: sdi → ai_analysis or aggregate
+        # Conditional: sdi ai_analysis or aggregate
         workflow.add_conditional_edges(
             "sdi_patterns_check",
             self._should_run_ai_analysis,
@@ -162,10 +160,10 @@ class ComplianceCheckWorkflow:
             },
         )
 
-        # Sequential: ai → aggregate
+        # Sequential: ai aggregate
         workflow.add_edge("ai_analysis", "aggregate_results")
 
-        # Conditional: aggregate → review or end
+        # Conditional: aggregate review or end
         workflow.add_conditional_edges(
             "aggregate_results",
             self._should_require_review,

@@ -25,10 +25,10 @@ class TestAIDescribeCommandValidation:
         assert result.exit_code != 0
         assert "Missing argument" in result.stdout or "requires an argument" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.create_provider")
-    @patch("openfatture.cli.commands.ai.enrich_with_rag")
-    @patch("openfatture.cli.commands.ai.InvoiceAssistantAgent")
-    @patch("openfatture.cli.commands.ai.InvoiceContext")
+    @patch("openfatture.cli.commands.ai.describe.create_provider")
+    @patch("openfatture.cli.commands.ai.describe.enrich_with_rag")
+    @patch("openfatture.cli.commands.ai.describe.InvoiceAssistantAgent")
+    @patch("openfatture.cli.commands.ai.describe.InvoiceContext")
     def test_describe_valid_service_description(
         self, mock_context, mock_agent, mock_enrich, mock_provider
     ):
@@ -51,10 +51,10 @@ class TestAIDescribeCommandValidation:
         assert result.exit_code == 0
         assert "AI Invoice Description Generator" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.create_provider")
-    @patch("openfatture.cli.commands.ai.enrich_with_rag")
-    @patch("openfatture.cli.commands.ai.InvoiceAssistantAgent")
-    @patch("openfatture.cli.commands.ai.InvoiceContext")
+    @patch("openfatture.cli.commands.ai.describe.create_provider")
+    @patch("openfatture.cli.commands.ai.describe.enrich_with_rag")
+    @patch("openfatture.cli.commands.ai.describe.InvoiceAssistantAgent")
+    @patch("openfatture.cli.commands.ai.describe.InvoiceContext")
     def test_describe_with_optional_parameters(
         self, mock_context, mock_agent, mock_enrich, mock_provider
     ):
@@ -91,10 +91,10 @@ class TestAIDescribeCommandValidation:
         assert result.exit_code == 0
         assert "AI Invoice Description Generator" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.create_provider")
-    @patch("openfatture.cli.commands.ai.enrich_with_rag")
-    @patch("openfatture.cli.commands.ai.InvoiceAssistantAgent")
-    @patch("openfatture.cli.commands.ai.InvoiceContext")
+    @patch("openfatture.cli.commands.ai.describe.create_provider")
+    @patch("openfatture.cli.commands.ai.describe.enrich_with_rag")
+    @patch("openfatture.cli.commands.ai.describe.InvoiceAssistantAgent")
+    @patch("openfatture.cli.commands.ai.describe.InvoiceContext")
     def test_describe_agent_error(self, mock_context, mock_agent, mock_enrich, mock_provider):
         """Test describe command when agent returns error."""
         # Mock agent error
@@ -112,7 +112,7 @@ class TestAIDescribeCommandValidation:
         result = runner.invoke(app, ["describe", "Consulting services"])
 
         assert result.exit_code == 0  # Command doesn't exit with error, just shows message
-        assert "❌ Error:" in result.stdout
+        assert "Error:" in result.stdout
 
 
 class TestAISuggestVATCommandValidation:
@@ -126,8 +126,8 @@ class TestAISuggestVATCommandValidation:
         assert result.exit_code != 0
         assert "Missing argument" in result.stdout or "requires an argument" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.create_provider")
-    @patch("openfatture.cli.commands.ai.enrich_with_rag")
+    @patch("openfatture.cli.commands.ai.vat.create_provider")
+    @patch("openfatture.cli.commands.ai.vat.enrich_with_rag")
     @patch("openfatture.ai.agents.tax_advisor.TaxAdvisorAgent")
     @patch("openfatture.ai.domain.context.TaxContext")
     def test_suggest_vat_valid_description(
@@ -152,8 +152,8 @@ class TestAISuggestVATCommandValidation:
         assert result.exit_code == 0
         assert "AI Tax Advisor" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.create_provider")
-    @patch("openfatture.cli.commands.ai.enrich_with_rag")
+    @patch("openfatture.cli.commands.ai.vat.create_provider")
+    @patch("openfatture.cli.commands.ai.vat.enrich_with_rag")
     @patch("openfatture.ai.agents.tax_advisor.TaxAdvisorAgent")
     @patch("openfatture.ai.domain.context.TaxContext")
     def test_suggest_vat_with_all_options(
@@ -191,8 +191,8 @@ class TestAISuggestVATCommandValidation:
         assert result.exit_code == 0
         assert "AI Tax Advisor" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.create_provider")
-    @patch("openfatture.cli.commands.ai.enrich_with_rag")
+    @patch("openfatture.cli.commands.ai.vat.create_provider")
+    @patch("openfatture.cli.commands.ai.vat.enrich_with_rag")
     @patch("openfatture.ai.agents.tax_advisor.TaxAdvisorAgent")
     @patch("openfatture.ai.domain.context.TaxContext")
     def test_suggest_vat_foreign_client(self, mock_context, mock_agent, mock_enrich, mock_provider):
@@ -292,7 +292,7 @@ class TestAICreateInvoiceCommandValidation:
         )
         assert result.exit_code != 0
 
-    @patch("openfatture.cli.commands.ai.InvoiceCreationWorkflow")
+    @patch("openfatture.cli.commands.ai.create_invoice.InvoiceCreationWorkflow")
     def test_create_invoice_valid_parameters(self, mock_workflow_class):
         """Test create-invoice with valid parameters."""
         # Mock workflow
@@ -325,7 +325,7 @@ class TestAICreateInvoiceCommandValidation:
         assert result.exit_code == 0
         assert "Invoice created successfully" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.InvoiceCreationWorkflow")
+    @patch("openfatture.cli.commands.ai.create_invoice.InvoiceCreationWorkflow")
     def test_create_invoice_with_invalid_confidence_threshold(self, mock_workflow_class):
         """Test create-invoice with invalid confidence threshold."""
         # This test might not apply since typer handles validation automatically
@@ -357,8 +357,8 @@ class TestAIChatCommandValidation:
         # Should not fail just because no message provided (enters interactive mode)
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai.create_provider")
-    @patch("openfatture.cli.commands.ai.ChatAgent")
+    @patch("openfatture.cli.commands.ai.chat.create_provider")
+    @patch("openfatture.cli.commands.ai.chat.ChatAgent")
     def test_chat_with_message(self, mock_agent_class, mock_provider):
         """Test chat command with a message."""
         # Mock provider and agent
@@ -377,8 +377,8 @@ class TestAIChatCommandValidation:
         assert result.exit_code == 0
         assert "Assistant:" in result.stdout
 
-    @patch("openfatture.cli.commands.ai.create_provider")
-    @patch("openfatture.cli.commands.ai.ChatAgent")
+    @patch("openfatture.cli.commands.ai.chat.create_provider")
+    @patch("openfatture.cli.commands.ai.chat.ChatAgent")
     def test_chat_with_streaming(self, mock_agent_class, mock_provider):
         """Test chat command with streaming enabled."""
         # Mock provider and agent
@@ -402,7 +402,9 @@ class TestAIForecastCommandValidation:
 
     def test_forecast_default_parameters(self):
         """Test forecast command with default parameters."""
-        with patch("openfatture.ai.agents.cash_flow_predictor.CashFlowPredictorAgent") as mock_agent_class:
+        with patch(
+            "openfatture.ai.agents.cash_flow_predictor.CashFlowPredictorAgent"
+        ) as mock_agent_class:
             mock_agent = Mock()
             mock_forecast = Mock()
             mock_forecast.months = 3

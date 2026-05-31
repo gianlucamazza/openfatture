@@ -8,7 +8,7 @@ import streamlit as st
 from openfatture.i18n import t
 from openfatture.web.services.batch_service import StreamlitBatchService
 
-st.set_page_config(page_title=t("page-batch-page-title"), page_icon="📦", layout="wide")
+st.set_page_config(page_title=t("page-batch-page-title"), page_icon="", layout="wide")
 
 # Title
 st.title(t("page-batch-title"))
@@ -304,7 +304,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #666; font-size: 0.9em;'>
-    💡 <strong>Suggerimento:</strong> Per operazioni batch molto grandi, usa la CLI per prestazioni ottimali
+    <strong>Suggerimento:</strong> Per operazioni batch molto grandi, usa la CLI per prestazioni ottimali
     </div>
     """,
     unsafe_allow_html=True,

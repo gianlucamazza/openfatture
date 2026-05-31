@@ -357,7 +357,7 @@ OpenFatture includes a complete GitHub Actions workflow for automated performanc
    - Comments on PR with performance summary
 
 **Setup GitHub Pages** (optional):
-1. Go to repository Settings → Pages
+1. Go to repository Settings Pages
 2. Source: Deploy from branch `gh-pages`
 3. Access reports at: `https://[username].github.io/[repo]/performance-reports/`
 
@@ -420,7 +420,7 @@ The CI/CD workflow automatically:
 **Example PR Comment:**
 
 ```
-## 📊 Performance Test Results
+## Performance Test Results
 
 ### Summary
 
@@ -439,7 +439,7 @@ The CI/CD workflow automatically:
 | test_retrieval_latency | 189.45ms | 201.34ms |
 
 ---
-💡 View detailed results in the workflow artifacts
+View detailed results in the workflow artifacts
 ```
 
 **Slack/Email Notifications** (optional):
@@ -452,7 +452,7 @@ Add to workflow:
   uses: 8398a7/action-slack@v3
   with:
     status: ${{ job.status }}
-    text: '⚠️ Performance regression detected in PR #${{ github.event.pull_request.number }}'
+    text: 'Performance regression detected in PR #${{ github.event.pull_request.number }}'
     webhook_url: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
@@ -560,8 +560,8 @@ Add to README.md:
 ---
 
 **Next Steps:**
-1. ✅ Run initial baseline: `./scripts/save_performance_baseline.sh main`
-2. ✅ Push workflow to enable CI/CD
-3. ✅ Configure GitHub Pages (optional)
-4. ✅ Review and adjust targets based on your hardware
-5. ✅ Monitor performance trends over time
+1. Run initial baseline: `./scripts/save_performance_baseline.sh main`
+2. Push workflow to enable CI/CD
+3. Configure GitHub Pages (optional)
+4. Review and adjust targets based on your hardware
+5. Monitor performance trends over time

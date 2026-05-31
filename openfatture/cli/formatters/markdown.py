@@ -43,7 +43,7 @@ class MarkdownFormatter(BaseFormatter):
         if response.status.value == "error":
             lines.append("## Error")
             lines.append("")
-            lines.append(f"> ❌ {response.error or 'Unknown error'}")
+            lines.append(f"> {response.error or 'Unknown error'}")
             lines.append("")
             return "\n".join(lines)
 
@@ -118,7 +118,7 @@ class MarkdownFormatter(BaseFormatter):
         Returns:
             Markdown formatted error
         """
-        return f"# Error\n\n> ❌ {error_msg}\n"
+        return f"# Error\n\n> {error_msg}\n"
 
     def _format_metadata_impl(self, metadata: dict[str, Any]) -> str:
         """Format metadata as Markdown list.
