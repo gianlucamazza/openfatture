@@ -17,7 +17,7 @@ pytestmark = pytest.mark.unit
 class TestRAGStatusCommandValidation:
     """Test validation for 'ai rag status' command."""
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_status_success(self, mock_create_indexer):
         """Test RAG status command with successful indexer creation."""
         # Mock indexer
@@ -47,7 +47,7 @@ class TestRAGStatusCommandValidation:
         assert "Knowledge Base Sources" in result.stdout
         assert "Vector Store" in result.stdout
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_status_error(self, mock_create_indexer):
         """Test RAG status command with indexer creation error."""
         mock_create_indexer.side_effect = RuntimeError("Indexer creation failed")
@@ -61,7 +61,7 @@ class TestRAGStatusCommandValidation:
 class TestRAGIndexCommandValidation:
     """Test validation for 'ai rag index' command."""
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_index_success(self, mock_create_indexer):
         """Test RAG index command with successful indexing."""
         # Mock indexer
@@ -74,7 +74,7 @@ class TestRAGIndexCommandValidation:
         assert result.exit_code == 0
         assert "Indicizzazione completata" in result.stdout
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_index_with_sources(self, mock_create_indexer):
         """Test RAG index command with specific sources."""
         # Mock indexer
@@ -87,7 +87,7 @@ class TestRAGIndexCommandValidation:
         assert result.exit_code == 0
         assert "Indicizzazione completata" in result.stdout
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_index_error(self, mock_create_indexer):
         """Test RAG index command with indexer creation error."""
         mock_create_indexer.side_effect = RuntimeError("Indexer creation failed")
@@ -109,7 +109,7 @@ class TestRAGSearchCommandValidation:
         assert result.exit_code != 0
         assert "Missing argument" in result.stdout or "requires an argument" in result.stdout
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_search_success(self, mock_create_indexer):
         """Test RAG search command with successful search."""
         # Mock indexer
@@ -128,7 +128,7 @@ class TestRAGSearchCommandValidation:
         assert result.exit_code == 0
         assert "Risultati per" in result.stdout
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_search_with_source_filter(self, mock_create_indexer):
         """Test RAG search command with source filter."""
         # Mock indexer
@@ -141,7 +141,7 @@ class TestRAGSearchCommandValidation:
         assert result.exit_code == 0
         # Search should execute without error even if no results
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_search_with_top_k(self, mock_create_indexer):
         """Test RAG search command with top-k parameter."""
         # Mock indexer
@@ -154,7 +154,7 @@ class TestRAGSearchCommandValidation:
         assert result.exit_code == 0
         # Search should execute without error
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_search_empty_results(self, mock_create_indexer):
         """Test RAG search command with no results."""
         # Mock indexer
@@ -167,7 +167,7 @@ class TestRAGSearchCommandValidation:
         assert result.exit_code == 0
         assert "Nessun risultato trovato" in result.stdout
 
-    @patch("openfatture.cli.commands.ai._create_knowledge_indexer")
+    @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_search_error(self, mock_create_indexer):
         """Test RAG search command with indexer creation error."""
         mock_create_indexer.side_effect = RuntimeError("Indexer creation failed")

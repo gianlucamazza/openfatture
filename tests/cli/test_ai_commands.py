@@ -18,7 +18,7 @@ pytestmark = pytest.mark.unit
 class TestRagStatusCommand:
     """Test 'ai rag status' command."""
 
-    @patch("openfatture.cli.commands.ai._rag_status")
+    @patch("openfatture.cli.commands.ai.rag._rag_status")
     def test_rag_status_success(self, mock_rag_status):
         """Test successful RAG status display."""
         mock_rag_status.return_value = None  # Async function returns None
@@ -28,7 +28,7 @@ class TestRagStatusCommand:
         assert result.exit_code == 0
         mock_rag_status.assert_called_once()
 
-    @patch("openfatture.cli.commands.ai._rag_status")
+    @patch("openfatture.cli.commands.ai.rag._rag_status")
     def test_rag_status_error(self, mock_rag_status):
         """Test RAG status with initialization error."""
         mock_rag_status.side_effect = RuntimeError("API key missing")
@@ -41,7 +41,7 @@ class TestRagStatusCommand:
 class TestRagIndexCommand:
     """Test 'ai rag index' command."""
 
-    @patch("openfatture.cli.commands.ai._rag_index")
+    @patch("openfatture.cli.commands.ai.rag._rag_index")
     def test_rag_index_all_sources(self, mock_rag_index):
         """Test indexing all sources."""
         mock_rag_index.return_value = None
@@ -51,7 +51,7 @@ class TestRagIndexCommand:
         assert result.exit_code == 0
         mock_rag_index.assert_called_once_with(None)
 
-    @patch("openfatture.cli.commands.ai._rag_index")
+    @patch("openfatture.cli.commands.ai.rag._rag_index")
     def test_rag_index_specific_sources(self, mock_rag_index):
         """Test indexing specific sources."""
         mock_rag_index.return_value = None
@@ -61,7 +61,7 @@ class TestRagIndexCommand:
         assert result.exit_code == 0
         mock_rag_index.assert_called_once_with(["doc1", "doc2"])
 
-    @patch("openfatture.cli.commands.ai._rag_index")
+    @patch("openfatture.cli.commands.ai.rag._rag_index")
     def test_rag_index_error(self, mock_rag_index):
         """Test indexing with error."""
         mock_rag_index.side_effect = Exception("Indexing failed")
@@ -74,7 +74,7 @@ class TestRagIndexCommand:
 class TestRagSearchCommand:
     """Test 'ai rag search' command."""
 
-    @patch("openfatture.cli.commands.ai._rag_search")
+    @patch("openfatture.cli.commands.ai.rag._rag_search")
     def test_rag_search_success(self, mock_rag_search):
         """Test successful semantic search."""
         mock_rag_search.return_value = None
@@ -84,7 +84,7 @@ class TestRagSearchCommand:
         assert result.exit_code == 0
         mock_rag_search.assert_called_once_with("test query", 5, None)
 
-    @patch("openfatture.cli.commands.ai._rag_search")
+    @patch("openfatture.cli.commands.ai.rag._rag_search")
     def test_rag_search_no_results(self, mock_rag_search):
         """Test search with no results."""
         mock_rag_search.return_value = None
@@ -94,7 +94,7 @@ class TestRagSearchCommand:
         assert result.exit_code == 0
         mock_rag_search.assert_called_once_with("nonexistent query", 5, None)
 
-    @patch("openfatture.cli.commands.ai._rag_search")
+    @patch("openfatture.cli.commands.ai.rag._rag_search")
     def test_rag_search_with_filters(self, mock_rag_search):
         """Test search with source filter."""
         mock_rag_search.return_value = None
@@ -108,7 +108,7 @@ class TestRagSearchCommand:
 class TestDescribeCommand:
     """Test 'ai describe' command."""
 
-    @patch("openfatture.cli.commands.ai._run_invoice_assistant")
+    @patch("openfatture.cli.commands.ai.describe._run_invoice_assistant")
     def test_describe_success_basic(self, mock_run_assistant):
         """Test successful description generation with basic input."""
         mock_run_assistant.return_value = None
@@ -122,7 +122,7 @@ class TestDescribeCommand:
 class TestSuggestVatCommand:
     """Test 'ai suggest-vat' command."""
 
-    @patch("openfatture.cli.commands.ai._run_tax_advisor")
+    @patch("openfatture.cli.commands.ai.vat._run_tax_advisor")
     def test_suggest_vat_basic(self, mock_run_advisor):
         """Test basic VAT suggestion."""
         mock_run_advisor.return_value = None
@@ -131,7 +131,7 @@ class TestSuggestVatCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_tax_advisor")
+    @patch("openfatture.cli.commands.ai.vat._run_tax_advisor")
     def test_suggest_vat_pa_client(self, mock_run_advisor):
         """Test VAT suggestion for public administration."""
         mock_run_advisor.return_value = None
@@ -140,7 +140,7 @@ class TestSuggestVatCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_tax_advisor")
+    @patch("openfatture.cli.commands.ai.vat._run_tax_advisor")
     def test_suggest_vat_foreign_client(self, mock_run_advisor):
         """Test VAT suggestion for foreign client."""
         mock_run_advisor.return_value = None
@@ -153,7 +153,7 @@ class TestSuggestVatCommand:
 class TestForecastCommand:
     """Test 'ai forecast' command."""
 
-    @patch("openfatture.cli.commands.ai._run_cash_flow_forecast")
+    @patch("openfatture.cli.commands.ai.forecast._run_cash_flow_forecast")
     def test_forecast_success(self, mock_run_forecast):
         """Test successful cash flow forecasting."""
         mock_run_forecast.return_value = None
@@ -162,7 +162,7 @@ class TestForecastCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_cash_flow_forecast")
+    @patch("openfatture.cli.commands.ai.forecast._run_cash_flow_forecast")
     def test_forecast_with_client_filter(self, mock_run_forecast):
         """Test forecasting filtered by client."""
         mock_run_forecast.return_value = None
@@ -171,7 +171,7 @@ class TestForecastCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_cash_flow_forecast")
+    @patch("openfatture.cli.commands.ai.forecast._run_cash_flow_forecast")
     def test_forecast_with_retrain(self, mock_run_forecast):
         """Test forecasting with model retraining."""
         mock_run_forecast.return_value = None
@@ -180,7 +180,7 @@ class TestForecastCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_cash_flow_forecast")
+    @patch("openfatture.cli.commands.ai.forecast._run_cash_flow_forecast")
     def test_forecast_insufficient_data(self, mock_run_forecast):
         """Test forecasting with insufficient data."""
         mock_run_forecast.side_effect = ValueError("Insufficient invoice data for forecasting")
@@ -193,7 +193,7 @@ class TestForecastCommand:
 class TestCheckCommand:
     """Test 'ai check' command."""
 
-    @patch("openfatture.cli.commands.ai._run_compliance_check")
+    @patch("openfatture.cli.commands.ai.compliance._run_compliance_check")
     def test_check_basic_level(self, mock_run_check):
         """Test compliance check with basic level."""
         mock_run_check.return_value = None
@@ -202,7 +202,7 @@ class TestCheckCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_compliance_check")
+    @patch("openfatture.cli.commands.ai.compliance._run_compliance_check")
     def test_check_advanced_level_with_issues(self, mock_run_check):
         """Test advanced compliance check with issues."""
         mock_run_check.return_value = None
@@ -211,7 +211,7 @@ class TestCheckCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_compliance_check")
+    @patch("openfatture.cli.commands.ai.compliance._run_compliance_check")
     def test_check_invalid_level(self, mock_run_check):
         """Test check with invalid compliance level."""
         mock_run_check.side_effect = SystemExit(1)
@@ -220,7 +220,7 @@ class TestCheckCommand:
 
         assert result.exit_code == 1
 
-    @patch("openfatture.cli.commands.ai._run_compliance_check")
+    @patch("openfatture.cli.commands.ai.compliance._run_compliance_check")
     def test_check_json_output(self, mock_run_check):
         """Test compliance check with JSON output."""
         mock_run_check.return_value = None
@@ -233,7 +233,7 @@ class TestCheckCommand:
 class TestCreateInvoiceCommand:
     """Test 'ai create-invoice' command."""
 
-    @patch("openfatture.cli.commands.ai._run_invoice_workflow")
+    @patch("openfatture.cli.commands.ai.create_invoice._run_invoice_workflow")
     def test_create_invoice_success(self, mock_run_workflow):
         """Test successful invoice creation via workflow."""
         mock_run_workflow.return_value = None
@@ -245,7 +245,7 @@ class TestCreateInvoiceCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_invoice_workflow")
+    @patch("openfatture.cli.commands.ai.create_invoice._run_invoice_workflow")
     def test_create_invoice_with_options(self, mock_run_workflow):
         """Test invoice creation with all options."""
         mock_run_workflow.return_value = None
@@ -275,7 +275,7 @@ class TestCreateInvoiceCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_invoice_workflow")
+    @patch("openfatture.cli.commands.ai.create_invoice._run_invoice_workflow")
     def test_create_invoice_workflow_error(self, mock_run_workflow):
         """Test invoice creation with workflow error."""
         mock_run_workflow.side_effect = Exception("Workflow failed")
@@ -286,7 +286,7 @@ class TestCreateInvoiceCommand:
 
         assert result.exit_code == 1
 
-    @patch("openfatture.cli.commands.ai._run_invoice_workflow")
+    @patch("openfatture.cli.commands.ai.create_invoice._run_invoice_workflow")
     def test_create_invoice_json_output(self, mock_run_workflow):
         """Test invoice creation with JSON output."""
         mock_run_workflow.return_value = None
@@ -301,7 +301,7 @@ class TestCreateInvoiceCommand:
 class TestChatCommand:
     """Test 'ai chat' command."""
 
-    @patch("openfatture.cli.commands.ai._run_chat")
+    @patch("openfatture.cli.commands.ai.chat._run_chat")
     def test_chat_single_message(self, mock_run_chat):
         """Test single message chat."""
         mock_run_chat.return_value = None
@@ -310,7 +310,7 @@ class TestChatCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_chat")
+    @patch("openfatture.cli.commands.ai.chat._run_chat")
     def test_chat_single_message_streaming(self, mock_run_chat):
         """Test single message chat with streaming."""
         mock_run_chat.return_value = None
@@ -319,7 +319,7 @@ class TestChatCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_chat")
+    @patch("openfatture.cli.commands.ai.chat._run_chat")
     def test_chat_json_output(self, mock_run_chat):
         """Test chat with JSON output."""
         mock_run_chat.return_value = None
@@ -328,7 +328,7 @@ class TestChatCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_chat")
+    @patch("openfatture.cli.commands.ai.chat._run_chat")
     def test_chat_interactive_mode(self, mock_run_chat):
         """Test interactive chat mode."""
         mock_run_chat.return_value = None
@@ -337,7 +337,7 @@ class TestChatCommand:
 
         assert result.exit_code == 0
 
-    @patch("openfatture.cli.commands.ai._run_chat")
+    @patch("openfatture.cli.commands.ai.chat._run_chat")
     def test_chat_provider_error(self, mock_run_chat):
         """Test chat with provider error."""
         mock_run_chat.side_effect = Exception("Provider unavailable")
