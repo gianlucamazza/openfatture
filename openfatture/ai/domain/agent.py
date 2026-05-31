@@ -40,6 +40,10 @@ class AgentConfig(BaseModel):
 
     # Features
     tools_enabled: bool = Field(default=False, description="Enable tool/function calling")
+    output_schema: dict[str, Any] | None = Field(
+        default=None,
+        description="JSON schema for native structured output (forced when provider supports tools)",
+    )
     memory_enabled: bool = Field(default=False, description="Enable conversation memory")
     rag_enabled: bool = Field(default=False, description="Enable RAG (vector search)")
     streaming_enabled: bool = Field(default=False, description="Enable streaming responses")
