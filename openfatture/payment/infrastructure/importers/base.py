@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Session, object_session
 
 from openfatture.payment.domain.models import BankTransaction
-from openfatture.storage.database.base import SessionLocal
+from openfatture.storage.session import db_session
 
 if TYPE_CHECKING:
     from ...domain.models import BankAccount, BankTransaction
@@ -143,31 +143,16 @@ class BaseImporter(ABC):
             transactions = self.parse(account)
 
             session = object_session(account)
-            created_session = False
-            if session is None:
-                if SessionLocal is None:
-                    raise RuntimeError(
-                        "Database not initialised. Call init_db() before importing statements."
+            if session is not None:
+                # Reuse the session already bound to the account.
+                self._process_transactions(session, account, transactions, result, skip_duplicates)
+            else:
+                # Create a new session managed by the context manager,
+                # guaranteeing cleanup/rollback.
+                with db_session() as session:
+                    self._process_transactions(
+                        session, account, transactions, result, skip_duplicates
                     )
-                session = SessionLocal()
-                created_session = True
-
-            # Process each transaction
-            for transaction in transactions:
-                try:
-                    if skip_duplicates and self._transaction_exists(session, account, transaction):
-                        result.duplicate_count += 1
-                        continue
-
-                    result.transactions.append(transaction)
-                    result.success_count += 1
-
-                except Exception as e:
-                    result.error_count += 1
-                    result.errors.append(f"Transaction import error: {str(e)}")
-
-            if created_session:
-                session.close()
 
         except Exception as e:
             result.error_count += 1
@@ -175,6 +160,31 @@ class BaseImporter(ABC):
             raise
 
         return result
+
+    def _process_transactions(
+        self,
+        session: Session,
+        account: "BankAccount",
+        transactions: list["BankTransaction"],
+        result: ImportResult,
+        skip_duplicates: bool,
+    ) -> None:
+        """Process parsed transactions against the given session.
+
+        Updates ``result`` in place with success/duplicate/error counts.
+        """
+        for transaction in transactions:
+            try:
+                if skip_duplicates and self._transaction_exists(session, account, transaction):
+                    result.duplicate_count += 1
+                    continue
+
+                result.transactions.append(transaction)
+                result.success_count += 1
+
+            except Exception as e:
+                result.error_count += 1
+                result.errors.append(f"Transaction import error: {str(e)}")
 
     def validate_file(self) -> None:
         """Validate that file exists and is readable.

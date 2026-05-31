@@ -5,6 +5,8 @@ from decimal import Decimal
 
 import typer
 
+from openfatture.utils.async_bridge import run_async
+
 from ..application.services.invoice_service import LightningInvoiceService
 from ..application.services.payment_service import LightningPaymentService
 from ..infrastructure.lnd_client import LNDClient
@@ -51,7 +53,7 @@ def info():
             typer.echo(f"Error getting node info: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_info())
+    run_async(_info())
 
 
 @app.command()
@@ -82,7 +84,7 @@ def channels():
             typer.echo(f"Error listing channels: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_channels())
+    run_async(_channels())
 
 
 @app.command()
@@ -108,7 +110,7 @@ def balance():
             typer.echo(f"Error getting balance: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_balance())
+    run_async(_balance())
 
 
 @app.command()
@@ -151,7 +153,7 @@ def create_invoice(
             typer.echo(f"Error creating invoice: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_create_invoice())
+    run_async(_create_invoice())
 
 
 @app.command()
@@ -201,7 +203,7 @@ def list_invoices(
             typer.echo(f"Error listing invoices: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_list_invoices())
+    run_async(_list_invoices())
 
 
 @app.command()
@@ -229,7 +231,7 @@ def decode_invoice(payment_request: str):
             typer.echo(f"Error decoding invoice: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_decode_invoice())
+    run_async(_decode_invoice())
 
 
 @app.command()
@@ -255,7 +257,7 @@ def monitor_start():
             typer.echo(f"Error in payment monitoring: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_monitor_start())
+    run_async(_monitor_start())
 
 
 @app.command()
@@ -272,7 +274,7 @@ def monitor_stop():
             typer.echo(f"Error stopping monitoring: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_monitor_stop())
+    run_async(_monitor_stop())
 
 
 @app.command()
@@ -297,7 +299,7 @@ def stats():
             typer.echo(f"Error getting statistics: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_stats())
+    run_async(_stats())
 
 
 @app.command()
@@ -319,7 +321,7 @@ def simulate_payment(payment_hash: str):
             typer.echo(f"Error simulating payment: {e}", err=True)
             raise typer.Exit(1)
 
-    asyncio.run(_simulate_payment())
+    run_async(_simulate_payment())
 
 
 if __name__ == "__main__":

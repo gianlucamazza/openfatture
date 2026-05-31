@@ -22,6 +22,7 @@ from openfatture.lightning.application.services.tax_calculation_service import (
 )
 from openfatture.lightning.domain.value_objects import QuadroRWData
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
+from openfatture.utils.async_bridge import run_async
 
 
 @dataclass
@@ -410,9 +411,7 @@ class ComplianceReportService:
         Returns:
             TaxYearSummary with aggregated data
         """
-        import asyncio
-
-        return asyncio.run(self.generate_tax_year_summary(tax_year))
+        return run_async(self.generate_tax_year_summary(tax_year))
 
     def generate_quadro_rw_report_sync(
         self, tax_year: int, output_format: ReportFormat = "json"
@@ -426,9 +425,7 @@ class ComplianceReportService:
         Returns:
             Report as string in requested format
         """
-        import asyncio
-
-        return asyncio.run(self.generate_quadro_rw_report(tax_year, output_format))
+        return run_async(self.generate_quadro_rw_report(tax_year, output_format))
 
     def generate_aml_compliance_report_sync(
         self, threshold_eur: Decimal | None = None
@@ -441,9 +438,7 @@ class ComplianceReportService:
         Returns:
             AMLComplianceReport with current status
         """
-        import asyncio
-
-        return asyncio.run(self.generate_aml_compliance_report(threshold_eur))
+        return run_async(self.generate_aml_compliance_report(threshold_eur))
 
     def generate_capital_gains_report_sync(
         self, tax_year: int, output_format: ReportFormat = "csv"
@@ -457,9 +452,7 @@ class ComplianceReportService:
         Returns:
             Report as string in requested format
         """
-        import asyncio
-
-        return asyncio.run(self.generate_capital_gains_report(tax_year, output_format))
+        return run_async(self.generate_capital_gains_report(tax_year, output_format))
 
 
 def create_compliance_report_service(
