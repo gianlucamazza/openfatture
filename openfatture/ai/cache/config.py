@@ -3,11 +3,12 @@
 This module defines cache settings and configuration using Pydantic.
 """
 
-import logging
 import os
 from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from openfatture.utils.logging import get_logger
 
 
 class CacheConfig(BaseModel):
@@ -90,7 +91,7 @@ class CacheConfig(BaseModel):
 # Default configuration
 DEFAULT_CACHE_CONFIG = CacheConfig()
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger(__name__)
 
 
 def get_cache_config() -> CacheConfig:
@@ -109,8 +110,9 @@ def get_cache_config() -> CacheConfig:
     strategy_raw = os.getenv("OPENFATTURE_CACHE_STRATEGY", "lru")
     if strategy_raw not in {"lru", "semantic", "hybrid"}:
         _logger.warning(
-            "Invalid cache strategy '%s'. Falling back to 'lru'.",
-            strategy_raw,
+            "invalid_cache_strategy",
+            strategy=strategy_raw,
+            fallback="lru",
         )
         strategy_raw = "lru"
 

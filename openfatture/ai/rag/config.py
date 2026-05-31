@@ -3,12 +3,13 @@
 This module defines configuration settings for the RAG system using Pydantic.
 """
 
-import logging
 import os
 from pathlib import Path
 from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from openfatture.utils.logging import get_logger
 
 
 class RAGConfig(BaseModel):
@@ -119,7 +120,7 @@ class RAGConfig(BaseModel):
 # Default configuration
 DEFAULT_RAG_CONFIG = RAGConfig()
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger(__name__)
 
 
 def get_rag_config() -> RAGConfig:
@@ -147,14 +148,17 @@ def get_rag_config() -> RAGConfig:
     ai_provider = os.getenv("OPENFATTURE_AI_PROVIDER") or os.getenv("AI_PROVIDER")
     if ai_provider == "ollama" and "OPENFATTURE_RAG_EMBEDDING_PROVIDER" not in os.environ:
         default_provider = "sentence-transformers"
-        _logger.info("Using sentence-transformers for embeddings (AI_PROVIDER=ollama detected)")
+        _logger.info(
+            "rag_default_embeddings_sentence_transformers",
+            reason="AI_PROVIDER=ollama detected",
+        )
 
     provider_raw = os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER", default_provider)
     if provider_raw not in {"openai", "sentence-transformers"}:
         _logger.warning(
-            "Invalid embedding provider '%s'. Falling back to '%s'.",
-            provider_raw,
-            default_provider,
+            "invalid_embedding_provider",
+            provider=provider_raw,
+            fallback=default_provider,
         )
         provider_raw = default_provider
 
