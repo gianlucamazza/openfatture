@@ -10,12 +10,17 @@ tests at all. This module adds:
    ``retry_with_backoff``) so the logic is covered independently of Streamlit.
 """
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
-PAGE_PATH = "openfatture/web/pages/5_AI_Assistant.py"
+# Anchor to the repo root (tests/web/<this file>) so AppTest.from_file resolves
+# regardless of the working directory or the caller's location.
+PAGE_PATH = str(
+    Path(__file__).resolve().parents[2] / "openfatture" / "web" / "pages" / "5_AI_Assistant.py"
+)
 
 
 def _make_ai_service() -> MagicMock:
