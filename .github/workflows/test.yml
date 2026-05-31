@@ -125,6 +125,25 @@ jobs:
         run: uv run safety check --json
         continue-on-error: true
 
+      - name: Run Bandit (Python SAST)
+        # Advisory for now: the codebase has pre-existing findings (3 High,
+        # 6 Medium). Results are surfaced in the Security tab via SARIF; triage
+        # and tighten to a failing gate once the backlog is addressed.
+        run: |
+          uvx bandit -r openfatture/ -ll -f sarif -o bandit-results.sarif || true
+          uvx bandit -r openfatture/ -ll || true
+
+      - name: Upload Bandit results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'bandit-results.sarif'
+        continue-on-error: true
+
+      - name: Run pip-audit (dependency vulnerabilities)
+        run: uvx pip-audit --strict || true
+        continue-on-error: true
+
 permissions:
   contents: read
   security-events: write
