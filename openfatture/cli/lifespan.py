@@ -5,28 +5,26 @@ Provides graceful startup and shutdown handling for async resources,
 preventing event loop race conditions during application termination.
 """
 
+from __future__ import annotations
+
 import asyncio
 import signal
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from openfatture.ai.ml.retraining import (
-    RetrainingScheduler,
-)
-from openfatture.ai.ml.retraining import (
-    get_scheduler as get_retraining_scheduler,
-)
-from openfatture.ai.rag.auto_update import (
-    AutoIndexingService,
-    get_auto_indexing_service,
-    get_auto_update_config,
-    setup_event_listeners,
-    teardown_event_listeners,
-)
+# The AI/ML self-learning stack (retraining scheduler, RAG auto-update) is heavy
+# and optional. Import it lazily inside the methods that use it so the core CLI
+# (and a minimal, AI-free install such as the payment-only Docker image) can
+# start without the AI extras; only type names are imported eagerly, guarded by
+# TYPE_CHECKING.
+if TYPE_CHECKING:
+    from openfatture.ai.ml.retraining import RetrainingScheduler
+    from openfatture.ai.rag.auto_update import AutoIndexingService
+
 from openfatture.core.events import GlobalEventBus, initialize_event_system
 from openfatture.core.hooks import HookEventBridge, initialize_hook_system
 from openfatture.utils.async_bridge import run_async
@@ -105,6 +103,15 @@ class LifespanManager:
     async def _initialize_self_learning(self) -> None:
         """Initialize self-learning systems."""
         try:
+            from openfatture.ai.ml.retraining import (
+                get_scheduler as get_retraining_scheduler,
+            )
+            from openfatture.ai.rag.auto_update import (
+                get_auto_indexing_service,
+                get_auto_update_config,
+                setup_event_listeners,
+            )
+
             # Setup RAG auto-update event listeners
             logger.debug("Setting up RAG auto-update event listeners")
             setup_event_listeners()
@@ -192,6 +199,8 @@ class LifespanManager:
     async def _shutdown_self_learning(self) -> None:
         """Shutdown self-learning systems gracefully."""
         try:
+            from openfatture.ai.rag.auto_update import teardown_event_listeners
+
             # Stop retraining scheduler
             if self.retraining_scheduler:
                 logger.debug("Stopping retraining scheduler")

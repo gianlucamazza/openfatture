@@ -95,6 +95,9 @@ jobs:
 
       - name: Comment coverage on PR
         if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        # A coverage PR comment is informational and fails for forks / missing
+        # permissions; it must never fail the test job.
+        continue-on-error: true
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
           GITHUB_TOKEN: ${{ github.token }}
