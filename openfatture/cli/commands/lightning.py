@@ -252,6 +252,10 @@ def compliance_check(
                 )
             console.print()
 
+    except typer.Exit:
+        # Control-flow exit (e.g. compliance issues found): do not report it as
+        # an unexpected error.
+        raise
     except Exception as e:
         console.print(_("cli-lightning-compliance-error", error=str(e)))
         raise typer.Exit(code=1)

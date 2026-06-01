@@ -1,5 +1,6 @@
 """Configuration management commands."""
 
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -273,8 +274,9 @@ def set_config(
 
             setattr(settings, key, new_val)
 
-        # Save to TOML
-        config_path = dirs.user_config_dir / "config.toml"
+        # Save to TOML. dirs.user_config_dir is a str (platformdirs), so wrap it
+        # in Path before joining.
+        config_path = Path(dirs.user_config_dir) / "config.toml"
         save_config(settings, config_path)
 
         console.print(_("cli-config-set-success", key=key, value=value))
