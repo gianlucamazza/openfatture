@@ -2,12 +2,14 @@
 
 import hashlib
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
 import pytest
 
+from openfatture.lightning.domain.enums import InvoiceStatus
 from openfatture.lightning.domain.value_objects import (
     ChannelInfo,
     LightningInvoice,
@@ -145,6 +147,95 @@ def mock_btc_converter():
 def mock_lnd_client():
     """Fixture providing mock LND client."""
     return MockLNDClient()
+
+
+@dataclass
+class InMemoryInvoiceRecord:
+    """Simple in-memory representation of a Lightning invoice record."""
+
+    payment_hash: str
+    payment_request: str
+    amount_msat: int | None
+    description: str
+    expiry_timestamp: int
+    status: InvoiceStatus = InvoiceStatus.PENDING
+    fattura_id: int | None = None
+    fee_paid_msat: int | None = None
+    settled_at: datetime | None = None
+    preimage: str | None = None
+    eur_amount_declared: Decimal | None = None
+    exceeds_aml_threshold: bool = False
+
+
+class InMemoryLightningInvoiceRepository:
+    """Minimal in-memory repository for Lightning invoice records.
+
+    Mirrors the query surface of the SQLAlchemy-backed
+    LightningInvoiceRepository used by LightningPaymentService, so tests can
+    exercise the real service logic without a database.
+    """
+
+    def __init__(self) -> None:
+        self._records: dict[str, InMemoryInvoiceRecord] = {}
+
+    def save(self, invoice: InMemoryInvoiceRecord) -> InMemoryInvoiceRecord:
+        """Save or update a record in memory."""
+        self._records[invoice.payment_hash] = invoice
+        return invoice
+
+    def create_from_invoice(
+        self, invoice: LightningInvoice, fattura_id: int | None = None
+    ) -> InMemoryInvoiceRecord:
+        """Create and persist a pending record from a Lightning invoice."""
+        expiry = invoice.expiry_timestamp or int(time.time()) + 3600
+        record = InMemoryInvoiceRecord(
+            payment_hash=invoice.payment_hash,
+            payment_request=invoice.payment_request,
+            amount_msat=invoice.amount_msat,
+            description=invoice.description,
+            expiry_timestamp=expiry,
+            fattura_id=fattura_id,
+        )
+        return self.save(record)
+
+    def find_by_payment_hash(self, payment_hash: str) -> InMemoryInvoiceRecord | None:
+        return self._records.get(payment_hash)
+
+    def find_pending(self) -> list[InMemoryInvoiceRecord]:
+        return [
+            record for record in self._records.values() if record.status == InvoiceStatus.PENDING
+        ]
+
+    def find_expired_pending(self) -> list[InMemoryInvoiceRecord]:
+        current_time = int(time.time())
+        return [
+            record
+            for record in self._records.values()
+            if record.status == InvoiceStatus.PENDING and record.expiry_timestamp <= current_time
+        ]
+
+    def find_settled_in_date_range(
+        self, start_date: datetime, end_date: datetime
+    ) -> list[InMemoryInvoiceRecord]:
+        return [
+            record
+            for record in self._records.values()
+            if record.status == InvoiceStatus.SETTLED
+            and record.settled_at is not None
+            and start_date <= record.settled_at <= end_date
+        ]
+
+    def find_by_fattura_id(self, fattura_id: int) -> list[InMemoryInvoiceRecord]:
+        return [record for record in self._records.values() if record.fattura_id == fattura_id]
+
+    def all(self) -> list[InMemoryInvoiceRecord]:
+        return list(self._records.values())
+
+
+@pytest.fixture
+def in_memory_invoice_repo() -> InMemoryLightningInvoiceRepository:
+    """Fixture providing an in-memory Lightning invoice repository."""
+    return InMemoryLightningInvoiceRepository()
 
 
 @pytest.fixture

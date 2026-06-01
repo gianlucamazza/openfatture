@@ -94,7 +94,9 @@ class LightningLiquidityService:
                 await self._monitoring_task
             except asyncio.CancelledError:
                 pass
-            self._monitoring_task = None
+            # Keep the (now-cancelled, done) task reference so callers can
+            # inspect its state; start_monitoring already restarts when the
+            # existing task is done.
             print("Stopped Lightning liquidity monitoring")
 
     async def _monitor_liquidity_loop(self):
@@ -221,22 +223,26 @@ class LightningLiquidityService:
         channels = await self.lnd_client.list_channels()
         opportunities = []
 
-        # Simple rebalancing logic: move from high-outbound to low-inbound channels
+        # Rebalancing moves local balance (outbound) from channels with excess
+        # outbound to channels that are short on outbound (i.e. holding excess
+        # inbound). The source is a high-outbound channel; the target is a
+        # high-inbound channel that needs more local balance to send with.
+        target_outbound_ratio = 1.0 - self.target_inbound_ratio
         high_outbound = [ch for ch in channels if ch.outbound_ratio > self.max_outbound_ratio]
-        low_inbound = [ch for ch in channels if ch.inbound_ratio < self.min_inbound_ratio]
+        high_inbound = [ch for ch in channels if ch.inbound_ratio > (1.0 - self.max_outbound_ratio)]
 
         for source in high_outbound:
-            for target in low_inbound:
+            for target in high_inbound:
                 if source.channel_id == target.channel_id:
                     continue
 
-                # Calculate rebalancing amount (move towards target ratio)
+                # Calculate rebalancing amount (move both channels towards the
+                # target outbound ratio).
                 source_excess = int(
-                    source.outbound_capacity_sat
-                    * (source.outbound_ratio - self.target_inbound_ratio)
+                    source.capacity_sat * (source.outbound_ratio - target_outbound_ratio)
                 )
                 target_needed = int(
-                    target.capacity_sat * (self.target_inbound_ratio - target.inbound_ratio)
+                    target.capacity_sat * (target_outbound_ratio - target.outbound_ratio)
                 )
 
                 amount = min(source_excess, target_needed, 1000000)  # Max 1M sats per rebalance
