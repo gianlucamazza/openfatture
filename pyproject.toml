@@ -113,8 +113,8 @@ dev = [
   # Cap the formatter/linter to their pre-commit-pinned series: black's yearly
   # "stable style" (26.x) and new ruff rule sets reformat/flag code differently,
   # which made CI (fresh-resolved) disagree with the locked/pre-commit versions.
-  "black>=25.9.0,<26",
-  "ruff>=0.14.0,<0.15",
+  "black>=25.9.0,<27",
+  "ruff>=0.14.0,<0.16",
   "mypy>=1.8.0",
   "isort>=5.13.2",
 
