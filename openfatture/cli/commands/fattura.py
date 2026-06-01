@@ -7,6 +7,7 @@ import typer
 from rich.console import Console
 from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
+from sqlalchemy.exc import SQLAlchemyError
 
 from openfatture.cli.lifespan import get_event_bus
 from openfatture.core.events import (
@@ -56,6 +57,19 @@ def crea_fattura(
 
     console.print(f"\n{_('cli-fattura-create-title')}\n")
 
+    try:
+        _crea_fattura_in_db(cliente_id)
+    except (SQLAlchemyError, ValueError) as exc:
+        # db_session() has already rolled back; convert a database/validation
+        # failure into a clean error message and non-zero exit instead of a raw
+        # traceback. typer.Exit raised inside (e.g. no clients) is not caught
+        # here and propagates unchanged.
+        console.print(_("cli-fattura-create-error", error=str(exc)))
+        raise typer.Exit(1) from exc
+
+
+def _crea_fattura_in_db(cliente_id: int | None) -> None:
+    """Run the invoice-creation transaction. Wrapped by ``crea_fattura``."""
     with db_session() as db:
         # Select client
         if not cliente_id:
@@ -80,8 +94,16 @@ def crea_fattura(
 
         console.print(f"{_('cli-fattura-client-selected', client_name=cliente.denominazione)}\n")
 
-        # Invoice details
-        anno = date.today().year
+        # Invoice details. Derive the year from the entered issue date so the
+        # stored ``anno`` (used for FatturaPA numbering/progressivo) stays
+        # consistent with ``data_emissione`` even when the user back-dates or
+        # forward-dates the invoice into another year.
+        data_emissione_input = Prompt.ask(
+            "Issue date (YYYY-MM-DD)", default=date.today().isoformat()
+        )
+        data_emissione = date.fromisoformat(data_emissione_input)
+        anno = data_emissione.year
+
         ultimo_numero = (
             db.query(Fattura).filter(Fattura.anno == anno).order_by(Fattura.numero.desc()).first()
         )
@@ -92,13 +114,12 @@ def crea_fattura(
             prossimo_numero = 1
 
         numero = Prompt.ask("Invoice number", default=str(prossimo_numero))
-        data_emissione = Prompt.ask("Issue date (YYYY-MM-DD)", default=date.today().isoformat())
 
         # Create invoice
         fattura = Fattura(
             numero=numero,
             anno=anno,
-            data_emissione=date.fromisoformat(data_emissione),
+            data_emissione=data_emissione,
             cliente_id=cliente.id,
             tipo_documento=TipoDocumento.TD01,
             stato=StatoFattura.BOZZA,

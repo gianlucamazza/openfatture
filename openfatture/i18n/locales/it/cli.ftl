@@ -1258,3 +1258,9 @@ cli-config-set-success = [green]Impostato { $key } = { $value }[/green]
 cli-config-saved-to = [dim]Salvato in { $path }[/dim]
 cli-config-invalid-key = [red]Chiave configurazione non valida: { $key }[/red]
 cli-config-error = [red]Errore: { $error }[/red]
+
+# Added: chat labels / DB-error messages
+cli-ai-chat-assistant-title = [bold cyan]Assistente AI[/bold cyan]
+cli-ai-chat-exit-message = [yellow]Arrivederci![/yellow]
+cli-cliente-add-error = [red]Errore nel salvataggio del cliente: { $error }[/red]
+cli-fattura-create-error = [red]Errore nella creazione della fattura: { $error }[/red]

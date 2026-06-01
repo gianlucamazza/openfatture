@@ -8,12 +8,15 @@ so message assertions are deterministic. Genuine error-path tests force a DB
 failure by patching the real ``db_session`` seam on the command module.
 """
 
+import io
 from contextlib import contextmanager
 from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
+import typer
+from rich.console import Console
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.cliente import add_cliente, app
@@ -83,9 +86,19 @@ def _seed_fattura(session, cliente: Cliente) -> Fattura:
     return fattura
 
 
+def _recording_console() -> Console:
+    """A wide Console that records output to a StringIO for assertions."""
+    return Console(file=io.StringIO(), width=220, force_terminal=False)
+
+
 @contextmanager
 def _failing_db_session(exc: Exception):
-    """A ``db_session()`` replacement whose add/commit raise ``exc``."""
+    """A ``db_session()`` replacement whose add/commit raise ``exc``.
+
+    Mirrors the real ``db_session()`` contract: an exception inside the block
+    propagates out of the context manager (rollback is the real implementation's
+    job and is covered by its own tests).
+    """
     db = MagicMock()
     db.add.side_effect = exc
     db.commit.side_effect = exc
@@ -200,21 +213,26 @@ class TestAddClienteFunction:
         assert cliente.partita_iva == "12345678901"
 
     def test_add_cliente_validation_error(self, runtime_db):
-        """Test that a database error during add aborts the command.
+        """A validation error during add aborts cleanly (exit 1, no traceback).
 
-        ``add_cliente`` runs inside ``db_session()``, which rolls back and
-        re-raises any exception. A failure in ``db.add`` therefore propagates
-        out of the command instead of silently succeeding.
+        ``add_cliente`` wraps the ``db_session()`` block: ``db_session()`` rolls
+        back and re-raises, and the command converts a ``ValueError`` into a
+        clean error message plus ``typer.Exit(1)`` rather than letting a raw
+        traceback escape to the user.
         """
+        console = _recording_console()
 
         def fake_session():
             return _failing_db_session(ValueError("Database error"))
 
-        with patch(
-            "openfatture.cli.commands.cliente.db_session",
-            side_effect=fake_session,
+        with (
+            patch("openfatture.cli.commands.cliente.console", console),
+            patch(
+                "openfatture.cli.commands.cliente.db_session",
+                side_effect=fake_session,
+            ),
         ):
-            with pytest.raises(ValueError, match="Database error"):
+            with pytest.raises(typer.Exit) as exc_info:
                 add_cliente(
                     "Test Client",
                     partita_iva="12345678901",
@@ -224,22 +242,33 @@ class TestAddClienteFunction:
                     interactive=False,
                 )
 
-    def test_add_cliente_duplicate_piva(self, runtime_db):
-        """Test that a duplicate partita IVA (constraint violation) aborts the command.
+        assert exc_info.value.exit_code == 1
+        output = console.file.getvalue()
+        assert "Error saving client" in output
+        assert "Database error" in output
 
-        ``db.add`` raising ``IntegrityError`` (e.g. a duplicate VAT number)
-        propagates out of the ``db_session()`` context after rollback.
+    def test_add_cliente_duplicate_piva(self, runtime_db):
+        """A duplicate partita IVA (constraint violation) aborts cleanly.
+
+        ``db.add`` raising ``IntegrityError`` (e.g. a duplicate VAT number) is
+        caught after ``db_session()`` rolls back, and reported as a clean error
+        message plus ``typer.Exit(1)`` instead of a raw traceback.
         """
         from sqlalchemy.exc import IntegrityError
+
+        console = _recording_console()
 
         def fake_session():
             return _failing_db_session(IntegrityError(None, None, Exception("Duplicate PIVA")))
 
-        with patch(
-            "openfatture.cli.commands.cliente.db_session",
-            side_effect=fake_session,
+        with (
+            patch("openfatture.cli.commands.cliente.console", console),
+            patch(
+                "openfatture.cli.commands.cliente.db_session",
+                side_effect=fake_session,
+            ),
         ):
-            with pytest.raises(IntegrityError):
+            with pytest.raises(typer.Exit) as exc_info:
                 add_cliente(
                     "Test Client",
                     partita_iva="12345678901",
@@ -248,3 +277,7 @@ class TestAddClienteFunction:
                     pec=None,
                     interactive=False,
                 )
+
+        assert exc_info.value.exit_code == 1
+        output = console.file.getvalue()
+        assert "Error saving client" in output

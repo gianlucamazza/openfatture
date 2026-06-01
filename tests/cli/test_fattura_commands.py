@@ -421,10 +421,11 @@ class TestCreaFatturaCommand:
         """Test successful invoice creation with line items."""
         cliente = _make_cliente(runtime_session)
 
-        # Mock user inputs
+        # Mock user inputs. The issue date is prompted before the invoice
+        # number so the invoice year can be derived from the entered date.
         mock_prompt.ask.side_effect = [
+            "2023-01-15",  # issue date (deliberately not the current year)
             "001",  # invoice number
-            "2025-01-15",  # issue date
             "Development services",  # item 1 description
             "",  # end items
         ]
@@ -442,11 +443,14 @@ class TestCreaFatturaCommand:
 
         assert result.exit_code == 0
         assert "Invoice created successfully" in result.stdout
-        # The command stamps invoices with the current year.
-        assert f"001/{date.today().year}" in result.stdout
-        # Invoice persisted to the shared database.
+        # The invoice year is derived from the entered issue date, not today's
+        # date, so numbering and date stay consistent.
+        assert "001/2023" in result.stdout
+        # Invoice persisted to the shared database with a matching year.
         created = runtime_session.query(Fattura).filter(Fattura.numero == "001").first()
         assert created is not None
+        assert created.anno == 2023
+        assert created.data_emissione == date(2023, 1, 15)
         assert len(created.righe) == 1
 
     @patch("openfatture.cli.commands.fattura.Prompt")
@@ -464,10 +468,11 @@ class TestCreaFatturaCommand:
         """Test invoice creation cancelled when no items added."""
         cliente = _make_cliente(runtime_session)
 
-        # Mock user inputs - empty description immediately
+        # Mock user inputs - empty description immediately. Issue date is
+        # prompted before the invoice number.
         mock_prompt.ask.side_effect = [
-            "001",  # invoice number
             "2025-01-15",  # issue date
+            "001",  # invoice number
             "",  # no items
         ]
 
@@ -493,10 +498,10 @@ class TestCreaFatturaCommand:
         """Test invoice creation with ritenuta and bollo."""
         cliente = _make_cliente(runtime_session)
 
-        # Mock user inputs
+        # Mock user inputs. Issue date is prompted before the invoice number.
         mock_prompt.ask.side_effect = [
-            "001",  # invoice number
             "2025-01-15",  # issue date
+            "001",  # invoice number
             "Consulting",  # item description
             "",  # end items
         ]
@@ -542,10 +547,10 @@ class TestCreaFatturaCommand:
         # Mock client selection (pick the seeded client by id)
         mock_int_prompt.ask.return_value = cliente.id
 
-        # Mock user inputs
+        # Mock user inputs. Issue date is prompted before the invoice number.
         mock_prompt.ask.side_effect = [
-            "001",  # invoice number
             "2025-01-15",  # issue date
+            "001",  # invoice number
             "",  # no items
         ]
 
@@ -558,21 +563,22 @@ class TestCreaFatturaCommand:
     @patch("openfatture.cli.commands.fattura.Prompt")
     @patch("openfatture.cli.commands.fattura.db_session")
     def test_crea_database_error(self, mock_db_session, mock_prompt, runtime_db):
-        """Test invoice creation surfaces a database error.
+        """Invoice creation aborts cleanly on a database error (exit 1).
 
-        ``crea`` has no try/except of its own: a failure mid-creation must
-        propagate (rollback is the ``db_session`` context manager's job, covered
-        by its own tests). We inject the failure at the real ``db_session`` seam
-        — making ``db.add`` raise — and assert the error surfaces instead of the
-        command reporting success. ``rollback`` is asserted to confirm the
-        context manager's exit path runs on the way out.
+        The failure is injected at the real ``db_session`` seam by making
+        ``db.add`` raise a ``SQLAlchemyError``. ``db_session()`` rolls back and
+        re-raises; the command catches it, prints a clean error message, and
+        exits 1 — no raw traceback escapes. ``rollback`` is asserted to confirm
+        the context manager's exit path runs on the way out.
         """
+        from sqlalchemy.exc import SQLAlchemyError
+
         cliente = Mock()
         cliente.id = 1
         cliente.denominazione = "Acme Corporation"
 
         mock_db = MagicMock()
-        db_error = RuntimeError("Database connection failed")
+        db_error = SQLAlchemyError("Database connection failed")
 
         # Emulate the real db_session contract: yield the session, and on an
         # exception inside the block, roll back and re-raise.
@@ -595,14 +601,16 @@ class TestCreaFatturaCommand:
         mock_db.add.side_effect = db_error
 
         mock_prompt.ask.side_effect = [
+            "2025-01-15",  # issue date (prompted before the number)
             "001",  # invoice number
-            "2025-01-15",  # issue date
         ]
 
         result = runner.invoke(app, ["crea", "--cliente", "1"])
 
-        assert result.exit_code != 0
-        assert result.exception is db_error
+        assert result.exit_code == 1
+        # Clean exit: no raw exception propagated to the CLI runner.
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert "Error creating invoice" in result.stdout
         mock_db.rollback.assert_called_once()
 
 

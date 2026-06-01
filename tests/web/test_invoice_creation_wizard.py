@@ -14,10 +14,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from openfatture.payment.domain.models import BankAccount
+from openfatture.payment.domain.models import BankAccount, BankTransaction
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
+    Pagamento,
     StatoFattura,
     TipoDocumento,
 )
@@ -262,3 +263,70 @@ class TestPaymentService:
         assert matches[0]["cliente"] == "Test Client"
         assert matches[0]["totale"] == 122.0
         assert matches[0]["confidence"] == 0.5
+
+    def test_match_transaction_persists_allocation(self, runtime_session):
+        """Test manual matching persists a PaymentAllocation row.
+
+        Seeds a real invoice with a payment schedule (``Pagamento``) and a real
+        ``BankTransaction``, then matches them through the real service. The
+        service opens its own session via ``db_session_scope`` on the same
+        runtime database, so we assert on the persisted allocation linking the
+        payment to the transaction.
+        """
+        from openfatture.payment.domain.enums import MatchType
+        from openfatture.payment.domain.payment_allocation import PaymentAllocation
+
+        cliente = _seed_cliente(runtime_session, denominazione="Test Client")
+        fattura = _seed_fattura(runtime_session, cliente, numero="001", anno=2024)
+
+        # The invoice needs a payment schedule row to allocate against.
+        pagamento = Pagamento(
+            fattura_id=fattura.id,
+            importo=Decimal("122.00"),
+            data_scadenza=date(2024, 2, 15),
+        )
+        runtime_session.add(pagamento)
+
+        # Seed a real bank account + transaction.
+        account = BankAccount(
+            name="Test Account",
+            iban="IT60X0542811101000000123456",
+            bank_name="Test Bank",
+            currency="EUR",
+            opening_balance=Decimal("0.00"),
+        )
+        runtime_session.add(account)
+        runtime_session.flush()
+
+        transaction = BankTransaction(
+            account_id=account.id,
+            date=date(2024, 1, 20),
+            amount=Decimal("122.00"),
+            description="Bonifico cliente",
+            reference="REF001",
+        )
+        runtime_session.add(transaction)
+        runtime_session.commit()
+        runtime_session.refresh(pagamento)
+        runtime_session.refresh(transaction)
+
+        payment_id = pagamento.id
+        transaction_id = transaction.id
+
+        service = StreamlitPaymentService()
+        result = service.match_transaction(transaction_id, fattura.id)
+
+        assert result["success"] is True
+
+        # Verify the allocation was actually persisted, linking the payment
+        # schedule row to the bank transaction.
+        allocation = (
+            runtime_session.query(PaymentAllocation)
+            .filter(PaymentAllocation.transaction_id == transaction_id)
+            .first()
+        )
+        assert allocation is not None
+        assert allocation.payment_id == payment_id
+        assert allocation.transaction_id == transaction_id
+        assert allocation.amount == Decimal("122.00")
+        assert allocation.match_type == MatchType.MANUAL

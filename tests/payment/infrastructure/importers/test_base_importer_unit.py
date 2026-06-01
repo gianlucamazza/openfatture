@@ -93,6 +93,50 @@ def test_import_transactions_deduplicates(
     assert result.transactions == [fresh]
 
 
+def test_import_transactions_persists_rows(db_session: Session, bank_account, tmp_path):
+    """import_transactions must actually persist parsed rows to the database.
+
+    Regression test: previously rows were counted as ``success`` but never
+    added/committed, leaving the DB empty after a "successful" import.
+    """
+    file_path = tmp_path / "persist.csv"
+    file_path.write_text("header\n")
+
+    before = db_session.query(BankTransaction).filter_by(account_id=bank_account.id).count()
+
+    tx1 = _make_transaction(
+        bank_account,
+        amount="111.00",
+        description="Persisted one",
+        tx_date=date.today(),
+    )
+    tx2 = _make_transaction(
+        bank_account,
+        amount="222.00",
+        description="Persisted two",
+        tx_date=date.today(),
+    )
+
+    importer = DummyImporter(file_path, [tx1, tx2])
+    result = importer.import_transactions(bank_account, skip_duplicates=True)
+
+    assert result.success_count == 2
+
+    # Use a fresh session bound to the same engine to prove the rows were
+    # committed (not just pending in the caller-owned session).
+    from sqlalchemy.orm import sessionmaker
+
+    verify_session = sessionmaker(bind=db_session.get_bind())()
+    try:
+        persisted = (
+            verify_session.query(BankTransaction).filter_by(account_id=bank_account.id).count()
+        )
+    finally:
+        verify_session.close()
+
+    assert persisted - before == result.success_count == 2
+
+
 def test_import_transactions_skip_duplicates_false(
     db_session: Session, bank_account, bank_transaction, tmp_path
 ):

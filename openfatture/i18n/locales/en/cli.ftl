@@ -80,6 +80,7 @@ cli-fattura-confirm-prompt = [yellow]Confirm creation?[/yellow]
 cli-fattura-created-success = [bold green]Invoice created successfully![/bold green]
 cli-fattura-created-number = [green]Invoice number: { $numero }/{ $anno }[/green]
 cli-fattura-created-xml = [green]XML saved: { $xml_path }[/green]
+cli-fattura-create-error = [red]Error creating invoice: { $error }[/red]
 
 cli-fattura-list-title = [bold blue]Invoice List[/bold blue]
 cli-fattura-list-empty = [yellow]No invoices found[/yellow]
@@ -202,6 +203,7 @@ cli-cliente-no-clients = [yellow]No clients found. Add one with 'cliente add'[/y
 cli-cliente-list-title = Clients ({ $count })
 cli-cliente-list-empty = [yellow]No clients found[/yellow]
 cli-cliente-added-success = [green]Client added successfully (ID: { $id })[/green]
+cli-cliente-add-error = [red]Error saving client: { $error }[/red]
 cli-cliente-updated-success = [green]Client updated successfully[/green]
 cli-cliente-deleted-success = [green]Client deleted successfully[/green]
 cli-cliente-deleted = [green]Client '{ $name }' deleted[/green]
@@ -1227,3 +1229,7 @@ cli-config-set-success = [green]Set { $key } = { $value }[/green]
 cli-config-saved-to = [dim]Saved to { $path }[/dim]
 cli-config-invalid-key = [red]Invalid configuration key: { $key }[/red]
 cli-config-error = [red]Error: { $error }[/red]
+
+# Added: chat labels / DB-error messages
+cli-ai-chat-assistant-title = [bold cyan]AI Assistant[/bold cyan]
+cli-ai-chat-exit-message = [yellow]Goodbye![/yellow]

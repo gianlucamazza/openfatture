@@ -351,23 +351,43 @@ class StreamlitPaymentService:
         Returns:
             Match result dictionary
         """
+        from openfatture.payment.domain.enums import MatchType
+        from openfatture.payment.domain.models import BankTransaction
         from openfatture.payment.domain.payment_allocation import PaymentAllocation
         from openfatture.storage.database.models import Fattura
         from openfatture.web.utils.cache import db_session_scope
 
         try:
             with db_session_scope() as session:
-                # Verify invoice exists
+                # Verify invoice exists.
                 invoice = session.query(Fattura).filter(Fattura.id == invoice_id).first()
                 if not invoice:
                     return {"success": False, "message": "Fattura non trovata"}
 
-                # Create allocation record (simplified approach)
+                # Verify the bank transaction exists.
+                transaction = (
+                    session.query(BankTransaction)
+                    .filter(BankTransaction.id == transaction_id)
+                    .first()
+                )
+                if not transaction:
+                    return {"success": False, "message": "Transazione non trovata"}
+
+                # A PaymentAllocation links a Pagamento (payment schedule row) to a
+                # BankTransaction; it requires the invoice's payment record.
+                pagamento = invoice.pagamenti[0] if invoice.pagamenti else None
+                if pagamento is None:
+                    return {
+                        "success": False,
+                        "message": "La fattura non ha un piano di pagamento associato",
+                    }
+
                 allocation = PaymentAllocation(
-                    fattura_id=invoice_id,
-                    amount=invoice.totale,  # Assume full payment for simplicity
-                    payment_date=invoice.data_emissione,
-                    notes=f"Manual match from web UI - Transaction {transaction_id}",
+                    payment_id=pagamento.id,
+                    transaction_id=transaction.id,
+                    amount=transaction.amount,
+                    match_type=MatchType.MANUAL,
+                    notes="Manual match from web UI",
                 )
                 session.add(allocation)
                 session.commit()

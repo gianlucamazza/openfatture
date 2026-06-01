@@ -232,9 +232,16 @@ class TestAddClienteCommand:
 
     @patch("openfatture.cli.commands.cliente.db_session")
     def test_add_cliente_database_error(self, mock_ds, runtime_db):
-        """Test adding client with database error (forced failure)."""
+        """A database error during add aborts cleanly (exit 1, no traceback).
+
+        The failure is injected at the real ``db_session`` seam by making
+        ``db.add`` raise a ``SQLAlchemyError``. The command must catch it,
+        print a clean error message, and exit 1 — no raw exception escapes.
+        """
+        from sqlalchemy.exc import SQLAlchemyError
+
         mock_db = MagicMock()
-        mock_db.add.side_effect = Exception("Database error")
+        mock_db.add.side_effect = SQLAlchemyError("Database error")
         # Context manager that surfaces the error from the command body.
         mock_ds.return_value.__enter__.return_value = mock_db
         mock_ds.return_value.__exit__.return_value = False
@@ -242,7 +249,9 @@ class TestAddClienteCommand:
         result = runner.invoke(app, ["add", "Test Client"])
 
         assert result.exit_code == 1
-        assert isinstance(result.exception, Exception)
+        # Clean exit: no raw exception propagated to the CLI runner.
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert "Error saving client" in result.stdout
 
     @patch("openfatture.cli.commands.cliente.Prompt")
     def test_add_cliente_interactive_basic(self, mock_prompt, runtime_session):
