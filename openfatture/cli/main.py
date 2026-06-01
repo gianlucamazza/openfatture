@@ -1,18 +1,21 @@
 """Main CLI entry point for OpenFatture."""
 
+from importlib import import_module
+
 import typer
 from rich.console import Console
 
 from openfatture import __version__
 from openfatture.utils.config import get_settings
-from openfatture.utils.logging import configure_dynamic_logging
+from openfatture.utils.logging import configure_dynamic_logging, get_logger
+
+logger = get_logger(__name__)
 
 # Payment CLI lives in the payment package to keep the top-level commands lean.
 from ..payment.cli import app as payment_app
 
-# Import command modules
+# Import core command modules (lightweight, always available).
 from .commands import (
-    ai,
     batch,
     cliente,
     config,
@@ -22,14 +25,22 @@ from .commands import (
     hooks,
     init,
     interactive,
-    lightning,
-    media,
     notifiche,
     pec,
     plugin,
     preventivo,
     report,
-    web_scraper,
+)
+
+# Optional command groups that pull in heavy/optional dependencies (AI/ML stack,
+# browser automation, gRPC). They are imported defensively below so a minimal
+# install — e.g. the payment-only Docker image without the AI/ML extras — still
+# exposes the core commands; a missing dependency disables only its own group.
+_OPTIONAL_GROUPS: tuple[tuple[str, str, str], ...] = (
+    ("ai", "ai", "AI-powered assistance"),
+    ("lightning", "lightning", "Lightning Network payments"),
+    ("media", "media", "Media automation & VHS generation"),
+    ("web_scraper", "web-scraper", "Regulatory web scraping"),
 )
 
 # Create main app and console
@@ -193,15 +204,20 @@ app.add_typer(pec.app, name="pec", help="PEC configuration and testing")
 app.add_typer(email.app, name="email", help="Email templates & testing")
 app.add_typer(notifiche.app, name="notifiche", help="SDI notifications")
 app.add_typer(batch.app, name="batch", help="Batch operations")
-app.add_typer(ai.app, name="ai", help="AI-powered assistance")
-app.add_typer(lightning.app, name="lightning", help="Lightning Network payments")
-app.add_typer(media.app, name="media", help="Media automation & VHS generation")
 app.add_typer(hooks.app, name="hooks", help="Manage lifecycle hooks")
 app.add_typer(events.app, name="events", help="View event history & audit log")
 app.add_typer(report.app, name="report", help="Generate reports")
-app.add_typer(web_scraper.app, name="web-scraper", help="Regulatory web scraping")
 app.add_typer(plugin.app, name="plugin", help="Manage plugins")
 app.add_typer(payment_app, name="payment", help="Payment tracking & reconciliation")
+
+# Register optional command groups, skipping any whose dependencies are absent.
+for _module_name, _command_name, _help_text in _OPTIONAL_GROUPS:
+    try:
+        _group = import_module(f"{__package__}.commands.{_module_name}")
+    except ModuleNotFoundError as exc:  # optional extra not installed
+        logger.debug("optional_command_group_unavailable", group=_command_name, error=str(exc))
+        continue
+    app.add_typer(_group.app, name=_command_name, help=_help_text)
 
 # Pre-load plugins and register their CLI commands
 try:
