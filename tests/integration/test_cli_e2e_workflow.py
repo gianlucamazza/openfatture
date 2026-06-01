@@ -458,8 +458,8 @@ class TestCompleteWorkflowE2E:
             ["fattura", "crea", "--cliente", str(cliente_id)],
             input="\n".join(
                 [
+                    "2025-01-15",  # issue date (ISO) - prompted first
                     "100",  # invoice number
-                    "2025-01-15",  # issue date (ISO)
                     "Full lifecycle consulting",  # line 1 description
                     "1",  # quantity
                     "1000.00",  # unit price
@@ -473,10 +473,8 @@ class TestCompleteWorkflowE2E:
         assert result1.exit_code == 0
         assert "Invoice created successfully" in result1.output
 
-        # The wizard stamps the invoice with the current year (independent of the
-        # issue date entered), so look it up accordingly.
-        current_year = date.today().year
-        fattura = runtime_session.query(Fattura).filter_by(numero="100", anno=current_year).first()
+        # The invoice year is derived from the entered issue date.
+        fattura = runtime_session.query(Fattura).filter_by(numero="100", anno=2025).first()
         assert fattura is not None
         fattura_id = fattura.id
 
