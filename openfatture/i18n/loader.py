@@ -54,8 +54,11 @@ def _load_bundle(locale: str) -> FluentBundle:
     if not locale_dir.exists():
         raise FileNotFoundError(f"Locale directory not found: {locale_dir}")
 
-    # Create FluentBundle
-    bundle = FluentBundle([locale])
+    # Create FluentBundle.
+    # use_isolating=False: this app renders Fluent output through Rich markup and
+    # plain CLI/email text, where the Unicode bidi isolation marks (U+2068/U+2069)
+    # that Fluent inserts around placeables corrupt markup and pollute output.
+    bundle = FluentBundle([locale], use_isolating=False)
 
     # Load all .ftl files in the locale directory
     ftl_files = sorted(locale_dir.glob("*.ftl"))

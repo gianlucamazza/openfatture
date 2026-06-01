@@ -236,9 +236,12 @@ class TestCustomCommandsIntegration:
         async for chunk in agent.execute_stream(context):
             chunks.append(chunk)
 
-        # Verify streaming
+        # Verify streaming. execute_stream yields StreamEvent objects; assemble
+        # the textual content from their string payloads.
         assert len(chunks) > 0
-        full_response = "".join(chunks)
+        full_response = "".join(
+            chunk.data for chunk in chunks if isinstance(getattr(chunk, "data", None), str)
+        )
         assert len(full_response) > 0
         assert mock_provider.call_count == 1
 
@@ -362,6 +365,7 @@ class TestCustomCommandsWithTools:
 
 
 @pytest.mark.asyncio
+@pytest.mark.performance
 class TestCustomCommandsPerformance:
     """Performance tests for custom commands."""
 

@@ -50,18 +50,23 @@ class TestInvoiceService:
             assert "FatturaElettronica" in xml_content
 
     def test_generate_xml_with_validation_failure(self, test_settings, sample_fattura):
-        """Test XML generation with validation failure."""
+        """Test XML generation raises on validation failure.
+
+        Per the documented contract, generate_xml raises XMLValidationError when
+        XSD validation fails (rather than returning an error tuple), so callers
+        cannot accidentally proceed with a non-conformant invoice.
+        """
+        from openfatture.exceptions import XMLValidationError
+
         service = InvoiceService(test_settings)
 
         # Mock validator to return failure
         validation_error = "Invalid XML schema"
         with patch.object(service.validator, "validate", return_value=(False, validation_error)):
-            xml_content, error = service.generate_xml(sample_fattura, validate=True)
+            with pytest.raises(XMLValidationError) as exc_info:
+                service.generate_xml(sample_fattura, validate=True)
 
-            assert error is not None
-            assert "Validation failed" in error
-            assert validation_error in error
-            assert xml_content is not None  # XML is still returned even if validation fails
+            assert validation_error in str(exc_info.value)
 
     def test_generate_xml_exception_handling(self, test_settings, sample_fattura):
         """Test XML generation handles exceptions properly."""

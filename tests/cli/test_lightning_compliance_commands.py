@@ -14,7 +14,34 @@ from openfatture.lightning.domain.models import LightningInvoiceRecord
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
 from openfatture.storage.database.base import get_session, init_db
 
-runner = CliRunner()
+
+class _WideCliRunner(CliRunner):
+    """CliRunner that renders Rich output at a wide terminal width.
+
+    Under the default 80-column terminal Rich truncates table cells and wraps
+    long lines, which would make substring assertions flaky. A fixed wide width
+    keeps the rendered tokens intact and deterministic.
+    """
+
+    def invoke(self, *args, **kwargs):  # type: ignore[override]
+        env = {"COLUMNS": "220", **(kwargs.pop("env", None) or {})}
+        return super().invoke(*args, env=env, **kwargs)
+
+
+runner = _WideCliRunner()
+
+
+@pytest.fixture(autouse=True)
+def _english_locale():
+    """Pin the locale to English so label assertions are deterministic."""
+    from openfatture.i18n import get_locale, set_locale
+
+    previous = get_locale()
+    set_locale("en")
+    try:
+        yield
+    finally:
+        set_locale(previous)
 
 
 @pytest.fixture(scope="function")

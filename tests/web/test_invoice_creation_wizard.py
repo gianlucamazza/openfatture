@@ -1,11 +1,79 @@
-"""Tests for the invoice creation wizard in the Web UI."""
+"""Tests for the invoice creation wizard in the Web UI.
+
+The service-layer tests exercise the real Streamlit service adapters
+(``openfatture.web.services.*``) against a real, isolated database wired into
+the global session factory via the ``runtime_db`` / ``runtime_session``
+fixtures (see ``tests/conftest.py``). Data is seeded through the same database
+the services read/write, so assertions are made on real results instead of
+mocked SQLAlchemy query chains. AI and Streamlit collaborators stay mocked.
+"""
 
 from datetime import date
+from decimal import Decimal
 from unittest.mock import Mock, patch
 
+import pytest
+
+from openfatture.payment.domain.models import BankAccount, BankTransaction
+from openfatture.storage.database.models import (
+    Cliente,
+    Fattura,
+    Pagamento,
+    StatoFattura,
+    TipoDocumento,
+)
 from openfatture.web.services.client_service import StreamlitClientService
 from openfatture.web.services.invoice_service import StreamlitInvoiceService
 from openfatture.web.services.payment_service import StreamlitPaymentService
+
+
+@pytest.fixture(autouse=True)
+def _reset_web_db_session():
+    """Drop any Streamlit-cached DB session between tests.
+
+    ``get_db_session()`` memoises a session in ``st.session_state``, which is a
+    process-wide proxy in bare (non-``streamlit run``) mode. Without this reset
+    a session bound to a previous test's (torn-down) ``runtime_db`` would leak
+    into the next test, so each service test must start from a clean slate.
+    """
+    from openfatture.web.utils.cache import clear_db_session
+
+    clear_db_session()
+    yield
+    clear_db_session()
+
+
+def _seed_cliente(session, denominazione="Test Client") -> Cliente:
+    """Persist a client into the runtime database and return it."""
+    cliente = Cliente(
+        denominazione=denominazione,
+        partita_iva="12345678901",
+        codice_destinatario="ABC1234",
+        nazione="IT",
+    )
+    session.add(cliente)
+    session.commit()
+    session.refresh(cliente)
+    return cliente
+
+
+def _seed_fattura(session, cliente: Cliente, *, numero="001", anno=2024) -> Fattura:
+    """Persist a sendable invoice (with a client) into the runtime database."""
+    fattura = Fattura(
+        numero=numero,
+        anno=anno,
+        data_emissione=date(anno, 1, 15),
+        cliente_id=cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.INVIATA,
+        imponibile=Decimal("100.00"),
+        iva=Decimal("22.00"),
+        totale=Decimal("122.00"),
+    )
+    session.add(fattura)
+    session.commit()
+    session.refresh(fattura)
+    return fattura
 
 
 class TestInvoiceCreationWizard:
@@ -59,29 +127,18 @@ class TestInvoiceCreationWizard:
         has_products = len(wizard_state.get("line_items", [])) > 0
         assert has_products
 
-    @patch("openfatture.web.services.invoice_service.get_db_session")
-    @patch("openfatture.web.services.invoice_service.StreamlitInvoiceService")
-    def test_invoice_creation_service(self, mock_service, mock_get_db_session):
-        """Test the invoice creation service."""
-        # Mock database session
-        mock_session = Mock()
-        mock_get_db_session.return_value = mock_session
+    def test_invoice_creation_service(self, runtime_session):
+        """Test the invoice creation service against a real database.
 
-        # Mock the service
-        mock_instance = Mock()
-        mock_service.return_value = mock_instance
+        Seeds a real client, creates an invoice through the real service (which
+        opens its own session via ``db_session_scope``/``get_db_session`` on the
+        runtime database), and asserts on the persisted result.
+        """
+        cliente = _seed_cliente(runtime_session)
 
-        # Mock the create_invoice method
-        mock_invoice = Mock()
-        mock_invoice.id = 123
-        mock_invoice.numero = "001"
-        mock_invoice.anno = 2024
-        mock_instance.create_invoice.return_value = mock_invoice
-
-        # Test the service
         service = StreamlitInvoiceService()
         result = service.create_invoice(
-            cliente_id=1,
+            cliente_id=cliente.id,
             numero="001",
             anno=2024,
             data_emissione=date(2024, 1, 1),
@@ -95,32 +152,33 @@ class TestInvoiceCreationWizard:
             ],
         )
 
-        assert result.id == 123
-        mock_instance.create_invoice.assert_called_once()
+        # The service returns a real, persisted Fattura.
+        assert result is not None
+        assert result.numero == "001"
+        assert result.anno == 2024
+        assert result.cliente_id == cliente.id
+        assert result.totale == Decimal("122.00")
 
-    @patch("openfatture.web.services.client_service.get_db_session")
-    @patch("openfatture.web.services.client_service.StreamlitClientService")
-    def test_client_service(self, mock_service, mock_get_db_session):
-        """Test the client service."""
-        # Mock database session
-        mock_session = Mock()
-        mock_get_db_session.return_value = mock_session
+        # Verify it was actually written to the database.
+        stored = runtime_session.query(Fattura).filter(Fattura.id == result.id).first()
+        assert stored is not None
+        assert len(stored.righe) == 1
+        assert stored.righe[0].descrizione == "Test"
 
-        # Mock the service
-        mock_instance = Mock()
-        mock_service.return_value = mock_instance
+    def test_client_service(self, runtime_session):
+        """Test the client service against a real database.
 
-        # Mock client data
-        mock_clients = [{"id": 1, "denominazione": "Test Client", "partita_iva": "12345678901"}]
-        mock_instance.get_clients.return_value = mock_clients
+        Seeds real clients and asserts ``get_clients`` returns them as
+        serialised dictionaries from the runtime database.
+        """
+        _seed_cliente(runtime_session, denominazione="Test Client")
 
-        # Test the service
         service = StreamlitClientService()
         clients = service.get_clients()
 
         assert len(clients) == 1
         assert clients[0]["denominazione"] == "Test Client"
-        mock_instance.get_clients.assert_called_once()
+        assert clients[0]["partita_iva"] == "12345678901"
 
     @patch("openfatture.web.services.ai_service.get_ai_service")
     def test_ai_service_integration(self, mock_get_service):
@@ -147,57 +205,128 @@ class TestInvoiceCreationWizard:
 class TestPaymentService:
     """Test the payment service functionality."""
 
-    @patch("openfatture.web.services.payment_service.StreamlitPaymentService")
-    def test_payment_import(self, mock_service):
-        """Test payment import functionality."""
-        # Mock the service
-        mock_instance = Mock()
-        mock_service.return_value = mock_instance
+    def test_payment_import(self, runtime_session, tmp_path):
+        """Test payment import against a real database.
 
-        # Mock import result
-        mock_instance.import_bank_statement.return_value = {
-            "success": True,
-            "message": "Imported 5 transactions",
-            "transactions_imported": 5,
-        }
+        Seeds a real bank account, provides a real CSV statement file, and runs
+        the import through the real service so persistence hits the runtime
+        database. Only the uploaded-file boundary is provided via ``tmp_path``.
+        """
+        account = BankAccount(
+            name="Test Account",
+            iban="IT60X0542811101000000123456",
+            bank_name="Test Bank",
+            currency="EUR",
+            opening_balance=Decimal("0.00"),
+        )
+        runtime_session.add(account)
+        runtime_session.commit()
+        runtime_session.refresh(account)
+        account_id = account.id
 
-        # Test the service
+        # Minimal CSV matching the default importer field mapping
+        # (Date / Amount / Description / Reference).
+        csv_content = (
+            "Date,Amount,Description,Reference\n"
+            "2024-01-05,100.00,Bonifico cliente A,REF001\n"
+            "2024-01-06,250.50,Bonifico cliente B,REF002\n"
+            "2024-01-07,75.00,Bonifico cliente C,REF003\n"
+        )
+        file_content = csv_content.encode("utf-8")
+
         service = StreamlitPaymentService()
         result = service.import_bank_statement(
-            account_id=1, file_content=b"test content", filename="test.csv"
+            account_id=account_id,
+            file_content=file_content,
+            filename="test.csv",
         )
 
         assert result["success"] is True
-        assert result["transactions_imported"] == 5
-        mock_instance.import_bank_statement.assert_called_once()
+        assert result["transactions_imported"] == 3
+        assert "3 transactions" in result["message"]
 
-    @patch("openfatture.web.services.payment_service.StreamlitPaymentService")
-    def test_payment_matching(self, mock_service):
-        """Test payment matching functionality."""
-        # Mock the service
-        mock_instance = Mock()
-        mock_service.return_value = mock_instance
+    def test_payment_matching(self, runtime_session):
+        """Test payment matching against a real database.
 
-        # Mock matches
-        mock_matches = [
-            {"id": 1, "numero": "001", "cliente": "Test Client", "totale": 100.0, "confidence": 0.8}
-        ]
-        mock_instance.get_potential_matches.return_value = mock_matches
+        Seeds real sendable invoices so ``get_potential_matches`` returns real
+        candidates with confidence scores from the runtime database.
+        """
+        cliente = _seed_cliente(runtime_session, denominazione="Test Client")
+        fattura = _seed_fattura(runtime_session, cliente, numero="001", anno=2024)
 
-        # Mock match result
-        mock_instance.match_transaction.return_value = {
-            "success": True,
-            "message": "Transaction matched",
-        }
-
-        # Test the service
         service = StreamlitPaymentService()
         matches = service.get_potential_matches(123)
-        result = service.match_transaction(123, 1)
 
         assert len(matches) == 1
-        assert matches[0]["confidence"] == 0.8
+        assert matches[0]["id"] == fattura.id
+        assert matches[0]["numero"] == "001"
+        assert matches[0]["cliente"] == "Test Client"
+        assert matches[0]["totale"] == 122.0
+        assert matches[0]["confidence"] == 0.5
+
+    def test_match_transaction_persists_allocation(self, runtime_session):
+        """Test manual matching persists a PaymentAllocation row.
+
+        Seeds a real invoice with a payment schedule (``Pagamento``) and a real
+        ``BankTransaction``, then matches them through the real service. The
+        service opens its own session via ``db_session_scope`` on the same
+        runtime database, so we assert on the persisted allocation linking the
+        payment to the transaction.
+        """
+        from openfatture.payment.domain.enums import MatchType
+        from openfatture.payment.domain.payment_allocation import PaymentAllocation
+
+        cliente = _seed_cliente(runtime_session, denominazione="Test Client")
+        fattura = _seed_fattura(runtime_session, cliente, numero="001", anno=2024)
+
+        # The invoice needs a payment schedule row to allocate against.
+        pagamento = Pagamento(
+            fattura_id=fattura.id,
+            importo=Decimal("122.00"),
+            data_scadenza=date(2024, 2, 15),
+        )
+        runtime_session.add(pagamento)
+
+        # Seed a real bank account + transaction.
+        account = BankAccount(
+            name="Test Account",
+            iban="IT60X0542811101000000123456",
+            bank_name="Test Bank",
+            currency="EUR",
+            opening_balance=Decimal("0.00"),
+        )
+        runtime_session.add(account)
+        runtime_session.flush()
+
+        transaction = BankTransaction(
+            account_id=account.id,
+            date=date(2024, 1, 20),
+            amount=Decimal("122.00"),
+            description="Bonifico cliente",
+            reference="REF001",
+        )
+        runtime_session.add(transaction)
+        runtime_session.commit()
+        runtime_session.refresh(pagamento)
+        runtime_session.refresh(transaction)
+
+        payment_id = pagamento.id
+        transaction_id = transaction.id
+
+        service = StreamlitPaymentService()
+        result = service.match_transaction(transaction_id, fattura.id)
+
         assert result["success"] is True
 
-        mock_instance.get_potential_matches.assert_called_once_with(123, limit=10)
-        mock_instance.match_transaction.assert_called_once_with(123, 1)
+        # Verify the allocation was actually persisted, linking the payment
+        # schedule row to the bank transaction.
+        allocation = (
+            runtime_session.query(PaymentAllocation)
+            .filter(PaymentAllocation.transaction_id == transaction_id)
+            .first()
+        )
+        assert allocation is not None
+        assert allocation.payment_id == payment_id
+        assert allocation.transaction_id == transaction_id
+        assert allocation.amount == Decimal("122.00")
+        assert allocation.match_type == MatchType.MANUAL

@@ -708,19 +708,16 @@ cli-events-dashboard-column-events = Ereignisse
 ### Messages - Ausgabemeldungen
 cli-events-no-events = [yellow]Keine Ereignisse gefunden, die den Kriterien entsprechen[/yellow]
 cli-events-show-not-found = [red]Ereignis mit ID '{ $event_id }' nicht gefunden[/red]
-cli-events-filters-applied =
-    [dim]Filter: { $filters }[/dim]
+cli-events-filters-applied = [dim]Filter: { $filters }[/dim]
 cli-events-stats-all-time = Alle Zeit
 cli-events-stats-last-hours = Letzte { $hours } Stunden
 cli-events-stats-last-days = Letzte { $days } Tage
-cli-events-stats-total =
-    [bold]Ereignisse Gesamt:[/bold] { $total }
+cli-events-stats-total = [bold]Ereignisse Gesamt:[/bold] { $total }
 
 cli-events-stats-most-recent = [bold]Neuestes Ereignis:[/bold] { $event_type } am { $timestamp }
 cli-events-stats-oldest = [bold]Ältestes Ereignis:[/bold] { $event_type } am { $timestamp }
 cli-events-timeline-no-events = [yellow]Keine Ereignisse für { $entity_type } mit ID { $entity_id } gefunden[/yellow]
-cli-events-timeline-total =
-    [dim]Ereignisse gesamt: { $total }[/dim]
+cli-events-timeline-total = [dim]Ereignisse gesamt: { $total }[/dim]
 cli-events-search-no-results = [yellow]Keine Ereignisse gefunden, die '{ $query }' entsprechen[/yellow]
 cli-events-types-no-events = [yellow]Noch keine Ereignisse aufgezeichnet[/yellow]
 cli-events-dashboard-most-recent = [dim]Neuestes: { $event_type } am { $timestamp }[/dim]
@@ -771,9 +768,7 @@ cli-lightning-liquidity-not-available = Liquiditätsüberwachung nicht verfügba
 cli-lightning-compliance-opt-tax-year = Zu prüfendes Steuerjahr (Standard: aktuelles Jahr)
 cli-lightning-compliance-opt-verbose = Detaillierte Informationen anzeigen
 
-cli-lightning-compliance-title =
-
-    [bold cyan]Lightning Compliance-Prüfung - { $year }[/bold cyan]
+cli-lightning-compliance-title = [bold cyan]Lightning Compliance-Prüfung - { $year }[/bold cyan]
 
 cli-lightning-compliance-summary-title = [bold]Steuerjahr Zusammenfassung[/bold]
 cli-lightning-compliance-summary-payments = Anzahl der Zahlungen:
@@ -822,16 +817,12 @@ cli-lightning-report-saved = [green]Bericht gespeichert in: { $path }[/green]
 cli-lightning-report-summary = [cyan]Gesamtrechnungen im Bericht: { $count }[/cyan]
 
 ### Quadro RW Report
-cli-lightning-report-quadro-title =
-
-    [bold cyan]Erstelle Quadro RW Bericht - { $year } ({ $format })[/bold cyan]
+cli-lightning-report-quadro-title = [bold cyan]Erstelle Quadro RW Bericht - { $year } ({ $format })[/bold cyan]
 
 cli-lightning-report-quadro-error = [bold red]Fehler beim Erstellen des Quadro RW Berichts: { $error }[/bold red]
 
 ### Capital Gains Report
-cli-lightning-report-gains-title =
-
-    [bold cyan]Erstelle Kapitalgewinne-Bericht - { $year } ({ $format })[/bold cyan]
+cli-lightning-report-gains-title = [bold cyan]Erstelle Kapitalgewinne-Bericht - { $year } ({ $format })[/bold cyan]
 
 cli-lightning-report-gains-summary-count = [cyan]Gesamtrechnungen mit Gewinnen: { $count }[/cyan]
 cli-lightning-report-gains-summary-total = [yellow]Gesamtkapitalgewinne: { $total } EUR[/yellow]
@@ -843,9 +834,7 @@ cli-lightning-aml-opt-threshold = GW-Schwelle in EUR
 cli-lightning-aml-opt-format = Ausgabeformat: nur json
 cli-lightning-aml-opt-verbose = Detaillierte Informationen anzeigen
 
-cli-lightning-aml-report-title =
-
-    [bold cyan]Erstelle GW-Compliance-Bericht (Schwelle: { $threshold } EUR)[/bold cyan]
+cli-lightning-aml-report-title = [bold cyan]Erstelle GW-Compliance-Bericht (Schwelle: { $threshold } EUR)[/bold cyan]
 
 cli-lightning-aml-report-summary-total = [cyan]Gesamt über Schwelle: { $total }[/cyan]
 cli-lightning-aml-report-summary-verified = [green]Verifiziert: { $verified }[/green]
@@ -853,17 +842,13 @@ cli-lightning-aml-report-summary-unverified-ok = Nicht verifiziert: 0
 cli-lightning-aml-report-summary-unverified-warning = Nicht verifiziert: { $count }
 cli-lightning-aml-report-summary-rate = [yellow]Compliance-Rate: { $rate }%[/yellow]
 
-cli-lightning-aml-report-action-required =
-
-    [bold yellow]Erforderliche Aktion: Nicht verifizierte Zahlungen mit GW-Prozess verifizieren[/bold yellow]
+cli-lightning-aml-report-action-required = [bold yellow]Erforderliche Aktion: Nicht verifizierte Zahlungen mit GW-Prozess verifizieren[/bold yellow]
 cli-lightning-aml-report-action-hint = [dim]Verwenden Sie: openfatture lightning aml list-unverified für Details[/dim]
 
 cli-lightning-aml-report-error = [bold red]Fehler beim Erstellen des GW-Berichts: { $error }[/bold red]
 
 ### AML List Unverified Command
-cli-lightning-aml-list-title =
-
-    [bold cyan]Nicht Verifizierte GW-Zahlungen (Schwelle: { $threshold } EUR)[/bold cyan]
+cli-lightning-aml-list-title = [bold cyan]Nicht Verifizierte GW-Zahlungen (Schwelle: { $threshold } EUR)[/bold cyan]
 
 cli-lightning-aml-list-empty = [green]Keine nicht verifizierten Zahlungen gefunden[/green]
 
@@ -886,9 +871,7 @@ cli-lightning-aml-verify-opt-by = E-Mail der verifizierenden Person
 cli-lightning-aml-verify-opt-notes = Verifizierungsnotizen (optional)
 cli-lightning-aml-verify-opt-client = Kunden-ID (optional)
 
-cli-lightning-aml-verify-title =
-
-    [bold cyan]Verifiziere GW-Zahlung: { $hash }...[/bold cyan]
+cli-lightning-aml-verify-title = [bold cyan]Verifiziere GW-Zahlung: { $hash }...[/bold cyan]
 
 cli-lightning-aml-verify-not-found = [bold red]Rechnung nicht gefunden: { $hash }[/bold red]
 cli-lightning-aml-verify-already-verified = [yellow]Zahlung bereits verifiziert am { $date }[/yellow]
@@ -915,34 +898,22 @@ cli-report-clienti-help-anno = Jahr
 cli-report-scadenze-help-finestra = Anzahl der Tage, die als "bald fällig" betrachtet werden (Standard: 14)
 
 ### Titles and Headers - MwSt Report
-cli-report-iva-title =
+cli-report-iva-title = [bold blue]MwSt-Bericht - { $anno }[/bold blue]
 
-    [bold blue]MwSt-Bericht - { $anno }[/bold blue]
+cli-report-iva-quarter = [cyan]Quartal: { $trimestre } ({ $mese_inizio }-{ $mese_fine })[/cyan]
 
-cli-report-iva-quarter =
-
-    [cyan]Quartal: { $trimestre } ({ $mese_inizio }-{ $mese_fine })[/cyan]
-
-cli-report-iva-full-year =
-
-    [cyan]Gesamtes Jahr[/cyan]
+cli-report-iva-full-year = [cyan]Gesamtes Jahr[/cyan]
 
 cli-report-iva-summary-title = MwSt-Zusammenfassung
-cli-report-iva-breakdown-title =
-
-    [bold]Aufschlüsselung nach MwSt-Satz:[/bold]
+cli-report-iva-breakdown-title = [bold]Aufschlüsselung nach MwSt-Satz:[/bold]
 
 ### Titles and Headers - Client Report
-cli-report-clienti-title =
-
-    [bold blue]Kunden-Umsatzbericht - { $anno }[/bold blue]
+cli-report-clienti-title = [bold blue]Kunden-Umsatzbericht - { $anno }[/bold blue]
 
 cli-report-clienti-table-title = Top-Kunden - { $anno }
 
 ### Titles and Headers - Due Dates Report
-cli-report-scadenze-title =
-
-    [bold blue]Übersicht der Fälligkeitstermine[/bold blue]
+cli-report-scadenze-title = [bold blue]Übersicht der Fälligkeitstermine[/bold blue]
 
 ### Table Columns - MwSt Report
 cli-report-iva-column-metric = Metrik
@@ -981,22 +952,14 @@ cli-report-no-invoices-year = [yellow]Keine Rechnungen für das ausgewählte Jah
 cli-report-iva-error-invalid-quarter = [red]Ungültiges Quartal. Verwenden Sie Q1, Q2, Q3 oder Q4[/red]
 
 ### Messages - Client Report
-cli-report-clienti-total-revenue =
-
-    [bold]Gesamtumsatz: { $totale }[/bold]
+cli-report-clienti-total-revenue = [bold]Gesamtumsatz: { $totale }[/bold]
 
 ### Messages - Due Dates Report
-cli-report-scadenze-no-outstanding =
+cli-report-scadenze-no-outstanding = [green]Keine ausstehenden Zahlungen. Alle Rechnungen sind beglichen![/green]
 
-    [green]Keine ausstehenden Zahlungen. Alle Rechnungen sind beglichen![/green]
+cli-report-scadenze-hidden-upcoming = [dim]… { $count } weitere zukünftige Zahlungen nicht angezeigt. Verwenden Sie --finestra oder exportieren Sie Daten aus dem Zahlungsmodul für weitere Details.[/dim]
 
-cli-report-scadenze-hidden-upcoming =
-
-    [dim]… { $count } weitere zukünftige Zahlungen nicht angezeigt. Verwenden Sie --finestra oder exportieren Sie Daten aus dem Zahlungsmodul für weitere Details.[/dim]
-
-cli-report-scadenze-total-outstanding =
-
-    [bold]Gesamter ausstehender Saldo: { $totale }[/bold]
+cli-report-scadenze-total-outstanding = [bold]Gesamter ausstehender Saldo: { $totale }[/bold]
 
 ### Section Titles - Due Dates Report
 cli-report-scadenze-section-overdue = [red]Überfällig[/red]
@@ -1049,8 +1012,7 @@ cli-pec-test-more-testing = [dim]Für weitere E-Mail-Tests:[/dim]
 cli-pec-test-cmd-email-test = [cyan]openfatture email test[/cyan]  - Vollständiger E-Mail-Test
 cli-pec-test-cmd-email-preview = [cyan]openfatture email preview[/cyan] - Vorlagenvorschau
 
-cli-pec-test-failed =
-    [red]Test fehlgeschlagen: { $error }[/red]
+cli-pec-test-failed = [red]Test fehlgeschlagen: { $error }[/red]
 cli-pec-test-common-issues = [yellow]Häufige Probleme:[/yellow]
 cli-pec-issue-credentials = • Falsche PEC-Anmeldedaten
 cli-pec-issue-smtp = • Falscher SMTP-Server
@@ -1105,16 +1067,13 @@ cli-notifiche-label-xml-path = XML-Pfad
 cli-notifiche-file-not-found = [red]Datei nicht gefunden: { $file_path }[/red]
 cli-notifiche-file-label = [cyan]Datei:[/cyan] { $name }
 cli-notifiche-size-label = [cyan]Größe:[/cyan] { $size } Bytes
-cli-notifiche-auto-email-enabled =
-    [dim]Automatische E-Mail aktiviert { $email }[/dim]
+cli-notifiche-auto-email-enabled = [dim]Automatische E-Mail aktiviert { $email }[/dim]
 
 cli-notifiche-processing = Verarbeite Benachrichtigung...
-cli-notifiche-error =
-    [red]Fehler: { $error }[/red]
+cli-notifiche-error = [red]Fehler: { $error }[/red]
 cli-notifiche-success = [bold green]Benachrichtigung erfolgreich verarbeitet![/bold green]
 cli-notifiche-errors-count = { $count } Fehler
-cli-notifiche-email-sent =
-    [dim]E-Mail-Benachrichtigung gesendet an { $email }[/dim]
+cli-notifiche-email-sent = [dim]E-Mail-Benachrichtigung gesendet an { $email }[/dim]
 
 cli-notifiche-no-notifications = [yellow]Keine Benachrichtigungen gefunden[/yellow]
 cli-notifiche-process-hint = [dim]Benachrichtigungen verarbeiten mit:[/dim]
@@ -1198,3 +1157,9 @@ cli-config-set-success = [green]{ $key } = { $value } festgelegt[/green]
 cli-config-saved-to = [dim]Gespeichert in { $path }[/dim]
 cli-config-invalid-key = [red]Ungültiger Konfigurationsschlüssel: { $key }[/red]
 cli-config-error = [red]Fehler: { $error }[/red]
+
+# Added: chat labels / DB-error messages
+cli-ai-chat-assistant-title = [bold cyan]KI-Assistent[/bold cyan]
+cli-ai-chat-exit-message = [yellow]Auf Wiedersehen![/yellow]
+cli-cliente-add-error = [red]Fehler beim Speichern des Kunden: { $error }[/red]
+cli-fattura-create-error = [red]Fehler beim Erstellen der Rechnung: { $error }[/red]

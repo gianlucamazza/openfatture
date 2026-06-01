@@ -49,6 +49,14 @@ def _(message_id: str, locale: str | None = None, **variables: Any) -> str:
     """
     current_locale = locale or get_locale()
 
+    # Year-like variables are identifiers, not quantities: render them verbatim
+    # so Fluent's numeric formatter does not insert a thousands separator
+    # (e.g. a year 2025 must not become "2,025" / "2.025"). Quantity variables
+    # such as `count`/`months` stay numeric so plural selectors keep working.
+    for year_var in ("anno", "year", "tax_year"):
+        if isinstance(variables.get(year_var), int):
+            variables[year_var] = str(variables[year_var])
+
     # Try to get formatted message
     result = format_value(current_locale, message_id, variables)
 

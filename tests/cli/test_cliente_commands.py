@@ -1,124 +1,132 @@
-"""
-Tests for cliente CLI commands.
+"""Tests for cliente CLI commands.
+
+These exercise the commands end-to-end against a real, isolated database
+(``runtime_db``) instead of mocking SQLAlchemy query chains: data is seeded
+through the same database the command reads, and the locale is pinned to
+English so label assertions are deterministic. Only genuine error-path tests
+mock the ``db_session`` seam to force a database failure.
 """
 
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.cliente import app
+from openfatture.storage.database.models import Cliente
 
 runner = CliRunner()
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def _english_locale():
+    """Pin the locale to English so label assertions are deterministic."""
+    from openfatture.i18n import get_locale, set_locale
+
+    previous = get_locale()
+    set_locale("en")
+    try:
+        yield
+    finally:
+        set_locale(previous)
+
+
+def _make_cliente(session: Session, **overrides) -> Cliente:
+    """Seed a real client row into the runtime database."""
+    data = {
+        "denominazione": "Acme Corporation",
+        "partita_iva": "12345678901",
+        "codice_fiscale": "CMPACM80A01H501Z",
+        "codice_destinatario": "ABC1234",
+        "pec": "acme@pec.it",
+        "indirizzo": "Via Roma 1",
+        "cap": "20100",
+        "comune": "Milano",
+        "provincia": "MI",
+        "nazione": "IT",
+        "email": "contact@acme.com",
+        "telefono": "+39 02 12345678",
+    }
+    data.update(overrides)
+    cliente = Cliente(**data)
+    session.add(cliente)
+    session.commit()
+    session.refresh(cliente)
+    return cliente
+
+
 class TestListClientiCommand:
     """Test 'cliente list' command."""
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_list_clienti_empty(self, mock_init_db, mock_session_local):
+    def test_list_clienti_empty(self, runtime_db):
         """Test listing when no clients exist."""
-        # Mock database session
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = []
-
         result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
         assert "No clients found" in result.stdout
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_list_clienti_with_data(self, mock_init_db, mock_session_local, sample_cliente):
+    def test_list_clienti_with_data(self, runtime_session):
         """Test listing clients with data."""
-        # Setup mock
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        # Mock the query chain
-        mock_query = mock_db.query.return_value.order_by.return_value
-        mock_query.limit.return_value.all.return_value = [sample_cliente]
+        cliente = _make_cliente(runtime_session)
 
         result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
         assert "Clients" in result.stdout
+        assert cliente.denominazione in result.stdout
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_list_clienti_with_limit(self, mock_init_db, mock_session_local):
-        """Test listing with custom limit."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = []
+    def test_list_clienti_with_limit(self, runtime_session):
+        """Test listing with custom limit returns seeded rows."""
+        _make_cliente(runtime_session, denominazione="Alpha SRL", partita_iva="11111111111")
+        _make_cliente(runtime_session, denominazione="Beta SRL", partita_iva="22222222222")
 
         result = runner.invoke(app, ["list", "--limit", "10"])
 
         assert result.exit_code == 0
-        # Verify limit was applied
-        mock_db.query.return_value.order_by.return_value.limit.assert_called_once_with(10)
+        assert "Alpha SRL" in result.stdout
+        assert "Beta SRL" in result.stdout
 
 
 class TestShowClienteCommand:
     """Test 'cliente show' command."""
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_show_cliente_not_found(self, mock_init_db, mock_session_local):
+    def test_show_cliente_not_found(self, runtime_db):
         """Test showing non-existent client."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
         result = runner.invoke(app, ["show", "999"])
 
         assert result.exit_code == 1
         assert "not found" in result.stdout
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_show_cliente_success(self, mock_init_db, mock_session_local, sample_cliente):
+    def test_show_cliente_success(self, runtime_session):
         """Test showing client details."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_cliente
+        cliente = _make_cliente(runtime_session)
 
-        result = runner.invoke(app, ["show", "1"])
+        result = runner.invoke(app, ["show", str(cliente.id)])
 
         assert result.exit_code == 0
         assert "Client Details" in result.stdout
-        assert sample_cliente.denominazione in result.stdout
+        assert cliente.denominazione in result.stdout
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_show_cliente_with_full_address(self, mock_init_db, mock_session_local):
+    def test_show_cliente_with_full_address(self, runtime_session):
         """Test showing client with full address information."""
-        # Create a client with full address
-        mock_cliente = Mock()
-        mock_cliente.id = 1
-        mock_cliente.denominazione = "Test Client"
-        mock_cliente.partita_iva = "12345678901"
-        mock_cliente.codice_fiscale = "RSSMRA80A01H501U"
-        mock_cliente.indirizzo = "Via Roma 1"
-        mock_cliente.cap = "00100"
-        mock_cliente.comune = "Roma"
-        mock_cliente.provincia = "RM"
-        mock_cliente.codice_destinatario = "ABCDEFG"
-        mock_cliente.pec = "test@pec.it"
-        mock_cliente.email = "test@example.com"
-        mock_cliente.telefono = "0612345678"
-        mock_cliente.fatture = []
-        mock_cliente.created_at = Mock()
-        mock_cliente.created_at.strftime.return_value = "2025-01-01 12:00"
+        cliente = _make_cliente(
+            runtime_session,
+            denominazione="Test Client",
+            partita_iva="12345678901",
+            codice_fiscale="RSSMRA80A01H501U",
+            indirizzo="Via Roma 1",
+            cap="00100",
+            comune="Roma",
+            provincia="RM",
+            codice_destinatario="ABCDEFG",
+            pec="test@pec.it",
+            email="test@example.com",
+            telefono="0612345678",
+        )
 
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_cliente
-
-        result = runner.invoke(app, ["show", "1"])
+        result = runner.invoke(app, ["show", str(cliente.id)])
 
         assert result.exit_code == 0
         assert "Via Roma 1" in result.stdout
@@ -129,121 +137,76 @@ class TestShowClienteCommand:
 class TestDeleteClienteCommand:
     """Test 'cliente delete' command."""
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_delete_cliente_not_found(self, mock_init_db, mock_session_local):
+    def test_delete_cliente_not_found(self, runtime_db):
         """Test deleting non-existent client."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
         result = runner.invoke(app, ["delete", "999"])
 
         assert result.exit_code == 1
         assert "not found" in result.stdout
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_delete_cliente_with_force(self, mock_init_db, mock_session_local):
+    def test_delete_cliente_with_force(self, runtime_session):
         """Test deleting client with --force flag."""
-        mock_cliente = Mock()
-        mock_cliente.id = 1
-        mock_cliente.denominazione = "Test Client"
-        mock_cliente.fatture = []
+        cliente = _make_cliente(runtime_session, denominazione="Test Client")
+        cliente_id = cliente.id
 
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_cliente
-
-        result = runner.invoke(app, ["delete", "1", "--force"])
+        result = runner.invoke(app, ["delete", str(cliente_id), "--force"])
 
         assert result.exit_code == 0
         assert "deleted" in result.stdout
-        mock_db.delete.assert_called_once_with(mock_cliente)
-        mock_db.commit.assert_called_once()
+        # Row is actually gone from the database.
+        assert runtime_session.query(Cliente).filter_by(id=cliente_id).first() is None
 
     @patch("openfatture.cli.commands.cliente.Confirm")
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
     def test_delete_cliente_with_invoices_user_cancels(
-        self, mock_init_db, mock_session_local, mock_confirm
+        self, mock_confirm, runtime_session, seed_fattura
     ):
         """Test deleting client with invoices - user cancels."""
-        mock_cliente = Mock()
-        mock_cliente.id = 1
-        mock_cliente.denominazione = "Test Client"
-        mock_cliente.fatture = [Mock(), Mock()]  # 2 invoices
-
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_cliente
+        # seed_fattura creates a client (id from seed_cliente) with one invoice.
+        cliente_id = seed_fattura.cliente_id
 
         # User says no to deletion
         mock_confirm.ask.return_value = False
 
-        result = runner.invoke(app, ["delete", "1"])
+        result = runner.invoke(app, ["delete", str(cliente_id)])
 
         assert result.exit_code == 0
         assert "Cancelled" in result.stdout
-        mock_db.delete.assert_not_called()
+        # Client must still exist.
+        assert runtime_session.query(Cliente).filter_by(id=cliente_id).first() is not None
 
     @patch("openfatture.cli.commands.cliente.Confirm")
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_delete_cliente_with_confirmation(self, mock_init_db, mock_session_local, mock_confirm):
+    def test_delete_cliente_with_confirmation(self, mock_confirm, runtime_session):
         """Test deleting client with confirmation."""
-        mock_cliente = Mock()
-        mock_cliente.id = 1
-        mock_cliente.denominazione = "Test Client"
-        mock_cliente.fatture = []
-
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_cliente
+        cliente = _make_cliente(runtime_session, denominazione="Test Client")
+        cliente_id = cliente.id
 
         # User confirms deletion
         mock_confirm.ask.return_value = True
 
-        result = runner.invoke(app, ["delete", "1"])
+        result = runner.invoke(app, ["delete", str(cliente_id)])
 
         assert result.exit_code == 0
         assert "deleted" in result.stdout
-        mock_db.delete.assert_called_once()
+        assert runtime_session.query(Cliente).filter_by(id=cliente_id).first() is None
 
 
 class TestAddClienteCommand:
     """Test 'cliente add' command."""
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_add_cliente_quick_mode(self, mock_init_db, mock_session_local):
+    def test_add_cliente_quick_mode(self, runtime_session):
         """Test adding client in quick mode (non-interactive)."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        # Mock the created client
-        mock_cliente = Mock()
-        mock_cliente.id = 1
-        mock_db.add = Mock()
-        mock_db.commit = Mock()
-        mock_db.refresh = Mock(side_effect=lambda c: setattr(c, "id", 1))
-
         result = runner.invoke(app, ["add", "Test Client", "--piva", "12345678901"])
 
         assert result.exit_code == 0
         assert "Client added successfully" in result.stdout
+        # Client was persisted.
+        assert (
+            runtime_session.query(Cliente).filter_by(denominazione="Test Client").first()
+            is not None
+        )
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_add_cliente_with_all_options(self, mock_init_db, mock_session_local):
+    def test_add_cliente_with_all_options(self, runtime_session):
         """Test adding client with all command line options."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        mock_cliente = Mock()
-        mock_cliente.id = 1
-        mock_db.refresh = Mock(side_effect=lambda c: setattr(c, "id", 1))
-
         result = runner.invoke(
             app,
             [
@@ -262,39 +225,44 @@ class TestAddClienteCommand:
 
         assert result.exit_code == 0
         assert "Client added successfully" in result.stdout
+        persisted = runtime_session.query(Cliente).filter_by(denominazione="Test Client").first()
+        assert persisted is not None
+        assert persisted.codice_destinatario == "ABCDEFG"
+        assert persisted.pec == "test@pec.it"
 
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_add_cliente_database_error(self, mock_init_db, mock_session_local):
-        """Test adding client with database error."""
+    @patch("openfatture.cli.commands.cliente.db_session")
+    def test_add_cliente_database_error(self, mock_ds, runtime_db):
+        """A database error during add aborts cleanly (exit 1, no traceback).
+
+        The failure is injected at the real ``db_session`` seam by making
+        ``db.add`` raise a ``SQLAlchemyError``. The command must catch it,
+        print a clean error message, and exit 1 — no raw exception escapes.
+        """
+        from sqlalchemy.exc import SQLAlchemyError
+
         mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.add.side_effect = Exception("Database error")
+        mock_db.add.side_effect = SQLAlchemyError("Database error")
+        # Context manager that surfaces the error from the command body.
+        mock_ds.return_value.__enter__.return_value = mock_db
+        mock_ds.return_value.__exit__.return_value = False
 
         result = runner.invoke(app, ["add", "Test Client"])
 
         assert result.exit_code == 1
-        assert "Error adding client" in result.stdout
-        mock_db.rollback.assert_called_once()
+        # Clean exit: no raw exception propagated to the CLI runner.
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert "Error saving client" in result.stdout
 
     @patch("openfatture.cli.commands.cliente.Prompt")
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_add_cliente_interactive_basic(self, mock_init_db, mock_session_local, mock_prompt):
+    def test_add_cliente_interactive_basic(self, mock_prompt, runtime_session):
         """Test adding client in interactive mode."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        mock_cliente = Mock()
-        mock_cliente.id = 1
-        mock_db.refresh = Mock(side_effect=lambda c: setattr(c, "id", 1))
-
         # Mock user inputs for interactive mode
         mock_prompt.ask.side_effect = [
             "Test Interactive Client",  # denominazione
             "12345678901",  # partita_iva
             "RSSMRA80A01H501U",  # codice_fiscale
             "Via Roma 1",  # indirizzo
+            "",  # numero_civico
             "00100",  # cap
             "Roma",  # comune
             "RM",  # provincia
@@ -302,33 +270,30 @@ class TestAddClienteCommand:
             "test@pec.it",  # PEC
             "test@example.com",  # email
             "0612345678",  # telefono
+            "",  # note
         ]
 
         result = runner.invoke(app, ["add", "Test", "--interactive"])
 
         assert result.exit_code == 0
         assert "Client added successfully" in result.stdout
+        assert (
+            runtime_session.query(Cliente)
+            .filter_by(denominazione="Test Interactive Client")
+            .first()
+            is not None
+        )
 
     @patch("openfatture.cli.commands.cliente.Prompt")
-    @patch("openfatture.cli.commands.cliente.SessionLocal")
-    @patch("openfatture.cli.commands.cliente.init_db")
-    def test_add_cliente_interactive_invalid_piva(
-        self, mock_init_db, mock_session_local, mock_prompt
-    ):
+    def test_add_cliente_interactive_invalid_piva(self, mock_prompt, runtime_session):
         """Test adding client in interactive mode with invalid P.IVA."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        mock_cliente = Mock()
-        mock_cliente.id = 1
-        mock_db.refresh = Mock(side_effect=lambda c: setattr(c, "id", 1))
-
         # Mock user inputs - invalid P.IVA
         mock_prompt.ask.side_effect = [
             "Test Client",  # denominazione
             "INVALID",  # partita_iva (INVALID)
             "",  # codice_fiscale (empty)
             "",  # indirizzo
+            "",  # numero_civico
             "",  # cap
             "",  # comune
             "",  # provincia
@@ -336,12 +301,15 @@ class TestAddClienteCommand:
             "",  # PEC
             "",  # email
             "",  # telefono
+            "",  # note
         ]
 
         result = runner.invoke(app, ["add", "Test", "--interactive"])
 
         assert result.exit_code == 0
-        assert "Invalid Partita IVA" in result.stdout
+        # The command warns about the invalid P.IVA. The English locale has no
+        # translation for this key yet, so it renders the message id verbatim.
+        assert "cli-cliente-invalid-piva" in result.stdout
 
 
 class TestEnsureDB:

@@ -4,6 +4,7 @@ import typer
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
+from sqlalchemy.exc import SQLAlchemyError
 
 from openfatture.cli.lifespan import get_event_bus
 from openfatture.core.events import ClientCreatedEvent, ClientDeletedEvent
@@ -109,71 +110,77 @@ def add_cliente(
         raise typer.Exit(1)
 
     # Create client
-    with db_session() as db:
-        # Parse name into first and last name if possible
-        nome = None
-        cognome = None
-        if denominazione and " " in denominazione:
-            # Try to split the name into first and last name
-            parts = denominazione.split(" ", 1)
-            if len(parts) == 2:
-                nome = parts[0]
-                cognome = parts[1]
+    try:
+        with db_session() as db:
+            # Parse name into first and last name if possible
+            nome = None
+            cognome = None
+            if denominazione and " " in denominazione:
+                # Try to split the name into first and last name
+                parts = denominazione.split(" ", 1)
+                if len(parts) == 2:
+                    nome = parts[0]
+                    cognome = parts[1]
 
-        cliente = Cliente(
-            denominazione=denominazione,
-            nome=nome,
-            cognome=cognome,
-            partita_iva=partita_iva,
-            codice_fiscale=codice_fiscale,
-            codice_destinatario=codice_destinatario,
-            pec=pec,
-            indirizzo=indirizzo if interactive else None,
-            numero_civico=numero_civico if interactive else None,
-            cap=cap if interactive else None,
-            comune=comune if interactive else None,
-            provincia=provincia if interactive else None,
-            nazione="IT",  # Default to Italy
-            email=email if interactive else None,
-            telefono=telefono if interactive else None,
-            note=note if interactive else None,
-        )
-
-        db.add(cliente)
-        db.commit()
-        db.refresh(cliente)
-
-        # Publish ClientCreatedEvent
-        event_bus = get_event_bus()
-        if event_bus:
-            event_bus.publish(
-                ClientCreatedEvent(
-                    client_id=cliente.id,
-                    client_name=cliente.denominazione,
-                    partita_iva=cliente.partita_iva,
-                    codice_fiscale=cliente.codice_fiscale,
-                    codice_destinatario=cliente.codice_destinatario,
-                    pec=cliente.pec,
-                )
+            cliente = Cliente(
+                denominazione=denominazione,
+                nome=nome,
+                cognome=cognome,
+                partita_iva=partita_iva,
+                codice_fiscale=codice_fiscale,
+                codice_destinatario=codice_destinatario,
+                pec=pec,
+                indirizzo=indirizzo if interactive else None,
+                numero_civico=numero_civico if interactive else None,
+                cap=cap if interactive else None,
+                comune=comune if interactive else None,
+                provincia=provincia if interactive else None,
+                nazione="IT",  # Default to Italy
+                email=email if interactive else None,
+                telefono=telefono if interactive else None,
+                note=note if interactive else None,
             )
 
-        console.print(_("cli-cliente-added-success", id=cliente.id))
+            db.add(cliente)
+            db.commit()
+            db.refresh(cliente)
 
-        # Show summary
-        table = Table(title=_("cli-cliente-table-title", name=denominazione))
-        table.add_column(_("cli-cliente-table-field"), style="cyan")
-        table.add_column(_("cli-cliente-table-value"), style="white")
+            # Publish ClientCreatedEvent
+            event_bus = get_event_bus()
+            if event_bus:
+                event_bus.publish(
+                    ClientCreatedEvent(
+                        client_id=cliente.id,
+                        client_name=cliente.denominazione,
+                        partita_iva=cliente.partita_iva,
+                        codice_fiscale=cliente.codice_fiscale,
+                        codice_destinatario=cliente.codice_destinatario,
+                        pec=cliente.pec,
+                    )
+                )
 
-        if partita_iva:
-            table.add_row(_("cli-cliente-label-piva"), partita_iva)
-        if codice_fiscale:
-            table.add_row(_("cli-cliente-label-cf"), codice_fiscale)
-        if codice_destinatario:
-            table.add_row(_("cli-cliente-label-sdi"), codice_destinatario)
-        if pec:
-            table.add_row(_("cli-cliente-label-pec"), pec)
+            console.print(_("cli-cliente-added-success", id=cliente.id))
 
-        console.print(table)
+            # Show summary
+            table = Table(title=_("cli-cliente-table-title", name=denominazione))
+            table.add_column(_("cli-cliente-table-field"), style="cyan")
+            table.add_column(_("cli-cliente-table-value"), style="white")
+
+            if partita_iva:
+                table.add_row(_("cli-cliente-label-piva"), partita_iva)
+            if codice_fiscale:
+                table.add_row(_("cli-cliente-label-cf"), codice_fiscale)
+            if codice_destinatario:
+                table.add_row(_("cli-cliente-label-sdi"), codice_destinatario)
+            if pec:
+                table.add_row(_("cli-cliente-label-pec"), pec)
+
+            console.print(table)
+    except (SQLAlchemyError, ValueError) as exc:
+        # db_session() has already rolled back; convert the failure into a
+        # clean error message and non-zero exit instead of a raw traceback.
+        console.print(_("cli-cliente-add-error", error=str(exc)))
+        raise typer.Exit(1) from exc
 
 
 @app.command("list")

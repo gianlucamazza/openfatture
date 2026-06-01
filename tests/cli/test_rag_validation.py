@@ -105,9 +105,10 @@ class TestRAGSearchCommandValidation:
         """Test that search query is required."""
         result = runner.invoke(app, ["rag", "search"])
 
-        # Should show error about missing argument
+        # Should show error about missing argument. Click/Typer routes usage
+        # errors to stderr, which the installed CliRunner exposes separately.
         assert result.exit_code != 0
-        assert "Missing argument" in result.stdout or "requires an argument" in result.stdout
+        assert "Missing argument" in result.stderr or "Usage:" in result.stderr
 
     @patch("openfatture.cli.commands.ai.rag._create_knowledge_indexer")
     def test_rag_search_success(self, mock_create_indexer):

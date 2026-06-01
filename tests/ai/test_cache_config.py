@@ -156,11 +156,15 @@ class TestGetCacheConfig:
             "OPENFATTURE_CACHE_STRATEGY": "invalid",
         },
     )
+    @patch.dict(os.environ, {"OPENFATTURE_CACHE_STRATEGY": "invalid"})
     def test_get_cache_config_invalid_strategy(self, caplog):
         """Test get_cache_config with invalid strategy falls back to lru."""
-        config = get_cache_config()
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            config = get_cache_config()
         assert config.strategy == "lru"
-        assert "Invalid cache strategy 'invalid'. Falling back to 'lru'." in caplog.text
+        assert "invalid_cache_strategy" in caplog.text
 
     @patch.dict(
         os.environ,

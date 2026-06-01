@@ -145,14 +145,19 @@ class BaseImporter(ABC):
             session = object_session(account)
             if session is not None:
                 # Reuse the session already bound to the account.
+                # Only commit if processing completed without raising, so a
+                # caller-owned session is not left in a half-committed state.
                 self._process_transactions(session, account, transactions, result, skip_duplicates)
+                session.commit()
             else:
                 # Create a new session managed by the context manager,
-                # guaranteeing cleanup/rollback.
+                # guaranteeing cleanup/rollback. db_session() does not
+                # auto-commit, so commit explicitly to persist the import.
                 with db_session() as session:
                     self._process_transactions(
                         session, account, transactions, result, skip_duplicates
                     )
+                    session.commit()
 
         except Exception as e:
             result.error_count += 1
@@ -179,6 +184,11 @@ class BaseImporter(ABC):
                     result.duplicate_count += 1
                     continue
 
+                # Persist the parsed transaction. The add happens only for
+                # non-duplicates (after the existence check), so subsequent
+                # duplicate detection within the same batch still works once
+                # the pending row is flushed by the existence query.
+                session.add(transaction)
                 result.transactions.append(transaction)
                 result.success_count += 1
 

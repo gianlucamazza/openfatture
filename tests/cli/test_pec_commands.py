@@ -13,6 +13,19 @@ runner = CliRunner()
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def _english_locale():
+    """Pin the locale to English so label assertions are deterministic."""
+    from openfatture.i18n import get_locale, set_locale
+
+    previous = get_locale()
+    set_locale("en")
+    try:
+        yield
+    finally:
+        set_locale(previous)
+
+
 class TestPECTestCommand:
     """Test 'pec test' command."""
 

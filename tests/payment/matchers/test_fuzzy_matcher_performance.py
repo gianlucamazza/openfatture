@@ -21,7 +21,7 @@ import pytest
 
 from openfatture.payment.matchers.fuzzy import FuzzyDescriptionMatcher
 
-pytestmark = pytest.mark.unit
+pytestmark = pytest.mark.performance
 
 
 class TestFuzzyMatcherPerformance:

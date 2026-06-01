@@ -1,83 +1,168 @@
-"""
-Tests for invoice CLI commands.
+"""Tests for invoice CLI commands.
 
-Tests Typer commands with mocking of database and user interactions.
+These exercise the Typer commands end-to-end against a real, isolated database
+(``runtime_db``) instead of mocking SQLAlchemy query chains: data is seeded
+through the same database the command reads, and the locale is pinned to English
+so label assertions are deterministic. Genuine error paths (e.g. the DB raising
+mid-operation) inject failures via the real ``db_session`` seam.
 """
 
-from pathlib import Path
+from datetime import date
+from decimal import Decimal
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.fattura import app
-from openfatture.storage.database.models import StatoFattura
+from openfatture.storage.database.models import (
+    Cliente,
+    Fattura,
+    RigaFattura,
+    StatoFattura,
+    TipoDocumento,
+)
 
-runner = CliRunner()
+
+class _WideCliRunner(CliRunner):
+    """CliRunner that renders Rich output at a wide terminal width.
+
+    Under the default 80-column terminal Rich truncates table cells (client
+    names, invoice numbers), which would make substring assertions flaky. A
+    fixed wide width keeps the rendered tokens intact and deterministic.
+    """
+
+    def invoke(self, *args, **kwargs):  # type: ignore[override]
+        env = {"COLUMNS": "220", **(kwargs.pop("env", None) or {})}
+        return super().invoke(*args, env=env, **kwargs)
+
+
+runner = _WideCliRunner()
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def _english_locale():
+    """Pin the locale to English so label assertions are deterministic."""
+    from openfatture.i18n import get_locale, set_locale
+
+    previous = get_locale()
+    set_locale("en")
+    try:
+        yield
+    finally:
+        set_locale(previous)
+
+
+def _make_cliente(
+    session: Session,
+    denominazione: str = "Acme Corporation",
+    codice: str = "ABC1234",
+) -> Cliente:
+    cliente = Cliente(
+        denominazione=denominazione,
+        partita_iva="12345678901",
+        codice_destinatario=codice,
+        nazione="IT",
+    )
+    session.add(cliente)
+    session.commit()
+    session.refresh(cliente)
+    return cliente
+
+
+def _make_fattura(
+    session: Session,
+    *,
+    numero: str,
+    cliente: Cliente,
+    anno: int = 2025,
+    mese: int = 1,
+    stato: StatoFattura = StatoFattura.BOZZA,
+    tipo_documento: TipoDocumento = TipoDocumento.TD01,
+    imponibile: Decimal = Decimal("1000.00"),
+    iva: Decimal = Decimal("220.00"),
+    ritenuta_acconto: Decimal | None = None,
+    aliquota_ritenuta: Decimal | None = None,
+    importo_bollo: Decimal | None = None,
+) -> Fattura:
+    totale = imponibile + iva
+    fattura = Fattura(
+        numero=numero,
+        anno=anno,
+        data_emissione=date(anno, mese, 15),
+        cliente_id=cliente.id,
+        tipo_documento=tipo_documento,
+        stato=stato,
+        imponibile=imponibile,
+        iva=iva,
+        ritenuta_acconto=ritenuta_acconto,
+        aliquota_ritenuta=aliquota_ritenuta,
+        importo_bollo=importo_bollo,
+        totale=totale,
+    )
+    session.add(fattura)
+    session.flush()
+    session.add(
+        RigaFattura(
+            fattura_id=fattura.id,
+            numero_riga=1,
+            descrizione="Consulenza sviluppo software",
+            quantita=Decimal("1"),
+            prezzo_unitario=imponibile,
+            unita_misura="servizio",
+            aliquota_iva=Decimal("22.00"),
+            imponibile=imponibile,
+            iva=iva,
+            totale=totale,
+        )
+    )
+    session.commit()
+    session.refresh(fattura)
+    return fattura
 
 
 class TestListFattureCommand:
     """Test 'fattura list' command."""
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_list_fatture_empty(self, mock_init_db, mock_session_local):
+    def test_list_fatture_empty(self, runtime_db):
         """Test listing when no invoices exist."""
-        # Mock database session
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = []
-
         result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
         assert "No invoices found" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_list_fatture_with_data(
-        self, mock_init_db, mock_session_local, sample_fattura, sample_cliente
-    ):
+    def test_list_fatture_with_data(self, runtime_session):
         """Test listing invoices with data."""
-        # Setup mock
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        # Mock the query chain
-        mock_query = mock_db.query.return_value.order_by.return_value
-        mock_query.limit.return_value.all.return_value = [sample_fattura]
+        cliente = _make_cliente(runtime_session)
+        _make_fattura(runtime_session, numero="1", cliente=cliente)
 
         result = runner.invoke(app, ["list"])
 
         assert result.exit_code == 0
         assert "Invoices" in result.stdout  # Table is shown
-        # Note: Exact content check removed due to mocking complexities
+        assert "Acme Corporation" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_list_fatture_with_filters(self, mock_init_db, mock_session_local, sample_fattura):
+    def test_list_fatture_with_filters(self, runtime_session):
         """Test listing with status and year filters."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        # Mock query chain with filters
-        mock_query = mock_db.query.return_value.order_by.return_value
-        mock_query.filter.return_value = mock_query
-        mock_query.limit.return_value.all.return_value = [sample_fattura]
+        cliente = _make_cliente(runtime_session)
+        _make_fattura(
+            runtime_session,
+            numero="1",
+            cliente=cliente,
+            anno=2025,
+            stato=StatoFattura.BOZZA,
+        )
 
         result = runner.invoke(app, ["list", "--stato", "bozza", "--anno", "2025"])
 
         assert result.exit_code == 0
-        # Should filter by status and year
+        # Should filter by status and year and still show the matching invoice
+        assert "Acme Corporation" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_list_fatture_invalid_status(self, mock_init_db, mock_session_local):
+    def test_list_fatture_invalid_status(self, runtime_db):
         """Test listing with invalid status filter."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
         result = runner.invoke(app, ["list", "--stato", "invalid"])
 
         # Should show error but not exit with error code
@@ -87,138 +172,105 @@ class TestListFattureCommand:
 class TestShowFatturaCommand:
     """Test 'fattura show' command."""
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_show_fattura_not_found(self, mock_init_db, mock_session_local):
+    def test_show_fattura_not_found(self, runtime_db):
         """Test showing non-existent invoice."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
         result = runner.invoke(app, ["show", "999"])
 
         assert result.exit_code == 1
         assert "not found" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_show_fattura_success(self, mock_init_db, mock_session_local, sample_fattura):
+    def test_show_fattura_success(self, runtime_session):
         """Test showing invoice details."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_fattura
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(runtime_session, numero="1", cliente=cliente)
 
-        result = runner.invoke(app, ["show", "1"])
+        result = runner.invoke(app, ["show", str(fattura.id)])
 
         assert result.exit_code == 0
         assert "Invoice 1/2025" in result.stdout
-        assert sample_fattura.cliente.denominazione in result.stdout
+        assert "Acme Corporation" in result.stdout
         assert "1000" in result.stdout  # Imponibile
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_show_fattura_with_ritenuta(
-        self, mock_init_db, mock_session_local, sample_fattura_with_ritenuta
-    ):
+    def test_show_fattura_with_ritenuta(self, runtime_session):
         """Test showing invoice with ritenuta."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            sample_fattura_with_ritenuta
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(
+            runtime_session,
+            numero="2",
+            cliente=cliente,
+            mese=2,
+            stato=StatoFattura.DA_INVIARE,
+            tipo_documento=TipoDocumento.TD06,
+            ritenuta_acconto=Decimal("200.00"),
+            aliquota_ritenuta=Decimal("20.00"),
         )
 
-        result = runner.invoke(app, ["show", "2"])
+        result = runner.invoke(app, ["show", str(fattura.id)])
 
         assert result.exit_code == 0
-        assert "Ritenuta" in result.stdout
+        # "Withholding" is the English label for ritenuta d'acconto.
+        assert "Withholding" in result.stdout
 
 
 class TestDeleteFatturaCommand:
     """Test 'fattura delete' command."""
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_delete_fattura_not_found(self, mock_init_db, mock_session_local):
+    def test_delete_fattura_not_found(self, runtime_db):
         """Test deleting non-existent invoice."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
         result = runner.invoke(app, ["delete", "999"])
 
         assert result.exit_code == 1
         assert "not found" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_delete_fattura_sent_invoice_blocked(self, mock_init_db, mock_session_local):
+    def test_delete_fattura_sent_invoice_blocked(self, runtime_session):
         """Test that sent invoices cannot be deleted."""
-        # Create invoice with INVIATA status
-        mock_fattura = Mock()
-        mock_fattura.stato = StatoFattura.INVIATA
-        mock_fattura.numero = "1"
-        mock_fattura.anno = 2025
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(
+            runtime_session,
+            numero="1",
+            cliente=cliente,
+            stato=StatoFattura.INVIATA,
+        )
 
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_fattura
-
-        result = runner.invoke(app, ["delete", "1"])
+        result = runner.invoke(app, ["delete", str(fattura.id)])
 
         assert result.exit_code == 1
         assert "Cannot delete invoice" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_delete_fattura_with_force(self, mock_init_db, mock_session_local, sample_fattura):
+    def test_delete_fattura_with_force(self, runtime_session):
         """Test deleting invoice with --force flag."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_fattura
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(
+            runtime_session,
+            numero="1",
+            cliente=cliente,
+            stato=StatoFattura.BOZZA,
+        )
+        fattura_id = fattura.id
 
-        result = runner.invoke(app, ["delete", "1", "--force"])
+        result = runner.invoke(app, ["delete", str(fattura_id), "--force"])
 
         assert result.exit_code == 0
         assert "deleted" in result.stdout
-        mock_db.delete.assert_called_once_with(sample_fattura)
-        mock_db.commit.assert_called_once()
+        # Row is really gone from the shared database.
+        assert runtime_session.query(Fattura).filter(Fattura.id == fattura_id).first() is None
 
 
 class TestGeneraXMLCommand:
     """Test 'fattura xml' command."""
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_genera_xml_invoice_not_found(self, mock_init_db, mock_session_local):
+    def test_genera_xml_invoice_not_found(self, runtime_db):
         """Test XML generation for non-existent invoice."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
         result = runner.invoke(app, ["xml", "999"])
 
         assert result.exit_code == 1
         assert "not found" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.get_settings")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_genera_xml_success(
-        self, mock_init_db, mock_session_local, mock_settings, sample_fattura
-    ):
+    def test_genera_xml_success(self, runtime_session):
         """Test successful XML generation."""
-        # Setup mocks
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_fattura
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(runtime_session, numero="1", cliente=cliente)
 
-        # Mock settings to return proper paths
-        mock_settings_instance = Mock()
-        mock_settings_instance.archivio_dir = Path("/tmp/test")
-        mock_settings_instance.data_dir = Path("/tmp/test/data")
-        mock_settings.return_value = mock_settings_instance
-
-        # Mock InvoiceService
         with patch("openfatture.core.fatture.service.InvoiceService") as mock_service_class:
             mock_service = mock_service_class.return_value
             mock_service.generate_xml.return_value = ("<?xml...>", None)
@@ -226,43 +278,31 @@ class TestGeneraXMLCommand:
             mock_path.absolute.return_value = "/path/to/xml"
             mock_service.get_xml_path.return_value = mock_path
 
-            result = runner.invoke(app, ["xml", "1", "--no-validate"])
+            result = runner.invoke(app, ["xml", str(fattura.id), "--no-validate"])
 
             assert result.exit_code == 0
             assert "generated" in result.stdout.lower()
             mock_service.generate_xml.assert_called_once()
 
-    @patch("openfatture.cli.commands.fattura.get_settings")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_genera_xml_with_error(
-        self, mock_init_db, mock_session_local, mock_settings, sample_fattura
-    ):
+    def test_genera_xml_with_error(self, runtime_session):
         """Test XML generation with error."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_fattura
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(runtime_session, numero="1", cliente=cliente)
 
         with patch("openfatture.core.fatture.service.InvoiceService") as mock_service_class:
             mock_service = mock_service_class.return_value
             mock_service.generate_xml.return_value = ("", "Validation error")
 
-            result = runner.invoke(app, ["xml", "1"])
+            result = runner.invoke(app, ["xml", str(fattura.id)])
 
             assert result.exit_code == 1
             # Error should be displayed (either "Error" or the actual error message)
             assert len(result.stdout) > 0
 
-    @patch("openfatture.cli.commands.fattura.get_settings")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_genera_xml_custom_output(
-        self, mock_init_db, mock_session_local, mock_settings, sample_fattura, tmp_path
-    ):
+    def test_genera_xml_custom_output(self, runtime_session, tmp_path):
         """Test XML generation with custom output path."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_fattura
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(runtime_session, numero="1", cliente=cliente)
 
         output_file = tmp_path / "test.xml"
 
@@ -270,7 +310,9 @@ class TestGeneraXMLCommand:
             mock_service = mock_service_class.return_value
             mock_service.generate_xml.return_value = ("<xml>content</xml>", None)
 
-            result = runner.invoke(app, ["xml", "1", "--output", str(output_file), "--no-validate"])
+            result = runner.invoke(
+                app, ["xml", str(fattura.id), "--output", str(output_file), "--no-validate"]
+            )
 
             assert result.exit_code == 0
             assert output_file.exists()
@@ -280,50 +322,32 @@ class TestGeneraXMLCommand:
 class TestInviaFatturaCommand:
     """Test 'fattura invia' command."""
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_invia_invoice_not_found(self, mock_init_db, mock_session_local):
+    def test_invia_invoice_not_found(self, runtime_db):
         """Test sending non-existent invoice."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
         result = runner.invoke(app, ["invia", "999"])
 
         assert result.exit_code == 1
         assert "not found" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.get_settings")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_invia_xml_generation_fails(
-        self, mock_init_db, mock_session_local, mock_settings, sample_fattura
-    ):
+    def test_invia_xml_generation_fails(self, runtime_session):
         """Test sending when XML generation fails."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_fattura
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(runtime_session, numero="1", cliente=cliente)
 
         with patch("openfatture.core.fatture.service.InvoiceService") as mock_service_class:
             mock_service = mock_service_class.return_value
             mock_service.generate_xml.return_value = ("", "XML error")
 
-            result = runner.invoke(app, ["invia", "1"])
+            result = runner.invoke(app, ["invia", str(fattura.id)])
 
             assert result.exit_code == 1
             assert "XML generation failed" in result.stdout
 
     @patch("openfatture.cli.commands.fattura.Confirm")
-    @patch("openfatture.cli.commands.fattura.get_settings")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_invia_user_cancels(
-        self, mock_init_db, mock_session_local, mock_settings, mock_confirm, sample_fattura
-    ):
+    def test_invia_user_cancels(self, mock_confirm, runtime_session):
         """Test sending when user cancels confirmation."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_fattura
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(runtime_session, numero="1", cliente=cliente)
 
         # User says no to confirmation
         mock_confirm.ask.return_value = False
@@ -332,22 +356,16 @@ class TestInviaFatturaCommand:
             mock_service = mock_service_class.return_value
             mock_service.generate_xml.return_value = ("<xml/>", None)
 
-            result = runner.invoke(app, ["invia", "1"])
+            result = runner.invoke(app, ["invia", str(fattura.id)])
 
             assert result.exit_code == 0
             # User cancelled - command exits gracefully
 
     @patch("openfatture.cli.commands.fattura.Confirm")
-    @patch("openfatture.cli.commands.fattura.get_settings")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_invia_success(
-        self, mock_init_db, mock_session_local, mock_settings, mock_confirm, sample_fattura
-    ):
+    def test_invia_success(self, mock_confirm, runtime_session):
         """Test successful invoice sending."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_fattura
+        cliente = _make_cliente(runtime_session)
+        fattura = _make_fattura(runtime_session, numero="1", cliente=cliente)
 
         # User confirms sending
         mock_confirm.ask.return_value = True
@@ -364,7 +382,7 @@ class TestInviaFatturaCommand:
             mock_pec = mock_pec_class.return_value
             mock_pec.send_invoice_to_sdi.return_value = (True, None)
 
-            result = runner.invoke(app, ["invia", "1"])
+            result = runner.invoke(app, ["invia", str(fattura.id)])
 
             assert result.exit_code == 0
             assert "sent" in result.stdout.lower()
@@ -374,64 +392,40 @@ class TestInviaFatturaCommand:
 class TestCreaFatturaCommand:
     """Test 'fattura crea' command."""
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_crea_no_clients(self, mock_init_db, mock_session_local):
+    def test_crea_no_clients(self, runtime_db):
         """Test creating invoice when no clients exist."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.order_by.return_value.all.return_value = []
-
         result = runner.invoke(app, ["crea"])
 
         assert result.exit_code == 1
         assert "No clients found" in result.stdout
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_crea_client_not_found(self, mock_init_db, mock_session_local):
+    def test_crea_client_not_found(self, runtime_db):
         """Test creating invoice with non-existent client ID."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
         result = runner.invoke(app, ["crea", "--cliente", "999"])
 
         assert result.exit_code == 1
-        assert "Client 999 not found" in result.stdout
+        assert "Invalid client selection" in result.stdout
 
     @patch("openfatture.cli.commands.fattura.Prompt")
     @patch("openfatture.cli.commands.fattura.IntPrompt")
     @patch("openfatture.cli.commands.fattura.FloatPrompt")
     @patch("openfatture.cli.commands.fattura.Confirm")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
     def test_crea_successful_with_line_items(
         self,
-        mock_init_db,
-        mock_session_local,
         mock_confirm,
         mock_float_prompt,
         mock_int_prompt,
         mock_prompt,
-        sample_cliente,
+        runtime_session,
     ):
         """Test successful invoice creation with line items."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
+        cliente = _make_cliente(runtime_session)
 
-        # Mock client query
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_cliente
-
-        # Mock invoice number generation (no previous invoices)
-        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = (
-            None
-        )
-
-        # Mock user inputs
+        # Mock user inputs. The issue date is prompted before the invoice
+        # number so the invoice year can be derived from the entered date.
         mock_prompt.ask.side_effect = [
+            "2023-01-15",  # issue date (deliberately not the current year)
             "001",  # invoice number
-            "2025-01-15",  # issue date
             "Development services",  # item 1 description
             "",  # end items
         ]
@@ -445,100 +439,69 @@ class TestCreaFatturaCommand:
             False,  # no bollo
         ]
 
-        # Mock invoice creation
-        mock_fattura = Mock()
-        mock_fattura.id = 1
-        mock_fattura.numero = "001"
-        mock_fattura.anno = 2025
-        mock_fattura.data_emissione.isoformat.return_value = "2025-01-15"
-        mock_fattura.imponibile = 500.0
-        mock_fattura.iva = 110.0
-        mock_fattura.totale = 610.0
-        mock_fattura.ritenuta_acconto = None
-        mock_fattura.importo_bollo = None
-        mock_fattura.righe = [Mock()]  # One line item
-        mock_db.refresh.return_value = mock_fattura
-
-        result = runner.invoke(app, ["crea", "--cliente", "1"])
+        result = runner.invoke(app, ["crea", "--cliente", str(cliente.id)])
 
         assert result.exit_code == 0
         assert "Invoice created successfully" in result.stdout
-        assert "001/2025" in result.stdout
-        mock_db.commit.assert_called_once()
+        # The invoice year is derived from the entered issue date, not today's
+        # date, so numbering and date stay consistent.
+        assert "001/2023" in result.stdout
+        # Invoice persisted to the shared database with a matching year.
+        created = runtime_session.query(Fattura).filter(Fattura.numero == "001").first()
+        assert created is not None
+        assert created.anno == 2023
+        assert created.data_emissione == date(2023, 1, 15)
+        assert len(created.righe) == 1
 
     @patch("openfatture.cli.commands.fattura.Prompt")
     @patch("openfatture.cli.commands.fattura.IntPrompt")
     @patch("openfatture.cli.commands.fattura.FloatPrompt")
     @patch("openfatture.cli.commands.fattura.Confirm")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
     def test_crea_cancelled_no_items(
         self,
-        mock_init_db,
-        mock_session_local,
         mock_confirm,
         mock_float_prompt,
         mock_int_prompt,
         mock_prompt,
-        sample_cliente,
+        runtime_session,
     ):
         """Test invoice creation cancelled when no items added."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
+        cliente = _make_cliente(runtime_session)
 
-        # Mock client query
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_cliente
-
-        # Mock invoice number generation
-        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = (
-            None
-        )
-
-        # Mock user inputs - empty description immediately
+        # Mock user inputs - empty description immediately. Issue date is
+        # prompted before the invoice number.
         mock_prompt.ask.side_effect = [
-            "001",  # invoice number
             "2025-01-15",  # issue date
+            "001",  # invoice number
             "",  # no items
         ]
 
-        result = runner.invoke(app, ["crea", "--cliente", "1"])
+        result = runner.invoke(app, ["crea", "--cliente", str(cliente.id)])
 
         assert result.exit_code == 0
         assert "No items added. Invoice creation cancelled" in result.stdout
-        mock_db.rollback.assert_called_once()
+        # Rolled back: nothing persisted.
+        assert runtime_session.query(Fattura).filter(Fattura.numero == "001").first() is None
 
     @patch("openfatture.cli.commands.fattura.Prompt")
     @patch("openfatture.cli.commands.fattura.IntPrompt")
     @patch("openfatture.cli.commands.fattura.FloatPrompt")
     @patch("openfatture.cli.commands.fattura.Confirm")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
     def test_crea_with_ritenuta_and_bollo(
         self,
-        mock_init_db,
-        mock_session_local,
         mock_confirm,
         mock_float_prompt,
         mock_int_prompt,
         mock_prompt,
-        sample_cliente,
+        runtime_session,
     ):
         """Test invoice creation with ritenuta and bollo."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
+        cliente = _make_cliente(runtime_session)
 
-        # Mock client query
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_cliente
-
-        # Mock invoice number generation
-        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = (
-            None
-        )
-
-        # Mock user inputs
+        # Mock user inputs. Issue date is prompted before the invoice number.
         mock_prompt.ask.side_effect = [
-            "001",  # invoice number
             "2025-01-15",  # issue date
+            "001",  # invoice number
             "Consulting",  # item description
             "",  # end items
         ]
@@ -553,65 +516,41 @@ class TestCreaFatturaCommand:
             True,  # yes bollo
         ]
 
-        # Mock invoice creation
-        mock_fattura = Mock()
-        mock_fattura.id = 1
-        mock_fattura.numero = "001"
-        mock_fattura.anno = 2025
-        mock_fattura.data_emissione.isoformat.return_value = "2025-01-15"
-        mock_fattura.imponibile = 100.0
-        mock_fattura.iva = 0.0
-        mock_fattura.totale = 102.0  # + bollo
-        mock_fattura.ritenuta_acconto = 20.0
-        mock_fattura.importo_bollo = 2.0
-        mock_fattura.righe = [Mock()]
-        mock_db.refresh.return_value = mock_fattura
-
-        result = runner.invoke(app, ["crea", "--cliente", "1"])
+        result = runner.invoke(app, ["crea", "--cliente", str(cliente.id)])
 
         assert result.exit_code == 0
         assert "Invoice created successfully" in result.stdout
+        # The crea summary table uses literal labels (not i18n keys).
         assert "Ritenuta" in result.stdout
         assert "Bollo" in result.stdout
+        # Persisted with ritenuta and bollo applied.
+        created = runtime_session.query(Fattura).filter(Fattura.numero == "001").first()
+        assert created is not None
+        assert created.ritenuta_acconto == Decimal("20.00")
+        assert created.importo_bollo == Decimal("2.00")
 
     @patch("openfatture.cli.commands.fattura.Prompt")
     @patch("openfatture.cli.commands.fattura.IntPrompt")
     @patch("openfatture.cli.commands.fattura.FloatPrompt")
     @patch("openfatture.cli.commands.fattura.Confirm")
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
     def test_crea_client_selection_interactive(
         self,
-        mock_init_db,
-        mock_session_local,
         mock_confirm,
         mock_float_prompt,
         mock_int_prompt,
         mock_prompt,
-        sample_cliente,
+        runtime_session,
     ):
         """Test client selection in interactive mode."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
+        cliente = _make_cliente(runtime_session)
 
-        # Mock clients list
-        mock_db.query.return_value.order_by.return_value.all.return_value = [sample_cliente]
+        # Mock client selection (pick the seeded client by id)
+        mock_int_prompt.ask.return_value = cliente.id
 
-        # Mock client selection
-        mock_int_prompt.ask.return_value = 1
-
-        # Mock selected client
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_cliente
-
-        # Mock invoice number generation
-        mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = (
-            None
-        )
-
-        # Mock user inputs
+        # Mock user inputs. Issue date is prompted before the invoice number.
         mock_prompt.ask.side_effect = [
-            "001",  # invoice number
             "2025-01-15",  # issue date
+            "001",  # invoice number
             "",  # no items
         ]
 
@@ -621,27 +560,56 @@ class TestCreaFatturaCommand:
         assert "No items added. Invoice creation cancelled" in result.stdout
         mock_int_prompt.ask.assert_called_once()
 
-    @patch("openfatture.cli.commands.fattura.SessionLocal")
-    @patch("openfatture.cli.commands.fattura.init_db")
-    def test_crea_database_error(self, mock_init_db, mock_session_local, sample_cliente):
-        """Test invoice creation with database error."""
+    @patch("openfatture.cli.commands.fattura.Prompt")
+    @patch("openfatture.cli.commands.fattura.db_session")
+    def test_crea_database_error(self, mock_db_session, mock_prompt, runtime_db):
+        """Invoice creation aborts cleanly on a database error (exit 1).
+
+        The failure is injected at the real ``db_session`` seam by making
+        ``db.add`` raise a ``SQLAlchemyError``. ``db_session()`` rolls back and
+        re-raises; the command catches it, prints a clean error message, and
+        exits 1 — no raw traceback escapes. ``rollback`` is asserted to confirm
+        the context manager's exit path runs on the way out.
+        """
+        from sqlalchemy.exc import SQLAlchemyError
+
+        cliente = Mock()
+        cliente.id = 1
+        cliente.denominazione = "Acme Corporation"
+
         mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
+        db_error = SQLAlchemyError("Database connection failed")
 
-        # Mock client query
-        mock_db.query.return_value.filter.return_value.first.return_value = sample_cliente
+        # Emulate the real db_session contract: yield the session, and on an
+        # exception inside the block, roll back and re-raise.
+        class _CtxManager:
+            def __enter__(self):
+                return mock_db
 
-        # Mock invoice number generation
+            def __exit__(self, exc_type, exc, tb):
+                if exc_type is not None:
+                    mock_db.rollback()
+                return False  # propagate
+
+        mock_db_session.return_value = _CtxManager()
+        # Client lookup succeeds, invoice-number lookup returns no previous invoice.
+        mock_db.query.return_value.filter.return_value.first.return_value = cliente
         mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = (
             None
         )
+        # Adding the invoice blows up.
+        mock_db.add.side_effect = db_error
 
-        # Mock database error
-        mock_db.add.side_effect = Exception("Database connection failed")
+        mock_prompt.ask.side_effect = [
+            "2025-01-15",  # issue date (prompted before the number)
+            "001",  # invoice number
+        ]
 
         result = runner.invoke(app, ["crea", "--cliente", "1"])
 
         assert result.exit_code == 1
+        # Clean exit: no raw exception propagated to the CLI runner.
+        assert result.exception is None or isinstance(result.exception, SystemExit)
         assert "Error creating invoice" in result.stdout
         mock_db.rollback.assert_called_once()
 

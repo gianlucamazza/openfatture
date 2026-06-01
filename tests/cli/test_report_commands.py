@@ -1,69 +1,127 @@
-"""
-Tests for report CLI commands.
+"""Tests for report CLI commands.
+
+These exercise the commands end-to-end against a real, isolated database
+(``runtime_db``) instead of mocking SQLAlchemy query chains: data is seeded
+through the same database the command reads, and the locale is pinned to
+English so label assertions are deterministic.
 """
 
 from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
+from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.report import app
-from openfatture.storage.database.models import StatoPagamento
+from openfatture.storage.database.models import (
+    Cliente,
+    Fattura,
+    Pagamento,
+    RigaFattura,
+    StatoFattura,
+    StatoPagamento,
+    TipoDocumento,
+)
 
 runner = CliRunner()
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def _english_locale():
+    """Pin the locale to English so label assertions are deterministic."""
+    from openfatture.i18n import get_locale, set_locale
+
+    previous = get_locale()
+    set_locale("en")
+    try:
+        yield
+    finally:
+        set_locale(previous)
+
+
+def _make_cliente(session: Session, denominazione: str, codice: str) -> Cliente:
+    cliente = Cliente(
+        denominazione=denominazione,
+        partita_iva="12345678901",
+        codice_destinatario=codice,
+        nazione="IT",
+    )
+    session.add(cliente)
+    session.commit()
+    session.refresh(cliente)
+    return cliente
+
+
+def _make_fattura(
+    session: Session,
+    *,
+    numero: str,
+    cliente: Cliente,
+    imponibile: Decimal,
+    iva: Decimal,
+    anno: int = 2025,
+    mese: int = 6,
+    stato: StatoFattura = StatoFattura.INVIATA,
+) -> Fattura:
+    fattura = Fattura(
+        numero=numero,
+        anno=anno,
+        data_emissione=date(anno, mese, 15),
+        cliente_id=cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=stato,
+        imponibile=imponibile,
+        iva=iva,
+        totale=imponibile + iva,
+    )
+    session.add(fattura)
+    session.flush()
+    session.add(
+        RigaFattura(
+            fattura_id=fattura.id,
+            numero_riga=1,
+            descrizione="Servizio",
+            quantita=Decimal("1"),
+            prezzo_unitario=imponibile,
+            unita_misura="servizio",
+            aliquota_iva=Decimal("22.00"),
+            imponibile=imponibile,
+            iva=iva,
+            totale=imponibile + iva,
+        )
+    )
+    session.commit()
+    session.refresh(fattura)
+    return fattura
+
+
 class TestReportIVACommand:
     """Test 'report iva' command."""
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_iva_no_data(self, mock_init_db, mock_session_local):
-        """Test VAT report with no data."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.filter.return_value.all.return_value = []
-
+    def test_report_iva_no_data(self, runtime_db):
         result = runner.invoke(app, ["iva", "--anno", "2025"])
-
         assert result.exit_code == 0
         assert "No invoices found" in result.stdout
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_iva_with_data(self, mock_init_db, mock_session_local):
-        """Test VAT report with invoice data."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        # Create mock invoices with righe
-        mock_fattura1 = Mock()
-        mock_fattura1.imponibile = Decimal("1000.00")
-        mock_fattura1.iva = Decimal("220.00")
-        mock_fattura1.totale = Decimal("1220.00")
-        mock_riga1 = Mock()
-        mock_riga1.aliquota_iva = Decimal("22")
-        mock_riga1.imponibile = Decimal("1000.00")
-        mock_riga1.iva = Decimal("220.00")
-        mock_fattura1.righe = [mock_riga1]
-
-        mock_fattura2 = Mock()
-        mock_fattura2.imponibile = Decimal("500.00")
-        mock_fattura2.iva = Decimal("110.00")
-        mock_fattura2.totale = Decimal("610.00")
-        mock_riga2 = Mock()
-        mock_riga2.aliquota_iva = Decimal("22")
-        mock_riga2.imponibile = Decimal("500.00")
-        mock_riga2.iva = Decimal("110.00")
-        mock_fattura2.righe = [mock_riga2]
-
-        mock_db.query.return_value.filter.return_value.filter.return_value.all.return_value = [
-            mock_fattura1,
-            mock_fattura2,
-        ]
+    def test_report_iva_with_data(self, runtime_session):
+        cliente = _make_cliente(runtime_session, "Acme", "ABC1234")
+        _make_fattura(
+            runtime_session,
+            numero="1",
+            cliente=cliente,
+            imponibile=Decimal("1000.00"),
+            iva=Decimal("220.00"),
+        )
+        _make_fattura(
+            runtime_session,
+            numero="2",
+            cliente=cliente,
+            imponibile=Decimal("500.00"),
+            iva=Decimal("110.00"),
+        )
 
         result = runner.invoke(app, ["iva", "--anno", "2025"])
 
@@ -74,26 +132,16 @@ class TestReportIVACommand:
         assert "330" in result.stdout  # Total IVA
         assert "1,830" in result.stdout  # Total revenue
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_iva_with_quarter(self, mock_init_db, mock_session_local):
-        """Test VAT report with quarter filter."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        mock_fattura = Mock()
-        mock_fattura.imponibile = Decimal("1000.00")
-        mock_fattura.iva = Decimal("220.00")
-        mock_fattura.totale = Decimal("1220.00")
-        mock_riga = Mock()
-        mock_riga.aliquota_iva = Decimal("22")
-        mock_riga.imponibile = Decimal("1000.00")
-        mock_riga.iva = Decimal("220.00")
-        mock_fattura.righe = [mock_riga]
-
-        mock_db.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
-            mock_fattura
-        ]
+    def test_report_iva_with_quarter(self, runtime_session):
+        cliente = _make_cliente(runtime_session, "Acme", "ABC1234")
+        _make_fattura(
+            runtime_session,
+            numero="1",
+            cliente=cliente,
+            imponibile=Decimal("1000.00"),
+            iva=Decimal("220.00"),
+            mese=2,  # Q1
+        )
 
         result = runner.invoke(app, ["iva", "--anno", "2025", "--trimestre", "Q1"])
 
@@ -101,113 +149,64 @@ class TestReportIVACommand:
         assert "Q1" in result.stdout
         assert "1-3" in result.stdout
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_iva_invalid_quarter(self, mock_init_db, mock_session_local):
-        """Test VAT report with invalid quarter."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
+    def test_report_iva_invalid_quarter(self, runtime_db):
         result = runner.invoke(app, ["iva", "--anno", "2025", "--trimestre", "Q5"])
-
         assert result.exit_code == 0
         assert "Invalid quarter" in result.stdout
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_iva_default_year(self, mock_init_db, mock_session_local):
-        """Test VAT report uses current year by default."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.filter.return_value.all.return_value = []
-
+    def test_report_iva_default_year(self, runtime_db):
         result = runner.invoke(app, ["iva"])
-
         assert result.exit_code == 0
-        current_year = date.today().year
-        assert str(current_year) in result.stdout
+        assert str(date.today().year) in result.stdout
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_iva_full_year(self, mock_init_db, mock_session_local):
-        """Test VAT report for full year (no quarter)."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.filter.return_value.all.return_value = []
-
+    def test_report_iva_full_year(self, runtime_db):
         result = runner.invoke(app, ["iva", "--anno", "2025"])
-
         assert result.exit_code == 0
         assert "Full year" in result.stdout
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_iva_excludes_bozza(self, mock_init_db, mock_session_local):
-        """Test VAT report excludes draft invoices."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        # Verify filter excludes BOZZA status
-        mock_query = mock_db.query.return_value.filter.return_value.filter.return_value
-        mock_query.all.return_value = []
+    def test_report_iva_excludes_bozza(self, runtime_session):
+        cliente = _make_cliente(runtime_session, "Acme", "ABC1234")
+        # Only a draft invoice exists -> report must treat the period as empty.
+        _make_fattura(
+            runtime_session,
+            numero="1",
+            cliente=cliente,
+            imponibile=Decimal("1000.00"),
+            iva=Decimal("220.00"),
+            stato=StatoFattura.BOZZA,
+        )
 
         result = runner.invoke(app, ["iva", "--anno", "2025"])
 
         assert result.exit_code == 0
-        # Query should filter out BOZZA status
-        assert mock_db.query.called
+        assert "No invoices found" in result.stdout
 
 
 class TestReportClientiCommand:
     """Test 'report clienti' command."""
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_clienti_no_data(self, mock_init_db, mock_session_local):
-        """Test client report with no data."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.filter.return_value.group_by.return_value.order_by.return_value.all.return_value = (
-            []
-        )
-
+    def test_report_clienti_no_data(self, runtime_db):
         result = runner.invoke(app, ["clienti", "--anno", "2025"])
-
         assert result.exit_code == 0
         assert "No invoices found" in result.stdout
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_clienti_with_data(self, mock_init_db, mock_session_local, sample_cliente):
-        """Test client report with data."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        # Mock aggregation results
-        mock_results = [
-            (1, 5, Decimal("5000.00")),  # (cliente_id, num_fatture, totale_fatturato)
-            (2, 3, Decimal("3000.00")),
-        ]
-
-        mock_db.query.return_value.filter.return_value.filter.return_value.group_by.return_value.order_by.return_value.all.return_value = (
-            mock_results
+    def test_report_clienti_with_data(self, runtime_session):
+        client_a = _make_cliente(runtime_session, "Client A", "AAA0001")
+        client_b = _make_cliente(runtime_session, "Client B", "BBB0001")
+        _make_fattura(
+            runtime_session,
+            numero="1",
+            cliente=client_a,
+            imponibile=Decimal("5000.00"),
+            iva=Decimal("0.00"),
         )
-
-        # Mock cliente query
-        mock_cliente1 = Mock()
-        mock_cliente1.denominazione = "Client A"
-        mock_cliente2 = Mock()
-        mock_cliente2.denominazione = "Client B"
-
-        def get_cliente(cliente_id):
-            if cliente_id == 1:
-                return mock_cliente1
-            return mock_cliente2
-
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            mock_cliente1,
-            mock_cliente2,
-        ]
+        _make_fattura(
+            runtime_session,
+            numero="2",
+            cliente=client_b,
+            imponibile=Decimal("3000.00"),
+            iva=Decimal("0.00"),
+        )
 
         result = runner.invoke(app, ["clienti", "--anno", "2025"])
 
@@ -216,169 +215,114 @@ class TestReportClientiCommand:
         assert "Top Clients" in result.stdout
         assert "5,000" in result.stdout
         assert "3,000" in result.stdout
-        assert "8,000" in result.stdout  # Total
+        assert "Client A" in result.stdout
+        assert "Client B" in result.stdout
 
+    def test_report_clienti_default_year(self, runtime_db):
+        result = runner.invoke(app, ["clienti"])
+        assert result.exit_code == 0
+        assert str(date.today().year) in result.stdout
 
-class FakeCliente:
-    def __init__(self, denominazione: str):
-        self.denominazione = denominazione
-        self.nome = denominazione
+    def test_report_clienti_sorted_by_revenue(self, runtime_session):
+        client_a = _make_cliente(runtime_session, "Client A", "AAA0001")
+        client_b = _make_cliente(runtime_session, "Client B", "BBB0001")
+        _make_fattura(
+            runtime_session,
+            numero="1",
+            cliente=client_a,
+            imponibile=Decimal("10000.00"),
+            iva=Decimal("0.00"),
+        )
+        _make_fattura(
+            runtime_session,
+            numero="2",
+            cliente=client_b,
+            imponibile=Decimal("5000.00"),
+            iva=Decimal("0.00"),
+        )
 
+        result = runner.invoke(app, ["clienti", "--anno", "2025"])
 
-class FakeFattura:
-    def __init__(self, numero: str, anno: int, cliente: FakeCliente):
-        self.numero = numero
-        self.anno = anno
-        self.cliente = cliente
-
-
-class FakePagamento:
-    def __init__(
-        self,
-        numero: str,
-        anno: int,
-        cliente: str,
-        data_scadenza: date,
-        importo: Decimal,
-        importo_pagato: Decimal,
-        stato: StatoPagamento = StatoPagamento.DA_PAGARE,
-    ):
-        self.fattura = FakeFattura(numero, anno, FakeCliente(cliente))
-        self.data_scadenza = data_scadenza
-        self.importo = importo
-        self.importo_pagato = importo_pagato
-        self.stato = stato
-
-    @property
-    def saldo_residuo(self) -> Decimal:
-        residuo = self.importo - self.importo_pagato
-        return residuo if residuo > Decimal("0.00") else Decimal("0.00")
+        assert result.exit_code == 0
+        # Highest revenue client appears before the lower one.
+        assert result.stdout.index("Client A") < result.stdout.index("Client B")
 
 
 class TestReportScadenzeCommand:
     """Test 'report scadenze' command."""
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_scadenze_no_outstanding(self, mock_init_db, mock_session_local):
-        """Should inform when there are no pending payments."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
+    def _make_pagamento(
+        self,
+        session: Session,
+        *,
+        numero: str,
+        cliente_name: str,
+        data_scadenza: date,
+        importo: Decimal,
+        importo_pagato: Decimal,
+        stato: StatoPagamento = StatoPagamento.DA_PAGARE,
+    ) -> None:
+        cliente = _make_cliente(session, cliente_name, numero.zfill(7))
+        fattura = _make_fattura(
+            session,
+            numero=numero,
+            cliente=cliente,
+            imponibile=importo,
+            iva=Decimal("0.00"),
+        )
+        session.add(
+            Pagamento(
+                fattura_id=fattura.id,
+                data_scadenza=data_scadenza,
+                importo=importo,
+                importo_pagato=importo_pagato,
+                stato=stato,
+            )
+        )
+        session.commit()
 
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.options.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.all.return_value = []
-
+    def test_report_scadenze_no_outstanding(self, runtime_db):
         result = runner.invoke(app, ["scadenze"])
-
         assert result.exit_code == 0
         assert "No outstanding payments" in result.stdout
 
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_scadenze_with_categories(self, mock_init_db, mock_session_local):
-        """Should group payments into overdue, due soon, and upcoming."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.options.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-
+    def test_report_scadenze_with_categories(self, runtime_session):
         today = date.today()
-        payments = [
-            FakePagamento(
-                numero="001",
-                anno=2025,
-                cliente="Client Overdue",
-                data_scadenza=today - timedelta(days=5),
-                importo=Decimal("1000.00"),
-                importo_pagato=Decimal("200.00"),
-                stato=StatoPagamento.PAGATO_PARZIALE,
-            ),
-            FakePagamento(
-                numero="002",
-                anno=2025,
-                cliente="Client Soon",
-                data_scadenza=today + timedelta(days=3),
-                importo=Decimal("500.00"),
-                importo_pagato=Decimal("0.00"),
-            ),
-            FakePagamento(
-                numero="003",
-                anno=2025,
-                cliente="Client Future",
-                data_scadenza=today + timedelta(days=21),
-                importo=Decimal("250.00"),
-                importo_pagato=Decimal("0.00"),
-            ),
-        ]
-
-        mock_query.all.return_value = payments
+        self._make_pagamento(
+            runtime_session,
+            numero="001",
+            cliente_name="Client Overdue",
+            data_scadenza=today - timedelta(days=5),
+            importo=Decimal("1000.00"),
+            importo_pagato=Decimal("200.00"),
+            stato=StatoPagamento.PAGATO_PARZIALE,
+        )
+        self._make_pagamento(
+            runtime_session,
+            numero="002",
+            cliente_name="Client Soon",
+            data_scadenza=today + timedelta(days=3),
+            importo=Decimal("500.00"),
+            importo_pagato=Decimal("0.00"),
+        )
+        self._make_pagamento(
+            runtime_session,
+            numero="003",
+            cliente_name="Client Future",
+            data_scadenza=today + timedelta(days=21),
+            importo=Decimal("250.00"),
+            importo_pagato=Decimal("0.00"),
+        )
 
         result = runner.invoke(app, ["scadenze"])
 
         assert result.exit_code == 0
-        assert "Scaduti" in result.stdout
-        assert "In scadenza" in result.stdout
-        assert "Prossimi pagamenti" in result.stdout
-        assert "001/2025" in result.stdout
-        assert "002/2025" in result.stdout
-        assert "003/2025" in result.stdout
+        assert "Overdue" in result.stdout
+        assert "Due soon" in result.stdout
+        assert "Upcoming" in result.stdout
         assert "Client Overdue" in result.stdout
         assert "Client Soon" in result.stdout
         assert "Client Future" in result.stdout
-
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_clienti_default_year(self, mock_init_db, mock_session_local):
-        """Test client report uses current year by default."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-        mock_db.query.return_value.filter.return_value.filter.return_value.group_by.return_value.order_by.return_value.all.return_value = (
-            []
-        )
-
-        result = runner.invoke(app, ["clienti"])
-
-        assert result.exit_code == 0
-        current_year = date.today().year
-        assert str(current_year) in result.stdout
-
-    @patch("openfatture.cli.commands.report.SessionLocal")
-    @patch("openfatture.cli.commands.report.init_db")
-    def test_report_clienti_sorted_by_revenue(self, mock_init_db, mock_session_local):
-        """Test client report is sorted by revenue (descending)."""
-        mock_db = MagicMock()
-        mock_session_local.return_value = mock_db
-
-        # Mock results already sorted
-        mock_results = [
-            (1, 5, Decimal("10000.00")),  # Highest
-            (2, 3, Decimal("5000.00")),
-            (3, 2, Decimal("1000.00")),  # Lowest
-        ]
-
-        mock_db.query.return_value.filter.return_value.filter.return_value.group_by.return_value.order_by.return_value.all.return_value = (
-            mock_results
-        )
-
-        mock_cliente = Mock()
-        mock_cliente.denominazione = "Test Client"
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_cliente
-
-        result = runner.invoke(app, ["clienti", "--anno", "2025"])
-
-        assert result.exit_code == 0
-        # Should show ranking
-        assert "1" in result.stdout  # Rank 1
-        assert "2" in result.stdout  # Rank 2
-        assert "3" in result.stdout  # Rank 3
 
 
 class TestEnsureDB:

@@ -878,12 +878,36 @@ See `docs/CONFIGURATION.md` for complete reference.
 - **Payment tests**: `tests/payment/` - Domain, matchers, services (≥80% coverage required)
 - Use `conftest.py` fixtures for database session, sample data, mock providers
 
+**Database fixtures (testing architecture):**
+- `db_session` / `sample_*` (root `conftest.py`): an in-memory session for direct
+  ORM assertions. Does NOT wire the global session factory — use it when the test
+  itself owns the queries.
+- `runtime_db` / `runtime_session` / `seed_cliente` / `seed_fattura`: point an
+  isolated, file-backed SQLite DB at the GLOBAL session factory AND at
+  `get_settings()` (cedente/PEC/`database_url` via env). Use these whenever the
+  code under test opens its own session — CLI commands (`with db_session() as db:`
+  / `init_db(settings.database_url)`), web services (`db_session_scope`), or agents
+  — so production code and the test share one real database. Prefer seeding real
+  rows over mocking SQLAlchemy query chains. Mock only true external boundaries
+  (LLM providers, PEC/SMTP, LND/gRPC). The `tests/ai` package has an autouse
+  in-memory DB; opt a node test out of session mocking with `@pytest.mark.real_db`.
+- CLI output is i18n (default locale Italian). Tests that assert on rendered text
+  pin the locale with a module-level autouse `_english_locale` fixture and assert
+  the English strings; Rich tables truncate at 80 cols, so use a `_WideCliRunner`
+  (COLUMNS=220) when asserting wide table cells. Typer/Click route usage/argument
+  errors to `result.stderr` (streams are split), not `result.stdout`.
+
 **Test Markers:**
 ```python
 @pytest.mark.streaming     # Streaming-capable components
 @pytest.mark.e2e          # End-to-end tests requiring external services
 @pytest.mark.ollama       # Tests requiring Ollama LLM service
+@pytest.mark.performance  # Wall-clock/benchmark tests
+@pytest.mark.real_db      # Opt out of session mocking, use the real in-memory DB
 ```
+The default `pytest` gate deselects `performance`/`benchmark`/`slow`/`e2e`/`ollama`
+(see `addopts`) so it stays fast and deterministic; run those tiers explicitly,
+e.g. `uv run pytest -m performance` or `uv run pytest -m "ollama and e2e"`.
 
 ## Code Style
 

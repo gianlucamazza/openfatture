@@ -235,16 +235,24 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-ra -q --cov=openfatture --cov-report=term-missing --cov-report=html"
+# Default gate = fast, deterministic functional suite (unit + integration).
+# Heavy/non-deterministic tiers (performance/benchmark/slow wall-clock asserts,
+# e2e and external-service tests) are opt-in via their markers and run in
+# dedicated CI jobs, e.g. `pytest -m performance` or `pytest -m "ollama and e2e"`.
+# A CLI `-m` expression overrides the default below (it is appended after addopts).
+addopts = "-ra -q --cov=openfatture --cov-report=term-missing --cov-report=html -m 'not performance and not benchmark and not slow and not e2e and not ollama'"
 testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
+  "unit: fast, isolated unit tests (no external I/O)",
+  "integration: integration tests across multiple components",
   "streaming: tests that exercise streaming-capable components",
   "e2e: end-to-end tests that require external services",
   "ollama: tests that require Ollama LLM service to be running",
   "performance: performance benchmarks and load tests",
   "slow: slow tests that may take >5 seconds",
   "benchmark: pytest-benchmark tests (legacy marker)",
+  "real_db: test opts out of session mocking and uses the real in-memory database",
 ]
 
 [tool.coverage.run]

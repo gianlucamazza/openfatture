@@ -1,10 +1,13 @@
 """Streaming JSON Lines formatter."""
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.cli.formatters.base import BaseFormatter
+
+if TYPE_CHECKING:
+    from openfatture.ai.streaming.events import StreamEvent
 
 
 class StreamJSONFormatter(BaseFormatter):
@@ -84,7 +87,7 @@ class StreamJSONFormatter(BaseFormatter):
 
         return "\n".join(lines)
 
-    def format_stream_chunk(self, chunk: str) -> str:
+    def format_stream_chunk(self, chunk: "str | StreamEvent") -> str:
         """Format a streaming chunk as JSON Line.
 
         Each chunk is formatted as a separate JSON object with:
@@ -92,19 +95,57 @@ class StreamJSONFormatter(BaseFormatter):
         - content: the chunk text
         - index: sequential chunk number
 
+        Accepts either a plain string (raw text chunk) or a
+        :class:`~openfatture.ai.streaming.events.StreamEvent`, which is what
+        streaming agents such as ``ChatAgent.execute_stream()`` actually yield.
+        For a ``StreamEvent`` the textual payload is extracted (``data`` for
+        content/string events, or its JSON form for structured events) so the
+        emitted JSON line is always serializable.
+
         Args:
-            chunk: A chunk of response content
+            chunk: A chunk of response content (string or StreamEvent)
 
         Returns:
             JSONL formatted chunk with newline
         """
+        content = self._extract_chunk_content(chunk)
         chunk_obj = {
             "type": "chunk",
-            "content": chunk,
+            "content": content,
             "index": self.chunk_index,
         }
         self.chunk_index += 1
         return json.dumps(chunk_obj, ensure_ascii=self.ensure_ascii) + "\n"
+
+    @staticmethod
+    def _extract_chunk_content(chunk: "str | StreamEvent") -> str:
+        """Normalize a stream chunk into a JSON-serializable string.
+
+        Streaming agents yield ``StreamEvent`` objects rather than raw strings.
+        A ``StreamEvent`` is not JSON-serializable on its own, so extract its
+        textual payload: the ``data`` field for string payloads (content,
+        thinking, status, ...) or a compact JSON encoding for structured
+        payloads (tool events, metrics, ...).
+
+        Args:
+            chunk: A raw string chunk or a StreamEvent.
+
+        Returns:
+            A plain string suitable for embedding in the JSON line.
+        """
+        if isinstance(chunk, str):
+            return chunk
+
+        # Lazy import keeps the CLI startup free of the AI stack.
+        from openfatture.ai.streaming.events import StreamEvent
+
+        if isinstance(chunk, StreamEvent):
+            data = chunk.data
+            if isinstance(data, str):
+                return data
+            return json.dumps(data, ensure_ascii=False)
+
+        return str(chunk)
 
     def format_stream_complete(
         self,
