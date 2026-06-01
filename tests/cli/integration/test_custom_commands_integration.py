@@ -409,7 +409,7 @@ class TestCustomCommandsPerformance:
         load_time_ms = (end - start) * 1000
 
         # Should load 50 commands in < 100ms
-        assert load_time_ms < 100.0, (
-            f"Load time {load_time_ms:.2f}ms exceeds 100ms target for 50 commands"
-        )
+        assert (
+            load_time_ms < 100.0
+        ), f"Load time {load_time_ms:.2f}ms exceeds 100ms target for 50 commands"
         assert len(registry.list_commands()) == 50
