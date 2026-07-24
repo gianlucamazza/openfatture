@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 import typer
 from rich.console import Console
 
-from openfatture.cli.formatters.utils import get_format_from_context, render_response
 from openfatture.cli.lifespan import get_event_bus, run_sync_with_lifespan
 from openfatture.core.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
 from openfatture.utils.config import get_settings
@@ -55,6 +54,7 @@ async def _run_assistant(
     from openfatture.ai.agents.chat_agent import ChatAgent
     from openfatture.ai.domain.context import ChatContext
     from openfatture.ai.providers.factory import create_provider
+    from openfatture.cli.formatters.utils import get_format_from_context, render_response
 
     format_type = get_format_from_context(ctx, json_output)
     started_at = time.time()
