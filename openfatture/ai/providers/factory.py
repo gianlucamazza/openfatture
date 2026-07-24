@@ -1,5 +1,7 @@
 """Factory for creating LLM providers."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Literal
 
 import httpx
