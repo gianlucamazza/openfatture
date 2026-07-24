@@ -258,13 +258,9 @@ jobs:
       - name: Test public CLI in payment image
         run: |
           docker run --rm openfatture:payment --help
-          docker run --rm openfatture:payment payment stats --help
+          docker run --rm openfatture:payment status --help
 
-      - name: Test metrics endpoint health
+      - name: Test payment module import
         run: |
-          docker run -d --name test-container -p 8000:8000 \
-            -e PROMETHEUS_ENABLED=true openfatture:payment payment stats
-          sleep 5
-          curl -f http://localhost:8000/metrics || echo "Metrics endpoint not yet ready"
-          docker rm -f test-container || true
-        continue-on-error: true
+          docker run --rm --entrypoint python openfatture:payment \
+            -c "from openfatture.payment.domain.models import BankTransaction; print(BankTransaction.__name__)"
