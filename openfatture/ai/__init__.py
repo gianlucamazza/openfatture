@@ -1,5 +1,4 @@
-"""
-AI-powered assistance features for OpenFatture.
+"""AI-powered assistance features for OpenFatture.
 
 This package provides LLM-based agents for intelligent invoice management:
 - Invoice description generation
@@ -13,6 +12,8 @@ Architecture:
     - Agents: Specialized agents for different tasks
     - Config: Configuration management
 """
+
+from typing import Any
 
 # Core domain models
 # Configuration
@@ -32,7 +33,7 @@ from openfatture.ai.domain import (
 __version__ = "1.3.1"
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Load provider plugins only when a caller explicitly requests one."""
     if name in {
         "AnthropicProvider",

@@ -37,7 +37,7 @@ def create_provider(
     provider_type: Literal["openai", "anthropic", "ollama"] | None = None,
     settings: AISettings | None = None,
     http_client: Any = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> BaseLLMProvider:
     """
     Create an LLM provider instance.

@@ -1,7 +1,9 @@
 """LLM provider plugins, loaded on demand."""
 
+from typing import Any
 
-def __getattr__(name: str):
+
+def __getattr__(name: str) -> Any:
     if name in {"AnthropicProvider", "OllamaProvider", "OpenAIProvider"}:
         module_name = {
             "AnthropicProvider": "anthropic",
