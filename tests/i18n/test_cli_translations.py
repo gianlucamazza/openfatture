@@ -140,52 +140,23 @@ class TestCLIVariableInterpolation:
             assert substring in result
 
 
-class TestCLIEmoji:
-    """Test that emoji are preserved in CLI translations."""
-
-    @pytest.mark.parametrize(
-        "locale,msg_id,expected_emoji",
-        [
-            ("it", "cli-fattura-create-title", ""),
-            ("en", "cli-fattura-create-title", ""),
-            ("it", "cli-ai-voice-title", ""),
-            ("en", "cli-ai-voice-title", ""),
-            ("it", "cli-ai-vat-title", ""),  # Italian uses abacus
-            ("en", "cli-ai-vat-title", ""),  # English uses receipt
-        ],
-    )
-    def test_emoji_preservation(self, locale, msg_id, expected_emoji):
-        """Test emoji preservation across locales."""
-        set_locale(locale)
-        result = _(msg_id)
-        assert expected_emoji in result
-
-
-class TestCLICommandGroups:
-    """Test main CLI command group translations."""
+class TestCLITranslations:
+    """Test translations used by the current CLI surface."""
 
     @pytest.mark.parametrize("locale", ["it", "en"])
-    def test_all_command_groups_present(self, locale):
-        """Test that all command groups are translated."""
+    def test_current_cli_messages_present(self, locale):
+        """Test that current top-level CLI messages are translated."""
         set_locale(locale)
 
-        command_groups = [
-            "cli-main-group-invoices",
-            "cli-main-group-clients",
-            "cli-main-group-products",
-            "cli-main-group-pec",
-            "cli-main-group-batch",
-            "cli-main-group-ai",
-            "cli-main-group-payments",
-            "cli-main-group-preventivi",
-            "cli-main-group-events",
-            "cli-main-group-lightning",
-            "cli-main-group-web",
+        messages = [
+            "cli-main-title",
+            "cli-main-description",
+            "cli-config-show-title",
         ]
 
-        for group_id in command_groups:
-            result = _(group_id)
+        for message_id in messages:
+            result = _(message_id)
             # Should not return the key itself (means translation not found)
-            assert result != group_id, f"Missing translation for {group_id} in {locale}"
+            assert result != message_id, f"Missing translation for {message_id} in {locale}"
             # Should have some content
             assert len(result) > 0

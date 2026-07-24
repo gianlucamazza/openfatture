@@ -1,6 +1,6 @@
 # OpenFatture project status
 
-**Current version:** 1.3.0
+**Current version:** 1.3.1
 **Product posture:** CLI-first, with an interactive terminal mode for guided workflows
 **Runtime:** Python 3.12+ and `uv`
 
