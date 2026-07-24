@@ -1,19 +1,19 @@
 """Agentic assistant entry point for the public CLI."""
 
 import time
+from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
 
-from openfatture.ai.agents.chat_agent import ChatAgent
-from openfatture.ai.domain.context import ChatContext
-from openfatture.ai.domain.message import ConversationHistory, Message, Role
-from openfatture.ai.providers.factory import create_provider
 from openfatture.cli.formatters.utils import get_format_from_context, render_response
 from openfatture.cli.lifespan import get_event_bus, run_sync_with_lifespan
 from openfatture.core.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
 from openfatture.utils.config import get_settings
 from openfatture.utils.logging import get_logger
+
+if TYPE_CHECKING:
+    from openfatture.ai.domain.message import ConversationHistory
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
@@ -21,6 +21,8 @@ logger = get_logger(__name__)
 
 
 def _history(items: list[dict[str, str]]) -> ConversationHistory:
+    from openfatture.ai.domain.message import ConversationHistory, Message, Role
+
     history = ConversationHistory()
     for item in items:
         try:
@@ -50,6 +52,10 @@ async def run_assistant_session(message: str | None = None) -> None:
 async def _run_assistant(
     ctx: typer.Context | None, message: str | None, stream: bool, json_output: bool
 ) -> None:
+    from openfatture.ai.agents.chat_agent import ChatAgent
+    from openfatture.ai.domain.context import ChatContext
+    from openfatture.ai.providers.factory import create_provider
+
     format_type = get_format_from_context(ctx, json_output)
     started_at = time.time()
     event_bus = get_event_bus()
