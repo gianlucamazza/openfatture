@@ -292,9 +292,9 @@ class TestVectorStoreScalability:
         metrics.print_summary()
 
         # Target: <200MB for 1000 docs
-        assert metrics.memory_peak_mb < 200.0, (
-            f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 200MB target"
-        )
+        assert (
+            metrics.memory_peak_mb < 200.0
+        ), f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 200MB target"
 
         print(f"\nMemory per document: {metrics.memory_peak_mb / 1000:.3f} MB/doc")
 

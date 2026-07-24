@@ -55,16 +55,12 @@ def hook_bridge(event_bus, registry, executor):
 def invoice_create_hook(temp_hooks_dir):
     """Create a hook for invoice creation."""
     script_path = temp_hooks_dir / "post-invoice-create.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             # DESCRIPTION: Invoice creation hook
             echo "Invoice ${OPENFATTURE_INVOICE_NUMBER} created"
             echo "Total: ${OPENFATTURE_TOTAL_AMOUNT} ${OPENFATTURE_CURRENCY}"
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
 
@@ -72,15 +68,11 @@ def invoice_create_hook(temp_hooks_dir):
 def invoice_send_hook(temp_hooks_dir):
     """Create a hook for invoice sending."""
     script_path = temp_hooks_dir / "post-invoice-send.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             # DESCRIPTION: Invoice send hook
             echo "Invoice sent to ${OPENFATTURE_RECIPIENT}"
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
 
@@ -88,9 +80,7 @@ def invoice_send_hook(temp_hooks_dir):
 def env_check_hook(temp_hooks_dir):
     """Create a hook that outputs all event data as JSON."""
     script_path = temp_hooks_dir / "on-invoice-create.py"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/usr/bin/env python3
             import os
             import json
@@ -98,9 +88,7 @@ def env_check_hook(temp_hooks_dir):
             # Output all OPENFATTURE_* env vars to validate injection
             env_vars = {k: v for k, v in os.environ.items() if k.startswith('OPENFATTURE_')}
             print(json.dumps(env_vars, indent=2))
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
 
@@ -109,16 +97,12 @@ def failing_hook(temp_hooks_dir):
     """Create a hook that always fails."""
     # Use "on-invoice-send" to match InvoiceSentEvent pattern
     script_path = temp_hooks_dir / "on-invoice-send.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             # DESCRIPTION: Failing hook for error isolation test
             echo "This hook will fail" >&2
             exit 1
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
 

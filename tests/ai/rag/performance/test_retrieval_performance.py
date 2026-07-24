@@ -71,15 +71,15 @@ class TestRetrievalQualityPerformance:
             assert len(results) > 0, f"No results for query: {query}"
 
             # Results should have similarity scores
-            assert all(r.similarity > 0.0 for r in results), (
-                "All results should have similarity scores"
-            )
+            assert all(
+                r.similarity > 0.0 for r in results
+            ), "All results should have similarity scores"
 
             # Results should be sorted by similarity
             similarities = [r.similarity for r in results]
-            assert similarities == sorted(similarities, reverse=True), (
-                "Results should be sorted by similarity"
-            )
+            assert similarities == sorted(
+                similarities, reverse=True
+            ), "Results should be sorted by similarity"
 
             print(f"\nQuery: {query}")
             print(f"  Results: {len(results)}")

@@ -168,8 +168,7 @@ class TestOFXImporter:
         """Test duplicate transactions are prevented by FITID."""
         # Create OFX file with duplicate FITID
         duplicate_ofx = tmp_path / "duplicate.ofx"
-        duplicate_ofx.write_text(
-            """<?xml version="1.0" encoding="UTF-8"?>
+        duplicate_ofx.write_text("""<?xml version="1.0" encoding="UTF-8"?>
 <OFX>
   <SIGNONMSGSRSV1>
     <SONRS>
@@ -217,8 +216,7 @@ class TestOFXImporter:
     </STMTTRNRS>
   </BANKMSGSRSV1>
 </OFX>
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(duplicate_ofx)

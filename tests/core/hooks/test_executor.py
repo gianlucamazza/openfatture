@@ -45,15 +45,11 @@ def test_event():
 def success_bash_hook(temp_hooks_dir):
     """Create a simple bash hook that succeeds (exit 0)."""
     script_path = temp_hooks_dir / "success.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             echo "Hook executed successfully"
             exit 0
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
     return HookConfig(
@@ -68,16 +64,12 @@ def success_bash_hook(temp_hooks_dir):
 def success_python_hook(temp_hooks_dir):
     """Create a simple Python hook that succeeds."""
     script_path = temp_hooks_dir / "success.py"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/usr/bin/env python3
             import sys
             print("Python hook executed successfully")
             sys.exit(0)
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
     return HookConfig(
@@ -92,16 +84,12 @@ def success_python_hook(temp_hooks_dir):
 def timeout_hook(temp_hooks_dir):
     """Create a hook that times out (sleeps forever)."""
     script_path = temp_hooks_dir / "timeout.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             echo "Starting long task"
             sleep 100
             echo "This should never be reached"
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
     return HookConfig(
@@ -116,15 +104,11 @@ def timeout_hook(temp_hooks_dir):
 def env_check_hook(temp_hooks_dir):
     """Create a hook that prints all OPENFATTURE_* env vars."""
     script_path = temp_hooks_dir / "env_check.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             # Print all OPENFATTURE_ environment variables
             env | grep "^OPENFATTURE_" | sort
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
     return HookConfig(
@@ -139,15 +123,11 @@ def env_check_hook(temp_hooks_dir):
 def failure_hook(temp_hooks_dir):
     """Create a hook that fails (exit 1)."""
     script_path = temp_hooks_dir / "failure.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             echo "Hook failed" >&2
             exit 1
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
     return HookConfig(
@@ -162,16 +142,12 @@ def failure_hook(temp_hooks_dir):
 def output_hook(temp_hooks_dir):
     """Create a hook that outputs to both stdout and stderr."""
     script_path = temp_hooks_dir / "output.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             echo "This goes to stdout"
             echo "This goes to stderr" >&2
             exit 0
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
     return HookConfig(
@@ -316,15 +292,11 @@ def test_extra_env_vars(executor, env_check_hook, test_event):
 def test_config_env_vars(temp_hooks_dir, executor, test_event):
     """Test that config.env_vars are passed to hook."""
     script_path = temp_hooks_dir / "config_env.sh"
-    script_path.write_text(
-        dedent(
-            """\
+    script_path.write_text(dedent("""\
             #!/bin/bash
             echo "CONFIG_VAR=$CONFIG_VAR"
             echo "ANOTHER_VAR=$ANOTHER_VAR"
-            """
-        )
-    )
+            """))
     script_path.chmod(0o755)
 
     config = HookConfig(

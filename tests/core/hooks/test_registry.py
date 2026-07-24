@@ -25,49 +25,33 @@ def registry(temp_hooks_dir):
 def sample_hooks(temp_hooks_dir):
     """Create sample hook scripts for testing."""
     # Create post-invoice-create.sh
-    (temp_hooks_dir / "post-invoice-create.sh").write_text(
-        dedent(
-            """\
+    (temp_hooks_dir / "post-invoice-create.sh").write_text(dedent("""\
             #!/bin/bash
             # DESCRIPTION: Invoice creation hook
             # TIMEOUT: 15
             echo "Invoice created"
-            """
-        )
-    )
+            """))
 
     # Create post-invoice-send.py
-    (temp_hooks_dir / "post-invoice-send.py").write_text(
-        dedent(
-            """\
+    (temp_hooks_dir / "post-invoice-send.py").write_text(dedent("""\
             #!/usr/bin/env python3
             # DESCRIPTION: Invoice send hook
             # TIMEOUT: 30
             print("Invoice sent")
-            """
-        )
-    )
+            """))
 
     # Create pre-ai-command.sh
-    (temp_hooks_dir / "pre-ai-command.sh").write_text(
-        dedent(
-            """\
+    (temp_hooks_dir / "pre-ai-command.sh").write_text(dedent("""\
             #!/bin/bash
             # DESCRIPTION: Pre AI command hook
             echo "AI command starting"
-            """
-        )
-    )
+            """))
 
     # Create on-sdi-notification.sh
-    (temp_hooks_dir / "on-sdi-notification.sh").write_text(
-        dedent(
-            """\
+    (temp_hooks_dir / "on-sdi-notification.sh").write_text(dedent("""\
             #!/bin/bash
             echo "SDI notification received"
-            """
-        )
-    )
+            """))
 
     # Create non-hook file (should be ignored)
     (temp_hooks_dir / "README.md").write_text("This is a README")
@@ -263,14 +247,10 @@ def test_reload_hooks(temp_hooks_dir, sample_hooks):
     assert len(registry.list_hooks()) == 4
 
     # Add a new hook file
-    (temp_hooks_dir / "on-payment-matched.sh").write_text(
-        dedent(
-            """\
+    (temp_hooks_dir / "on-payment-matched.sh").write_text(dedent("""\
             #!/bin/bash
             echo "Payment matched"
-            """
-        )
-    )
+            """))
 
     # Before reload, still 4 hooks
     assert len(registry.list_hooks()) == 4

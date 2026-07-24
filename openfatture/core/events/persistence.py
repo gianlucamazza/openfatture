@@ -156,9 +156,7 @@ class EventPersistenceListener:
                         else (
                             item.isoformat()
                             if isinstance(item, datetime)
-                            else float(item)
-                            if isinstance(item, Decimal)
-                            else item
+                            else float(item) if isinstance(item, Decimal) else item
                         )
                     )
                     for item in value

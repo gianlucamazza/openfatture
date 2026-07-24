@@ -109,8 +109,7 @@ class TestQIFImporter:
     def test_qif_transaction_end_marker(self, db_session, bank_account, tmp_path):
         """Test QIF transactions are properly delimited by ^ marker."""
         qif_file = tmp_path / "test_markers.qif"
-        qif_file.write_text(
-            """!Type:Bank
+        qif_file.write_text("""!Type:Bank
 D01/15/2025
 T100.00
 PTest Payee 1
@@ -119,8 +118,7 @@ D01/16/2025
 T200.00
 PTest Payee 2
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)
@@ -166,8 +164,7 @@ PTest Payee 2
     def test_qif_date_format_variations(self, db_session, bank_account, tmp_path):
         """Test various QIF date format parsing."""
         qif_file = tmp_path / "date_formats.qif"
-        qif_file.write_text(
-            """!Type:Bank
+        qif_file.write_text("""!Type:Bank
 D01/15/2025
 T100.00
 PSlash separator
@@ -180,8 +177,7 @@ D2025-01-17
 T300.00
 PISO format
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)
@@ -201,8 +197,7 @@ PISO format
     def test_qif_amount_with_thousand_separator(self, db_session, bank_account, tmp_path):
         """Test QIF amount parsing with thousand separators."""
         qif_file = tmp_path / "thousand_sep.qif"
-        qif_file.write_text(
-            """!Type:Bank
+        qif_file.write_text("""!Type:Bank
 D01/15/2025
 T1,234.56
 PThousand separator
@@ -211,8 +206,7 @@ D01/16/2025
 T10,000.00
 PLarge amount
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)
@@ -230,8 +224,7 @@ PLarge amount
     def test_qif_negative_amount_parentheses(self, db_session, bank_account, tmp_path):
         """Test QIF negative amounts in parentheses format: (150.00)."""
         qif_file = tmp_path / "parentheses.qif"
-        qif_file.write_text(
-            """!Type:Bank
+        qif_file.write_text("""!Type:Bank
 D01/15/2025
 T(150.00)
 PParentheses negative
@@ -240,8 +233,7 @@ D01/16/2025
 T-200.00
 PMinus sign negative
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)
@@ -259,8 +251,7 @@ PMinus sign negative
     def test_qif_split_transaction_handling(self, db_session, bank_account, tmp_path):
         """Test QIF split transactions are combined correctly."""
         qif_file = tmp_path / "split.qif"
-        qif_file.write_text(
-            """!Type:Bank
+        qif_file.write_text("""!Type:Bank
 D01/15/2025
 T300.00
 PSplit Transaction
@@ -269,8 +260,7 @@ $100.00
 SCategory 2
 $200.00
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)
@@ -288,8 +278,7 @@ $200.00
     def test_qif_missing_required_fields_skipped(self, db_session, bank_account, tmp_path):
         """Test QIF transactions missing required fields are skipped."""
         qif_file = tmp_path / "missing_fields.qif"
-        qif_file.write_text(
-            """!Type:Bank
+        qif_file.write_text("""!Type:Bank
 D01/15/2025
 T100.00
 PValid transaction
@@ -300,8 +289,7 @@ PMissing amount field
 T200.00
 PMissing date field
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)
@@ -318,13 +306,11 @@ PMissing date field
     def test_qif_type_bank_header_required(self, db_session, bank_account, tmp_path):
         """Test QIF requires !Type:Bank header."""
         qif_file = tmp_path / "no_header.qif"
-        qif_file.write_text(
-            """D01/15/2025
+        qif_file.write_text("""D01/15/2025
 T100.00
 PNo header
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)
@@ -355,14 +341,12 @@ PNo header
     def test_qif_description_memo_only(self, db_session, bank_account, tmp_path):
         """Test QIF transaction with Memo but no Payee."""
         qif_file = tmp_path / "memo_only.qif"
-        qif_file.write_text(
-            """!Type:Bank
+        qif_file.write_text("""!Type:Bank
 D01/15/2025
 T100.00
 MOnly memo field, no payee
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)
@@ -380,15 +364,13 @@ MOnly memo field, no payee
     def test_qif_reference_field_check_number(self, db_session, bank_account, tmp_path):
         """Test QIF reference field (N) for check numbers."""
         qif_file = tmp_path / "check_number.qif"
-        qif_file.write_text(
-            """!Type:Bank
+        qif_file.write_text("""!Type:Bank
 D01/15/2025
 T-150.00
 PCheck Payment
 N1234
 ^
-"""
-        )
+""")
 
         factory = ImporterFactory()
         importer = factory.create_from_file(qif_file)

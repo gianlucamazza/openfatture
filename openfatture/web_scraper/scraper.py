@@ -136,8 +136,7 @@ class RegulatoryWebScraper:
             return
 
         # Add scripts to make browser behavior more human-like
-        await self.context.add_init_script(
-            """
+        await self.context.add_init_script("""
             // Override navigator properties
             Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
 
@@ -154,8 +153,7 @@ class RegulatoryWebScraper:
             Object.defineProperty(navigator, 'languages', {
                 get: () => ['it-IT', 'it', 'en-US', 'en']
             });
-        """
-        )
+        """)
 
     async def scrape_source(self, source: RegulatorySource) -> list[RegulatoryDocument]:
         """Scrape a regulatory source and return documents.

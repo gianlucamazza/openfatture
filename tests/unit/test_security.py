@@ -281,14 +281,12 @@ class TestCheckSecretsInCode:
     def test_check_secrets_in_code_multiple_patterns(self, tmp_path):
         """Test detection of multiple secret patterns."""
         bad_file = tmp_path / "multiple.py"
-        bad_file.write_text(
-            """
+        bad_file.write_text("""
 password = "secret1"
 api_key = "key123"
 secret = "mysecret"
 token = "bearer_token"
-"""
-        )
+""")
 
         issues = check_secrets_in_code(tmp_path)
 

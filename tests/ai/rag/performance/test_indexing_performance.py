@@ -185,9 +185,9 @@ class TestIndexingScalability:
             print(f"  Throughput: {metrics.throughput:.2f} invoices/sec")
 
         # Verify larger batches are more efficient
-        assert results[100]["throughput"] > results[10]["throughput"], (
-            "Larger batches should be more efficient"
-        )
+        assert (
+            results[100]["throughput"] > results[10]["throughput"]
+        ), "Larger batches should be more efficient"
 
     async def test_memory_usage_large_batch(self, perf_vector_store):
         """Test memory usage for large batch indexing (1000 invoices, target: <300MB)."""
@@ -226,9 +226,9 @@ class TestIndexingScalability:
         metrics.print_summary()
 
         # Target: <300MB for 1000 invoices
-        assert metrics.memory_peak_mb < 300.0, (
-            f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 300MB target"
-        )
+        assert (
+            metrics.memory_peak_mb < 300.0
+        ), f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 300MB target"
 
         print(f"\nMemory per invoice: {metrics.memory_peak_mb / 1000:.3f} MB")
 

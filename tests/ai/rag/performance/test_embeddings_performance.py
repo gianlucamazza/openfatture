@@ -159,9 +159,9 @@ class TestEmbeddingScalability:
 
         print(f"\nBatching efficiency: {per_doc_100 / per_doc_1:.2%} of single-doc latency")
 
-        assert per_doc_100 < per_doc_1, (
-            f"Batching should reduce per-doc latency: {per_doc_100:.2f} >= {per_doc_1:.2f}"
-        )
+        assert (
+            per_doc_100 < per_doc_1
+        ), f"Batching should reduce per-doc latency: {per_doc_100:.2f} >= {per_doc_1:.2f}"
 
     async def test_memory_usage_batch(self, real_local_embeddings, rag_test_documents_medium):
         """Test memory usage for batch operations (target: <100MB for 100 docs)."""
@@ -177,9 +177,9 @@ class TestEmbeddingScalability:
         metrics.print_summary()
 
         # Target: <100MB peak memory
-        assert metrics.memory_peak_mb < 100.0, (
-            f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 100MB target"
-        )
+        assert (
+            metrics.memory_peak_mb < 100.0
+        ), f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 100MB target"
 
         print(f"\nMemory efficiency: {metrics.memory_peak_mb / len(documents):.3f} MB/doc")
 

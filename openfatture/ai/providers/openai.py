@@ -646,9 +646,9 @@ class OpenAIProvider(BaseLLMProvider):
                             if tool_call_delta.function.name:
                                 tool_call["function"]["name"] += tool_call_delta.function.name
                             if tool_call_delta.function.arguments:
-                                tool_call["function"]["arguments"] += (
-                                    tool_call_delta.function.arguments
-                                )
+                                tool_call["function"][
+                                    "arguments"
+                                ] += tool_call_delta.function.arguments
 
                 # Check for finish reason
                 if choice.finish_reason:

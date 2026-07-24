@@ -685,13 +685,11 @@ def get_preventivo_tools() -> list[Tool]:
             ],
             func=create_preventivo,
             requires_confirmation=True,
-            examples=[
-                """create_preventivo(
+            examples=["""create_preventivo(
                 cliente_id=5,
                 righe=[{"descrizione": "Web consulting", "quantita": 8, "prezzo_unitario": 80, "aliquota_iva": 22}],
                 validita_giorni=30
-            )"""
-            ],
+            )"""],
             tags=["create", "preventivo", "quote", "write"],
         ),
         Tool(
