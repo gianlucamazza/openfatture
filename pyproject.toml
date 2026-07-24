@@ -51,6 +51,7 @@ dependencies = [
   "pyasn1-modules>=0.3.0",
   # HTTP & Email (for PEC)
   "requests>=2.31.0",
+  "urllib3>=2.7.0",
   "httpx>=0.26.0",
   # Email Templates
   "jinja2>=3.1.0",
@@ -66,6 +67,7 @@ dependencies = [
   # Vector Store & Embeddings
   "chromadb>=0.4.22",
   "sentence-transformers>=2.6.0",
+  "transformers>=5.5.0",
   "prophet>=1.1.5",
   "xgboost>=2.1.0",
   # Date & Time

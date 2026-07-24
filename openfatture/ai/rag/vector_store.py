@@ -64,7 +64,8 @@ class VectorStore:
         self.config = config
         self.embedding_strategy = embedding_strategy
 
-        # Initialize ChromaDB client
+        # Keep RAG local-only: the application never starts or connects to a
+        # ChromaDB server and does not enable remote model-code execution.
         self.client = chromadb.PersistentClient(
             path=str(config.persist_directory),
             settings=Settings(
