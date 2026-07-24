@@ -10,6 +10,9 @@ on:
     - cron: '0 2 * * 1'
   workflow_dispatch: # Allow manual triggering
 
+permissions:
+  contents: write
+
 jobs:
   performance-tests:
     name: Run Performance Benchmarks
