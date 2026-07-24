@@ -123,7 +123,7 @@ async def main() -> None:
     print("VECTOR STORE INIZIALIZZATO CON SUCCESSO!")
     print("=" * 80)
     print("\nOra puoi testare il RAG con:")
-    print("   uv run openfatture ai chat")
+    print("   uv run openfatture assistant")
     print("   > dimmi le ultime fatture emesse\n")
 
 

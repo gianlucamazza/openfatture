@@ -253,8 +253,8 @@ def init(
     panel = Panel(
         "[bold green]OpenFatture is ready to use![/bold green]\n\n"
         "Next steps:\n"
-        "  • Add a client: [cyan]openfatture cliente add[/cyan]\n"
-        "  • Create an invoice: [cyan]openfatture fattura crea[/cyan]\n"
+        "  • Check readiness: [cyan]openfatture status[/cyan]\n"
+        "  • Ask the assistant: [cyan]openfatture assistant[/cyan]\n"
         "  • View help: [cyan]openfatture --help[/cyan]",
         title="Setup Complete",
         border_style="green",

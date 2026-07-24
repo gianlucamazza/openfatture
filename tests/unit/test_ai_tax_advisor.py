@@ -141,7 +141,9 @@ class TestTaxAdvisorAgent:
     async def test_validation_unrealistic_amount(self, tax_advisor):
         """Test validation flags unrealistic amounts."""
         context = TaxContext(
-            user_input="test", tipo_servizio="consulenza", importo=2_000_000.0  # Over 1M
+            user_input="test",
+            tipo_servizio="consulenza",
+            importo=2_000_000.0,  # Over 1M
         )
 
         is_valid, error = await tax_advisor.validate_input(context)
@@ -351,12 +353,16 @@ class TestTaxSuggestionOutput:
         """Test VAT rate must be in valid range."""
         with pytest.raises(ValueError):
             TaxSuggestionOutput(
-                aliquota_iva=150.0, spiegazione="Test", riferimento_normativo="Test"  # Over 100
+                aliquota_iva=150.0,
+                spiegazione="Test",
+                riferimento_normativo="Test",  # Over 100
             )
 
         with pytest.raises(ValueError):
             TaxSuggestionOutput(
-                aliquota_iva=-5.0, spiegazione="Test", riferimento_normativo="Test"  # Negative
+                aliquota_iva=-5.0,
+                spiegazione="Test",
+                riferimento_normativo="Test",  # Negative
             )
 
     def test_codice_natura_pattern_validation(self):

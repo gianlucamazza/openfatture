@@ -7,8 +7,6 @@ in the user's data directory (~/.openfatture/sessions/).
 Design Rationale (2025 Best Practices):
 - Adapter pattern wraps existing SessionManager
 - Delegation to proven implementation
-- Maintains backward compatibility
-- Zero breaking changes to existing code
 - Type-safe with explicit return types
 
 Example:

@@ -39,9 +39,9 @@ class TestAnthropicInvoiceAssistant:
         # Check for Italian business terms
         full_text = response.content.lower()
         business_terms = ["consulenza", "web", "sviluppo", "servizio"]
-        assert any(
-            term in full_text for term in business_terms
-        ), f"No business terms found in: {response.content}"
+        assert any(term in full_text for term in business_terms), (
+            f"No business terms found in: {response.content}"
+        )
 
     async def test_complex_invoice_with_client(self, anthropic_provider):
         """Test invoice description with client context."""

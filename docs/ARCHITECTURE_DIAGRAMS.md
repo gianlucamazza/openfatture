@@ -435,7 +435,6 @@ Lightning Network payment processing architecture:
 graph TB
     subgraph "OpenFatture Application"
         CLI[CLI Commands<br/>lightning invoice create<br/>lightning status]
-        WebUI[Web UI<br/>Lightning Dashboard<br/>Invoice Generator]
         API[REST API<br/>Future: Invoice API]
     end
 
@@ -460,7 +459,6 @@ graph TB
     end
 
     CLI --> InvSvc
-    WebUI --> InvSvc
     API --> InvSvc
 
     InvSvc --> LND
@@ -488,7 +486,7 @@ graph TB
 
 **Key Components:**
 
-- **Application Layer:** CLI, Web UI, and future API interfaces
+- **Application Layer:** CLI and future API interfaces
 - **Service Layer:** Business logic for invoices, payments, liquidity, webhooks
 - **Infrastructure:** LND client, database, rate providers, event system
 - **External:** Lightning Network, customer wallets, webhook endpoints

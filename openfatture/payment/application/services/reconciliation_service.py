@@ -586,4 +586,4 @@ class ReconciliationService:
 
     def __repr__(self) -> str:
         """Human-readable string representation."""
-        return f"<ReconciliationService(" f"matching_service={self.matching_service})>"
+        return f"<ReconciliationService(matching_service={self.matching_service})>"

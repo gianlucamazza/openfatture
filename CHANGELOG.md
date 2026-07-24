@@ -5,7 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] - 2026-07-24
+
+### Removed
+
+- Removed the retired frontend application, its dependencies, tests, locale bundles, configuration, and documentation.
+- Removed the in-memory web session backend; AI sessions now use the file-backed CLI store.
+
+### Changed
+
+- OpenFatture is now explicitly CLI-first, with interactive terminal mode as its guided user experience.
+- Reduced the public CLI to setup, configuration, status, and the agentic assistant; domain and plugin modules remain internal extension boundaries.
+- Updated current documentation, version references, and project status to match the `1.3.0` codebase.
+
+### Tooling
+
+- Added deterministic CLI demo validation and modernized GitHub Actions workflows.
+- Added pre-commit checks for Python, TOML, YAML, Ruff, Black, and GitHub Actions.
+- Consolidated MyPy configuration in `pyproject.toml` and made type checking blocking in CI.
+- Updated Make and Docker Compose targets for the current CLI and Alembic workflow.
+
+### Removed
+
+- Removed obsolete media automation workflows, generated scenario videos, and provider-dependent demo scripts.
+- Removed obsolete command adapters while retaining core payment, Lightning, SDI, AI, and plugin modules.
 
 ## [1.2.0] - 2025-12-02
 
@@ -75,28 +98,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Event analytics: 15% (new module, will increase with usage)
 - **Total Project Tests**: ~170 (increased from 117)
 - **Architecture**: Observer pattern for event bus, Repository pattern for data access, error isolation for reliability
-
-- **Web UI Module** - Modern Streamlit-based interface following 2025 Best Practices:
-  - **Dashboard**: Real-time KPI with interactive Plotly charts, business metrics, and payment status
-  - **AI Assistant**: Chat interface with streaming, invoice description generation, VAT suggestions
-  - **Invoice Management**: List with filtering, XML generation, SDI integration preview
-  - **Lightning Payments**: Invoice creation, QR code generation, payment monitoring
-  - **Security**: File upload validation, input sanitization, rate limiting, CSRF protection
-  - **Health Monitoring**: Component status checks, usage metrics, structured logging
-  - **Navigation**: Modern st.Page + st.navigation with conditional feature flags
-  - **Components**: Reusable React-style library (cards, tables, alerts) reducing duplication by 50%
-  - **Caching**: TTL-based intelligent caching with category invalidation
-  - **Testing**: 77% coverage with 17 tests, mock-based isolation from Streamlit dependencies
-
-### Technical (Web UI)
-
-- **Architecture**: Service layer pattern with async/sync bridging, component reusability
-- **Security**: OWASP-compliant validation, XSS prevention, path traversal protection
-- **Performance**: Selective cache invalidation, lazy loading, pagination
-- **Configuration**: Production-ready .streamlit/config.toml with security hardening
-- **Testing**: Comprehensive test suite with 17 passing tests (100% pass rate)
-- **Dependencies**: Streamlit ecosystem (streamlit-aggrid, streamlit-extras, plotly)
-- **Best Practices**: Explicit resource cleanup, async standardization, production config
 
 ## [1.1.0] - 2025-10-12
 
@@ -281,7 +282,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Encrypted digital signature handling
 - Input validation for all user data
 
-[Unreleased]: https://github.com/gianlucamazza/openfatture/compare/v1.2.0...HEAD
+[1.3.0]: https://github.com/gianlucamazza/openfatture/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/gianlucamazza/openfatture/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/gianlucamazza/openfatture/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/gianlucamazza/openfatture/compare/v0.1.0...v1.0.0

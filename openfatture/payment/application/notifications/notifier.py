@@ -241,9 +241,9 @@ Payment Reminder
 
 {status}
 
-Invoice: {invoice.numero if invoice else 'N/A'}
+Invoice: {invoice.numero if invoice else "N/A"}
 Amount: €{payment.importo_da_pagare if payment else 0}
-Due date: {payment.data_scadenza.strftime('%d/%m/%Y') if payment else 'N/A'}
+Due date: {payment.data_scadenza.strftime("%d/%m/%Y") if payment else "N/A"}
 
 Kind regards,
 {company_name}
@@ -315,16 +315,16 @@ class ConsoleNotifier(INotifier):
         payment = reminder.payment
         invoice = payment.fattura if hasattr(payment, "fattura") else None
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"[REMINDER] Payment #{reminder.payment_id}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         if invoice:
             print(f"Invoice: {invoice.numero}")
         print(f"Amount: €{payment.importo_da_pagare if payment else 0}")
         print(f"Due Date: {payment.data_scadenza.strftime('%d/%m/%Y') if payment else 'N/A'}")
         print(f"Days to Due: {reminder.days_before_due}")
         print(f"Strategy: {reminder.strategy.value if reminder.strategy else 'N/A'}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         return True
 

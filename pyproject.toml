@@ -133,18 +133,6 @@ dev = [
   "pandas-stubs>=2.0.0",
 ]
 
-web = [
-  # Web UI Framework
-  "streamlit>=1.30.0",
-
-  # Enhanced UI Components
-  "streamlit-aggrid>=0.3.4", # Advanced tables with filtering/sorting
-  "streamlit-extras>=0.3.6", # Additional utility components
-
-  # Visualization (note: plotly already in main deps)
-  "altair>=5.2.0", # Declarative charts for Streamlit
-]
-
 [project.scripts]
 openfatture = "openfatture.cli.main:app"
 
@@ -191,7 +179,7 @@ python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-plugins = ["pydantic.mypy"]
+plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
@@ -204,15 +192,6 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["xgboost.*", "xgboost"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["streamlit.*", "streamlit"]
-ignore_missing_imports = true
-
-# Scripts imported dynamically
-[[tool.mypy.overrides]]
-module = ["collect_media_metrics"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -63,7 +63,7 @@ class HTMLBenchmarkReporter:
     <div class="container">
         <header>
             <h1>OpenFatture Performance Benchmark Report</h1>
-            <p class="timestamp">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            <p class="timestamp">Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
         </header>
 
         <section class="summary">

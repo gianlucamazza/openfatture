@@ -125,9 +125,9 @@ Services:
 ```
 
 **Profiles enable**:
-- Development: `docker-compose up`
-- Production: `docker-compose --profile postgres up`
-- Full stack: `docker-compose --profile postgres --profile ai up`
+- Development: `docker compose up`
+- Production: `docker compose --profile postgres up`
+- Full stack: `docker compose --profile postgres --profile ai up`
 
 ---
 

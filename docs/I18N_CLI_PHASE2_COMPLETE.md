@@ -223,18 +223,9 @@ tests/i18n/test_cli_translations.py::TestCLICommandGroups PASSED [100%]
    - `main.py` (21 strings)
    - Total remaining: ~240 strings
 
-### Phase 3 (Web UI Translation)
+### Phase 3: Retired frontend translation work
 
-- Extract Web UI strings (~208 estimated)
-- Create `web.ftl` for all languages
-- Convert Streamlit pages to use `_()`
-- Add locale selector component
-
-### Phase 4 (AI Prompts)
-
-- Create multilingual YAML prompts
-- Preserve Italian legal terminology
-- Test with actual AI agents
+The former frontend translation work is not part of the maintained product surface. New translations target CLI commands, interactive terminal flows, emails, PDFs, and other maintained outputs.
 
 ---
 
@@ -314,7 +305,7 @@ Use Fluent native pluralization adapted per language:
 **Ready for**:
 1. Completing fattura.py conversion
 2. Converting remaining CLI commands
-3. Phase 3 (Web UI translation)
+3. Future CLI and maintained-output translation work
 
 ---
 

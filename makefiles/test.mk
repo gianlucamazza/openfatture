@@ -19,12 +19,12 @@ test-all: ## Run complete test suite with coverage
 		--cov-report=term-missing \
 		--cov-report=html \
 		--tb=short
-	@echo "$(GREEN)✓ All tests passed$(NC)"
+	@echo "$(GREEN)All tests passed$(NC)"
 
 test-fast: ## Run tests without coverage (faster)
 	@echo "$(BLUE)Running fast tests (no coverage)...$(NC)"
 	$(PYTEST) tests/ -v --no-cov --tb=short
-	@echo "$(GREEN)✓ Tests passed$(NC)"
+	@echo "$(GREEN)Tests passed$(NC)"
 
 test-verbose: ## Run tests with verbose output
 	@echo "$(BLUE)Running tests with verbose output...$(NC)"
@@ -38,7 +38,7 @@ test-watch: ## Run tests in watch mode (requires pytest-watch)
 test-parallel: ## Run tests in parallel (requires pytest-xdist)
 	@echo "$(BLUE)Running tests in parallel...$(NC)"
 	$(PYTEST) tests/ -v -n auto --cov=$(PROJECT_ROOT) --cov-report=term-missing
-	@echo "$(GREEN)✓ Parallel tests complete$(NC)"
+	@echo "$(GREEN)Parallel tests complete$(NC)"
 
 # Module-specific tests
 # ============================================================================
@@ -46,17 +46,17 @@ test-parallel: ## Run tests in parallel (requires pytest-xdist)
 test-unit: ## Run unit tests only
 	@echo "$(BLUE)Running unit tests...$(NC)"
 	$(PYTEST) tests/unit/ -v --tb=short
-	@echo "$(GREEN)✓ Unit tests passed$(NC)"
+	@echo "$(GREEN)Unit tests passed$(NC)"
 
 test-integration: ## Run integration tests only
 	@echo "$(BLUE)Running integration tests...$(NC)"
 	$(PYTEST) tests/integration/ -v --tb=short
-	@echo "$(GREEN)✓ Integration tests passed$(NC)"
+	@echo "$(GREEN)Integration tests passed$(NC)"
 
 test-core: ## Run core module tests
 	@echo "$(BLUE)Running core module tests...$(NC)"
 	$(PYTEST) tests/unit/test_*_service.py tests/unit/test_batch_*.py -v
-	@echo "$(GREEN)✓ Core tests passed$(NC)"
+	@echo "$(GREEN)Core tests passed$(NC)"
 
 test-sdi: ## Run SDI module tests
 	@echo "$(BLUE)Running SDI module tests...$(NC)"
@@ -66,12 +66,12 @@ test-sdi: ## Run SDI module tests
 		tests/unit/test_sdi_notifiche.py \
 		tests/unit/test_digital_signature.py \
 		-v
-	@echo "$(GREEN)✓ SDI tests passed$(NC)"
+	@echo "$(GREEN)SDI tests passed$(NC)"
 
 test-cli: ## Run CLI tests
 	@echo "$(BLUE)Running CLI tests...$(NC)"
 	$(PYTEST) tests/cli/ -v --tb=short
-	@echo "$(GREEN)✓ CLI tests passed$(NC)"
+	@echo "$(GREEN)CLI tests passed$(NC)"
 
 test-utils: ## Run utility tests
 	@echo "$(BLUE)Running utility tests...$(NC)"
@@ -81,7 +81,7 @@ test-utils: ## Run utility tests
 		tests/unit/test_security.py \
 		tests/unit/test_rate_limiter.py \
 		-v
-	@echo "$(GREEN)✓ Utility tests passed$(NC)"
+	@echo "$(GREEN)Utility tests passed$(NC)"
 
 # AI module tests
 # ============================================================================
@@ -92,32 +92,32 @@ test-ai: ## Run AI module tests
 		--cov=$(PROJECT_ROOT)/ai \
 		--cov-report=term-missing \
 		--tb=short
-	@echo "$(GREEN)✓ AI tests passed$(NC)"
+	@echo "$(GREEN)AI tests passed$(NC)"
 
 test-ai-unit: ## Run AI unit tests only
 	@echo "$(BLUE)Running AI unit tests...$(NC)"
 	$(PYTEST) tests/unit/test_ai_*.py -v --tb=short
-	@echo "$(GREEN)✓ AI unit tests passed$(NC)"
+	@echo "$(GREEN)AI unit tests passed$(NC)"
 
 test-ai-integration: ## Run AI integration tests
 	@echo "$(BLUE)Running AI integration tests...$(NC)"
 	$(PYTEST) tests/ai/test_*_integration.py -v --tb=short
-	@echo "$(GREEN)✓ AI integration tests passed$(NC)"
+	@echo "$(GREEN)AI integration tests passed$(NC)"
 
 test-ai-streaming: ## Run AI streaming tests
 	@echo "$(BLUE)Running AI streaming tests...$(NC)"
 	$(PYTEST) tests/ai/test_streaming.py -v
-	@echo "$(GREEN)✓ AI streaming tests passed$(NC)"
+	@echo "$(GREEN)AI streaming tests passed$(NC)"
 
 test-ai-cache: ## Run AI cache tests
 	@echo "$(BLUE)Running AI cache tests...$(NC)"
 	$(PYTEST) tests/ai/cache/ -v --tb=short
-	@echo "$(GREEN)✓ AI cache tests passed$(NC)"
+	@echo "$(GREEN)AI cache tests passed$(NC)"
 
 test-ai-token-counter: ## Run token counter tests
 	@echo "$(BLUE)Running token counter tests...$(NC)"
 	$(PYTEST) tests/ai/test_token_counter.py -v
-	@echo "$(GREEN)✓ Token counter tests passed$(NC)"
+	@echo "$(GREEN)Token counter tests passed$(NC)"
 
 # Payment module tests
 # ============================================================================
@@ -131,17 +131,17 @@ test-payment: ## Run payment module tests (>=80% coverage required)
 		--cov-report=html \
 		--cov-fail-under=80 \
 		--tb=short
-	@echo "$(GREEN)✓ Payment tests passed (coverage ≥80%)$(NC)"
+	@echo "$(GREEN)Payment tests passed (coverage ≥80%)$(NC)"
 
 test-payment-domain: ## Run payment domain tests
 	@echo "$(BLUE)Running payment domain tests...$(NC)"
 	$(PYTEST) tests/payment/domain/ -v --tb=short
-	@echo "$(GREEN)✓ Payment domain tests passed$(NC)"
+	@echo "$(GREEN)Payment domain tests passed$(NC)"
 
 test-payment-matchers: ## Run payment matchers tests
 	@echo "$(BLUE)Running payment matchers tests...$(NC)"
 	$(PYTEST) tests/payment/matchers/ -v --tb=short
-	@echo "$(GREEN)✓ Payment matchers tests passed$(NC)"
+	@echo "$(GREEN)Payment matchers tests passed$(NC)"
 
 # Services tests
 # ============================================================================
@@ -149,12 +149,12 @@ test-payment-matchers: ## Run payment matchers tests
 test-services: ## Run services tests (PDF, etc.)
 	@echo "$(BLUE)Running services tests...$(NC)"
 	$(PYTEST) tests/services/ -v --tb=short
-	@echo "$(GREEN)✓ Services tests passed$(NC)"
+	@echo "$(GREEN)Services tests passed$(NC)"
 
 test-pdf: ## Run PDF generator tests
 	@echo "$(BLUE)Running PDF generator tests...$(NC)"
 	$(PYTEST) tests/services/test_pdf_generator.py -v
-	@echo "$(GREEN)✓ PDF tests passed$(NC)"
+	@echo "$(GREEN)PDF tests passed$(NC)"
 
 # Coverage targets
 # ============================================================================
@@ -166,7 +166,7 @@ coverage: ## Run tests with coverage report
 		--cov-report=term-missing \
 		--cov-report=html \
 		--cov-report=xml
-	@echo "$(GREEN)✓ Coverage report generated$(NC)"
+	@echo "$(GREEN)Coverage report generated$(NC)"
 	@echo "$(BLUE)HTML report: $(CYAN)htmlcov/index.html$(NC)"
 
 coverage-report: coverage ## Generate and open coverage report
@@ -176,12 +176,12 @@ coverage-report: coverage ## Generate and open coverage report
 coverage-html: ## Generate HTML coverage report only
 	@echo "$(BLUE)Generating HTML coverage report...$(NC)"
 	$(PYTEST) tests/ --cov=$(PROJECT_ROOT) --cov-report=html
-	@echo "$(GREEN)✓ HTML coverage report: $(CYAN)htmlcov/index.html$(NC)"
+	@echo "$(GREEN)HTML coverage report: $(CYAN)htmlcov/index.html$(NC)"
 
 coverage-xml: ## Generate XML coverage report (for CI)
 	@echo "$(BLUE)Generating XML coverage report...$(NC)"
 	$(PYTEST) tests/ --cov=$(PROJECT_ROOT) --cov-report=xml
-	@echo "$(GREEN)✓ XML coverage report: $(CYAN)coverage.xml$(NC)"
+	@echo "$(GREEN)XML coverage report: $(CYAN)coverage.xml$(NC)"
 
 coverage-threshold: ## Check coverage meets threshold (80%)
 	@echo "$(BLUE)Checking coverage threshold (80%)...$(NC)"
@@ -189,7 +189,7 @@ coverage-threshold: ## Check coverage meets threshold (80%)
 		--cov=$(PROJECT_ROOT) \
 		--cov-fail-under=80 \
 		--cov-report=term-missing
-	@echo "$(GREEN)✓ Coverage threshold met$(NC)"
+	@echo "$(GREEN)Coverage threshold met$(NC)"
 
 # Performance tests
 # ============================================================================
@@ -199,21 +199,21 @@ test-performance: ## Run all performance benchmarks
 	$(PYTEST) -v -m performance \
 		--tb=short \
 		--no-cov
-	@echo "$(GREEN)✓ Performance benchmarks complete$(NC)"
+	@echo "$(GREEN)Performance benchmarks complete$(NC)"
 
 test-performance-rag: ## Run RAG performance tests (embeddings, vector store, retrieval)
 	@echo "$(BLUE)Running RAG performance tests...$(NC)"
 	$(PYTEST) tests/ai/rag/performance/ -v \
 		--tb=short \
 		--no-cov
-	@echo "$(GREEN)✓ RAG performance tests complete$(NC)"
+	@echo "$(GREEN)RAG performance tests complete$(NC)"
 
 test-performance-db: ## Run database performance tests
 	@echo "$(BLUE)Running database performance tests...$(NC)"
 	$(PYTEST) tests/storage/performance/ -v \
 		--tb=short \
 		--no-cov
-	@echo "$(GREEN)✓ Database performance tests complete$(NC)"
+	@echo "$(GREEN)Database performance tests complete$(NC)"
 
 test-performance-report: ## Run performance tests and generate HTML report
 	@echo "$(BLUE)Running performance tests with report generation...$(NC)"
@@ -223,14 +223,14 @@ test-performance-report: ## Run performance tests and generate HTML report
 		--benchmark-only \
 		--benchmark-autosave \
 		--benchmark-storage=file://$(PWD)/.benchmarks
-	@echo "$(GREEN)✓ Performance report saved to .benchmarks/$(NC)"
+	@echo "$(GREEN)Performance report saved to .benchmarks/$(NC)"
 
 test-performance-compare: ## Compare performance with previous run
 	@echo "$(BLUE)Comparing performance with previous run...$(NC)"
 	$(PYTEST) -v -m performance \
 		--benchmark-compare \
 		--benchmark-storage=file://$(PWD)/.benchmarks
-	@echo "$(GREEN)✓ Performance comparison complete$(NC)"
+	@echo "$(GREEN)Performance comparison complete$(NC)"
 
 # Test shortcuts
 # ============================================================================

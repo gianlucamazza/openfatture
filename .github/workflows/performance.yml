@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Full history for baseline comparison
 
@@ -28,13 +28,13 @@ jobs:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: true
 
       - name: Install dependencies
         run: |
-          uv sync --all-extras
+          uv sync --frozen --all-extras
 
       - name: Run performance tests
         run: |
@@ -75,9 +75,9 @@ jobs:
               sys.exit(2)
           print('baseline_valid')
           PY
-            echo "has_baseline=true" >> $GITHUB_OUTPUT
+            echo "has_baseline=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_baseline=false" >> $GITHUB_OUTPUT
+            echo "has_baseline=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Compare with baseline
@@ -91,9 +91,9 @@ jobs:
             uv run pytest -v -m performance \
               --benchmark-only \
               --benchmark-compare=baseline \
-              --benchmark-compare-fail=mean:20% || echo "⚠️  Performance regression detected"
+              --benchmark-compare-fail=mean:20% || echo "Performance regression detected"
           else
-            echo "ℹ️  No valid baseline found, skipping comparison"
+            echo "No valid baseline found, skipping comparison"
           fi
 
       - name: Comment PR with results
@@ -103,7 +103,7 @@ jobs:
           script: |
             const fs = require('fs');
 
-            let comment = '## 📊 Performance Test Results\n\n';
+            let comment = '## Performance Test Results\n\n';
 
             if (fs.existsSync('benchmark-results.json')) {
               const results = JSON.parse(fs.readFileSync('benchmark-results.json'));
@@ -129,11 +129,11 @@ jobs:
                 });
               }
             } else {
-              comment += '⚠️ No benchmark results file found\n';
+              comment += 'No benchmark results file found\n';
             }
 
             comment += '\n---\n';
-            comment += '💡 View detailed results in the workflow artifacts\n';
+            comment += 'View detailed results in the workflow artifacts\n';
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -150,7 +150,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -158,10 +158,10 @@ jobs:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Download benchmark results
         uses: actions/download-artifact@v4
@@ -237,7 +237,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download benchmark results
         uses: actions/download-artifact@v4
@@ -278,26 +278,26 @@ jobs:
                   ratio = stats["mean"] / stats["baseline_mean"]
 
                   if ratio > LATENCY_THRESHOLD:
-                      regressions.append(f"❌ {name}: {ratio:.2%} slower")
+                      regressions.append(f"{name}: {ratio:.2%} slower")
                   elif ratio > 1.10:
-                      warnings.append(f"⚠️  {name}: {ratio:.2%} slower")
+                      warnings.append(f"{name}: {ratio:.2%} slower")
 
           if regressions:
-              print("🚨 PERFORMANCE REGRESSIONS DETECTED:")
+              print("PERFORMANCE REGRESSIONS DETECTED:")
               for reg in regressions:
                   print(f"  {reg}")
               print(f"\nTotal: {len(regressions)} regressions")
               sys.exit(1)
           elif warnings:
-              print("⚠️  Performance warnings:")
+              print("Performance warnings:")
               for warn in warnings:
                   print(f"  {warn}")
-              print("\n✅ No critical regressions")
+              print("\nNo critical regressions")
           else:
-              print("✅ No performance regressions detected")
+              print("No performance regressions detected")
           EOF
 
-          uv run python check_regression.py || echo "regression_detected=true" >> $GITHUB_OUTPUT
+          uv run python check_regression.py || echo "regression_detected=true" >> "$GITHUB_OUTPUT"
 
       - name: Fail on regression
         if: steps.regression-check.outputs.regression_detected == 'true'

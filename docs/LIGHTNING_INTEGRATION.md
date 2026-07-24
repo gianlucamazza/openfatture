@@ -21,7 +21,7 @@ This document provides technical details about OpenFatture's Lightning Network i
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │Infrastructure   │    │   Event System   │    │   Web Layer     │
 │                 │    │                  │    │                 │
-│ • LND Client    │◀───│ • Event Handlers │───▶│ • Streamlit UI  │
+│ • LND Client    │◀───│ • Event Handlers │───▶│ • CLI/TUI       │
 │ • Repository    │    │ • Global Bus     │    │ • Webhooks      │
 │ • Rate Provider │    │ • Async Events   │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘

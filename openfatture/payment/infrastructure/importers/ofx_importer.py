@@ -93,7 +93,7 @@ class OFXImporter(BaseImporter):
         statement = self._find_statement(ofx)
         if statement is None:
             raise ValueError(
-                f"No matching account found in OFX file. " f"Expected account_id: {self.account_id}"
+                f"No matching account found in OFX file. Expected account_id: {self.account_id}"
             )
 
         # Extract transactions

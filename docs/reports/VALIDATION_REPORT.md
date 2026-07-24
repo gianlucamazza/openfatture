@@ -142,16 +142,9 @@
 
 **Action Required**: Improve analytics coverage from 15% 85%
 
-### 6. Web UI (Priority: MEDIUM)
+### 6. CLI/TUI surface (Priority: MEDIUM)
 
-**Status**: **Coverage analysis pending**
-
-**Previous Analysis**:
-- 17 tests
-- 77% coverage
-- Services, pages, components
-
-**Target Coverage**: 80%+
+**Status**: Maintained as the primary user interface. Validate onboarding, command help, error recovery, and interactive terminal feedback as part of each release.
 
 ### 7. Lightning Network (Priority: LOW)
 
@@ -271,7 +264,6 @@
 | Payment | - | Not tested |
 | Core | - | Coverage pending |
 | SDI | - | Coverage pending |
-| Web UI | - | Coverage pending |
 
 ---
 
@@ -289,7 +281,6 @@
 - [ ] SDI Integration: ≥85% (TBD)
 - [ ] AI/RAG: ≥75% (TBD)
 - [ ] Event System: ≥85% (Event Analytics needs work)
-- [ ] Web UI: ≥80% (previously 77%)
 
 ### Code Quality
 - [ ] Linting: 100% (currently ~98%)

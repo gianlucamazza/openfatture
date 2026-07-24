@@ -387,8 +387,7 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         best_field = max(similarity_scores.items(), key=lambda x: x[1])
 
         return (
-            f"Fuzzy match: {best_field[0]} similarity {max_similarity:.1f}% "
-            f"(Levenshtein distance)"
+            f"Fuzzy match: {best_field[0]} similarity {max_similarity:.1f}% (Levenshtein distance)"
         )
 
     def __repr__(self) -> str:

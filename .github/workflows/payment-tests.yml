@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install libomp on macOS
         if: runner.os == 'macOS'
@@ -50,7 +50,7 @@ jobs:
           else
             brew install libomp
           fi
-          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:${DYLD_LIBRARY_PATH}" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:${DYLD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -58,13 +58,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Run payment module tests
         run: |
@@ -124,7 +124,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
@@ -132,10 +132,10 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Run integration tests
         env:
@@ -156,7 +156,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -164,10 +164,10 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install dependencies
-        run: uv sync --all-extras --python $(which python3)
+        run: uv sync --frozen --all-extras --python "$(command -v python3)"
 
       - name: Run Black on payment module
         run: uv run --extra dev python -m black --check openfatture/payment/ tests/payment/
@@ -176,7 +176,7 @@ jobs:
         run: uv run --extra dev ruff check openfatture/payment/ tests/payment/
 
       - name: Run MyPy on payment module
-        run: uv run --extra dev mypy openfatture/payment/
+        run: uv run --extra dev python -m mypy openfatture/payment/
         continue-on-error: true
 
   test-fixtures:
@@ -185,7 +185,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
@@ -193,10 +193,10 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --frozen --all-extras
 
       - name: Validate bank statement fixtures
         run: |
@@ -221,7 +221,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -255,9 +255,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Test payment CLI in Docker
+      - name: Test public CLI in payment image
         run: |
-          docker run --rm openfatture:payment payment --help
+          docker run --rm openfatture:payment --help
           docker run --rm openfatture:payment payment stats --help
 
       - name: Test metrics endpoint health

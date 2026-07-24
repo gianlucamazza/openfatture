@@ -163,26 +163,9 @@ console.print(f"[bold blue]{_('cli-fattura-create-title')}[/bold blue]")
 console.print(_("cli-fattura-created", numero="001"))
 ```
 
-## Web UI (Streamlit) Integration
+## CLI and Interactive Mode Integration
 
-```python
-import streamlit as st
-from openfatture.i18n import _, get_locale, set_locale
-
-# Locale selector in sidebar
-locale = st.sidebar.selectbox(
-    "Language",
-    options=["it", "en", "es", "fr", "de"],
-    index=["it", "en", "es", "fr", "de"].index(get_locale()),
-)
-if locale != get_locale():
-    set_locale(locale)
-    st.rerun()
-
-# Use translations
-st.title(_("web-dashboard-title"))
-st.markdown(f"### {_('web-dashboard-metrics-title')}")
-```
+CLI commands and the interactive terminal mode use the same Fluent translation API. Keep new user-facing strings in the CLI locale bundle and cover variable interpolation with focused tests.
 
 ## AI Prompts Multi-Language
 

@@ -5,7 +5,7 @@ replacing 19+ different implementations scattered across the codebase.
 
 Modern best practices (2025):
 - Uses asyncio.run() as the primary mechanism (Python 3.7+)
-- Handles nested event loops (Streamlit, Jupyter)
+- Handles nested event loops in notebooks and async test environments
 - Thread-safe execution with proper cleanup
 - Support for lifespan management (CLI commands)
 - Context propagation for observability
@@ -27,7 +27,7 @@ Migration from old patterns:
     # OLD (inconsistent)
     asyncio.run(coro)                    # Various places
     loop.run_until_complete(coro)        # Legacy
-    nest_asyncio.apply()                 # Streamlit-specific
+    nest_asyncio.apply()                 # Legacy workaround
 
     # NEW (unified)
     run_async(coro)                      # Everywhere
@@ -78,7 +78,7 @@ def run_async[T](
 
     This is the primary async->sync bridge. It handles:
     - Creating new event loop if none exists
-    - Nested loop detection (Streamlit, Jupyter)
+    - Nested loop detection (notebooks and async test frameworks)
     - Proper cleanup and exception propagation
     - Context variable propagation
     - Debug mode for development
@@ -112,7 +112,7 @@ def run_async[T](
         loop = asyncio.get_running_loop()
 
         # We're in a running loop - this is a nested scenario
-        # This happens in Streamlit, Jupyter, or async test frameworks
+        # This happens in notebooks or async test frameworks
         logger.debug(
             "nested_event_loop_detected",
             thread=threading.current_thread().name,

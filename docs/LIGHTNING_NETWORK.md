@@ -240,28 +240,9 @@ openfatture lightning payments show <payment_hash>
 
 ---
 
-## Web UI Integration
+## CLI Monitoring
 
-### Lightning Dashboard
-
-Access the Lightning dashboard at: **http://localhost:8501** Lightning
-
-The dashboard shows:
-- Connection status
-- Channel overview
-- Recent payments
-- Liquidity metrics
-- Configuration settings
-
-### Invoice Generation
-
-Use the web interface to:
-- Generate Lightning invoices from existing invoices
-- Monitor payment status
-- View payment history
-- Configure Lightning settings
-
----
+Lightning status, invoice creation, payment monitoring, and liquidity operations are available through the `openfatture lightning` command group. See the CLI reference for command options and safe operational workflows.
 
 ## Webhook Integration
 

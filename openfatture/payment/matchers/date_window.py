@@ -190,8 +190,7 @@ class DateWindowMatcher(IMatcherStrategy):
             return f"Exact amount, date within {date_diff_days} day(s)"
         else:
             return (
-                f"Date window match: {date_diff_days} day(s) apart, "
-                f"amount diff €{amount_diff:.2f}"
+                f"Date window match: {date_diff_days} day(s) apart, amount diff €{amount_diff:.2f}"
             )
 
     def __repr__(self) -> str:

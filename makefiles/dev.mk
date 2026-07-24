@@ -12,18 +12,18 @@
 
 dev-setup: install-dev ## Complete development environment setup
 	@echo "$(BLUE)Setting up development environment...$(NC)"
-	@echo "$(BLUE)  → Installing pre-commit hooks...$(NC)"
+	@echo "$(BLUE) Installing pre-commit hooks...$(NC)"
 	@$(UV) run pre-commit install
-	@echo "$(BLUE)  → Creating .env file (if not exists)...$(NC)"
+	@echo "$(BLUE) Creating .env file (if not exists)...$(NC)"
 	@if [ ! -f .env ]; then \
 		cp .env.example .env 2>/dev/null || touch .env; \
-		echo "$(YELLOW)⚠️  Please edit .env with your configuration$(NC)"; \
+		echo "$(YELLOW)Please edit .env with your configuration$(NC)"; \
 	else \
-		echo "$(GREEN)✓ .env already exists$(NC)"; \
+		echo "$(GREEN).env already exists$(NC)"; \
 	fi
-	@echo "$(BLUE)  → Creating data directories...$(NC)"
+	@echo "$(BLUE) Creating data directories...$(NC)"
 	@mkdir -p ~/.openfatture/data ~/.openfatture/archivio ~/.openfatture/certificates
-	@echo "$(GREEN)✓ Development environment ready!$(NC)"
+	@echo "$(GREEN)Development environment ready!$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Next steps:$(NC)"
 	@echo "  1. Edit .env with your configuration"
@@ -47,30 +47,30 @@ dev-env: ## Show development environment info
 
 dev-check: ## Check development prerequisites
 	@echo "$(BLUE)Checking prerequisites...$(NC)"
-	@command -v uv >/dev/null 2>&1 && echo "$(GREEN)✓ uv$(NC)" || echo "$(RED)✗ uv not installed$(NC)"
-	@command -v python3 >/dev/null 2>&1 && echo "$(GREEN)✓ python3$(NC)" || echo "$(RED)✗ python3 not installed$(NC)"
-	@command -v docker >/dev/null 2>&1 && echo "$(GREEN)✓ docker$(NC)" || echo "$(YELLOW)⚠️  docker not installed (optional)$(NC)"
-	@command -v git >/dev/null 2>&1 && echo "$(GREEN)✓ git$(NC)" || echo "$(RED)✗ git not installed$(NC)"
-	@[ -f .env ] && echo "$(GREEN)✓ .env configured$(NC)" || echo "$(YELLOW)⚠️  .env not found$(NC)"
-	@[ -d ~/.openfatture/data ] && echo "$(GREEN)✓ data directory$(NC)" || echo "$(YELLOW)⚠️  data directory not found$(NC)"
+	@command -v uv >/dev/null 2>&1 && echo "$(GREEN)uv$(NC)" || echo "$(RED)uv not installed$(NC)"
+	@command -v python3 >/dev/null 2>&1 && echo "$(GREEN)python3$(NC)" || echo "$(RED)python3 not installed$(NC)"
+	@command -v docker >/dev/null 2>&1 && echo "$(GREEN)docker$(NC)" || echo "$(YELLOW)docker not installed (optional)$(NC)"
+	@command -v git >/dev/null 2>&1 && echo "$(GREEN)git$(NC)" || echo "$(RED)git not installed$(NC)"
+	@[ -f .env ] && echo "$(GREEN).env configured$(NC)" || echo "$(YELLOW).env not found$(NC)"
+	@[ -d ~/.openfatture/data ] && echo "$(GREEN)data directory$(NC)" || echo "$(YELLOW)data directory not found$(NC)"
 
 # Database operations
 # ============================================================================
 
 db-init: ## Initialize database
 	@echo "$(BLUE)Initializing database...$(NC)"
-	$(PYTHON) -c "from openfatture.storage.database.session import init_db; init_db()"
-	@echo "$(GREEN)✓ Database initialized$(NC)"
+	$(UV) run python -c "from openfatture.storage.database.session import init_db; init_db()"
+	@echo "$(GREEN)Database initialized$(NC)"
 
 db-reset: ## Reset database (WARNING: deletes all data!)
-	@echo "$(YELLOW)⚠️  This will delete all data!$(NC)"
+	@echo "$(YELLOW)This will delete all data!$(NC)"
 	@read -p "Are you sure? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
 		echo "$(BLUE)Resetting database...$(NC)"; \
 		rm -f ~/.openfatture/data/openfatture.db; \
 		$(MAKE) db-init; \
-		echo "$(GREEN)✓ Database reset complete$(NC)"; \
+		echo "$(GREEN)Database reset complete$(NC)"; \
 	else \
 		echo "$(YELLOW)Cancelled$(NC)"; \
 	fi
@@ -79,22 +79,21 @@ db-seed: ## Seed database with example data
 	@echo "$(BLUE)Seeding database...$(NC)"
 	@if [ -f scripts/seed_database.py ]; then \
 		$(PYTHON) scripts/seed_database.py; \
-		echo "$(GREEN)✓ Database seeded$(NC)"; \
+		echo "$(GREEN)Database seeded$(NC)"; \
 	else \
-		echo "$(YELLOW)⚠️  Seed script not found$(NC)"; \
+		echo "$(YELLOW)Seed script not found$(NC)"; \
 	fi
 
 db-migrate: ## Run database migrations
 	@echo "$(BLUE)Running migrations...$(NC)"
-	@echo "$(YELLOW)⚠️  Migrations not yet implemented$(NC)"
-	@echo "$(YELLOW)Future: will use Alembic for migrations$(NC)"
+	$(UV) run alembic upgrade head
 
 db-shell: ## Open database shell (SQLite)
 	@echo "$(BLUE)Opening database shell...$(NC)"
 	@if [ -f ~/.openfatture/data/openfatture.db ]; then \
 		sqlite3 ~/.openfatture/data/openfatture.db; \
 	else \
-		echo "$(RED)✗ Database not found. Run: make db-init$(NC)"; \
+		echo "$(RED)Database not found. Run: make db-init$(NC)"; \
 	fi
 
 db-backup: ## Backup database
@@ -102,26 +101,26 @@ db-backup: ## Backup database
 	@mkdir -p backups
 	@if [ -f ~/.openfatture/data/openfatture.db ]; then \
 		cp ~/.openfatture/data/openfatture.db backups/openfatture_$$(date +%Y%m%d_%H%M%S).db; \
-		echo "$(GREEN)✓ Database backed up to backups/$(NC)"; \
+		echo "$(GREEN)Database backed up to backups/$(NC)"; \
 	else \
-		echo "$(RED)✗ Database not found$(NC)"; \
+		echo "$(RED)Database not found$(NC)"; \
 	fi
 
 db-restore: ## Restore database from backup (usage: make db-restore BACKUP=filename)
 	@if [ -z "$(BACKUP)" ]; then \
-		echo "$(RED)✗ Please specify backup file: make db-restore BACKUP=filename$(NC)"; \
+		echo "$(RED)Please specify backup file: make db-restore BACKUP=filename$(NC)"; \
 		echo "$(BLUE)Available backups:$(NC)"; \
 		ls -lh backups/*.db 2>/dev/null || echo "  No backups found"; \
 	elif [ -f "backups/$(BACKUP)" ]; then \
-		echo "$(YELLOW)⚠️  This will overwrite current database!$(NC)"; \
+		echo "$(YELLOW)This will overwrite current database!$(NC)"; \
 		read -p "Continue? [y/N] " -n 1 -r; \
 		echo; \
 		if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
 			cp backups/$(BACKUP) ~/.openfatture/data/openfatture.db; \
-			echo "$(GREEN)✓ Database restored$(NC)"; \
+			echo "$(GREEN)Database restored$(NC)"; \
 		fi \
 	else \
-		echo "$(RED)✗ Backup file not found: backups/$(BACKUP)$(NC)"; \
+		echo "$(RED)Backup file not found: backups/$(BACKUP)$(NC)"; \
 	fi
 
 # Run targets
@@ -133,7 +132,7 @@ run: ## Run OpenFatture CLI
 
 run-interactive: ## Run OpenFatture in interactive mode
 	@echo "$(BLUE)Starting OpenFatture (interactive mode)...$(NC)"
-	$(UV) run openfatture -i
+	$(UV) run openfatture interactive
 
 run-help: ## Show OpenFatture help
 	$(UV) run openfatture --help
@@ -143,9 +142,6 @@ run-version: ## Show OpenFatture version
 
 run-config: ## Show OpenFatture configuration
 	$(UV) run openfatture config show
-
-run-stats: ## Show invoice statistics
-	$(UV) run openfatture fattura stats
 
 # Development shells
 # ============================================================================
@@ -171,10 +167,10 @@ docs-build: ## Build documentation
 	@echo "$(BLUE)Building documentation...$(NC)"
 	@if [ -d docs ]; then \
 		cd docs && $(MAKE) html; \
-		echo "$(GREEN)✓ Documentation built$(NC)"; \
+		echo "$(GREEN)Documentation built$(NC)"; \
 		echo "$(BLUE)Open: $(CYAN)docs/_build/html/index.html$(NC)"; \
 	else \
-		echo "$(YELLOW)⚠️  docs/ directory not found$(NC)"; \
+		echo "$(YELLOW)docs/ directory not found$(NC)"; \
 	fi
 
 docs-serve: ## Serve documentation locally
@@ -182,14 +178,14 @@ docs-serve: ## Serve documentation locally
 	@if [ -d docs/_build/html ]; then \
 		cd docs/_build/html && python -m http.server 8000; \
 	else \
-		echo "$(RED)✗ Documentation not built. Run: make docs-build$(NC)"; \
+		echo "$(RED)Documentation not built. Run: make docs-build$(NC)"; \
 	fi
 
 docs-clean: ## Clean documentation build
 	@echo "$(BLUE)Cleaning documentation...$(NC)"
 	@if [ -d docs ]; then \
 		cd docs && $(MAKE) clean; \
-		echo "$(GREEN)✓ Documentation cleaned$(NC)"; \
+		echo "$(GREEN)Documentation cleaned$(NC)"; \
 	fi
 
 docs: docs-build ## Alias for docs-build

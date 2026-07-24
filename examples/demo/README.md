@@ -1,6 +1,7 @@
-# Dataset demo OpenFatture (2025)
+# Dataset demo OpenFatture
 
-Questo pacchetto fornisce dati coerenti con gli scenari video/documentazione.
+Questi file sono fixture di dominio per test e sperimentazioni locali. La demo
+CLI ufficiale è provider-free e si esegue con `./scripts/demo.sh`.
 
 ## Contenuto
 - `clients.csv` – tre clienti esempio (ACME, Studio Legale Aurora, Freelance Lab).
@@ -8,18 +9,16 @@ Questo pacchetto fornisce dati coerenti con gli scenari video/documentazione.
 - `invoices.csv` – tre fatture 2025 in diversi stati (`bozza`, `inviata`, `consegnata`).
 - `sdi-notifications/` – notifiche PEC finte per mockare il flusso SDI.
 
-## Utilizzo Rapido
+## Utilizzo
+
+Per eseguire la demo deterministica:
+
 ```bash
-uv run openfatture cliente list
-uv run openfatture batch import examples/demo/invoices.csv --dry-run
-uv run openfatture batch import examples/demo/invoices.csv
-uv run openfatture fattura list --anno 2025
+./scripts/demo.sh
 ```
 
-Per ripristinare l'intero ambiente:
-```bash
-./scripts/reset_demo.sh
-```
+Per usare questi fixture, importa i dati dal codice o dai test di dominio. Non
+sono collegati a comandi CLI rimossi.
 
 ## Nota JSON/CSV
 - Encoding UTF-8 senza BOM.

@@ -448,9 +448,9 @@ class TestReActOllamaSuccessRate:
                 pass
 
         success_rate = successes / total
-        assert (
-            success_rate >= 0.8
-        ), f"Tool calling success rate too low: {success_rate:.2%} (expected ≥80%)"
+        assert success_rate >= 0.8, (
+            f"Tool calling success rate too low: {success_rate:.2%} (expected ≥80%)"
+        )
 
         # Print stats for analysis
         print(f"\nSuccess Rate: {success_rate:.2%} ({successes}/{total})")

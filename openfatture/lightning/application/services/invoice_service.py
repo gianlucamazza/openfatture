@@ -6,7 +6,7 @@ from decimal import Decimal
 from openfatture.core.events.base import get_global_event_bus
 from openfatture.lightning.domain.events import LightningInvoiceCreated
 from openfatture.lightning.domain.value_objects import LightningInvoice
-from openfatture.lightning.infrastructure.lnd_client import LNDClient
+from openfatture.lightning.infrastructure.lnd_client import ProductionLNDClient
 from openfatture.lightning.infrastructure.rate_provider import (
     BTCConversionService,
     create_btc_conversion_service,
@@ -23,7 +23,7 @@ class LightningInvoiceService:
 
     def __init__(
         self,
-        lnd_client: LNDClient,
+        lnd_client: ProductionLNDClient,
         btc_converter: BTCConversionService | None = None,
         default_expiry_hours: int = 24,
         tax_service=None,  # Type hint would create circular import
@@ -337,7 +337,7 @@ def create_lightning_invoice_service(
         settings = get_settings()
 
     # Create LND client
-    lnd_client = LNDClient(
+    lnd_client = ProductionLNDClient(
         host=settings.lightning_host,
         cert_path=settings.lightning_cert_path,
         macaroon_path=settings.lightning_macaroon_path,

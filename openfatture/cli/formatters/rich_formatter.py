@@ -12,9 +12,8 @@ from openfatture.cli.formatters.base import BaseFormatter
 class RichFormatter(BaseFormatter):
     """Formatter that outputs responses using Rich terminal formatting.
 
-    This is the default formatter and maintains backward compatibility
-    with existing CLI output behavior. It uses Rich library for
-    beautiful terminal output with colors, panels, and formatting.
+    This is the default formatter. It uses Rich for terminal output with
+    colors, panels, and formatting.
     """
 
     def __init__(self, console: Console | None = None):

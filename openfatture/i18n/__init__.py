@@ -1,7 +1,7 @@
 """Internationalization (i18n) module for OpenFatture.
 
 This module provides a modern i18n infrastructure using Mozilla Fluent for
-multi-language support across CLI, Web UI, AI prompts, and error messages.
+multi-language support across CLI, AI prompts, and error messages.
 
 Supported languages: IT (Italian - default), EN (English), ES (Spanish), FR (French), DE (German)
 

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from openfatture.core.events.base import get_global_event_bus
 from openfatture.lightning.domain.enums import InvoiceStatus
 from openfatture.lightning.domain.events import LightningPaymentSettled
-from openfatture.lightning.infrastructure.lnd_client import LNDClient
+from openfatture.lightning.infrastructure.lnd_client import ProductionLNDClient
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
 
 
@@ -16,7 +16,7 @@ class LightningPaymentService:
 
     def __init__(
         self,
-        lnd_client: LNDClient,
+        lnd_client: ProductionLNDClient,
         invoice_repository: LightningInvoiceRepository,
         polling_interval_seconds: int = 30,
         max_concurrent_checks: int = 10,

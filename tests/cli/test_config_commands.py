@@ -195,7 +195,7 @@ class TestSetConfigCommand:
     the command imports them locally inside the function body.
     """
 
-    @patch("openfatture.cli.wizard.save_config")
+    @patch("openfatture.cli.commands.config.save_config")
     @patch("openfatture.utils.config.dirs")
     def test_set_config_success(self, mock_dirs, mock_save_config, tmp_path):
         """Test successful configuration setting for a valid string key."""
@@ -213,7 +213,7 @@ class TestSetConfigCommand:
         assert saved_settings.ai_provider == "anthropic"
         assert Path(saved_path) == tmp_path / "config.toml"
 
-    @patch("openfatture.cli.wizard.save_config")
+    @patch("openfatture.cli.commands.config.save_config")
     @patch("openfatture.utils.config.dirs")
     def test_set_config_updates_string_attribute(self, mock_dirs, mock_save_config, tmp_path):
         """Test that config set updates a flat string attribute on settings."""
@@ -228,7 +228,7 @@ class TestSetConfigCommand:
         saved_settings = mock_save_config.call_args[0][0]
         assert saved_settings.cedente_denominazione == "New Company"
 
-    @patch("openfatture.cli.wizard.save_config")
+    @patch("openfatture.cli.commands.config.save_config")
     @patch("openfatture.utils.config.dirs")
     def test_set_config_with_spaces_in_value(self, mock_dirs, mock_save_config, tmp_path):
         """Test setting config with spaces in value."""
@@ -242,7 +242,10 @@ class TestSetConfigCommand:
         saved_settings = mock_save_config.call_args[0][0]
         assert saved_settings.cedente_indirizzo == "Via Roma 123"
 
-    @patch("openfatture.cli.wizard.save_config", side_effect=PermissionError("Permission denied"))
+    @patch(
+        "openfatture.cli.commands.config.save_config",
+        side_effect=PermissionError("Permission denied"),
+    )
     @patch("openfatture.utils.config.dirs")
     def test_set_config_permission_error(self, mock_dirs, mock_save_config, tmp_path):
         """Test config set when persistence fails with a permission error."""
@@ -253,7 +256,7 @@ class TestSetConfigCommand:
         assert result.exit_code == 1
         assert "Error" in result.stdout
 
-    @patch("openfatture.cli.wizard.save_config", side_effect=OSError("File not found"))
+    @patch("openfatture.cli.commands.config.save_config", side_effect=OSError("File not found"))
     @patch("openfatture.utils.config.dirs")
     def test_set_config_file_error(self, mock_dirs, mock_save_config, tmp_path):
         """Test config set when persistence fails with a file error."""
@@ -281,7 +284,7 @@ class TestSetConfigCommand:
         result = runner.invoke(app, ["set", "ai_provider"])
         assert result.exit_code != 0
 
-    @patch("openfatture.cli.wizard.save_config")
+    @patch("openfatture.cli.commands.config.save_config")
     @patch("openfatture.utils.config.dirs")
     def test_set_config_with_numeric_value(self, mock_dirs, mock_save_config, tmp_path):
         """Test setting config with numeric value coerces from the int attribute."""

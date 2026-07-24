@@ -19,13 +19,13 @@ def get_format_from_context(
 
     Priority order:
     1. format_override parameter (explicit format)
-    2. json_output flag (backward compatibility for --json)
+    2. json_output flag
     3. Context format setting (global --format flag)
     4. Default to "rich"
 
     Args:
         ctx: Typer context (may contain format from global flag)
-        json_output: Legacy --json flag for backward compatibility
+        json_output: Request JSON output
         format_override: Explicit format override
 
     Returns:
@@ -35,7 +35,7 @@ def get_format_from_context(
     if format_override:
         return format_override
 
-    # Priority 2: Legacy --json flag (backward compatibility)
+    # Priority 2: Explicit JSON output
     if json_output:
         return "json"
 

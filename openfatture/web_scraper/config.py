@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from openfatture import __version__
+
 
 class WebScraperConfig(BaseModel):
     """Configuration for regulatory web scraping system.
@@ -30,7 +32,7 @@ class WebScraperConfig(BaseModel):
     headless: bool = Field(default=True, description="Run browser in headless mode")
 
     user_agent: str = Field(
-        default="OpenFatture/1.1.0 (Regulatory Update Bot; +https://github.com/gianlucamazza/openfatture)",
+        default=f"OpenFatture/{__version__} (Regulatory Update Bot; +https://github.com/gianlucamazza/openfatture)",
         description="User agent string for requests",
     )
 

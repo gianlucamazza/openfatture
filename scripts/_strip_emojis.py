@@ -2,8 +2,8 @@
 """Strip emoji / pictographic characters from text files in place.
 
 Removes emoji and common pictographic/dingbat/arrow ranges, then normalises the
-whitespace they leave behind (e.g. ``"💰 Payment"`` -> ``"Payment"``,
-``"Done ✅"`` -> ``"Done"``). Operates line by line so code structure is untouched.
+whitespace they leave behind (e.g. ``"[currency] Payment"`` -> ``"Payment"``,
+``"Done [checkmark]"`` -> ``"Done"``). Operates line by line so code structure is untouched.
 
 Usage:
     python scripts/_strip_emojis.py <file> [<file> ...]

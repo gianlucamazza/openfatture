@@ -142,8 +142,8 @@ Example:
 - [ ] Convert CLI ai commands (90 strings)
 - [ ] Convert CLI main help text
 
-### Phase 3: Web UI Translation (Week 5-6)
-- [ ] Create Streamlit locale selector component
+### Phase 3: Maintained-output translation
+- [ ] Extend translation coverage for CLI, terminal mode, emails, and PDFs
 - [ ] Convert Web Dashboard page (14 strings)
 - [ ] Convert Web Fatture page (10 strings)
 - [ ] Convert Web AI Assistant page (29 strings)
@@ -179,7 +179,7 @@ Example:
 | Phase | Strings | Days | Priority |
 |-------|---------|------|----------|
 | CLI Translation | 432 | 8 | HIGH |
-| Web UI Translation | 208 | 6 | HIGH |
+| Maintained-output translation | CLI and terminal strings | Ongoing | HIGH |
 | AI Prompts | 100+ | 10 | MEDIUM |
 | Error Messages | 98 | 3 | MEDIUM |
 | PDF Labels | 50 | 5 | LOW |

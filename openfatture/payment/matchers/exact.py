@@ -144,8 +144,7 @@ class ExactAmountMatcher(IMatcherStrategy):
             return f"Same date, amount difference: €{amount_diff:.2f}"
         else:
             return (
-                f"Exact match: amount diff €{amount_diff:.2f}, "
-                f"date within {date_diff_days} day(s)"
+                f"Exact match: amount diff €{amount_diff:.2f}, date within {date_diff_days} day(s)"
             )
 
     def __repr__(self) -> str:

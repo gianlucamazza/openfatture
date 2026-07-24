@@ -300,6 +300,4 @@ class CachedProvider:
 
     def __repr__(self) -> str:
         """String representation."""
-        return (
-            f"CachedProvider(" f"provider={self.provider.provider_name}, " f"cache={self._cache})"
-        )
+        return f"CachedProvider(provider={self.provider.provider_name}, cache={self._cache})"

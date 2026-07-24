@@ -1,7 +1,7 @@
 # Minimal Dockerfile for Payment Module Testing
 # Excludes heavy AI/ML dependencies (torch, transformers, chromadb, etc.)
 # Build: docker build -f Dockerfile.payment -t openfatture:payment .
-# Run: docker run -it --rm openfatture:payment payment --help
+# Run: docker run -it --rm openfatture:payment --help
 
 # Stage 1: Builder
 FROM python:3.12-slim AS builder
@@ -103,4 +103,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Default command
 ENTRYPOINT ["python", "-m", "openfatture.cli.main"]
-CMD ["payment", "--help"]
+CMD ["--help"]

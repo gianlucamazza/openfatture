@@ -971,7 +971,7 @@ class CashFlowPredictorAgent:
 Fattura: {fattura.numero}/{fattura.anno}
 Cliente: {fattura.cliente.denominazione}
 Importo: €{fattura.totale:.2f}
-Data emissione: {fattura.data_emissione.strftime('%d/%m/%Y')}
+Data emissione: {fattura.data_emissione.strftime("%d/%m/%Y")}
 
 Previsione ML:
 - Ritardo atteso: {prediction.yhat:.1f} giorni

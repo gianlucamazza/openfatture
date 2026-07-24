@@ -88,7 +88,7 @@ def create_voice_provider(
 
     else:
         raise ValueError(
-            f"Unsupported voice provider: {provider_name}. " f"Supported providers: openai"
+            f"Unsupported voice provider: {provider_name}. Supported providers: openai"
         )
 
 

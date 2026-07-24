@@ -35,7 +35,7 @@ class MockMatcherStrategy(IMatcherStrategy):
                     transaction=transaction,
                     payment=payment,
                     confidence=confidence,
-                    match_reason=f"Mock match {i+1}",
+                    match_reason=f"Mock match {i + 1}",
                     match_type=MatchType.FUZZY,
                     matched_fields=["amount"],
                     amount_diff=Decimal("0.00"),
@@ -245,7 +245,7 @@ class TestMatchingService:
                 account_id=bank_account.id,
                 date=date.today() - timedelta(days=i),
                 amount=Decimal("100.00") * (i + 1),
-                description=f"Transaction {i+1}",
+                description=f"Transaction {i + 1}",
                 status=TransactionStatus.UNMATCHED,
             )
             db_session.add(tx)

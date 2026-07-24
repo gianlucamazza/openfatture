@@ -68,8 +68,8 @@ def asymmetric_mae_loss(y_true: np.ndarray, y_pred: np.ndarray) -> tuple:
     """Custom asymmetric MAE loss for XGBoost.
 
     Penalizes underestimation more than overestimation:
-    - Underestimating payment delay → client might face cash flow issues
-    - Overestimating payment delay → conservative but safer
+    - Underestimating payment delay client might face cash flow issues
+    - Overestimating payment delay conservative but safer
 
     Loss = 2 * |error| if y_pred < y_true (underestimation)
            1 * |error| if y_pred >= y_true (overestimation)

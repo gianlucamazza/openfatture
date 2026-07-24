@@ -443,7 +443,7 @@ class ReminderScheduler:
 
     def __repr__(self) -> str:
         """Human-readable string representation."""
-        return f"<ReminderScheduler(" f"notifier={self.notifier.__class__.__name__})>"
+        return f"<ReminderScheduler(notifier={self.notifier.__class__.__name__})>"
 
     @staticmethod
     def _outstanding_amount(payment: "Pagamento") -> Decimal:

@@ -85,7 +85,7 @@ class DataGenerator:
             codice_fiscale = f"{''.join(self.rng.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=6))}{self.rng.randint(10, 99)}A{self.rng.randint(10, 99)}A{''.join(self.rng.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=4))}"
 
             cliente = Cliente(
-                denominazione=f"{self.rng.choice(self._company_names)} {i+1}",
+                denominazione=f"{self.rng.choice(self._company_names)} {i + 1}",
                 partita_iva=partita_iva,
                 codice_fiscale=codice_fiscale if self.rng.random() > 0.3 else None,
                 indirizzo=f"Via {self.rng.choice(['Roma', 'Milano', 'Napoli', 'Torino'])} {self.rng.randint(1, 200)}",
@@ -94,7 +94,7 @@ class DataGenerator:
                 provincia=self.rng.choice(["MI", "RM", "TO", "BO", "FI"]),
                 nazione="IT",
                 codice_destinatario=f"{''.join(self.rng.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=7))}",
-                email=f"cliente{i+1}@example.com",
+                email=f"cliente{i + 1}@example.com",
                 telefono=f"+39 {self.rng.randint(300, 399)} {self.rng.randint(1000000, 9999999)}",
             )
             clienti.append(cliente)
@@ -143,7 +143,7 @@ class DataGenerator:
             )[0]
 
             fattura = Fattura(
-                numero=f"{i+1:04d}",
+                numero=f"{i + 1:04d}",
                 anno=year,
                 data_emissione=invoice_date,
                 tipo_documento=TipoDocumento.TD01,
@@ -281,7 +281,7 @@ class DataGenerator:
             company = self.rng.choice(self._company_names)
             service = self.rng.choice(self._services)
             amount = self.rng.uniform(100, 5000)
-            invoice_num = f"{i+1:04d}"
+            invoice_num = f"{i + 1:04d}"
             year = 2025
 
             text = f"Fattura {invoice_num}/{year} - Cliente: {company} SRL\n"

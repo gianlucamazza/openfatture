@@ -2,6 +2,7 @@
 """
 Migration script to move configuration from .env to config.toml.
 """
+
 import sys
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from openfatture.cli.wizard import save_config
+from openfatture.cli.config_file import save_config
 from openfatture.utils.config import dirs, get_settings
 
 

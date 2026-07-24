@@ -219,11 +219,9 @@ Emoji and special characters preserved
 4. **main.py** (21 strings)
    - Simple help text replacement
 
-### Phase 3: Web UI Translation
-- [ ] Extract Web UI strings (208 estimated)
-- [ ] Create `web.ftl` for IT/EN/ES/FR/DE
-- [ ] Convert Streamlit pages to use `_()`
-- [ ] Create locale selector component
+### Phase 3: Retired frontend translation work
+
+The former frontend translation work is archived and is no longer part of the product surface. New translations target CLI commands, interactive terminal flows, emails, PDFs, and other maintained outputs.
 
 ### Phase 4: AI Prompts
 - [ ] Create multilingual YAML prompts
@@ -376,6 +374,6 @@ def create(
 ---
 
 **Implementation Complete**: Phase 2 (CLI Italian Translation)
-**Next Phase**: Phase 2B (CLI English Translation) or Phase 3 (Web UI)
+**Next Phase**: Phase 2B (CLI English Translation) and maintained-output coverage
 **Developer**: Gianluca Mazza + Claude Code
 **Version**: 2.0.0 (CLI i18n)

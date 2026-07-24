@@ -307,7 +307,3 @@ class ProductionLNDClient:
             await self._close_channel()
             self._lightning_stub = None
             self._router_stub = None
-
-
-# Alias for easier importing and backward compatibility
-LNDClient = ProductionLNDClient

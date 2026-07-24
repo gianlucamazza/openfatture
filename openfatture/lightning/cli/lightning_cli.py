@@ -9,18 +9,18 @@ from openfatture.utils.async_bridge import run_async
 
 from ..application.services.invoice_service import LightningInvoiceService
 from ..application.services.payment_service import LightningPaymentService
-from ..infrastructure.lnd_client import LNDClient
+from ..infrastructure.lnd_client import ProductionLNDClient
 from ..infrastructure.repository import LightningInvoiceRepository
 
 # CLI app
 app = typer.Typer(name="lightning", help="Lightning Network payment management commands")
 
 
-def get_lnd_client() -> LNDClient:
+def get_lnd_client() -> ProductionLNDClient:
     """Get configured LND client."""
     # In production, this would read from settings
     # For now, use mock client
-    return LNDClient()
+    return ProductionLNDClient()
 
 
 def get_services():

@@ -1,8 +1,7 @@
-"""Session store abstraction for unified persistence across CLI and Web UI.
+"""Session store abstraction for persistent CLI chat sessions.
 
 This module provides a storage-agnostic interface for chat session persistence,
-enabling seamless switching between file-based storage (CLI) and in-memory
-storage (Streamlit web UI) following the Strategy pattern.
+enabling the file-backed session implementation to follow the Strategy pattern.
 
 Design Rationale (2025 Best Practices):
 - Abstract base class defines contract (no implementation details)
@@ -12,12 +11,9 @@ Design Rationale (2025 Best Practices):
 - Fail-safe operations (return None/False vs raising exceptions)
 
 Example:
-    # Auto-detect context (CLI vs Streamlit)
     store = get_session_store()
 
-    # Or explicit backend
     store = FileSessionStore()
-    store = StreamlitSessionStore()
 
     # Unified interface
     session = store.load("session-id")

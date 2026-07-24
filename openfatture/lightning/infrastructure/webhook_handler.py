@@ -80,9 +80,9 @@ class LightningWebhookHandler:
             HTTPException: If signature verification fails
         """
         # This method should only be called when webhook_secret is set
-        assert (
-            self.webhook_secret is not None
-        ), "webhook_secret must be set for signature verification"
+        assert self.webhook_secret is not None, (
+            "webhook_secret must be set for signature verification"
+        )
 
         signature = request.headers.get("X-LND-Signature")
         if not signature:

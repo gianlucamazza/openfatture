@@ -19,7 +19,6 @@ cli-main-group-payments = Payment Tracking
 cli-main-group-preventivi = Quotes
 cli-main-group-events = Event System
 cli-main-group-lightning = Lightning Network
-cli-main-group-web = Web Interface
 
 ## FATTURA Commands
 

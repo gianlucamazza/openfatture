@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from openfatture.core.events.base import get_global_event_bus
 from openfatture.lightning.domain.enums import LiquidityAlertType
 from openfatture.lightning.domain.events import LightningLiquidityAlert
-from openfatture.lightning.infrastructure.lnd_client import LNDClient
+from openfatture.lightning.infrastructure.lnd_client import ProductionLNDClient
 
 
 @dataclass
@@ -53,7 +53,7 @@ class LightningLiquidityService:
 
     def __init__(
         self,
-        lnd_client: LNDClient,
+        lnd_client: ProductionLNDClient,
         min_inbound_ratio: float = 0.1,
         target_inbound_ratio: float = 0.5,
         max_outbound_ratio: float = 0.8,

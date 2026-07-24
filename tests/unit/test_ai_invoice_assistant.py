@@ -130,7 +130,9 @@ class TestInvoiceAssistantAgent:
         """Test validation of field lengths."""
         # servizio_base too long
         context = InvoiceContext(
-            user_input="test", servizio_base="x" * 501, ore_lavorate=5.0  # Max is 500
+            user_input="test",
+            servizio_base="x" * 501,
+            ore_lavorate=5.0,  # Max is 500
         )
 
         is_valid, error = await invoice_assistant.validate_input(context)
@@ -141,7 +143,9 @@ class TestInvoiceAssistantAgent:
     async def test_validation_hours_positive(self, invoice_assistant):
         """Test validation of hours being positive."""
         context = InvoiceContext(
-            user_input="test", servizio_base="Consulenza", ore_lavorate=-5.0  # Invalid
+            user_input="test",
+            servizio_base="Consulenza",
+            ore_lavorate=-5.0,  # Invalid
         )
 
         is_valid, error = await invoice_assistant.validate_input(context)
@@ -152,7 +156,9 @@ class TestInvoiceAssistantAgent:
     async def test_validation_hours_realistic(self, invoice_assistant):
         """Test validation of hours being realistic."""
         context = InvoiceContext(
-            user_input="test", servizio_base="Consulenza", ore_lavorate=10000.0  # Unrealistic
+            user_input="test",
+            servizio_base="Consulenza",
+            ore_lavorate=10000.0,  # Unrealistic
         )
 
         is_valid, error = await invoice_assistant.validate_input(context)
@@ -334,7 +340,9 @@ class TestInvoiceDescriptionOutput:
         # This should fail validation
         with pytest.raises(ValueError):
             InvoiceDescriptionOutput(
-                descrizione_completa="x" * 1001, deliverables=[], competenze=[]  # Over limit
+                descrizione_completa="x" * 1001,
+                deliverables=[],
+                competenze=[],  # Over limit
             )
 
     def test_default_values(self):

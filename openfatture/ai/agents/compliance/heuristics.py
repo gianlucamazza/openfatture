@@ -254,7 +254,7 @@ class AIHeuristicAnalyzer:
         """Use AI to analyze description quality and completeness."""
 
         descriptions = [riga.descrizione for riga in fattura.righe]
-        descriptions_text = "\n".join(f"{i+1}. {desc}" for i, desc in enumerate(descriptions))
+        descriptions_text = "\n".join(f"{i + 1}. {desc}" for i, desc in enumerate(descriptions))
 
         prompt = f"""Analizza la qualità e completezza delle seguenti descrizioni di fattura elettronica (FatturaPA):
 

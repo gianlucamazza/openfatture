@@ -7,6 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from openfatture.cli.config_file import save_config
 from openfatture.i18n import _
 from openfatture.utils.config import get_settings, reload_settings
 
@@ -221,7 +222,6 @@ def set_config(
     Updates the config.toml file.
     """
 
-    from openfatture.cli.wizard import save_config
     from openfatture.utils.config import dirs
 
     try:

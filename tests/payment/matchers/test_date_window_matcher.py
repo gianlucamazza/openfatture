@@ -245,7 +245,7 @@ class TestDateWindowMatcher:
             payment.importo_da_pagare = Decimal("1000.00")
             payment.data_scadenza = date(2025, 1, 15) + timedelta(days=days_offset)
             payment.fattura = Mock()
-            payment.fattura.numero = f"00{i+1}"
+            payment.fattura.numero = f"00{i + 1}"
             payments.append(payment)
 
         results = await matcher.match(transaction, payments)

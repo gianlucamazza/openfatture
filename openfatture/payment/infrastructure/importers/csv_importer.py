@@ -355,9 +355,7 @@ class CSVImporter(BaseImporter):
     def __repr__(self) -> str:
         """Human-readable string representation."""
         return (
-            f"<CSVImporter("
-            f"delimiter='{self.config.delimiter}', "
-            f"encoding='{self.config.encoding}')>"
+            f"<CSVImporter(delimiter='{self.config.delimiter}', encoding='{self.config.encoding}')>"
         )
 
     @staticmethod

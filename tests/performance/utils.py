@@ -88,9 +88,9 @@ class PerformanceMetrics:
 
     def print_summary(self) -> None:
         """Print formatted metrics summary."""
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"Performance Metrics: {self.name}")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
         print(f"Iterations:      {self.iterations}")
         print(f"Mean latency:    {self.mean_latency_ms:.3f} ms")
         print(f"Median (p50):    {self.median_latency_ms:.3f} ms")
@@ -101,7 +101,7 @@ class PerformanceMetrics:
         print(f"Std dev:         {self.std_latency_ms:.3f} ms")
         print(f"Throughput:      {self.throughput:.2f} ops/sec")
         print(f"Peak memory:     {self.memory_peak_mb:.2f} MB")
-        print(f"{'='*70}\n")
+        print(f"{'=' * 70}\n")
 
 
 class PerformanceProfiler:

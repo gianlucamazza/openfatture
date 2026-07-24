@@ -1,0 +1,51 @@
+name: Demo validation
+
+on:
+  push:
+    paths:
+      - "scripts/demo.sh"
+      - "media/automation/**"
+      - ".github/workflows/demo-validation.yml"
+  pull_request:
+    paths:
+      - "scripts/demo.sh"
+      - "media/automation/**"
+      - ".github/workflows/demo-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-extras
+
+      - name: Validate demo script
+        run: |
+          bash -n scripts/demo.sh
+          test -x scripts/demo.sh
+
+      - name: Run deterministic CLI demo
+        run: scripts/demo.sh
+
+      - name: Validate tape contract
+        run: |
+          test -f media/automation/quickstart.tape
+          grep -q '^Output ' media/automation/quickstart.tape
+          grep -q 'openfatture --version' media/automation/quickstart.tape
+          grep -q 'openfatture status --json' media/automation/quickstart.tape
+          grep -q 'openfatture assistant --help' media/automation/quickstart.tape
+          ! grep -Eq 'openfatture (ai|cliente|fattura|payment|batch|pec|events|report)\b' media/automation/quickstart.tape

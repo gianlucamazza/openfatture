@@ -40,7 +40,7 @@ class FormatterFactory:
         if formatter_class is None:
             supported = ", ".join(cls._formatters.keys())
             raise ValueError(
-                f"Unsupported format type: {format_type}. " f"Supported types: {supported}"
+                f"Unsupported format type: {format_type}. Supported types: {supported}"
             )
         return formatter_class()
 
