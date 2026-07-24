@@ -9,6 +9,10 @@ from openfatture.ai.config import AISettings, get_ai_settings
 if TYPE_CHECKING:
     from contextvars import ContextVar
 
+    from openfatture.ai.providers.anthropic import AnthropicProvider
+    from openfatture.ai.providers.ollama import OllamaProvider
+    from openfatture.ai.providers.openai import OpenAIProvider
+
     _http_client_context: ContextVar[httpx.AsyncClient | None] | None
     _has_context: bool
 else:
@@ -21,10 +25,7 @@ else:
         # CLI lifespan module not available (e.g., in tests or non-CLI usage)
         _http_client_context = None
         _has_context = False
-from openfatture.ai.providers.anthropic import AnthropicProvider
 from openfatture.ai.providers.base import BaseLLMProvider, ProviderError
-from openfatture.ai.providers.ollama import OllamaProvider
-from openfatture.ai.providers.openai import OpenAIProvider
 from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -243,6 +244,8 @@ def _create_openai_provider(
     **kwargs: str | int | float,
 ) -> OpenAIProvider:
     """Create OpenAI provider."""
+    from openfatture.ai.providers.openai import OpenAIProvider
+
     # Check if API key is configured
     api_key = settings.get_api_key_for_provider()
 
@@ -283,6 +286,8 @@ def _create_anthropic_provider(
     **kwargs: str | int | float,
 ) -> AnthropicProvider:
     """Create Anthropic provider."""
+    from openfatture.ai.providers.anthropic import AnthropicProvider
+
     # Check if API key is configured
     api_key = settings.get_api_key_for_provider()
 
@@ -344,6 +349,8 @@ def _create_ollama_provider(
     **kwargs: str | int | float,
 ) -> OllamaProvider:
     """Create Ollama provider."""
+    from openfatture.ai.providers.ollama import OllamaProvider
+
     # Ollama doesn't use api_key, only base_url
     # Build config dict without TypedDict to avoid api_key type error
     params = {k: v for k, v in kwargs.items() if k != "api_key"}

@@ -29,17 +29,24 @@ from openfatture.ai.domain import (
     Role,
 )
 
-# Providers
-from openfatture.ai.providers import (
-    AnthropicProvider,
-    BaseLLMProvider,
-    OllamaProvider,
-    OpenAIProvider,
-    ProviderError,
-    create_provider,
-)
-
 __version__ = "1.3.1"
+
+
+def __getattr__(name: str):
+    """Load provider plugins only when a caller explicitly requests one."""
+    if name in {
+        "AnthropicProvider",
+        "BaseLLMProvider",
+        "OllamaProvider",
+        "OpenAIProvider",
+        "ProviderError",
+        "create_provider",
+    }:
+        from openfatture.ai import providers
+
+        return getattr(providers, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Domain

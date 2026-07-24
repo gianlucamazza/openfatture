@@ -1,17 +1,32 @@
-"""LLM provider implementations."""
+"""LLM provider plugins, loaded on demand."""
 
-from openfatture.ai.providers.anthropic import AnthropicProvider
-from openfatture.ai.providers.base import (
-    BaseLLMProvider,
-    ProviderAuthError,
-    ProviderError,
-    ProviderRateLimitError,
-    ProviderTimeoutError,
-    ProviderUnavailableError,
-)
-from openfatture.ai.providers.factory import create_provider, test_provider
-from openfatture.ai.providers.ollama import OllamaProvider
-from openfatture.ai.providers.openai import OpenAIProvider
+
+def __getattr__(name: str):
+    if name in {"AnthropicProvider", "OllamaProvider", "OpenAIProvider"}:
+        module_name = {
+            "AnthropicProvider": "anthropic",
+            "OllamaProvider": "ollama",
+            "OpenAIProvider": "openai",
+        }[name]
+        module = __import__(f"openfatture.ai.providers.{module_name}", fromlist=[name])
+        return getattr(module, name)
+    if name in {
+        "BaseLLMProvider",
+        "ProviderAuthError",
+        "ProviderError",
+        "ProviderRateLimitError",
+        "ProviderTimeoutError",
+        "ProviderUnavailableError",
+    }:
+        from openfatture.ai.providers import base
+
+        return getattr(base, name)
+    if name in {"create_provider", "test_provider"}:
+        from openfatture.ai.providers import factory
+
+        return getattr(factory, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Base
