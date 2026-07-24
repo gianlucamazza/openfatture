@@ -1,0 +1,59 @@
+{
+  "name": "OpenFatture 1440p60",
+  "base_canvas_resolution": "2560x1440",
+  "output_scaled_resolution": "1920x1080",
+  "fps": 60,
+  "color_format": "NV12",
+  "color_space": "sRGB",
+  "color_range": "full",
+  "video_encoder": {
+    "type": "apple_vth264_hw",
+    "bitrate_kbps": 18000,
+    "keyframe_interval": 2,
+    "b_frames": 0,
+    "profile": "high"
+  },
+  "audio": {
+    "sample_rate": 48000,
+    "channels": 2,
+    "tracks": [
+      {
+        "id": 1,
+        "name": "Program",
+        "enabled": true
+      },
+      {
+        "id": 2,
+        "name": "Clean Mic",
+        "enabled": true
+      },
+      {
+        "id": 3,
+        "name": "System FX",
+        "enabled": true
+      }
+    ]
+  },
+  "recording": {
+    "format": "mov",
+    "quality": "lossless_qp0",
+    "file_naming": "OF_{scenario}_{date}_{time}"
+  },
+  "scenes": [
+    {
+      "name": "CLI Capture",
+      "sources": [
+        {"type": "display_capture", "display": 1, "crop": {"top": 120, "bottom": 120, "left": 160, "right": 160}},
+        {"type": "cursor_highlight", "size": 140, "opacity": 0.35},
+        {"type": "media_source", "file": "media/overlays/lowerthird_cli.mov", "hotkeys": ["CTRL+ALT+L"]}
+      ]
+    },
+    {
+      "name": "Slides & Browser",
+      "sources": [
+        {"type": "window_capture", "window": "Chrome: Docs"},
+        {"type": "image", "file": "media/overlays/frame.png"}
+      ]
+    }
+  ]
+}
