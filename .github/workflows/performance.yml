@@ -180,12 +180,20 @@ jobs:
 
           # Load benchmark results
           results_file = Path("benchmark-results/benchmark-results.json")
-          if not results_file.exists():
-              print("No results file found")
+          if not results_file.exists() or results_file.stat().st_size == 0:
+              print("No benchmark results found; skipping HTML report")
               exit(0)
 
-          with open(results_file) as f:
-              data = json.load(f)
+          try:
+              with open(results_file) as f:
+                  data = json.load(f)
+          except json.JSONDecodeError:
+              print("Benchmark results are empty or invalid; skipping HTML report")
+              exit(0)
+
+          if not data.get("benchmarks"):
+              print("No benchmark entries found; skipping HTML report")
+              exit(0)
 
           # Convert to PerformanceMetrics
           reporter = HTMLBenchmarkReporter()
