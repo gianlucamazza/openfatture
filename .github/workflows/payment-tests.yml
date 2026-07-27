@@ -245,7 +245,7 @@ jobs:
           df -h
 
       - name: Build minimal Docker image (payment module only)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile.payment
