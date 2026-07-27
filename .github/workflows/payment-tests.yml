@@ -87,7 +87,7 @@ jobs:
 
       - name: Archive coverage HTML report
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: payment-coverage-${{ matrix.os }}-py${{ matrix.python-version }}
           path: htmlcov/
