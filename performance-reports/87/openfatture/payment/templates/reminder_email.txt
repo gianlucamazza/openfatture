@@ -1,0 +1,41 @@
+PAYMENT REMINDER
+{{ '=' * 60 }}
+
+Dear Customer,
+
+This is a friendly reminder for the following invoice:
+
+INVOICE DETAILS
+{{ '-' * 60 }}
+Invoice number:      {{ invoice.numero }}
+Issue date:          {{ invoice.data.strftime('%d/%m/%Y') }}
+Due date:            {{ payment.data_scadenza.strftime('%d/%m/%Y') }}
+Amount due:          € {{ "%.2f"|format(payment.importo_da_pagare) }}
+{{ '-' * 60 }}
+
+{% if days_to_due < 0 %}
+ATTENTION: The payment is {{ -days_to_due }} days overdue.
+   Please arrange payment as soon as possible.
+{% elif days_to_due == 0 %}
+DUE TODAY: The payment falls due today.
+   Kindly proceed with the transfer.
+{% elif days_to_due <= 3 %}
+The payment is due in {{ days_to_due }} days.
+{% else %}
+The payment is due in {{ days_to_due }} days.
+{% endif %}
+
+{% if payment.istruzioni_pagamento %}
+PAYMENT INSTRUCTIONS:
+{{ payment.istruzioni_pagamento }}
+{% endif %}
+
+Kind regards,
+{{ company_name }}
+
+{{ '=' * 60 }}
+This is an automated message. Please do not reply.
+Need help? Contact: support@example.com
+
+Powered by OpenFatture
+https://github.com/openfatture/openfatture

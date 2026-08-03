@@ -1,0 +1,4 @@
+denominazione,partita_iva,codice_fiscale,codice_destinatario,pec,email,indirizzo,cap,comune,provincia,nazione,telefono
+"ACME Innovazione S.r.l.",10293847561,ACMINN85L01H501Z,ABC1234,acme.innovazione@pec.demo.it,amministrazione@acme-demo.it,"Via Industria 10",20121,Milano,MI,IT,+390211223344
+"Studio Legale Aurora",01928374650,STLAUR80A41F205S,0000000,studio.aurora@pec.demo.it,contabilita@studioaurora.demo,"Corso Italia 45",40121,Bologna,BO,IT,+390512233445
+"Freelance Lab di Marta Neri",01234567890,NERMRT90B41H501U,KRRH6B9,marta.neri@pec.demo.it,hello@freelancelab.demo,"Via Garibaldi 12",10121,Torino,TO,IT,+390113334455

@@ -1,0 +1,89 @@
+{
+  "sources": [
+    {
+      "id": "agenzia_entrate_fatturapa",
+      "name": "Agenzia delle Entrate - FatturaPA",
+      "url": "https://www.agenziaentrate.gov.it/portale/web/guest/schede/comunicazioni/fatturazione-elettronica",
+      "description": "Pagina ufficiale FatturaPA con aggiornamenti normativi",
+      "content_type": "html",
+      "selectors": {
+        "main_content": ".main-content",
+        "news_section": ".news-list",
+        "updates_section": ".aggiornamenti"
+      },
+      "follow_links": true,
+      "link_selectors": [
+        ".news-item a",
+        ".aggiornamento a"
+      ],
+      "change_detection": "content_hash",
+      "jurisdiction": "IT",
+      "category": "invoice",
+      "priority": 10,
+      "official_source": true,
+      "enabled": true,
+      "tags": ["fatturapa", "xml", "sdi", "agenzia-entrate"]
+    },
+    {
+      "id": "ministero_economia_iva",
+      "name": "Ministero Economia - IVA",
+      "url": "https://www.mef.gov.it/it/normativa/iva/",
+      "description": "Normativa IVA e aliquote",
+      "content_type": "html",
+      "selectors": {
+        "content": ".content-wrapper",
+        "documents": ".document-list"
+      },
+      "follow_links": false,
+      "change_detection": "content_hash",
+      "jurisdiction": "IT",
+      "category": "iva",
+      "priority": 9,
+      "official_source": true,
+      "enabled": true,
+      "tags": ["iva", "aliquote", "mef"]
+    },
+    {
+      "id": "agenzia_entrate_regime_forfettario",
+      "name": "Agenzia Entrate - Regime Forfettario",
+      "url": "https://www.agenziaentrate.gov.it/portale/web/guest/schede/fiscalita/fiscalita-delle-persone-fisiche/regime-forfettario",
+      "description": "Aggiornamenti regime forfettario",
+      "content_type": "html",
+      "selectors": {
+        "main": ".main-content",
+        "updates": ".aggiornamenti"
+      },
+      "follow_links": true,
+      "link_selectors": [
+        ".news-link",
+        ".document-link"
+      ],
+      "change_detection": "content_hash",
+      "jurisdiction": "IT",
+      "category": "tax",
+      "priority": 8,
+      "official_source": true,
+      "enabled": true,
+      "tags": ["forfettario", "regime-fiscale", "professionisti"]
+    },
+    {
+      "id": "eu_vat_directive",
+      "name": "EU VAT Directive Updates",
+      "url": "https://ec.europa.eu/taxation_customs/business/vat_en",
+      "description": "Direttiva UE IVA e aggiornamenti comunitari",
+      "content_type": "html",
+      "selectors": {
+        "content": ".content",
+        "news": ".news-list"
+      },
+      "follow_links": false,
+      "change_detection": "content_hash",
+      "jurisdiction": "EU",
+      "category": "iva",
+      "priority": 7,
+      "official_source": true,
+      "enabled": true,
+      "tags": ["ue", "iva", "direttiva", "comunitario"]
+    }
+  ]
+}
