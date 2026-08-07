@@ -338,7 +338,21 @@ jobs:
               print("No performance regressions detected")
           EOF
 
-          uv run python check_regression.py || echo "regression_detected=true" >> "$GITHUB_OUTPUT"
+          # The script only uses the standard library, so it runs on the
+          # runner's Python: this job installs neither uv nor the project.
+          # Exit 1 means "regression found"; anything else is a real failure
+          # and must not be reported as a performance regression.
+          set +e
+          python3 check_regression.py
+          status=$?
+          set -e
+
+          if [ "$status" -eq 1 ]; then
+            echo "regression_detected=true" >> "$GITHUB_OUTPUT"
+          elif [ "$status" -ne 0 ]; then
+            echo "::error::check_regression.py exited with status $status"
+            exit "$status"
+          fi
 
       - name: Fail on regression
         if: steps.regression-check.outputs.regression_detected == 'true'
