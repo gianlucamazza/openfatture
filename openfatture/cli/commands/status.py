@@ -77,13 +77,20 @@ def _build_status() -> dict[str, Any]:
             p.name for p in hooks_dir.iterdir() if p.is_file() and not p.name.startswith(".")
         )
     readiness = _readiness(settings, extras)
-    # Keep mapping inline so core-only installs never import the AI package.
-    assistant_backend = str(getattr(settings, "assistant_backend", "chat") or "chat")
-    _backend_ids = {
-        "chat": "chat_agent_tool_loop",
-        "langgraph": "langgraph_tool_loop",
-    }
-    assistant_backend_id = _backend_ids.get(assistant_backend, "chat_agent_tool_loop")
+    # Backend ids SSOT: platform.assistant_backends (no AI package import).
+    from openfatture.platform.assistant_backends import (
+        DEFAULT_ASSISTANT_BACKEND,
+        resolve_backend_id,
+    )
+
+    assistant_backend = str(
+        getattr(settings, "assistant_backend", DEFAULT_ASSISTANT_BACKEND)
+        or DEFAULT_ASSISTANT_BACKEND
+    )
+    try:
+        assistant_backend_id = resolve_backend_id(assistant_backend)
+    except ValueError:
+        assistant_backend_id = resolve_backend_id(DEFAULT_ASSISTANT_BACKEND)
 
     return {
         "version": __version__,

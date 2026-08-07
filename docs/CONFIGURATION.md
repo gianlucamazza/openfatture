@@ -55,11 +55,17 @@ uv sync --all-extras
 | `CEDENTE_CODICE_FISCALE` | Tax code |
 | `PEC_ADDRESS` | Certified email address |
 | `PEC_PASSWORD` | Certified email credential |
-| `AI_PROVIDER` | Configured assistant provider |
-| `AI_MODEL` | Provider model name |
-| `AI_API_KEY` | Provider credential |
-| `AI_BASE_URL` | Local provider endpoint, such as Ollama |
-| `ASSISTANT_BACKEND` | Product assistant orchestration: `langgraph` (default StateGraph tool loop) or `chat` (rollback) |
+| `AI_PROVIDER` | **Product SSOT** assistant provider (`openai` / `anthropic` / `ollama`) |
+| `AI_MODEL` | **Product SSOT** model name for the selected provider |
+| `AI_API_KEY` | **Product SSOT** provider credential |
+| `AI_BASE_URL` | **Product SSOT** local provider endpoint (Ollama) |
+| `ASSISTANT_BACKEND` | Product assistant orchestration: `langgraph` (default) or `chat` (rollback) |
+
+Product credentials written by `openfatture init` use the `AI_*` names above.
+The provider factory hydrates `AISettings` from those values (see
+`hydrate_ai_settings_from_platform`). Advanced AI-only knobs may use the
+`OPENFATTURE_AI_*` prefix; when both are set, `OPENFATTURE_AI_*` wins for that
+field.
 
 Sensitive values should be provided through the environment or a protected
 local secrets file. Do not commit credentials.

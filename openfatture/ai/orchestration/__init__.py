@@ -42,6 +42,8 @@ Key Features:
 - **Observability**: Structured logging, metrics, audit trails
 """
 
+from openfatture import __version__
+
 # State Management
 # Human-in-the-Loop
 from openfatture.ai.orchestration.human_loop import (
@@ -164,7 +166,5 @@ __all__ = [
     "HumanReviewer",
     "ReviewDecisionLogger",
     "create_approval_checkpoint",
+    "__version__",
 ]
-
-# Version
-__version__ = "0.1.0"

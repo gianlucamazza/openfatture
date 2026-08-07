@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project config hygiene: pytest local runs no longer force coverage (CI still
   does); `Settings.app_version` tracks package `__version__`; bumpversion
   pin aligned to 2.1.0; technical debt docs updated for LangGraph default.
+- **SSOT:** assistant backend ids live in `platform.assistant_backends`;
+  package `__version__` is re-exported by subpackages; `AISettings` hydrates
+  credentials from platform `AI_*` (init/docs) with `OPENFATTURE_AI_*`
+  override precedence; coverage `fail_under=49` in pyproject.
 
 ## [2.1.0] - 2026-08-08
 

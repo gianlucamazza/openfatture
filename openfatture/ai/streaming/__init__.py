@@ -33,6 +33,7 @@ Best Practices (2025):
 - Use factory methods (e.g., StreamEvent.content()) for clarity
 """
 
+from openfatture import __version__
 from openfatture.ai.streaming.accumulator import (
     MultiStreamAccumulator,
     StreamAccumulator,
@@ -46,6 +47,5 @@ __all__ = [
     # Accumulators
     "StreamAccumulator",
     "MultiStreamAccumulator",
+    "__version__",
 ]
-
-__version__ = "1.0.0"
