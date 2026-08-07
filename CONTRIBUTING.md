@@ -215,12 +215,12 @@ uv run bump-my-version bump patch --dry-run --verbose
 ```
 
 When you bump a version, the tool automatically:
-1. Updates `__version__` in `openfatture/__init__.py`
-2. Updates `CHANGELOG.md` with new version header
-3. Creates a git commit: `Bump version: X.Y.Z X.Y.Z+1`
-4. Creates a git tag: `vX.Y.Z+1`
+1. Updates `__version__` in `openfatture/__init__.py` (single source of truth;
+   `openfatture.ai` re-exports it; `Settings.app_version` defaults to it)
+2. Creates a git commit and tag (`vX.Y.Z`) per `.bumpversion.toml`
 
-After bumping, push with: `git push --follow-tags`
+Keep `CHANGELOG.md` and release notes under `docs/releases/` updated **before**
+or **with** the bump. After bumping: `git push --follow-tags`.
 
 ### Updating CHANGELOG
 

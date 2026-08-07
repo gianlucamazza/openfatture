@@ -1,28 +1,28 @@
 # Technical Debt Inventory
 
-Honest inventory of remaining debt **after** the 2.0.0 modernization release
-(hygiene, Ruff-only tooling, extras, package reorg, core/extension boundaries,
-D2 tools, D3 runtime, honesty gates).
+Honest inventory of remaining debt **after** modernization **2.0** and the
+**2.1.0** LangGraph default flip.
 
-**Last updated:** 2026-08-07  
-Related: [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md), [ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md),
-[releases/v2.0.0.md](releases/v2.0.0.md).
+**Last updated:** 2026-08-08  
+Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
+[ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md),
+[releases/v2.1.0.md](releases/v2.1.0.md), [releases/v2.0.0.md](releases/v2.0.0.md).
 
 ---
 
 ## Verdict
 
-Structural modernization for 2.0.0 is **done**. Remaining debt is mostly
-**product completeness** (Lightning gRPC, oversized modules, experimental
+Structural modernization and AI product backend flip are **done**. Remaining
+debt is **product completeness** (Lightning gRPC, oversized modules, experimental
 workflows), not packaging chaos.
 
 | Area | Debt level | Notes |
 |------|------------|--------|
 | Public CLI surface | Low | Small agentic surface; status/extras clean |
-| Core billing / SDI / payment | Low | Tools → application; billing namespaces re-export use-cases |
+| Core billing / SDI / payment | Low | Tools → application; billing re-exports use-cases |
 | Package layout | Low | Bounded packages; no empty placeholders |
-| AI runtime | Medium | Product = ChatAgent; LangGraph multi-node is tested helper only |
-| Lightning | Medium–High | Fail-closed; simulate_payment gated; real gRPC still missing |
+| AI runtime | Low | Default `langgraph_tool_loop`; single tool-loop; ChatAgent slimmed (structured + rollback) |
+| Lightning | Medium–High | Fail-closed; real LND gRPC still missing |
 | RAG auto-update | Low | Callback required; default auto-update off |
 | Tooling / types | Low | No in-code suppressions; only E501 formatter ignore |
 | Tests | Low | Skips mostly for external services / interactive |
@@ -36,45 +36,39 @@ workflows), not packaging chaos.
 | Repo hygiene + docs | done |
 | Ruff-only tooling | done |
 | Optional extras | done |
-| D0 non-core cut | done |
-| D1 package reorg | done |
-| Core vs extras vs extensions | done (plugins package removed) |
+| D0–D3 (layout, tools, runtime) | done |
 | Honesty gates (Lightning mock, RAG queue) | done |
-| D2 tools → application services | done |
-| D3 single assistant runtime | done |
-| 2.0.0 release notes | done |
+| 2.0.0–2.0.2 releases | done |
+| LangGraph opt-in product backend | done (2.0.x) |
+| LangGraph **default** + ChatAgent slim | done (**2.1.0**) |
 
 ---
 
 ## High priority (real product risk)
 
-### 1. AI product path vs LangGraph helper
-
-- **Product path:** `AssistantRuntime` → `ChatAgent` (native tools / ReAct).
-- **Helper:** `ai.runtime.graph.build_tool_loop_graph` (multi-node model↔tools).
-- **Workflows:** `ai.orchestration.workflows.*` remain internal/experimental.
-- **Remaining:** promote graph to product only with parity tests; fix simulated
-  human approval in experimental workflows or rename nodes honestly.
-
-### 2. Lightning LND real gRPC still missing
+### 1. Lightning LND real gRPC still missing
 
 - **Files:** `openfatture/lightning/infrastructure/lnd_client.py`
-- **Honesty:** Mock is **off by default** (`allow_mock=False` /
-  `lightning_allow_mock=false`). Without stubs, operations raise `LNDClientError`.
-- **Status:** Silent mock **fixed**; full RPC **still open**. Lightning is
-  experimental until real bindings land.
+- **Honesty:** Mock is **off by default** (`lightning_allow_mock=false`).
+- **Status:** Silent mock fixed; full RPC still open. Lightning is
+  **experimental** until real bindings land — or document a harder cut.
+
+### 2. AI product path — resolved for 2.1.0
+
+- **Default:** `AssistantRuntime` → `GraphAssistantBackend` (`langgraph_tool_loop`).
+- **Rollback:** `ASSISTANT_BACKEND=chat` → slim `ChatAgent` (structured output +
+  same graph for tool/plain/ReAct turns).
+- **Workflows:** `ai.orchestration.workflows.*` remain internal/experimental;
+  not on the public CLI.
 
 ### 3. AI tools → application services — done
 
-- All AI tool modules under `openfatture/ai/tools` are thin adapters.
-- Domain use-cases: `billing.application.*`, `payment.application.*`,
-  `sdi.application.*`, `pdf.tool_ops`.
-- **Follow-up:** split large `*_ops.py` modules where complexity grows.
+- Thin adapters under `openfatture/ai/tools`.
+- Follow-up: split large `*_ops.py` / command modules where complexity grows.
 
 ### 4. RAG auto-update queue honesty — resolved
 
-- Requires a real `reindex_callback` (wired by `AutoIndexingService`).
-- Default auto-update remains disabled.
+- Requires a real `reindex_callback`; default auto-update remains disabled.
 
 ---
 
@@ -82,49 +76,42 @@ workflows), not packaging chaos.
 
 ### Oversized modules
 
-- `ai/agents/cash_flow_predictor.py`, `chat_agent.py`
-- `ai/tools/registry.py`
-- `ai/orchestration/workflows/invoice_creation.py`
-- `billing/application/preventivo_ops.py`, `prodotto_ops.py`, `invoice_commands.py`
-- `storage/database/models.py`
+| Module | ~LOC | Note |
+|--------|------|------|
+| `ai/agents/cash_flow_predictor.py` | ~1091 | P1 split candidate |
+| `ai/orchestration/workflows/invoice_creation.py` | ~921 | experimental |
+| `ai/providers/openai.py` | ~855 | provider adapter |
+| `ai/tools/registry/core.py` | ~718 | package already split |
+| `billing/application/invoice_commands.py` | ~714 | P2 |
+| `storage/database/models.py` | ~672 | split by bounded context |
+| `billing/application/preventivo_ops.py` | ~550 | P2 |
 
-### Empty billing packages — resolved as re-exports
-
-- `billing/clienti`, `billing/prodotti`, `billing/fiscale` re-export
-  application modules (no empty placeholders).
+`chat_agent.py` is slimmed (structured + graph delegation). Registry is a package.
 
 ### Experimental workflow human interrupt
 
-- `invoice_creation` / `compliance_check` use **confidence auto-gates** or
-  leave `awaiting_approval` without inventing human decisions. Real CLI
-  interrupt is not on the product path (internal workflows only).
+- Confidence auto-gates or honest `awaiting_approval`; no invented human decisions.
+- Real CLI interrupt is not on the product path.
 
 ### Type-safety / lint
 
 - **Resolved:** zero in-code `noqa` / `type: ignore` / `pragma: no cover`.
-  Ruff global ignore is only `E501` (formatter-owned).
-- Remaining: `mypy` still ignores entire `tests.*`.
+- Ruff global ignore is only `E501` (formatter-owned).
+- `mypy` still ignores entire `tests.*` (optional incremental typing later).
 - Third-party packages without stubs use `ignore_missing_imports` in
   `pyproject.toml` (external, not project debt).
 
 ### Bulkhead / registry TODOs
 
-- `ai/tools/registry.py`: queue length tracking for bulkhead not implemented.
+- Queue length tracking for bulkhead not implemented (observability).
 
 ### ML accuracy drift
 
-- Signal **explicitly unavailable** (`status: not_implemented` in
-  `get_trigger_summary`); does not silent-trigger and does not claim
-  “accuracy is fine”.
-
-### Fuzzy matcher — resolved
-
-- No Mock/MagicMock special-casing in production matcher.
+- Signal explicitly unavailable (`status: not_implemented`); no silent success claim.
 
 ### `async_bridge` nested loops
 
-- Documented nested path: `nest_asyncio` optional, else worker thread.
-  Primary path remains `asyncio.run`.
+- `nest_asyncio` optional, else worker thread; primary path `asyncio.run`.
 
 ---
 
@@ -133,30 +120,18 @@ workflows), not packaging chaos.
 | Item | Why acceptable |
 |------|----------------|
 | `except Exception` in hooks/events/email | Intentional isolation |
-| Retry / rate-limit `sleep` | Normal control flow |
 | External-service test skips | Correct for CI |
-| SQLAlchemy `.is_(True)` / `.is_(False)` | Correct ORM boolean comparisons |
 | Ruff `E501` ignore | Line length owned by `ruff format` |
 | `tests/**` E402 per-file | Fixture/path setup before SUT import |
 | `__init__.py` F401 per-file | Public re-export barrels |
-
----
-
-## Counts (approximate)
-
-| Signal | Count / note |
-|--------|----------------|
-| Explicit `TODO` in code | ~15 (LND, bulkhead, ML drift, …) |
-| `type: ignore` / `noqa` / `pragma: no cover` | **0** |
-| AI tools → application layer only | D2 done |
-| Skipped tests | mostly external/interactive |
+| Global coverage floor ~49% in CI | Baseline; payment suite has higher floor (75%) |
 
 ---
 
 ## Recommended burn-down order
 
-1. Session resume polish and graph test coverage (product UX)
-2. Lightning: real gRPC **or** keep hard experimental posture in docs/CLI
-3. Split oversized ops modules
-4. Honest experimental workflow approval nodes
-5. Optional: mypy on tests; import-linter boundaries
+1. Lightning: real gRPC **or** keep hard experimental posture in docs/CLI
+2. Split oversized modules (`cash_flow_predictor`, invoice commands, models)
+3. Honest experimental workflow approval nodes (if ever productized)
+4. Optional: mypy on selected tests; import-linter boundaries
+5. Optional: Textual TUI (product decision)

@@ -16,6 +16,13 @@ from pydantic_settings import (
 dirs = PlatformDirs("openfatture", "venerelabs")
 
 
+def _default_app_version() -> str:
+    """Resolve package version without duplicating the string in Settings."""
+    from openfatture import __version__
+
+    return __version__
+
+
 class DebugConfig(BaseSettings):
     """Dynamic debug configuration controls."""
 
@@ -148,7 +155,11 @@ class Settings(BaseSettings):
 
     # Application
     app_name: str = "OpenFatture"
-    app_version: str = "0.1.0"
+    # Single source of truth: openfatture.__version__ (CLI --version / status use the same).
+    app_version: str = Field(
+        default_factory=_default_app_version,
+        description="Package version (mirrors openfatture.__version__; overridable via env)",
+    )
     debug: bool = False
 
     # Database
