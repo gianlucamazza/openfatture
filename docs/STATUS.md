@@ -1,6 +1,6 @@
 # OpenFatture project status
 
-**Current version:** 2.0.1  
+**Current version:** 2.0.2  
 **Product posture:** CLI-first, with an interactive terminal mode for guided workflows  
 **Runtime:** Python 3.12+ and `uv`
 
@@ -45,8 +45,8 @@ fix the root cause instead.
    `ai.tools.registry` is already a package)
 4. Onboarding polish continues (readiness in `status`, slash commands in assistant)
 
-See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [releases/v2.0.1.md](releases/v2.0.1.md),
-and [releases/v2.0.0.md](releases/v2.0.0.md).
+See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [releases/v2.0.2.md](releases/v2.0.2.md),
+and [releases/v2.0.1.md](releases/v2.0.1.md).
 
 ## Explicit non-goals
 
