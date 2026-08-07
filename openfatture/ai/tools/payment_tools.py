@@ -779,18 +779,27 @@ def import_bank_transactions(
             .all()
         }
 
-        tx_repo = BankTransactionRepository(db)
-        imported = 0
+        # OFXImporter builds every transaction against `account`, so they all
+        # sit in account.transactions already. Drop the duplicates from that
+        # collection and persist the rest in one batch: flushing per row while
+        # later rows are still pending on the relationship makes SQLAlchemy
+        # warn about cascading an append for an object not yet in the session.
+        to_import = []
         skipped = 0
         for transaction in parsed:
             reference = transaction.reference
             if reference is not None and reference in known_references:
                 skipped += 1
+                account.transactions.remove(transaction)
                 continue
             if reference is not None:
                 known_references.add(reference)
-            tx_repo.add(transaction)
-            imported += 1
+            to_import.append(transaction)
+
+        tx_repo = BankTransactionRepository(db)
+        if to_import:
+            tx_repo.add_batch(to_import)
+        imported = len(to_import)
 
         db.commit()
 
