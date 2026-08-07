@@ -96,6 +96,10 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    # Do not inherit workflow UV_EXTRA=dev: it conflicts with --all-extras installs
+    # and can leave `uv run` unable to spawn tools from the full environment.
+    env:
+      UV_EXTRA: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -115,7 +119,7 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install dependencies
-        # --all-extras includes product extras and the dev optional-dep group.
+        # --all-extras includes product extras and the dev optional-dep group (ruff/mypy).
         run: uv sync --frozen --all-extras --python "$(command -v python3)"
 
       - name: Run Ruff format
