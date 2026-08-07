@@ -118,13 +118,14 @@ jobs:
         run: uv sync --frozen --all-extras --python "$(command -v python3)"
 
       - name: Run Ruff format
-        run: uv run --extra dev ruff format --check .
+        run: uv run --all-extras --extra dev ruff format --check .
 
       - name: Run Ruff check
-        run: uv run --extra dev ruff check .
+        run: uv run --all-extras --extra dev ruff check .
 
       - name: Run MyPy
-        run: uv run --extra dev python -m mypy openfatture/
+        # Include all feature extras so mypy can resolve optional imports (openai, langgraph, …).
+        run: uv run --all-extras --extra dev python -m mypy openfatture/
 
   security:
     runs-on: ubuntu-latest
