@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  openfatture:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openfatture:latest
+    container_name: openfatture
+    volumes:
+      # Mount .env for configuration
+      - ./.env:/app/.env:ro
+      # Mount data directories for persistence
+      - openfatture_data:/root/.openfatture/data
+      - openfatture_archivio:/root/.openfatture/archivio
+      - openfatture_certs:/root/.openfatture/certificates
+    environment:
+      - DATABASE_URL=sqlite:////root/.openfatture/data/openfatture.db
+    stdin_open: true
+    tty: true
+    networks:
+      - openfatture_network
+
+  # PostgreSQL database (optional - for production)
+  postgres:
+    image: postgres:16-alpine
+    container_name: openfatture_postgres
+    environment:
+      POSTGRES_DB: openfatture
+      POSTGRES_USER: openfatture
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - openfatture_network
+    profiles:
+      - postgres
+
+  # Redis (for AI caching)
+  redis:
+    image: redis:7-alpine
+    container_name: openfatture_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - openfatture_network
+    profiles:
+      - ai
+
+volumes:
+  openfatture_data:
+    driver: local
+  openfatture_archivio:
+    driver: local
+  openfatture_certs:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  openfatture_network:
+    driver: bridge
