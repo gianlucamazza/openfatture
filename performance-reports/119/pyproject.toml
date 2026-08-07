@@ -1,0 +1,262 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openfatture"
+dynamic = ["version"]
+description = "Open-source electronic invoicing for Italian freelancers - CLI-first with AI workflows"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Gianluca Mazza", email = "info@gianlucamazza.it" }]
+keywords = [
+  "fattura-elettronica",
+  "sdi",
+  "fatturapa",
+  "freelance",
+  "invoicing",
+  "cli",
+  "ai",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "Topic :: Office/Business :: Financial :: Accounting",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+  # CLI Framework
+  # typer 0.19+ has no "all" extra (was shellingham+rich; both are direct deps now)
+  "typer>=0.12.0",
+  "rich>=13.7.0",
+  "questionary>=2.0.0",
+  "tomlkit>=0.13.0",
+  "pyyaml>=6.0.1",
+  "click>=8.1.7",
+  # Database & ORM
+  "sqlalchemy>=2.0.25",
+  "alembic>=1.13.1",
+  # Data Validation
+  "pydantic>=2.6.0",
+  "pydantic-settings>=2.1.0",
+  # XML Processing & Financial Formats
+  "lxml>=5.1.0",
+  "xmlschema>=3.0.1",
+  "ofxparse>=0.21",
+  # Cryptography & Digital Signatures
+  "cryptography>=42.0.2",
+  "asn1crypto>=1.5.1",
+  "pyasn1>=0.5.0",
+  "pyasn1-modules>=0.3.0",
+  # HTTP & Email (for PEC)
+  "requests>=2.31.0",
+  "urllib3>=2.7.0",
+  "httpx>=0.26.0",
+  # Email Templates & PDF
+  "jinja2>=3.1.0",
+  "reportlab>=4.0.9",
+  # Date, matching, config, logging
+  "python-dateutil>=2.8.2",
+  "rapidfuzz>=3.0.0",
+  "python-dotenv>=1.0.0",
+  "platformdirs>=4.0.0",
+  "structlog>=24.1.0",
+  # Internationalization
+  "fluent-runtime>=0.4.0",
+  "babel>=2.14.0",
+]
+
+[project.optional-dependencies]
+# LLM providers, agents, tools, LangGraph workflows
+ai = [
+  "langgraph>=0.6",
+  "openai>=2.4.0",
+  "anthropic>=0.71.0",
+  "tiktoken>=0.8.0",
+]
+# Vector store + embeddings (implies AI for typical use)
+rag = [
+  "openfatture[ai]",
+  "chromadb>=0.4.22",
+  "sentence-transformers>=2.6.0",
+  "transformers>=5.5.0",
+]
+# Cash-flow forecasting models
+ml = [
+  "prophet>=1.1.5",
+  "xgboost>=2.1.0",
+  "pandas>=2.3.3",
+  "plotly>=6.3.1",
+  "numpy>=1.26.0",
+  "apscheduler>=3.10.4",
+]
+# Lightning Network (gRPC client for LND)
+lightning = [
+  "grpcio>=1.60.0",
+]
+# Full feature set for developers and production AI installs
+all = [
+  "openfatture[ai,rag,ml,lightning]",
+]
+dev = [
+  # Testing
+  "pytest>=8.0.0",
+  "pytest-cov>=4.1.0",
+  "pytest-asyncio>=0.23.3",
+  "pytest-mock>=3.12.0",
+  "pytest-benchmark>=4.0.0",
+  "hypothesis>=6.98.0",
+
+  # Code Quality (keep ranges aligned with pre-commit hooks)
+  "ruff>=0.14.0,<0.17",
+  "mypy>=1.8.0",
+
+  # Pre-commit hooks
+  "pre-commit>=3.6.0",
+
+  # Version Management
+  "bump-my-version>=0.18.0",
+
+  # Type stubs
+  "types-requests>=2.31.0",
+  "types-reportlab>=4.0.0",
+  "types-PyYAML>=6.0.0",
+  "types-pyasn1>=0.5.0",
+  "types-grpcio>=1.0.0",
+  "pandas-stubs>=2.0.0",
+  "lxml-stubs>=0.5.1",
+  "types-python-dateutil>=2.9.0",
+]
+
+[project.scripts]
+openfatture = "openfatture.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/gianlucamazza/openfatture"
+Repository = "https://github.com/gianlucamazza/openfatture"
+Issues = "https://github.com/gianlucamazza/openfatture/issues"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+  "E",  # pycodestyle errors
+  "W",  # pycodestyle warnings
+  "F",  # pyflakes
+  "I",  # isort
+  "C4", # flake8-comprehensions (not C90 complexity metrics)
+  "B",  # flake8-bugbear
+  "UP", # pyupgrade
+]
+# E501 is owned by the formatter (line-length = 100). No other global ignores:
+# suppressions belong in code fixes, not in lint debt.
+ignore = [
+  "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Re-export barrels may keep symbols for the public package surface.
+"__init__.py" = ["F401"]
+# Tests often configure paths/fixtures before importing the module under test.
+"tests/**" = ["E402"]
+# Bootstrap scripts append sys.path before importing the package.
+"scripts/**" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+ignore_errors = true
+
+# External libraries without stubs
+[[tool.mypy.overrides]]
+module = ["prophet.*", "prophet"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["xgboost.*", "xgboost"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "sklearn"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["ofxparse.*", "ofxparse"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pyasn1_modules.*", "pyasn1_modules"]
+ignore_missing_imports = true
+
+# Third-party packages without usable type stubs (not project suppressions).
+[[tool.mypy.overrides]]
+module = ["apscheduler.*", "apscheduler"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["fastapi", "fastapi.*"]
+ignore_missing_imports = true
+
+# Optional runtime dependency: imported lazily and guarded by ImportError.
+[[tool.mypy.overrides]]
+module = ["nest_asyncio"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+# Default gate = fast, deterministic functional suite (unit + integration).
+# Heavy/non-deterministic tiers (performance/benchmark/slow wall-clock asserts,
+# e2e and external-service tests) are opt-in via their markers and run in
+# dedicated CI jobs, e.g. `pytest -m performance` or `pytest -m "ollama and e2e"`.
+# A CLI `-m` expression overrides the default below (it is appended after addopts).
+addopts = "-ra -q --cov=openfatture --cov-report=term-missing --cov-report=html -m 'not performance and not benchmark and not slow and not e2e and not ollama'"
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+  "unit: fast, isolated unit tests (no external I/O)",
+  "integration: integration tests across multiple components",
+  "streaming: tests that exercise streaming-capable components",
+  "e2e: end-to-end tests that require external services",
+  "ollama: tests that require Ollama LLM service to be running",
+  "performance: performance benchmarks and load tests",
+  "slow: slow tests that may take >5 seconds",
+  "benchmark: pytest-benchmark tests (legacy marker)",
+  "real_db: test opts out of session mocking and uses the real in-memory database",
+]
+
+[tool.coverage.run]
+source = ["openfatture"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+# Hatchling configuration for dynamic versioning
+[tool.hatch.version]
+path = "openfatture/__init__.py"
