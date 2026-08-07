@@ -15,6 +15,9 @@ Architecture:
 
 from typing import Any
 
+# Same version as the distribution package (do not maintain a second number).
+from openfatture import __version__
+
 # Core domain models
 # Configuration
 from openfatture.ai.config import AISettings, get_ai_settings
@@ -29,8 +32,6 @@ from openfatture.ai.domain import (
     ResponseStatus,
     Role,
 )
-
-__version__ = "1.3.1"
 
 
 def __getattr__(name: str) -> Any:

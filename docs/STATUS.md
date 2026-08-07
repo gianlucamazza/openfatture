@@ -46,8 +46,18 @@ fix the root cause instead.
    `ai.tools.registry` is already a package)
 4. Onboarding polish continues (readiness in `status`, slash commands in assistant)
 
-See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [releases/v2.0.2.md](releases/v2.0.2.md),
-and [releases/v2.0.1.md](releases/v2.0.1.md).
+See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [releases/v2.1.0.md](releases/v2.1.0.md),
+[releases/v2.0.2.md](releases/v2.0.2.md), and [releases/v2.0.1.md](releases/v2.0.1.md).
+
+## Coverage floors (CI)
+
+| Suite | Floor | Workflow |
+|-------|-------|----------|
+| Full package | 49% | `test.yml` (`--cov-fail-under=49`) |
+| Payment module | 75% | `payment-tests.yml` (measured ~78%) |
+
+Local default pytest runs **without** coverage (faster). Pass `--cov=openfatture`
+(or use CI flags) when you need a report.
 
 ## Explicit non-goals
 
