@@ -1,0 +1,119 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.json
+htmlcov/
+.tox/
+.hypothesis/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# OpenFatture Specific
+# Anchored to the repo root: these are runtime directories (they default to the
+# platformdirs user paths), not names that should be ignored at any depth.
+/data/
+/archivio/
+/certificates/
+*.p7m
+*.xml.p7m
+
+# AI Models Cache
+# OPENFATTURE_ML_MODEL_PATH defaults to .models/. An unanchored `models/` here
+# also shadowed the openfatture/ai/ml/models/ source package, silently ignoring
+# any new module added to it.
+/.models/
+.cache/
+
+# ChromaDB Vector Store
+.chroma/
+
+# PDF Output (but not media/output/)
+/output/
+/*.pdf
+
+# Sensitive Data
+*.key
+*.pem
+*.crt
+
+# GitHub Actions Local Testing (act)
+.secrets
+.env.act
+
+# Media Automation Temporary Files
+media/output/*.tmp
+media/gifs/*.tmp
+media/videos/hd/
+media/videos/sd/
+media/videos/mobile/
+*.palette.png
+ffmpeg2pass-*.log
+
+# External Plugins (separate repositories)
+openfatture-plugin-*/
+
+# Landing Page
+landing-page/node_modules/
+landing-page/dist/
+
+# Claude Code machine-local state
+# Shared project config under .claude/ stays tracked; these two are per-machine
+# (the lock file records a PID and session id).
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

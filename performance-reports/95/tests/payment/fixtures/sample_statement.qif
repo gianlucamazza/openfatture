@@ -1,0 +1,51 @@
+!Type:Bank
+D01/15/2025
+T1220.00
+PACME CORPORATION
+MFattura 2025/001
+^
+D01/20/2025
+T500.50
+PTEST SRL
+MPagamento servizi
+^
+D01/25/2025
+T-150.00
+PUtilities Provider
+MAddebito utenze
+^
+D01/28/2025
+T2000.00
+PCLIENTE XYZ
+MConsulenza gennaio
+^
+D01/30/2025
+T750.00
+PBank Transfer
+MIBAN IT60X0542811101000000123456
+^
+D02/05/2025
+T-300.00
+PFornitore ABC
+MPagamento fornitore
+^
+D02/10/2025
+T1500.00
+PSTARTUP SRL
+MFattura 2025/010
+^
+D02/15/2025
+T-25.00
+PBank
+MCanone mensile
+^
+D02/20/2025
+T800.00
+PACME CORPORATION
+MSaldo fattura
+^
+D02/25/2025
+T3000.00
+PClient Payment
+MPagamento urgente
+^
