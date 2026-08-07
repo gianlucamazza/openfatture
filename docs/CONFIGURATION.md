@@ -59,7 +59,7 @@ uv sync --all-extras
 | `AI_MODEL` | Provider model name |
 | `AI_API_KEY` | Provider credential |
 | `AI_BASE_URL` | Local provider endpoint, such as Ollama |
-| `ASSISTANT_BACKEND` | Product assistant orchestration: `chat` (default) or `langgraph` (opt-in StateGraph tool loop) |
+| `ASSISTANT_BACKEND` | Product assistant orchestration: `langgraph` (default StateGraph tool loop) or `chat` (rollback) |
 
 Sensitive values should be provided through the environment or a protected
 local secrets file. Do not commit credentials.

@@ -5,23 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.0] - 2026-08-08
 
 ### Added
 
-- Opt-in LangGraph product assistant backend (`ASSISTANT_BACKEND=langgraph` /
-  `assistant_backend` setting). Default remains `chat`.
-- Shared chat prompt helpers (`ai.runtime.prompt`) used by both backends.
-- `GraphAssistantBackend` with `run` + node-granularity `stream` (`StreamEvent`).
-- Status fields `assistant_backend` and `assistant_backend_id`.
-- Parity tests: chat vs langgraph tool round-trips, max iterations, streaming
-  event order, session message sequence.
+- LangGraph is the **default** product assistant backend (`langgraph_tool_loop`).
+- Release notes: `docs/releases/v2.1.0.md`.
 
 ### Changed
 
-- `AssistantRuntime` resolves backend from settings/ctor; populates
-  `context.available_tools` so native tool loops actually engage.
-- `build_assistant_graph` no longer re-enters `runtime.run` (no circular facade).
+- Default `assistant_backend` / `ASSISTANT_BACKEND`: `chat` → **`langgraph`**.
+- `ChatAgent` slimmed: single tool-loop via `GraphAssistantBackend`; keeps
+  structured-output and shared prompt helpers. Rollback path: `ASSISTANT_BACKEND=chat`.
+- `AssistantRuntime` constructs only the selected backend (no always-on dual init).
+
+### Notes
+
+- Opt-in backend plumbing and parity tests shipped in 2.0.x unreleased work and
+  are now the product default.
 
 ## [2.0.2] - 2026-08-07
 

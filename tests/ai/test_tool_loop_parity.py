@@ -73,25 +73,26 @@ async def test_graph_tool_round_trip_matches_shape() -> None:
 
 
 @pytest.mark.asyncio
-async def test_product_runtime_default_backend_is_chat() -> None:
-    """Default product path still reports chat_agent_tool_loop (B1-β default)."""
+async def test_product_runtime_default_backend_is_langgraph() -> None:
+    """Default product path reports langgraph_tool_loop after default flip."""
+    provider = MagicMock(provider_name="openai", model="gpt", supports_tools=True)
+    provider.generate = AsyncMock(return_value=_final("ok"))
+    registry = MagicMock(list_tools=MagicMock(return_value=[]))
+    registry.get_openai_functions.return_value = []
     with (
         patch("openfatture.platform.extras.require_extra"),
-        patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
-        patch("openfatture.ai.tools.registry.get_tool_registry") as mock_reg,
-        patch("openfatture.ai.runtime.service.ChatAgent") as mock_agent_cls,
+        patch("openfatture.ai.providers.factory.create_provider", return_value=provider),
+        patch("openfatture.ai.tools.registry.get_tool_registry", return_value=registry),
+        patch("openfatture.ai.runtime.service.get_tool_registry", return_value=registry),
     ):
-        mock_prov.return_value = MagicMock(provider_name="openai", model="gpt")
-        mock_reg.return_value = MagicMock(list_tools=MagicMock(return_value=[]))
-        agent = MagicMock()
-        agent.execute = AsyncMock(return_value=_final("ok"))
-        mock_agent_cls.return_value = agent
-
         from openfatture.ai.runtime import create_assistant_runtime
+        from openfatture.platform.config import Settings
 
-        runtime = create_assistant_runtime()
-        assert runtime.backend == "chat_agent_tool_loop"
-        assert runtime.assistant_backend == "chat"
+        runtime = create_assistant_runtime(
+            provider=provider, settings=Settings(assistant_backend="langgraph")
+        )
+        assert runtime.backend == "langgraph_tool_loop"
+        assert runtime.assistant_backend == "langgraph"
         response = await runtime.run("hello")
         assert response.content == "ok"
 
