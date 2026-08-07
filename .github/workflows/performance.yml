@@ -108,9 +108,26 @@ jobs:
 
             let comment = '## Performance Test Results\n\n';
 
+            // pytest-benchmark leaves the file absent or empty when the run
+            // collected no benchmarks, so guard the parse instead of assuming
+            // that an existing file holds valid JSON.
+            let results = null;
             if (fs.existsSync('benchmark-results.json')) {
-              const results = JSON.parse(fs.readFileSync('benchmark-results.json'));
+              const raw = fs.readFileSync('benchmark-results.json', 'utf8').trim();
+              if (raw) {
+                try {
+                  results = JSON.parse(raw);
+                } catch (error) {
+                  comment += `Benchmark results file is not valid JSON: ${error.message}\n`;
+                }
+              } else {
+                comment += 'Benchmark results file is empty (no benchmarks collected)\n';
+              }
+            } else {
+              comment += 'No benchmark results file found\n';
+            }
 
+            if (results) {
               comment += '### Summary\n\n';
               comment += '| Metric | Value |\n';
               comment += '|--------|-------|\n';
@@ -131,8 +148,6 @@ jobs:
                   comment += `| ${bench.name} | ${mean}ms | ${p95}ms |\n`;
                 });
               }
-            } else {
-              comment += 'No benchmark results file found\n';
             }
 
             comment += '\n---\n';
