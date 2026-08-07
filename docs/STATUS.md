@@ -1,6 +1,6 @@
 # OpenFatture project status
 
-**Current version:** 2.0.2  
+**Current version:** 2.1.0  
 **Product posture:** CLI-first, with an interactive terminal mode for guided workflows  
 **Runtime:** Python 3.12+ and `uv`
 
@@ -36,11 +36,11 @@ fix the root cause instead.
 9. ~~D2: AI tools are adapters over application services~~
 10. ~~2.0.0 release notes and version bump~~
 
-## Current focus (post-2.0)
+## Current focus (post-2.1)
 
-1. **LangGraph product backend is opt-in** (`ASSISTANT_BACKEND=langgraph`);
-   default remains `chat` / `chat_agent_tool_loop`. Parity + stream tests gate
-   any future default flip. Multi-agent workflows stay non-CLI.
+1. **LangGraph is the default product backend** (`langgraph_tool_loop`);
+   `ASSISTANT_BACKEND=chat` remains a supported rollback. Multi-agent workflows
+   stay non-CLI.
 2. Lightning real LND gRPC **or** keep hard experimental posture
 3. Continue splitting oversized modules (`cash_flow_predictor`, ops facades;
    `ai.tools.registry` is already a package)

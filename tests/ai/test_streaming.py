@@ -672,51 +672,48 @@ class TestStreamingToolCalls:
         assert chunks[1].tool_call.arguments == {}  # Should default to empty dict
         assert chunks[2].is_final is True
 
-    async def test_chat_agent_message_construction_with_tool_calls(self, mock_openai_provider):
-        """Test that ChatAgent properly constructs messages with tool_calls for follow-up."""
-        from unittest.mock import AsyncMock
+    async def test_chat_agent_stream_uses_graph_tool_events(self):
+        """ChatAgent.execute_stream emits tool lifecycle via GraphAssistantBackend."""
+        from unittest.mock import AsyncMock, MagicMock
 
-        from openfatture.ai.domain.response import StreamChunk, ToolCall
-        from openfatture.ai.tools import get_tool_registry
+        from openfatture.ai.domain.response import AgentResponse, ResponseStatus, ToolCall
+        from openfatture.ai.streaming.events import StreamEventType
+        from openfatture.ai.tools.models import ToolResult
 
-        class MockToolResult:
-            def __init__(self, data):
-                self.data = data
-                self.success = True
+        tool_registry = MagicMock()
+        tool = MagicMock()
+        tool.name = "get_client_stats"
+        tool_registry.list_tools.return_value = [tool]
+        tool_registry.get_openai_functions.return_value = []
+        tool_registry.execute_tool = AsyncMock(
+            return_value=ToolResult(
+                success=True,
+                data={"total_clients": 3},
+                error=None,
+                tool_name="get_client_stats",
+            )
+        )
 
-            def to_dict(self):
-                return {"success": self.success, "data": self.data}
-
-        # Mock tool registry
-        tool_registry = get_tool_registry()
-        tool_registry.get_tool = AsyncMock(return_value=AsyncMock())
-        tool_registry.execute_tool = AsyncMock(return_value=MockToolResult({"total_clients": 3}))
-
-        initial_chunks = [
-            StreamChunk(content="I'll check your clients"),
-            StreamChunk(
-                content="",
-                tool_call=ToolCall(id="call_123", name="get_client_stats", arguments={}),
-            ),
-            StreamChunk(content="", is_final=True, finish_reason="tool_calls"),
-        ]
-
-        async def fake_stream_structured(messages, **kwargs):
-            for chunk in initial_chunks:
-                yield chunk
-
-        followup_calls = []
-
-        async def fake_followup_stream(messages, **kwargs):
-            followup_calls.append({"messages": messages, "kwargs": kwargs})
-            for part in ["You have 3 clients", ""]:
-                yield part
-
-        mock_openai_provider.stream_structured = fake_stream_structured
-        mock_openai_provider.stream = fake_followup_stream
+        provider = MagicMock()
+        provider.supports_tools = True
+        provider.provider_name = "openai"
+        provider.model = "gpt-test"
+        provider.generate = AsyncMock(
+            side_effect=[
+                AgentResponse(
+                    content="",
+                    status=ResponseStatus.SUCCESS,
+                    tool_calls=[ToolCall(id="call_123", name="get_client_stats", arguments={})],
+                ),
+                AgentResponse(
+                    content="You have 3 clients",
+                    status=ResponseStatus.SUCCESS,
+                ),
+            ]
+        )
 
         agent = ChatAgent(
-            provider=mock_openai_provider,
+            provider=provider,
             tool_registry=tool_registry,
             enable_tools=True,
             enable_streaming=True,
@@ -725,51 +722,17 @@ class TestStreamingToolCalls:
         context = ChatContext(user_input="How many clients do I have?")
         context.available_tools = ["get_client_stats"]
 
-        # Collect all events (now StreamEvent objects)
-        events = []
-        async for event in agent.execute_stream(context):
-            events.append(event)
+        events = [event async for event in agent.execute_stream(context)]
+        types = [e.type for e in events]
 
-        # Extract text from StreamEvent objects
-        text_parts = [e.get_text() for e in events if hasattr(e, "get_text")]
-        _full_text = " ".join(text_parts)
-
-        # Verify that tool calls were detected and executed
-        # Note: Text might be in progress/status events, not just content
-        assert len(events) > 0  # Should have some events
-
-        # Verify that the follow-up stream was called
-        assert len(followup_calls) == 1
-
-        followup_messages = followup_calls[0]["messages"]
-
-        # Verify message structure
-        assert len(followup_messages) >= 3  # Original + assistant + tool
-
-        # Find the assistant message
-        assistant_msg = None
-        tool_msg = None
-        for msg in followup_messages:
-            if msg.role == Role.ASSISTANT:
-                assistant_msg = msg
-            elif msg.role == Role.TOOL:
-                tool_msg = msg
-
-        assert assistant_msg is not None, "Assistant message should be present"
-        assert tool_msg is not None, "Tool message should be present"
-
-        # Verify assistant message has tool_calls
-        assert assistant_msg.tool_calls is not None, "Assistant message should have tool_calls"
-        assert len(assistant_msg.tool_calls) == 1, "Should have one tool call"
-
-        tool_call = assistant_msg.tool_calls[0]
-        assert tool_call["id"] == "call_123"
-        assert tool_call["type"] == "function"
-        assert tool_call["function"]["name"] == "get_client_stats"
-        assert tool_call["function"]["arguments"] == {}
-
-        # Verify tool message has correct tool_call_id
-        assert tool_msg.tool_call_id == "call_123"
+        assert StreamEventType.TOOL_START in types
+        assert StreamEventType.TOOL_RESULT in types
+        assert StreamEventType.CONTENT in types
+        assert types.index(StreamEventType.TOOL_START) < types.index(StreamEventType.TOOL_RESULT)
+        assert any(
+            e.type == StreamEventType.CONTENT and "3 clients" in e.get_text() for e in events
+        )
+        tool_registry.execute_tool.assert_awaited()
 
 
 @pytest.mark.asyncio

@@ -277,8 +277,8 @@ async def test_native_orchestrator_anthropic_tool_choice(mock_tool_registry):
 
 
 @pytest.mark.asyncio
-async def test_chat_agent_dispatches_to_native(mock_tool_registry):
-    """ChatAgent.execute routes to native orchestrator when supports_tools=True."""
+async def test_chat_agent_dispatches_to_graph_native_tools(mock_tool_registry):
+    """ChatAgent.execute uses GraphAssistantBackend tool loop when supports_tools=True."""
     provider = MagicMock()
     provider.provider_name = "openai"
     provider.model = "gpt-4o"
@@ -300,18 +300,18 @@ async def test_chat_agent_dispatches_to_native(mock_tool_registry):
     response = await agent.execute(context)
 
     assert "42 fatture" in response.content
-    assert response.metadata["orchestrator"] == "native_tools"
+    assert response.metadata["orchestrator"] == "langgraph_tool_loop"
     assert mock_tool_registry.execute_tool.call_count == 1
 
 
 # ---------------------------------------------------------------------------
-# (d) ChatAgent dispatch -> ReAct when supports_tools=False
+# (d) ChatAgent dispatch -> ReAct via graph when supports_tools=False
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_chat_agent_dispatches_to_react(mock_tool_registry):
-    """ChatAgent.execute falls back to ReAct when supports_tools=False."""
+async def test_chat_agent_dispatches_to_graph_react(mock_tool_registry):
+    """ChatAgent.execute uses graph ReAct path when supports_tools=False."""
     provider = MagicMock()
     provider.provider_name = "ollama"
     provider.model = "qwen3:8b"
@@ -322,7 +322,7 @@ async def test_chat_agent_dispatches_to_react(mock_tool_registry):
     context = ChatContext(user_input="Quante fatture?", enable_tools=True)
     context.available_tools = ["get_invoice_count"]
 
-    with patch("openfatture.ai.agents.chat_agent.ReActOrchestrator") as mock_react_cls:
+    with patch("openfatture.ai.orchestration.react.ReActOrchestrator") as mock_react_cls:
         instance = mock_react_cls.return_value
         instance.execute = AsyncMock(return_value="Risposta ReAct con 42 fatture.")
         instance.get_metrics = MagicMock(return_value={"total_executions": 1})
@@ -330,8 +330,7 @@ async def test_chat_agent_dispatches_to_react(mock_tool_registry):
         response = await agent.execute(context)
 
     assert "Risposta ReAct" in response.content
-    assert response.metadata["orchestrator"] == "react"
-    # Native provider.generate must NOT have been used for tool dispatch
+    assert response.metadata["orchestrator"] == "langgraph_react"
     mock_react_cls.assert_called_once()
 
 

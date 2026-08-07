@@ -5,8 +5,8 @@ business operations. Interactive sessions optionally persist via the
 file-backed session store.
 
 Backends (settings ``assistant_backend``):
-- ``chat`` → ChatAgent tool loop (default)
-- ``langgraph`` → GraphAssistantBackend (opt-in product path)
+- ``langgraph`` → GraphAssistantBackend (default product path)
+- ``chat`` → ChatAgent rollback (delegates tool loop to the same graph backend)
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
-from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.response import AgentResponse
@@ -33,6 +32,7 @@ from openfatture.platform.extras import require_extra
 from openfatture.platform.logging import get_logger
 
 if TYPE_CHECKING:
+    from openfatture.ai.agents.chat_agent import ChatAgent
     from openfatture.ai.runtime.graph_backend import GraphAssistantBackend
     from openfatture.ai.session.models import ChatSession
     from openfatture.ai.session.store import SessionStore
@@ -57,13 +57,13 @@ def _resolve_backend_name(
     backend: AssistantBackendName | None, settings: Settings
 ) -> AssistantBackendName:
     """Map ctor override or settings to a validated backend name."""
-    if backend == ASSISTANT_BACKEND_LANGGRAPH:
+    if backend is not None:
+        if backend == ASSISTANT_BACKEND_CHAT:
+            return ASSISTANT_BACKEND_CHAT
         return ASSISTANT_BACKEND_LANGGRAPH
-    if backend == ASSISTANT_BACKEND_CHAT:
+    if settings.assistant_backend == ASSISTANT_BACKEND_CHAT:
         return ASSISTANT_BACKEND_CHAT
-    if settings.assistant_backend == ASSISTANT_BACKEND_LANGGRAPH:
-        return ASSISTANT_BACKEND_LANGGRAPH
-    return ASSISTANT_BACKEND_CHAT
+    return ASSISTANT_BACKEND_LANGGRAPH
 
 
 class AssistantRuntime:
@@ -93,15 +93,20 @@ class AssistantRuntime:
         self._backend_name = _resolve_backend_name(backend, self.settings)
         self._backend_id = resolve_backend_id(self._backend_name)
 
-        self._agent = ChatAgent(
-            provider=self._provider,
-            tool_registry=self._tool_registry,
-            enable_streaming=enable_streaming,
-            enable_tools=enable_tools,
-            debug_config=self.debug_config,
-        )
+        self._agent: ChatAgent | None = None
         self._graph_backend: GraphAssistantBackend | None = None
-        if self._backend_name == ASSISTANT_BACKEND_LANGGRAPH:
+
+        if self._backend_name == ASSISTANT_BACKEND_CHAT:
+            from openfatture.ai.agents.chat_agent import ChatAgent
+
+            self._agent = ChatAgent(
+                provider=self._provider,
+                tool_registry=self._tool_registry,
+                enable_streaming=enable_streaming,
+                enable_tools=enable_tools,
+                debug_config=self.debug_config,
+            )
+        else:
             from openfatture.ai.runtime.graph_backend import GraphAssistantBackend
 
             self._graph_backend = GraphAssistantBackend(
@@ -164,7 +169,6 @@ class AssistantRuntime:
         else:
             conv = ConversationHistory()
         context = ChatContext(user_input=user_input, conversation_history=conv)
-        # Populate tools for both backends so native/ReAct paths actually run.
         if self.enable_tools and not context.available_tools:
             context.available_tools = [t.name for t in self._tool_registry.list_tools()]
         return context
@@ -200,8 +204,10 @@ class AssistantRuntime:
         context = self._context(user_input, history)
         if self._graph_backend is not None:
             response = await self._graph_backend.run(context)
-        else:
+        elif self._agent is not None:
             response = await self._agent.execute(context)
+        else:
+            raise RuntimeError("AssistantRuntime has no configured backend")
         self._persist_turn(user_input, response.content or "", response)
         return response
 
@@ -216,8 +222,10 @@ class AssistantRuntime:
         answer_parts: list[str] = []
         if self._graph_backend is not None:
             stream_iter: AsyncIterator[StreamEvent] = self._graph_backend.stream(context)
-        else:
+        elif self._agent is not None:
             stream_iter = self._agent.execute_stream(context)
+        else:
+            raise RuntimeError("AssistantRuntime has no configured backend")
         async for item in stream_iter:
             if item.is_content():
                 answer_parts.append(item.get_text())

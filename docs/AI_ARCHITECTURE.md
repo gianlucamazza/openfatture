@@ -11,16 +11,16 @@ CLI assistant / interactive
         v
 openfatture.ai.runtime.AssistantRuntime
         │
-        ├── assistant_backend=chat (default)
-        │     ChatAgent tool loop (status id: chat_agent_tool_loop)
-        │       ├── NativeToolOrchestrator  (providers with native tools)
-        │       └── ReActOrchestrator       (fallback / Ollama)
+        ├── assistant_backend=langgraph (default)
+        │     GraphAssistantBackend (status id: langgraph_tool_loop)
+        │       ├── StateGraph call_model ↔ call_tools
+        │       ├── ReAct when provider lacks native tools
+        │       └── node-granularity StreamEvent streaming
         │
-        └── assistant_backend=langgraph (opt-in)
-              GraphAssistantBackend (status id: langgraph_tool_loop)
-                ├── StateGraph call_model ↔ call_tools
-                ├── ReAct node when provider lacks native tools
-                └── node-granularity StreamEvent streaming
+        └── assistant_backend=chat (rollback)
+              ChatAgent (status id: chat_agent_tool_loop)
+                ├── structured output (output_schema)
+                └── tool/plain turns → same GraphAssistantBackend
         │
         v
 ToolRegistry → application services (billing.*) → storage
@@ -30,11 +30,11 @@ ToolRegistry → application services (billing.*) → storage
 # Preferred API for embedders / tests
 from openfatture.ai.runtime import create_assistant_runtime, run_assistant
 
-runtime = create_assistant_runtime()  # default: chat
+runtime = create_assistant_runtime()  # default: langgraph
 response = await runtime.run("Elenca le fatture non pagate")
 
-# Opt-in LangGraph product backend (or set ASSISTANT_BACKEND=langgraph)
-runtime = create_assistant_runtime(backend="langgraph")
+# Explicit rollback
+runtime = create_assistant_runtime(backend="chat")
 ```
 
 Interactive sessions can persist to the file session store
@@ -43,11 +43,12 @@ Interactive sessions can persist to the file session store
 loaded from the store (do not also pass a parallel in-memory history that
 duplicates turns).
 
-## LangGraph product backend (opt-in)
+## LangGraph product backend (default)
 
-`GraphAssistantBackend` is a first-class product path behind the same facade.
-Default remains **`chat`** until a later release flips the default after soak.
-Parity tests (`tests/ai/test_assistant_backend_parity.py`) gate readiness.
+`GraphAssistantBackend` is the product tool-loop. There is a **single**
+implementation for model↔tools / ReAct / plain turns; `ChatAgent` no longer
+maintains a parallel native orchestrator. Parity tests live in
+`tests/ai/test_assistant_backend_parity.py`.
 
 ```python
 from openfatture.ai.runtime.graph import build_assistant_graph
@@ -56,9 +57,8 @@ graph = build_assistant_graph(runtime)  # helper / tests; CLI uses runtime.backe
 await graph.ainvoke({"user_input": "..."})
 ```
 
-Set `ASSISTANT_BACKEND=langgraph` or `assistant_backend = "langgraph"` in
-config. Check with `openfatture status --json` (`assistant_backend`,
-`assistant_backend_id`).
+Rollback: `ASSISTANT_BACKEND=chat`. Inspect with `openfatture status --json`
+(`assistant_backend`, `assistant_backend_id`).
 
 ## Boundaries
 

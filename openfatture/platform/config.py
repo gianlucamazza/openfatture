@@ -256,12 +256,11 @@ class Settings(BaseSettings):
 
     # AI Chat Assistant
     assistant_backend: Literal["chat", "langgraph"] = Field(
-        default="chat",
+        default="langgraph",
         description=(
             "Product assistant orchestration backend: "
-            "'chat' (ChatAgent / NativeToolOrchestrator) or "
-            "'langgraph' (StateGraph model↔tools loop). Default remains chat until "
-            "parity gates flip it."
+            "'langgraph' (default StateGraph model↔tools loop) or "
+            "'chat' (ChatAgent rollback; tool loop still uses GraphAssistantBackend)."
         ),
     )
     ai_chat_enabled: bool = Field(

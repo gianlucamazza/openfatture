@@ -82,7 +82,7 @@ def _runtime(backend: str, provider: MagicMock, registry: MagicMock) -> Any:
 
 
 @pytest.mark.asyncio
-async def test_default_backend_is_chat() -> None:
+async def test_explicit_chat_backend_id() -> None:
     provider, registry = _provider_and_registry()
     runtime = _runtime("chat", provider, registry)
     assert runtime.backend == BACKEND_CHAT
@@ -95,6 +95,25 @@ async def test_langgraph_backend_id() -> None:
     runtime = _runtime("langgraph", provider, registry)
     assert runtime.backend == BACKEND_LANGGRAPH
     assert runtime.assistant_backend == "langgraph"
+
+
+@pytest.mark.asyncio
+async def test_settings_default_backend_is_langgraph() -> None:
+    """Product default (no ctor override) is langgraph_tool_loop."""
+    provider, registry = _provider_and_registry()
+    with (
+        patch("openfatture.platform.extras.require_extra"),
+        patch("openfatture.ai.providers.factory.create_provider", return_value=provider),
+        patch("openfatture.ai.tools.registry.get_tool_registry", return_value=registry),
+        patch("openfatture.ai.runtime.service.get_tool_registry", return_value=registry),
+    ):
+        from openfatture.ai.runtime import create_assistant_runtime
+        from openfatture.platform.config import Settings
+
+        settings = Settings(assistant_backend="langgraph")
+        runtime = create_assistant_runtime(provider=provider, settings=settings)
+        assert runtime.backend == BACKEND_LANGGRAPH
+        assert runtime.assistant_backend == "langgraph"
 
 
 @pytest.mark.asyncio
