@@ -65,14 +65,19 @@ dmypy.json
 *.log
 
 # OpenFatture Specific
-data/
-archivio/
-certificates/
+# Anchored to the repo root: these are runtime directories (they default to the
+# platformdirs user paths), not names that should be ignored at any depth.
+/data/
+/archivio/
+/certificates/
 *.p7m
 *.xml.p7m
 
 # AI Models Cache
-models/
+# OPENFATTURE_ML_MODEL_PATH defaults to .models/. An unanchored `models/` here
+# also shadowed the openfatture/ai/ml/models/ source package, silently ignoring
+# any new module added to it.
+/.models/
 .cache/
 
 # ChromaDB Vector Store
@@ -106,3 +111,9 @@ openfatture-plugin-*/
 # Landing Page
 landing-page/node_modules/
 landing-page/dist/
+
+# Claude Code machine-local state
+# Shared project config under .claude/ stays tracked; these two are per-machine
+# (the lock file records a PID and session id).
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
