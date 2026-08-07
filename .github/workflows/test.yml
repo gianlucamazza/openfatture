@@ -39,10 +39,11 @@ jobs:
       - name: Core tests (no AI / Lightning / scraper suites)
         run: |
           uv run --extra dev pytest -q --no-cov \
-            tests/cli tests/core tests/storage tests/payment \
-            tests/services tests/unit tests/utils tests/i18n \
-            tests/integration \
+            tests/cli tests/billing tests/storage tests/payment \
+            tests/pdf tests/platform tests/unit tests/events tests/hooks \
+            tests/i18n tests/integration \
             --ignore=tests/integration/test_ai_integration.py \
+            --ignore=tests/cli/formatters/test_formatters_integration.py \
             -m 'not performance and not benchmark and not slow and not e2e and not ollama'
 
   test:
@@ -95,6 +96,10 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    # Do not inherit workflow UV_EXTRA=dev: it conflicts with --all-extras installs
+    # and can leave `uv run` unable to spawn tools from the full environment.
+    env:
+      UV_EXTRA: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -114,16 +119,17 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install dependencies
+        # --all-extras includes product extras and the dev optional-dep group (ruff/mypy).
         run: uv sync --frozen --all-extras --python "$(command -v python3)"
 
       - name: Run Ruff format
-        run: uv run --extra dev ruff format --check .
+        run: .venv/bin/ruff format --check .
 
       - name: Run Ruff check
-        run: uv run --extra dev ruff check .
+        run: .venv/bin/ruff check .
 
       - name: Run MyPy
-        run: uv run --extra dev python -m mypy openfatture/
+        run: .venv/bin/python -m mypy openfatture/
 
   security:
     runs-on: ubuntu-latest

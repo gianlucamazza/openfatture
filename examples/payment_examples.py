@@ -175,7 +175,7 @@ async def example_1_basic_workflow():
         session.commit()
 
         # Create sample payments
-        payments = create_sample_payments(session)
+        __payments = create_sample_payments(session)
 
         # Create sample CSV
         with NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
@@ -348,7 +348,7 @@ async def example_2_csv_import_configurations():
 
     # UniCredit format (CSV, ISO dates)
     print("\nFormat 2: UniCredit")
-    unicredit_config = CSVConfig(
+    _unicredit_config = CSVConfig(
         delimiter=",",
         encoding="UTF-8",
         field_mapping={
@@ -368,7 +368,7 @@ async def example_2_csv_import_configurations():
 
     # BNL format (tab-separated)
     print("\nFormat 3: BNL (Banca Nazionale del Lavoro)")
-    bnl_config = CSVConfig(
+    _bnl_config = CSVConfig(
         delimiter="\t",  # Tab-separated
         encoding="UTF-8",
         field_mapping={
@@ -766,7 +766,7 @@ async def example_6_error_handling():
                 match_type=MatchType.MANUAL,
             )
             print(" Should have raised ValueError")
-        except ValueError as e:
+        except ValueError:
             print(" Caught expected error: Transaction ... not found")
 
         print("\nAll error handling tests completed")

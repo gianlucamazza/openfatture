@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-08-07
+
+### Added
+
+- Status readiness: `core_ready`, `assistant_ready`, checks, and `next_steps`
+  (human table + `--json`).
+- Interactive slash commands: `/help`, `/exit`, `/session`, `/clear`.
+- LangGraph tool-loop parity tests (product backend remains `chat_agent_tool_loop`).
+
+### Changed
+
+- `ai.tools.registry` is a package (`core` + `defaults`) with stable public imports.
+- Init refuses silent `.env` overwrite; post-setup messaging is honesty-first.
+
+### Fixed
+
+- Clearer onboarding next steps after init (does not claim assistant ready without extra).
+
 ## [2.0.0] - 2026-08-07
 
 ### Added

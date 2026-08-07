@@ -44,7 +44,7 @@ def main():
     print("=" * 50)
 
     # Example: Sync to external CRM
-    client_data = {
+    _client_data = {
         "id": client_id,
         "name": client_name,
         "vat_number": partita_iva,
