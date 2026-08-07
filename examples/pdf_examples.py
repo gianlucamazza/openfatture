@@ -635,7 +635,7 @@ def example_9_error_handling():
     print("Test 1: Invalid template name")
     try:
         config = PDFGeneratorConfig(template="invalid_template")
-        generator = PDFGenerator(config)
+        PDFGenerator(config)
         print(" Should have raised ValueError")
     except ValueError as e:
         print(f" Caught expected error: {e}")
@@ -660,7 +660,7 @@ def example_9_error_handling():
         enable_pdfa=True,
     )
 
-    generator = PDFGenerator(config)
+    _generator = PDFGenerator(config)
     print(" Generator created successfully")
     print(f"      Template: {config.template}")
     print(f"      Company: {config.company_name}")

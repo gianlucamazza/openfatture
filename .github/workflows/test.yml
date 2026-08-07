@@ -39,9 +39,9 @@ jobs:
       - name: Core tests (no AI / Lightning / scraper suites)
         run: |
           uv run --extra dev pytest -q --no-cov \
-            tests/cli tests/core tests/storage tests/payment \
-            tests/services tests/unit tests/utils tests/i18n \
-            tests/integration \
+            tests/cli tests/billing tests/storage tests/payment \
+            tests/pdf tests/platform tests/unit tests/events tests/hooks \
+            tests/i18n tests/integration \
             --ignore=tests/integration/test_ai_integration.py \
             -m 'not performance and not benchmark and not slow and not e2e and not ollama'
 

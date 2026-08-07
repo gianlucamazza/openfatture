@@ -172,6 +172,8 @@ ignore = [
 "__init__.py" = ["F401"]
 # Tests often configure paths/fixtures before importing the module under test.
 "tests/**" = ["E402"]
+# Bootstrap scripts append sys.path before importing the package.
+"scripts/**" = ["E402"]
 
 [tool.mypy]
 python_version = "3.12"

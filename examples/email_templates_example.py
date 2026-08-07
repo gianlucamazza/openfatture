@@ -9,10 +9,10 @@ from decimal import Decimal
 from pathlib import Path
 
 from openfatture.billing.batch.processor import BatchResult
-from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 from openfatture.platform.config import get_settings
 from openfatture.platform.email.renderer import TemplateRenderer
 from openfatture.platform.email.sender import TemplatePECSender
+from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 
 
 def example_1_send_invoice():
@@ -191,6 +191,7 @@ def example_5_custom_branding():
     )
 
     print("\nRenderer created with custom branding")
+    print(f"   Locale: {renderer.locale}")
     print("   All emails will use these colors and branding")
 
 
