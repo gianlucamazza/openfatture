@@ -4,7 +4,7 @@ import json
 from collections.abc import AsyncIterator
 from typing import Any
 
-from openfatture.ai.domain import AgentConfig, BaseAgent, Message, Role
+from openfatture.ai.domain import AgentConfig, BaseAgent, Message
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus
 from openfatture.ai.orchestration.native_tools import NativeToolOrchestrator
@@ -114,6 +114,11 @@ class ChatAgent(BaseAgent[ChatContext]):
 
         return True, None
 
+    def _ensure_available_tools(self, context: ChatContext) -> None:
+        """Populate tool names on context when tools are enabled and list is empty."""
+        if self.enable_tools and not context.available_tools:
+            context.available_tools = self.get_available_tools()
+
     async def execute(self, context: ChatContext, **kwargs: Any) -> AgentResponse:
         """Execute chat agent, dispatching to native tool calling or ReAct.
 
@@ -128,6 +133,7 @@ class ChatAgent(BaseAgent[ChatContext]):
         native tools, a forced structured-output call is performed instead.
         """
         collector = get_metrics_collector()
+        self._ensure_available_tools(context)
 
         with MetricsTimer("chat_agent_execute", {"agent": self.config.name}):
             try:
@@ -354,6 +360,7 @@ class ChatAgent(BaseAgent[ChatContext]):
         Yields:
             StreamEvent: Typed streaming events (CONTENT, TOOL_START, TOOL_RESULT, etc.)
         """
+        self._ensure_available_tools(context)
         # Check if we need ReAct orchestration
         needs_react = (
             self.enable_tools
@@ -634,125 +641,16 @@ class ChatAgent(BaseAgent[ChatContext]):
             yield StreamEvent.content(f"\n\nErrore durante l'esecuzione: {str(e)}")
 
     async def _build_prompt(self, context: ChatContext) -> list[Message]:
-        """
-        Build prompt messages for chat.
+        """Build prompt messages (shared helper with LangGraph product backend)."""
+        from openfatture.ai.runtime.prompt import build_chat_messages
 
-        Constructs a conversation with:
-        - System prompt with context
-        - Conversation history
-        - Current user message
-
-        Args:
-            context: Chat context
-
-        Returns:
-            List of messages for LLM
-        """
-        messages = []
-
-        # System prompt with context enrichment
-        system_prompt = self._build_system_prompt(context)
-        messages.append(Message(role=Role.SYSTEM, content=system_prompt))
-
-        # Add conversation history
-        for msg in context.conversation_history.get_messages(include_system=False):
-            messages.append(msg)
-
-        # Add current user message if not already in history
-        if not messages or messages[-1].role != Role.USER:
-            messages.append(Message(role=Role.USER, content=context.user_input))
-
-        logger.debug(
-            "prompt_built",
-            agent=self.config.name,
-            total_messages=len(messages),
-            history_messages=len(context.conversation_history.messages),
-        )
-
-        return messages
+        return build_chat_messages(context, enable_tools=self.enable_tools)
 
     def _build_system_prompt(self, context: ChatContext) -> str:
-        """
-        Build system prompt with context enrichment.
+        """Build system prompt (shared helper with LangGraph product backend)."""
+        from openfatture.ai.runtime.prompt import build_chat_system_prompt
 
-        Args:
-            context: Chat context
-
-        Returns:
-            System prompt string
-        """
-        parts = [
-            "Sei un assistente AI specializzato per OpenFatture, un sistema di fatturazione elettronica italiana.",
-            "",
-            "Il tuo ruolo è:",
-            "- Rispondere a domande su fatture e clienti",
-            "- Fornire statistiche e insights",
-            "- Guidare l'utente attraverso i workflow",
-            "- Eseguire azioni tramite tools quando necessario",
-            "",
-            "Regole:",
-            "- Usa un tono professionale ma friendly",
-            "- Rispondi in italiano (salvo richiesta diversa)",
-            "- Se non hai informazioni sufficienti, chiedi chiarimenti",
-            "- Prima di eseguire azioni distruttive, chiedi conferma",
-            "- Cita i dati specifici quando disponibili (numeri, date, importi)",
-        ]
-
-        # Add business context if available
-        if context.current_year_stats:
-            stats = context.current_year_stats
-            parts.extend(
-                [
-                    "",
-                    "Contesto corrente:",
-                    f"- Anno: {stats.get('anno', 'N/A')}",
-                    f"- Fatture totali: {stats.get('totale_fatture', 0)}",
-                    f"- Importo totale: €{stats.get('importo_totale', 0):.2f}",
-                ]
-            )
-
-        # Add available tools info
-        if self.enable_tools and context.available_tools:
-            parts.extend(
-                [
-                    "",
-                    "Strumenti disponibili:",
-                    f"- Hai accesso a {len(context.available_tools)} tools",
-                    "- Usa i tools per recuperare dati o eseguire azioni",
-                    "- I tools includono: ricerca fatture, statistiche, info clienti",
-                ]
-            )
-
-        if context.relevant_documents:
-            parts.extend(
-                [
-                    "",
-                    "Documenti rilevanti dal sistema (fatture correlate):",
-                ]
-            )
-            for doc in context.relevant_documents[:5]:
-                parts.append(f"- {doc}")
-
-        if context.knowledge_snippets:
-            parts.extend(
-                [
-                    "",
-                    "Fonti normative e note operative da consultare (cita come [numero]):",
-                ]
-            )
-            for idx, snippet in enumerate(context.knowledge_snippets[:5], 1):
-                citation = snippet.get("citation") or snippet.get("source") or f"Fonte {idx}"
-                excerpt = snippet.get("excerpt", "")
-                parts.append(f"[{idx}] {citation} — {excerpt}")
-
-            parts.extend(
-                [
-                    "",
-                    "Usa le fonti sopra per supportare la risposta e indica il riferimento con [numero].",
-                ]
-            )
-
-        return "\n".join(parts)
+        return build_chat_system_prompt(context, enable_tools=self.enable_tools)
 
     async def _parse_response(
         self,

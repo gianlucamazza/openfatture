@@ -3,20 +3,39 @@
 This is the only product-supported orchestration path for natural-language
 business operations. Interactive sessions optionally persist via the
 file-backed session store.
+
+Backends (settings ``assistant_backend``):
+- ``chat`` → ChatAgent tool loop (default)
+- ``langgraph`` → GraphAssistantBackend (opt-in product path)
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.response import AgentResponse
+from openfatture.ai.providers.base import BaseLLMProvider
+from openfatture.ai.providers.factory import create_provider
+from openfatture.ai.runtime.constants import (
+    ASSISTANT_BACKEND_CHAT,
+    ASSISTANT_BACKEND_LANGGRAPH,
+    AssistantBackendName,
+    resolve_backend_id,
+)
 from openfatture.ai.streaming.events import StreamEvent
+from openfatture.ai.tools.registry import ToolRegistry, get_tool_registry
 from openfatture.platform.config import DebugConfig, Settings, get_settings
 from openfatture.platform.extras import require_extra
 from openfatture.platform.logging import get_logger
+
+if TYPE_CHECKING:
+    from openfatture.ai.runtime.graph_backend import GraphAssistantBackend
+    from openfatture.ai.session.models import ChatSession
+    from openfatture.ai.session.store import SessionStore
 
 logger = get_logger(__name__)
 
@@ -34,35 +53,67 @@ def _history_from_dicts(items: list[dict[str, str]] | None) -> ConversationHisto
     return history
 
 
+def _resolve_backend_name(
+    backend: AssistantBackendName | None, settings: Settings
+) -> AssistantBackendName:
+    """Map ctor override or settings to a validated backend name."""
+    if backend == ASSISTANT_BACKEND_LANGGRAPH:
+        return ASSISTANT_BACKEND_LANGGRAPH
+    if backend == ASSISTANT_BACKEND_CHAT:
+        return ASSISTANT_BACKEND_CHAT
+    if settings.assistant_backend == ASSISTANT_BACKEND_LANGGRAPH:
+        return ASSISTANT_BACKEND_LANGGRAPH
+    return ASSISTANT_BACKEND_CHAT
+
+
 class AssistantRuntime:
     """Single assistant entry used by ``openfatture assistant`` / interactive."""
 
     def __init__(
         self,
         *,
-        provider: Any | None = None,
+        provider: BaseLLMProvider | None = None,
         settings: Settings | None = None,
         enable_streaming: bool = True,
         enable_tools: bool = True,
         debug_config: DebugConfig | None = None,
         session_id: str | None = None,
         persist_session: bool = False,
+        backend: AssistantBackendName | None = None,
     ) -> None:
         require_extra("ai", feature="the business assistant")
-        from openfatture.ai.agents.chat_agent import ChatAgent
-        from openfatture.ai.providers.factory import create_provider
 
         self.settings = settings or get_settings()
-        self._provider = provider or create_provider()
+        self._provider: BaseLLMProvider = provider or create_provider()
+        self.enable_tools = enable_tools
+        self.enable_streaming = enable_streaming
+        self.debug_config = debug_config or self.settings.debug_config
+        self._tool_registry: ToolRegistry = get_tool_registry()
+
+        self._backend_name = _resolve_backend_name(backend, self.settings)
+        self._backend_id = resolve_backend_id(self._backend_name)
+
         self._agent = ChatAgent(
             provider=self._provider,
+            tool_registry=self._tool_registry,
             enable_streaming=enable_streaming,
             enable_tools=enable_tools,
-            debug_config=debug_config or self.settings.debug_config,
+            debug_config=self.debug_config,
         )
+        self._graph_backend: GraphAssistantBackend | None = None
+        if self._backend_name == ASSISTANT_BACKEND_LANGGRAPH:
+            from openfatture.ai.runtime.graph_backend import GraphAssistantBackend
+
+            self._graph_backend = GraphAssistantBackend(
+                provider=self._provider,
+                tool_registry=self._tool_registry,
+                enable_tools=enable_tools,
+                debug_config=self.debug_config,
+            )
+
         self.persist_session = persist_session
-        self._session = None
-        self._session_store = None
+        self._session: ChatSession | None = None
+        self._session_store: SessionStore | None = None
         if persist_session:
             from openfatture.ai.session import ChatSession, get_session_store
 
@@ -76,15 +127,21 @@ class AssistantRuntime:
         logger.info(
             "assistant_runtime_ready",
             provider=self._provider.provider_name,
-            model=getattr(self._provider, "model", None),
-            backend="chat_agent_tool_loop",
+            model=self._provider.model,
+            backend=self._backend_id,
+            assistant_backend=self._backend_name,
             persist_session=persist_session,
         )
 
     @property
     def backend(self) -> str:
         """Orchestration backend identifier (stable for status/metrics)."""
-        return "chat_agent_tool_loop"
+        return self._backend_id
+
+    @property
+    def assistant_backend(self) -> AssistantBackendName:
+        """Settings-level backend name (``chat`` | ``langgraph``)."""
+        return self._backend_name
 
     @property
     def session_id(self) -> str | None:
@@ -95,19 +152,22 @@ class AssistantRuntime:
         user_input: str,
         history: list[dict[str, str]] | ConversationHistory | None = None,
     ) -> ChatContext:
-        conv: ConversationHistory | None
+        conv: ConversationHistory
         if isinstance(history, ConversationHistory):
             conv = history
         elif history is not None:
-            conv = _history_from_dicts(history)
+            conv = _history_from_dicts(history) or ConversationHistory()
         elif self._session is not None:
-            # Rebuild history from persisted session messages
             conv = ConversationHistory()
             for msg in self._session.messages:
                 conv.add_message(Message(role=msg.role, content=msg.content))
         else:
             conv = ConversationHistory()
-        return ChatContext(user_input=user_input, conversation_history=conv)
+        context = ChatContext(user_input=user_input, conversation_history=conv)
+        # Populate tools for both backends so native/ReAct paths actually run.
+        if self.enable_tools and not context.available_tools:
+            context.available_tools = [t.name for t in self._tool_registry.list_tools()]
+        return context
 
     def _persist_turn(
         self, user_input: str, assistant_content: str, response: AgentResponse | None = None
@@ -122,8 +182,8 @@ class AssistantRuntime:
             cost = response.usage.estimated_cost_usd
         self._session.add_assistant_message(
             assistant_content,
-            provider=getattr(self._provider, "provider_name", None),
-            model=getattr(self._provider, "model", None),
+            provider=self._provider.provider_name,
+            model=self._provider.model,
             tokens=tokens,
             cost=cost,
         )
@@ -138,7 +198,10 @@ class AssistantRuntime:
     ) -> AgentResponse:
         """Run one assistant turn and return a full response."""
         context = self._context(user_input, history)
-        response = await self._agent.execute(context)
+        if self._graph_backend is not None:
+            response = await self._graph_backend.run(context)
+        else:
+            response = await self._agent.execute(context)
         self._persist_turn(user_input, response.content or "", response)
         return response
 
@@ -151,8 +214,12 @@ class AssistantRuntime:
         """Stream one assistant turn as typed stream events."""
         context = self._context(user_input, history)
         answer_parts: list[str] = []
-        async for item in self._agent.execute_stream(context):
-            if hasattr(item, "is_content") and item.is_content():
+        if self._graph_backend is not None:
+            stream_iter: AsyncIterator[StreamEvent] = self._graph_backend.stream(context)
+        else:
+            stream_iter = self._agent.execute_stream(context)
+        async for item in stream_iter:
+            if item.is_content():
                 answer_parts.append(item.get_text())
             yield item
         self._persist_turn(user_input, "".join(answer_parts), None)

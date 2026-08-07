@@ -1,6 +1,7 @@
 """Configuration management for OpenFatture."""
 
 from pathlib import Path
+from typing import Literal
 
 from platformdirs import PlatformDirs
 from pydantic import Field, field_validator
@@ -254,6 +255,15 @@ class Settings(BaseSettings):
     ai_max_tokens: int = Field(default=2000, description="AI max tokens")
 
     # AI Chat Assistant
+    assistant_backend: Literal["chat", "langgraph"] = Field(
+        default="chat",
+        description=(
+            "Product assistant orchestration backend: "
+            "'chat' (ChatAgent / NativeToolOrchestrator) or "
+            "'langgraph' (StateGraph model↔tools loop). Default remains chat until "
+            "parity gates flip it."
+        ),
+    )
     ai_chat_enabled: bool = Field(
         default=True,
         description="Enable AI chat assistant",

@@ -77,6 +77,14 @@ def _build_status() -> dict[str, Any]:
             p.name for p in hooks_dir.iterdir() if p.is_file() and not p.name.startswith(".")
         )
     readiness = _readiness(settings, extras)
+    # Keep mapping inline so core-only installs never import the AI package.
+    assistant_backend = str(getattr(settings, "assistant_backend", "chat") or "chat")
+    _backend_ids = {
+        "chat": "chat_agent_tool_loop",
+        "langgraph": "langgraph_tool_loop",
+    }
+    assistant_backend_id = _backend_ids.get(assistant_backend, "chat_agent_tool_loop")
+
     return {
         "version": __version__,
         "database": str(settings.database_url),
@@ -85,6 +93,8 @@ def _build_status() -> dict[str, Any]:
         "ai_provider": settings.ai_provider,
         "ai_model": settings.ai_model,
         "ai_api_key_configured": bool(settings.ai_api_key),
+        "assistant_backend": assistant_backend,
+        "assistant_backend_id": assistant_backend_id,
         "readiness": readiness,
         "extras": extras,
         "extensions": {
@@ -100,6 +110,7 @@ def _build_status() -> dict[str, Any]:
             "lightning_allow_mock": settings.lightning_allow_mock,
             "lightning_rpc_ready": False,  # true only when LND gRPC stubs are wired
             "assistant_available": bool(extras.get("ai")),
+            "assistant_backend": assistant_backend,
             "rag_auto_update_default": False,  # OPENFATTURE_RAG_AUTO_UPDATE_ENABLED default
         },
         "limitations": {
@@ -142,6 +153,8 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
         "ai_provider",
         "ai_model",
         "ai_api_key_configured",
+        "assistant_backend",
+        "assistant_backend_id",
     ):
         table.add_row(key.replace("_", " ").title(), str(data[key]))
     console.print(table)

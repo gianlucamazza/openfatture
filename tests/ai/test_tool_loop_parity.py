@@ -73,14 +73,16 @@ async def test_graph_tool_round_trip_matches_shape() -> None:
 
 
 @pytest.mark.asyncio
-async def test_product_runtime_backend_is_chat_agent() -> None:
-    """Product path still reports chat_agent_tool_loop (B1-β)."""
+async def test_product_runtime_default_backend_is_chat() -> None:
+    """Default product path still reports chat_agent_tool_loop (B1-β default)."""
     with (
         patch("openfatture.platform.extras.require_extra"),
         patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
-        patch("openfatture.ai.agents.chat_agent.ChatAgent") as mock_agent_cls,
+        patch("openfatture.ai.tools.registry.get_tool_registry") as mock_reg,
+        patch("openfatture.ai.runtime.service.ChatAgent") as mock_agent_cls,
     ):
         mock_prov.return_value = MagicMock(provider_name="openai", model="gpt")
+        mock_reg.return_value = MagicMock(list_tools=MagicMock(return_value=[]))
         agent = MagicMock()
         agent.execute = AsyncMock(return_value=_final("ok"))
         mock_agent_cls.return_value = agent
@@ -89,6 +91,7 @@ async def test_product_runtime_backend_is_chat_agent() -> None:
 
         runtime = create_assistant_runtime()
         assert runtime.backend == "chat_agent_tool_loop"
+        assert runtime.assistant_backend == "chat"
         response = await runtime.run("hello")
         assert response.content == "ok"
 
