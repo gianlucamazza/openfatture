@@ -9,7 +9,7 @@ from __future__ import annotations
 import importlib
 from collections.abc import Callable
 from dataclasses import asdict
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -118,7 +118,8 @@ def _import_listener(path: str) -> Callable[[BaseEvent], Any]:
     if not callable(handler):
         raise TypeError(f"Listener '{path}' is not callable (type: {type(handler).__name__})")
 
-    return handler
+    # Dynamically imported: callability is all that can be checked at runtime.
+    return cast(Callable[[BaseEvent], Any], handler)
 
 
 def load_custom_listeners(

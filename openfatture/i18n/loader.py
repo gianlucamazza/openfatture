@@ -164,7 +164,7 @@ def get_locale() -> str:
     """
     # Check thread-local storage first
     if hasattr(_thread_local, "locale") and _thread_local.locale:
-        return _thread_local.locale
+        return str(_thread_local.locale)
 
     # Check environment variable
     env_locale = os.getenv("OPENFATTURE_LOCALE")
@@ -239,7 +239,9 @@ def format_value(
             formatted, errors = bundle.format_pattern(message.value, variables)
             if errors:
                 logger.warning(f"Formatting errors for {message_id}: {errors}")
-            return formatted
+            # format_pattern yields FluentNone for unresolvable placeables;
+            # str() renders its fallback text, keeping the return type a plain str.
+            return str(formatted)
         return None
     except Exception as e:
         logger.warning(f"Failed to format message {message_id}: {e}")

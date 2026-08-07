@@ -4,8 +4,13 @@ These handlers connect Lightning events to the broader OpenFatture system,
 updating fatture status, triggering notifications, tax compliance, etc.
 """
 
-import structlog
+from datetime import datetime
+from typing import Any, Protocol
 
+import structlog
+from sqlalchemy.orm import Session
+
+from openfatture.core.events.base import BaseEvent, EventBus
 from openfatture.lightning.domain.events import (
     LightningAMLAlertEvent,
     LightningAMLVerified,
@@ -14,6 +19,7 @@ from openfatture.lightning.domain.events import (
     LightningPaymentTaxableEvent,
     LightningTaxDataStored,
 )
+from openfatture.lightning.domain.models import LightningInvoiceRecord
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Fattura, Pagamento
@@ -27,11 +33,11 @@ class LightningPaymentSettledHandler:
     Updates fattura and pagamento status when Lightning payment is received.
     """
 
-    def __init__(self, session=None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or get_session()
         self.invoice_repo = LightningInvoiceRepository(self.session)
 
-    async def handle(self, event: LightningPaymentSettled):
+    async def handle(self, event: LightningPaymentSettled) -> None:
         """Handle a settled Lightning payment.
 
         Args:
@@ -62,7 +68,9 @@ class LightningPaymentSettledHandler:
             print(f"Error processing Lightning payment settlement: {e}")
             # In production, you might want to implement retry logic or dead letter queue
 
-    async def _update_fattura_payment(self, fattura_id: int, amount_msat: int, settled_at):
+    async def _update_fattura_payment(
+        self, fattura_id: int, amount_msat: int, settled_at: datetime
+    ) -> None:
         """Update fattura and pagamento records for settled payment.
 
         Args:
@@ -111,11 +119,11 @@ class LightningInvoiceExpiredHandler:
     reminders or status updates.
     """
 
-    def __init__(self, session=None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or get_session()
         self.invoice_repo = LightningInvoiceRepository(self.session)
 
-    async def handle(self, event: LightningInvoiceExpired):
+    async def handle(self, event: LightningInvoiceExpired) -> None:
         """Handle an expired Lightning invoice.
 
         Args:
@@ -140,7 +148,7 @@ class LightningInvoiceExpiredHandler:
         except Exception as e:
             print(f"Error processing Lightning invoice expiry: {e}")
 
-    async def _handle_fattura_invoice_expired(self, fattura_id: int):
+    async def _handle_fattura_invoice_expired(self, fattura_id: int) -> None:
         """Handle expiry of Lightning invoice for a fattura.
 
         Args:
@@ -164,11 +172,11 @@ class LightningPaymentTaxableEventHandler:
     payment creates a taxable event (capital gain) according to Italian law.
     """
 
-    def __init__(self, session=None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or get_session()
         self.invoice_repo = LightningInvoiceRepository(self.session)
 
-    async def handle(self, event: LightningPaymentTaxableEvent):
+    async def handle(self, event: LightningPaymentTaxableEvent) -> None:
         """Handle a taxable Lightning payment event.
 
         Args:
@@ -214,7 +222,9 @@ class LightningPaymentTaxableEventHandler:
                 error=str(e),
             )
 
-    async def _trigger_quadro_rw_reminder(self, invoice_record, event):
+    async def _trigger_quadro_rw_reminder(
+        self, invoice_record: LightningInvoiceRecord, event: LightningPaymentTaxableEvent
+    ) -> None:
         """Trigger reminder for Quadro RW declaration requirement.
 
         Args:
@@ -232,7 +242,9 @@ class LightningPaymentTaxableEventHandler:
         # - Create task in compliance system
         # - Update dashboard alert
 
-    async def _notify_significant_capital_gain(self, invoice_record, event):
+    async def _notify_significant_capital_gain(
+        self, invoice_record: LightningInvoiceRecord, event: LightningPaymentTaxableEvent
+    ) -> None:
         """Notify about significant capital gain.
 
         Args:
@@ -257,11 +269,11 @@ class LightningAMLAlertEventHandler:
     exceed the legal threshold (5,000 EUR in Italy as of 2025).
     """
 
-    def __init__(self, session=None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or get_session()
         self.invoice_repo = LightningInvoiceRepository(self.session)
 
-    async def handle(self, event: LightningAMLAlertEvent):
+    async def handle(self, event: LightningAMLAlertEvent) -> None:
         """Handle an AML alert event.
 
         Args:
@@ -302,7 +314,9 @@ class LightningAMLAlertEventHandler:
                 "error_processing_aml_alert", payment_hash=event.payment_hash, error=str(e)
             )
 
-    async def _trigger_aml_verification_workflow(self, invoice_record, event):
+    async def _trigger_aml_verification_workflow(
+        self, invoice_record: LightningInvoiceRecord, event: LightningAMLAlertEvent
+    ) -> None:
         """Trigger AML verification workflow.
 
         Args:
@@ -321,7 +335,9 @@ class LightningAMLAlertEventHandler:
         # - Freeze funds until verification
         # - Request additional client documentation
 
-    async def _log_aml_alert_for_audit(self, invoice_record, event):
+    async def _log_aml_alert_for_audit(
+        self, invoice_record: LightningInvoiceRecord, event: LightningAMLAlertEvent
+    ) -> None:
         """Log AML alert for regulatory audit trail.
 
         Args:
@@ -335,7 +351,7 @@ class LightningAMLAlertEventHandler:
             client_id=event.client_id,
             client_name=event.client_name,
             fattura_id=event.fattura_id,
-            timestamp=event.timestamp.isoformat(),
+            timestamp=event.occurred_at.isoformat(),
         )
         # In production, this could:
         # - Write to immutable audit log
@@ -350,11 +366,11 @@ class LightningTaxDataStoredHandler:
     for a Lightning payment.
     """
 
-    def __init__(self, session=None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or get_session()
         self.invoice_repo = LightningInvoiceRepository(self.session)
 
-    async def handle(self, event: LightningTaxDataStored):
+    async def handle(self, event: LightningTaxDataStored) -> None:
         """Handle tax data stored event.
 
         Args:
@@ -387,7 +403,9 @@ class LightningTaxDataStoredHandler:
                 error=str(e),
             )
 
-    async def _verify_tax_data_consistency(self, invoice_record, event):
+    async def _verify_tax_data_consistency(
+        self, invoice_record: LightningInvoiceRecord, event: LightningTaxDataStored
+    ) -> None:
         """Verify consistency of stored tax data.
 
         Args:
@@ -412,11 +430,11 @@ class LightningAMLVerifiedHandler:
     Handles completion of AML verification process.
     """
 
-    def __init__(self, session=None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or get_session()
         self.invoice_repo = LightningInvoiceRepository(self.session)
 
-    async def handle(self, event: LightningAMLVerified):
+    async def handle(self, event: LightningAMLVerified) -> None:
         """Handle AML verification completion event.
 
         Args:
@@ -451,8 +469,14 @@ class LightningAMLVerifiedHandler:
             )
 
 
+class LightningEventHandler(Protocol):
+    """Structural type shared by every Lightning event handler."""
+
+    async def handle(self, event: Any) -> None: ...
+
+
 # Registry of event handlers
-LIGHTNING_EVENT_HANDLERS = {
+LIGHTNING_EVENT_HANDLERS: dict[type[BaseEvent], type[LightningEventHandler]] = {
     # Core Lightning events
     LightningPaymentSettled: LightningPaymentSettledHandler,
     LightningInvoiceExpired: LightningInvoiceExpiredHandler,
@@ -464,7 +488,7 @@ LIGHTNING_EVENT_HANDLERS = {
 }
 
 
-def register_lightning_event_handlers(event_bus):
+def register_lightning_event_handlers(event_bus: EventBus) -> None:
     """Register all Lightning event handlers with the event bus.
 
     Args:
@@ -474,14 +498,16 @@ def register_lightning_event_handlers(event_bus):
         handler_instance = handler_class()
 
         # Create async wrapper for the handler
-        async def async_handler(event, handler=handler_instance):
+        async def async_handler(
+            event: BaseEvent, handler: LightningEventHandler = handler_instance
+        ) -> None:
             await handler.handle(event)
 
         event_bus.subscribe(event_type, async_handler)
         print(f"Registered Lightning event handler: {event_type.__name__}")
 
 
-def initialize_lightning_integration():
+def initialize_lightning_integration() -> None:
     """Initialize Lightning integration by registering event handlers.
 
     This should be called during application startup.

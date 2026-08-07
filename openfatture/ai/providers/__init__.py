@@ -1,6 +1,22 @@
 """LLM provider plugins, loaded on demand."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    # Import eagerly for type checkers only: at runtime the names are resolved
+    # lazily by __getattr__ below so importing this package stays cheap.
+    from openfatture.ai.providers.anthropic import AnthropicProvider
+    from openfatture.ai.providers.base import (
+        BaseLLMProvider,
+        ProviderAuthError,
+        ProviderError,
+        ProviderRateLimitError,
+        ProviderTimeoutError,
+        ProviderUnavailableError,
+    )
+    from openfatture.ai.providers.factory import create_provider, test_provider
+    from openfatture.ai.providers.ollama import OllamaProvider
+    from openfatture.ai.providers.openai import OpenAIProvider
 
 
 def __getattr__(name: str) -> Any:

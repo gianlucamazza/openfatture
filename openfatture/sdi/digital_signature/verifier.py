@@ -25,9 +25,8 @@ class SignatureVerifier:
         content = verifier.extract_content("invoice.xml.p7m")
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize signature verifier."""
-        pass
 
     def verify_file(
         self, signed_path: Path, original_path: Path | None = None

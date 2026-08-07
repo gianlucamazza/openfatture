@@ -41,7 +41,7 @@ def get_format_from_context(
 
     # Priority 3: Global --format flag from context
     if ctx and ctx.obj and "format" in ctx.obj:
-        return ctx.obj["format"]
+        return str(ctx.obj["format"])
 
     # Default: rich
     return "rich"

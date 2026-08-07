@@ -39,7 +39,9 @@ class TriggerReason:
         metadata: Additional metadata about the trigger
     """
 
-    def __init__(self, trigger_type: str, message: str, metadata: dict[str, Any] | None = None):
+    def __init__(
+        self, trigger_type: str, message: str, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Initialize trigger reason."""
         self.trigger_type = trigger_type
         self.message = message
@@ -70,7 +72,7 @@ class RetrainingTrigger:
         ...         print(reason.message)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize retraining trigger."""
         self.ml_config = get_ml_config()
         self.retrain_config = get_retraining_config()

@@ -94,7 +94,7 @@ class RetryConfig:
     jitter_range: float = 0.1
     retryable_exceptions: tuple[type[Exception], ...] = field(default_factory=lambda: (Exception,))
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration parameters."""
         if self.max_retries < 0:
             raise ValueError("max_retries must be >= 0")

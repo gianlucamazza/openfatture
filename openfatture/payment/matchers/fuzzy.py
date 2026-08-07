@@ -207,7 +207,7 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         scores: dict[str, float] = {}
 
         # Safely extract transaction attributes (handle Mock objects in tests)
-        def safe_get_text(obj, attr: str) -> str:
+        def safe_get_text(obj: object, attr: str) -> str:
             val = getattr(obj, attr, None)
             if val and not hasattr(val, "_mock_name"):
                 return self._normalize_text(str(val))

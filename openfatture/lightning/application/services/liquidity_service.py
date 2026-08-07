@@ -58,7 +58,7 @@ class LightningLiquidityService:
         target_inbound_ratio: float = 0.5,
         max_outbound_ratio: float = 0.8,
         check_interval_seconds: int = 3600,
-    ):
+    ) -> None:
         """Initialize the liquidity service.
 
         Args:
@@ -78,7 +78,7 @@ class LightningLiquidityService:
         self._monitoring_task: asyncio.Task | None = None
         self._last_check: datetime | None = None
 
-    async def start_monitoring(self):
+    async def start_monitoring(self) -> None:
         """Start automatic liquidity monitoring."""
         if self._monitoring_task and not self._monitoring_task.done():
             return  # Already running
@@ -86,7 +86,7 @@ class LightningLiquidityService:
         self._monitoring_task = asyncio.create_task(self._monitor_liquidity_loop())
         print(f"Started Lightning liquidity monitoring (interval: {self.check_interval}s)")
 
-    async def stop_monitoring(self):
+    async def stop_monitoring(self) -> None:
         """Stop automatic liquidity monitoring."""
         if self._monitoring_task:
             self._monitoring_task.cancel()
@@ -99,7 +99,7 @@ class LightningLiquidityService:
             # existing task is done.
             print("Stopped Lightning liquidity monitoring")
 
-    async def _monitor_liquidity_loop(self):
+    async def _monitor_liquidity_loop(self) -> None:
         """Main monitoring loop."""
         while True:
             try:
@@ -165,7 +165,7 @@ class LightningLiquidityService:
         self._last_check = datetime.now(UTC)
         return metrics
 
-    async def _check_alerts(self, metrics: LiquidityMetrics):
+    async def _check_alerts(self, metrics: LiquidityMetrics) -> None:
         """Check metrics and emit alerts if thresholds are breached."""
         alerts_emitted = []
 
@@ -357,7 +357,7 @@ class LightningLiquidityService:
 
         return recommendations
 
-    async def close(self):
+    async def close(self) -> None:
         """Cleanup resources."""
         await self.stop_monitoring()
         if hasattr(self.lnd_client, "close"):

@@ -30,7 +30,7 @@ class RetrievalResult:
     invoice_id: int | None = None
     client_name: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Extract common fields from metadata."""
         if self.metadata:
             self.invoice_id = self.metadata.get("invoice_id")

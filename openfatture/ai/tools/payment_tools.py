@@ -740,14 +740,9 @@ def import_bank_transactions(
     """
     from pathlib import Path
 
-    # NOTE: These imports are for planned/future modules (bank import refactoring)
-    # Current implementation uses: openfatture.payment.infrastructure.importers.ofx_importer.OFXImporter
-    # See pyproject.toml [[tool.mypy.overrides]] for type checking configuration
-    from openfatture.payment.application.services.bank_import_service import BankImportService
-    from openfatture.payment.domain.models import BankAccount
-    from openfatture.payment.infrastructure.ofx_parser import OFXParser
+    from openfatture.payment.domain.models import BankAccount, BankTransaction
+    from openfatture.payment.infrastructure.importers.ofx_importer import OFXImporter
     from openfatture.payment.infrastructure.repository import BankTransactionRepository
-    from openfatture.utils.async_bridge import run_async
 
     db = get_session()
     try:
@@ -767,12 +762,35 @@ def import_bank_transactions(
             db.add(account)
             db.flush()
 
-        # Import transactions
-        parser = OFXParser()
-        tx_repo = BankTransactionRepository(db)
-        import_service = BankImportService(parser=parser, tx_repo=tx_repo)
+        # Parse the statement
+        importer = OFXImporter(file)
+        importer.validate_file()
+        parsed = importer.parse(account)
 
-        result = run_async(import_service.import_from_file(str(file), account.id))
+        # Deduplicate against transactions already stored for this account,
+        # using the bank reference (FITID) as the natural key.
+        known_references = {
+            reference
+            for (reference,) in db.query(BankTransaction.reference)
+            .filter(
+                BankTransaction.account_id == account.id,
+                BankTransaction.reference.is_not(None),
+            )
+            .all()
+        }
+
+        tx_repo = BankTransactionRepository(db)
+        imported = 0
+        skipped = 0
+        for transaction in parsed:
+            reference = transaction.reference
+            if reference is not None and reference in known_references:
+                skipped += 1
+                continue
+            if reference is not None:
+                known_references.add(reference)
+            tx_repo.add(transaction)
+            imported += 1
 
         db.commit()
 
@@ -780,8 +798,8 @@ def import_bank_transactions(
             "bank_transactions_imported",
             file_path=file_path,
             account_id=account.id,
-            imported=result["imported"],
-            skipped=result["skipped"],
+            imported=imported,
+            skipped=skipped,
         )
 
         return {
@@ -789,10 +807,10 @@ def import_bank_transactions(
             "account_id": account.id,
             "account_name": account.name,
             "file_path": str(file),
-            "imported": result["imported"],
-            "skipped": result["skipped"],
-            "total_transactions": result["imported"] + result["skipped"],
-            "message": f"Imported {result['imported']} transactions ({result['skipped']} skipped as duplicates)",
+            "imported": imported,
+            "skipped": skipped,
+            "total_transactions": imported + skipped,
+            "message": f"Imported {imported} transactions ({skipped} skipped as duplicates)",
         }
 
     except Exception as e:

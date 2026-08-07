@@ -108,9 +108,13 @@ class DebugConfig(BaseSettings):
 
         try:
             levels = json.loads(self.log_level_per_module)
-            return levels.get(module_name)
         except (json.JSONDecodeError, TypeError):
             return None
+
+        if not isinstance(levels, dict):
+            return None
+        level = levels.get(module_name)
+        return str(level) if level is not None else None
 
 
 class Settings(BaseSettings):

@@ -574,7 +574,15 @@ Rispondi in italiano, conciso e professionale."""
         )
 
         # Execute graph
-        final_state = await self.graph.ainvoke(initial_state)
+        raw_final_state = await self.graph.ainvoke(initial_state)
+
+        # LangGraph's ainvoke() is untyped and returns the state as a plain dict:
+        # normalise it back into the workflow's own state model.
+        final_state: CashFlowAnalysisState = (
+            CashFlowAnalysisState.model_validate(raw_final_state)
+            if isinstance(raw_final_state, dict)
+            else raw_final_state
+        )
 
         logger.info(
             "cash_flow_workflow_completed",

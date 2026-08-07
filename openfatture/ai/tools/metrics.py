@@ -73,7 +73,7 @@ class ToolMetricsCollector:
     - Real-time statistics
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize metrics collector."""
         self._stats: dict[str, ToolStats] = defaultdict(ToolStats)
         self._execution_history: list[ToolExecutionMetrics] = []

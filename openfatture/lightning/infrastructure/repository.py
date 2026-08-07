@@ -3,6 +3,8 @@
 Provides data access abstraction following the Repository pattern.
 """
 
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,7 +19,7 @@ from openfatture.storage.database.base import SessionLocal, get_session
 class LightningNodeRepository:
     """Repository for LightningNode entities."""
 
-    def __init__(self, session: Session | None = None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or (SessionLocal() if SessionLocal is not None else get_session())
 
     def save(self, node: LightningNode) -> LightningNode:
@@ -47,7 +49,7 @@ class LightningNodeRepository:
 class LightningChannelRepository:
     """Repository for LightningChannel entities."""
 
-    def __init__(self, session: Session | None = None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or (SessionLocal() if SessionLocal is not None else get_session())
 
     def save(self, channel: LightningChannel) -> LightningChannel:
@@ -91,7 +93,7 @@ class LightningChannelRepository:
 class LightningInvoiceRepository:
     """Repository for LightningInvoiceRecord entities."""
 
-    def __init__(self, session: Session | None = None):
+    def __init__(self, session: Session | None = None) -> None:
         self.session = session or (SessionLocal() if SessionLocal is not None else get_session())
 
     def save(self, invoice: LightningInvoiceRecord) -> LightningInvoiceRecord:
@@ -135,7 +137,9 @@ class LightningInvoiceRepository:
         stmt = select(LightningInvoiceRecord).where(LightningInvoiceRecord.fattura_id == fattura_id)
         return list(self.session.execute(stmt).scalars())
 
-    def find_settled_in_date_range(self, start_date, end_date) -> list[LightningInvoiceRecord]:
+    def find_settled_in_date_range(
+        self, start_date: datetime, end_date: datetime
+    ) -> list[LightningInvoiceRecord]:
         """Find settled invoices within date range."""
         from openfatture.lightning.domain.enums import InvoiceStatus
 

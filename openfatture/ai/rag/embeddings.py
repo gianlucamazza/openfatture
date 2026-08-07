@@ -5,19 +5,24 @@ This module provides embedding generation using different providers:
 - Sentence Transformers (local models)
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from openfatture.ai.rag.config import RAGConfig
 from openfatture.utils.logging import get_logger
 
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
+
 logger = get_logger(__name__)
 
 
-def _sentence_transformer(*args, **kwargs):
+def _sentence_transformer(*args: Any, **kwargs: Any) -> SentenceTransformer:
     """Lazily import and instantiate SentenceTransformer.
 
     The import lives here (not at module top) so importing this module — and the
@@ -28,7 +33,8 @@ def _sentence_transformer(*args, **kwargs):
     """
     from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer(*args, **kwargs)
+    model: SentenceTransformer = SentenceTransformer(*args, **kwargs)
+    return model
 
 
 class EmbeddingStrategy(ABC):

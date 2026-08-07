@@ -50,7 +50,7 @@ class CachedProvider:
         self,
         provider: BaseLLMProvider,
         config: CacheConfig | None = None,
-        cache: CacheStrategy | None = None,
+        cache: CacheStrategy[AgentResponse] | None = None,
     ) -> None:
         """Initialize cached provider.
 
@@ -63,7 +63,7 @@ class CachedProvider:
         self.config = config or get_cache_config()
 
         # Create cache if not provided
-        self._cache: CacheStrategy[Any]
+        self._cache: CacheStrategy[AgentResponse]
         if cache is None:
             if self.config.strategy == "lru":
                 self._cache = LRUCache(

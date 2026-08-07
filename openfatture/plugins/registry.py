@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class PluginRegistry:
     """Central registry for managing OpenFatture plugins."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._plugins: dict[str, BasePlugin] = {}
         self._enabled_plugins: set[str] = set()
         self._initialized_plugins: set[str] = set()

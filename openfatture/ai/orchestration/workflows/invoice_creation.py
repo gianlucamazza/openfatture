@@ -877,10 +877,15 @@ class InvoiceCreationWorkflow:
         )
 
         # Execute graph
-        final_state = await self.graph.ainvoke(initial_state)
+        raw_final_state = await self.graph.ainvoke(initial_state)
 
-        if isinstance(final_state, dict):
-            final_state = InvoiceCreationState.model_validate(final_state)
+        # LangGraph's ainvoke() is untyped: normalise whatever it returns back
+        # into the workflow's own state model.
+        final_state: InvoiceCreationState = (
+            InvoiceCreationState.model_validate(raw_final_state)
+            if isinstance(raw_final_state, dict)
+            else raw_final_state
+        )
 
         logger.info(
             "invoice_workflow_completed",

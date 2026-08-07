@@ -199,7 +199,7 @@ class ToolResultCache:
         stats_before = self.cache.get_stats()
         await self.cache.clear()
 
-        invalidated = stats_before["size"]
+        invalidated = int(stats_before["size"])
         logger.info(
             "tool_cache_invalidated",
             tool_name=tool_name,

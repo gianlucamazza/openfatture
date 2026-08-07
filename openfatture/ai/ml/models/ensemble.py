@@ -441,7 +441,7 @@ class CashFlowEnsemble:
         predictions = self.predict(X)
         y_pred = np.array([p.yhat for p in predictions])
 
-        mae = np.mean(np.abs(y.values - y_pred))
+        mae = float(np.mean(np.abs(y.values - y_pred)))
 
         logger.info("ensemble_scored", mae=mae, sample_count=len(X))
 

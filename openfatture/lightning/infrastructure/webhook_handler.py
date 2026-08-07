@@ -6,6 +6,7 @@ processing payment events and updating the system state accordingly.
 
 import hashlib
 import hmac
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -32,7 +33,7 @@ class LightningWebhookHandler:
     updating invoices, payments, and emitting domain events.
     """
 
-    def __init__(self, webhook_secret: str | None = None):
+    def __init__(self, webhook_secret: str | None = None) -> None:
         """Initialize the webhook handler.
 
         Args:
@@ -70,7 +71,7 @@ class LightningWebhookHandler:
             logger.error("webhook_processing_error", error=str(e), exc_info=True)
             raise HTTPException(status_code=500, detail="Webhook processing failed")
 
-    async def _verify_signature(self, request: Request):
+    async def _verify_signature(self, request: Request) -> None:
         """Verify webhook signature for security.
 
         Args:
@@ -99,7 +100,7 @@ class LightningWebhookHandler:
         if not hmac.compare_digest(signature, expected_signature):
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
-    async def _process_webhook(self, payload: dict[str, Any]):
+    async def _process_webhook(self, payload: dict[str, Any]) -> None:
         """Process webhook payload based on event type.
 
         Args:
@@ -130,7 +131,7 @@ class LightningWebhookHandler:
         else:
             logger.warning("unknown_webhook_event_type", event_type=event_type)
 
-    async def _handle_invoice_created(self, payload: dict[str, Any]):
+    async def _handle_invoice_created(self, payload: dict[str, Any]) -> None:
         """Handle invoice creation event."""
         # Extract invoice data from payload
         invoice_data = payload.get("invoice", {})
@@ -147,7 +148,7 @@ class LightningWebhookHandler:
 
         await self.event_bus.publish_async(event)
 
-    async def _handle_invoice_settled(self, payload: dict[str, Any]):
+    async def _handle_invoice_settled(self, payload: dict[str, Any]) -> None:
         """Handle invoice settlement event."""
         invoice_data = payload.get("invoice", {})
 
@@ -165,7 +166,7 @@ class LightningWebhookHandler:
 
         await self.event_bus.publish_async(event)
 
-    async def _handle_invoice_expired(self, payload: dict[str, Any]):
+    async def _handle_invoice_expired(self, payload: dict[str, Any]) -> None:
         """Handle invoice expiry event."""
         invoice_data = payload.get("invoice", {})
 
@@ -180,7 +181,7 @@ class LightningWebhookHandler:
 
         await self.event_bus.publish_async(event)
 
-    async def _handle_channel_opened(self, payload: dict[str, Any]):
+    async def _handle_channel_opened(self, payload: dict[str, Any]) -> None:
         """Handle channel opened event."""
         channel_data = payload.get("channel", {})
 
@@ -194,7 +195,7 @@ class LightningWebhookHandler:
 
         await self.event_bus.publish_async(event)
 
-    async def _handle_channel_closed(self, payload: dict[str, Any]):
+    async def _handle_channel_closed(self, payload: dict[str, Any]) -> None:
         """Handle channel closed event."""
         channel_data = payload.get("channel", {})
 
@@ -208,7 +209,7 @@ class LightningWebhookHandler:
 
         await self.event_bus.publish_async(event)
 
-    async def _handle_payment_received(self, payload: dict[str, Any]):
+    async def _handle_payment_received(self, payload: dict[str, Any]) -> None:
         """Handle payment received event (alternative to invoice_settled)."""
         # This might be a duplicate of invoice_settled, but handle it anyway
         payment_data = payload.get("payment", {})
@@ -226,7 +227,7 @@ class LightningWebhookHandler:
 
             await self.event_bus.publish_async(event)
 
-    async def _handle_payment_sent(self, payload: dict[str, Any]):
+    async def _handle_payment_sent(self, payload: dict[str, Any]) -> None:
         """Handle payment sent event."""
         # For now, just log outgoing payments
         # Could emit a custom event for payment tracking
@@ -251,7 +252,9 @@ class LightningWebhookHandler:
 
 
 # FastAPI route helper
-def create_lightning_webhook_route(handler: LightningWebhookHandler):
+def create_lightning_webhook_route(
+    handler: LightningWebhookHandler,
+) -> Callable[[Request], Awaitable[Response]]:
     """Create a FastAPI route for Lightning webhooks.
 
     Returns:
@@ -267,7 +270,7 @@ def create_lightning_webhook_route(handler: LightningWebhookHandler):
 # Standalone webhook server for testing/development
 async def run_webhook_server(
     host: str = "0.0.0.0", port: int = 8080, webhook_secret: str | None = None
-):
+) -> None:
     """Run a standalone webhook server for testing.
 
     Args:
@@ -285,7 +288,7 @@ async def run_webhook_server(
         return await handler.handle_webhook(request)
 
     @app.get("/health")
-    async def health():
+    async def health() -> dict[str, Any]:
         return await handler.health_check()
 
     logger.info(

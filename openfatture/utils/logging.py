@@ -8,16 +8,22 @@ Best practices 2025:
 - Performance metrics
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import sys
 import uuid
 from contextvars import ContextVar
 from logging.handlers import RotatingFileHandler
-from typing import Any, cast
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, cast
 
 import structlog
 from structlog.types import EventDict, Processor
+
+if TYPE_CHECKING:
+    from openfatture.utils.config import DebugConfig
 
 # Context variable for tracking correlation IDs across async boundaries
 _correlation_id_var: ContextVar[str | None] = ContextVar("correlation_id", default=None)
@@ -178,12 +184,12 @@ class LogPerformance:
             pass
     """
 
-    def __init__(self, operation: str, logger: structlog.stdlib.BoundLogger):
+    def __init__(self, operation: str, logger: structlog.stdlib.BoundLogger) -> None:
         self.operation = operation
         self.logger = logger
         self.start_time: float = 0
 
-    def __enter__(self) -> "LogPerformance":
+    def __enter__(self) -> LogPerformance:
         import time
 
         self.start_time = time.perf_counter()
@@ -265,7 +271,7 @@ def log_sdi_notification(
     )
 
 
-def configure_dynamic_logging(debug_config) -> None:
+def configure_dynamic_logging(debug_config: DebugConfig) -> None:
     """
     Configure logging with dynamic debug controls.
 
@@ -315,7 +321,7 @@ def configure_dynamic_logging(debug_config) -> None:
             logger.warning("invalid_module_log_levels", error=str(e))
 
 
-def cleanup_old_logs(debug_config, max_age_days: int = 30) -> int:
+def cleanup_old_logs(debug_config: DebugConfig, max_age_days: int = 30) -> int:
     """
     Clean up old log files beyond retention period.
 
@@ -365,7 +371,9 @@ def cleanup_old_logs(debug_config, max_age_days: int = 30) -> int:
     return cleaned_count
 
 
-def get_dynamic_logger(name: str, debug_config=None) -> structlog.stdlib.BoundLogger:
+def get_dynamic_logger(
+    name: str, debug_config: DebugConfig | None = None
+) -> structlog.stdlib.BoundLogger:
     """
     Get a logger with dynamic debug controls.
 
@@ -399,11 +407,11 @@ class suppress_stdout_logging:
     Useful for TUI applications where stdout is used for UI.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.root_logger = logging.getLogger()
-        self.stdout_handlers = []
+        self.stdout_handlers: list[logging.Handler] = []
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         # Find and remove stdout handlers
         for handler in self.root_logger.handlers[:]:
             if isinstance(handler, logging.StreamHandler) and (
@@ -412,7 +420,12 @@ class suppress_stdout_logging:
                 self.stdout_handlers.append(handler)
                 self.root_logger.removeHandler(handler)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         # Restore stdout handlers
         for handler in self.stdout_handlers:
             self.root_logger.addHandler(handler)

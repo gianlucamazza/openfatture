@@ -6,14 +6,18 @@ Implements circuit breaker pattern and connection pooling for production use.
 
 import asyncio
 import time
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 import grpc
 from grpc.aio import Channel
 
 from ..domain.value_objects import ChannelInfo, LightningInvoice, NodeInfo
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class LNDClientError(Exception):
@@ -76,7 +80,7 @@ class ProductionLNDClient:
         max_retries: int = 3,
         circuit_breaker_failures: int = 5,
         circuit_breaker_timeout: int = 300,
-    ):
+    ) -> None:
         self.host = host
         self.cert_path = cert_path
         self.macaroon_path = macaroon_path
@@ -87,7 +91,7 @@ class ProductionLNDClient:
         self.circuit_failures = 0
         self.circuit_max_failures = circuit_breaker_failures
         self.circuit_timeout = circuit_breaker_timeout
-        self.circuit_last_failure = 0
+        self.circuit_last_failure: float = 0.0
 
         # Connection state
         self._channel: Channel | None = None
@@ -97,12 +101,12 @@ class ProductionLNDClient:
         self._lightning_stub = None
         self._router_stub = None
 
-    async def _ensure_connected(self):
+    async def _ensure_connected(self) -> None:
         """Ensure we have an active gRPC connection to LND."""
         if self._channel is None:
             await self._connect()
 
-    async def _connect(self):
+    async def _connect(self) -> None:
         """Establish gRPC connection to LND with proper authentication."""
         try:
             # Load TLS certificate
@@ -160,12 +164,17 @@ class ProductionLNDClient:
 
         return True
 
-    async def _with_retry(self, operation, *args, **kwargs):
+    async def _with_retry(
+        self,
+        operation: Callable[P, Awaitable[R]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
         """Execute operation with retry logic and circuit breaker."""
         if self._is_circuit_open():
             raise LNDConnectionError("Circuit breaker is open - too many failures")
 
-        last_exception = LNDConnectionError("All retry attempts failed")
+        last_exception: Exception = LNDConnectionError("All retry attempts failed")
         for attempt in range(self.max_retries):
             try:
                 await self._ensure_connected()
@@ -185,7 +194,7 @@ class ProductionLNDClient:
 
         raise last_exception
 
-    async def _close_channel(self):
+    async def _close_channel(self) -> None:
         """Close the current gRPC channel."""
         if self._channel:
             await self._channel.close()
@@ -196,7 +205,7 @@ class ProductionLNDClient:
     ) -> LightningInvoice:
         """Create a new Lightning invoice via LND gRPC."""
 
-        async def _create_invoice():
+        async def _create_invoice() -> LightningInvoice:
             if not self._lightning_stub:
                 # Fallback to mock for now until lnd-grpc is added
                 return await self._create_mock_invoice(amount_msat, description, expiry_seconds)
@@ -243,7 +252,7 @@ class ProductionLNDClient:
     async def lookup_invoice(self, payment_hash: str) -> dict[str, Any]:
         """Look up invoice by payment hash via LND gRPC."""
 
-        async def _lookup_invoice():
+        async def _lookup_invoice() -> dict[str, Any]:
             if not self._lightning_stub:
                 raise LNDInvoiceError("LND connection not available - requires lnd-grpc dependency")
 
@@ -259,7 +268,7 @@ class ProductionLNDClient:
     async def get_node_info(self) -> NodeInfo:
         """Get information about this Lightning node via LND gRPC."""
 
-        async def _get_node_info():
+        async def _get_node_info() -> NodeInfo:
             if not self._lightning_stub:
                 # Return mock data for development
                 return NodeInfo(
@@ -287,7 +296,7 @@ class ProductionLNDClient:
     async def list_channels(self) -> list[ChannelInfo]:
         """List all channels for this node via LND gRPC."""
 
-        async def _list_channels():
+        async def _list_channels() -> list[ChannelInfo]:
             if not self._lightning_stub:
                 # Return empty list for development
                 return []
@@ -301,7 +310,7 @@ class ProductionLNDClient:
 
         return await self._with_retry(_list_channels)
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the client connection and cleanup resources."""
         async with self._lock:
             await self._close_channel()

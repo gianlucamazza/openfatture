@@ -48,7 +48,7 @@ class ModelEvaluationResult:
         should_deploy: bool,
         deployment_reason: str,
         comparison: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """Initialize evaluation result."""
         self.metrics = metrics
         self.should_deploy = should_deploy
@@ -83,7 +83,7 @@ class ModelEvaluator:
         ...     print(result.deployment_reason)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize model evaluator."""
         self.config = get_retraining_config()
         logger.info("model_evaluator_initialized")

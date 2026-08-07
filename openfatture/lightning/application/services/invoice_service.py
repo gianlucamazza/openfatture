@@ -1,7 +1,10 @@
 """Lightning invoice generation and management service."""
 
+from __future__ import annotations
+
 import hashlib
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from openfatture.core.events.base import get_global_event_bus
 from openfatture.lightning.domain.events import LightningInvoiceCreated
@@ -11,7 +14,13 @@ from openfatture.lightning.infrastructure.rate_provider import (
     BTCConversionService,
     create_btc_conversion_service,
 )
+from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
 from openfatture.utils.config import Settings, get_settings
+
+if TYPE_CHECKING:
+    from openfatture.lightning.application.services.tax_calculation_service import (
+        TaxCalculationService,
+    )
 
 
 class LightningInvoiceService:
@@ -26,9 +35,9 @@ class LightningInvoiceService:
         lnd_client: ProductionLNDClient,
         btc_converter: BTCConversionService | None = None,
         default_expiry_hours: int = 24,
-        tax_service=None,  # Type hint would create circular import
-        invoice_repository=None,  # Optional repository for tax tracking
-    ):
+        tax_service: TaxCalculationService | None = None,
+        invoice_repository: LightningInvoiceRepository | None = None,
+    ) -> None:
         """Initialize the invoice service.
 
         Args:
@@ -83,13 +92,15 @@ class LightningInvoiceService:
         # Convert EUR to BTC
         btc_amount = await self.btc_converter.convert_eur_to_btc(totale_eur)
 
-        # Get current BTC/EUR rate for tax tracking
+        # Get current BTC/EUR rate for tax tracking (stored as Decimal for tax accuracy)
         rate_info = await self.btc_converter.get_rate_info()
-        btc_eur_rate = rate_info.get("rate") or rate_info.get("current_rate")
+        raw_rate = rate_info.get("rate") or rate_info.get("current_rate")
 
-        if btc_eur_rate is None:
+        if raw_rate is None:
             # Fallback: derive rate by converting 1 BTC to EUR
-            btc_eur_rate = float(await self.btc_converter.convert_btc_to_eur(Decimal("1")))
+            btc_eur_rate = await self.btc_converter.convert_btc_to_eur(Decimal("1"))
+        else:
+            btc_eur_rate = Decimal(str(raw_rate))
 
         # Convert to millisatoshis (1 sat = 1000 msat)
         amount_msat = int(btc_amount * Decimal("100000000") * Decimal("1000"))

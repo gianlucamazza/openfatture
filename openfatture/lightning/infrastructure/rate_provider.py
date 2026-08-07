@@ -35,7 +35,7 @@ class ExchangeRate:
 class ExchangeProvider(ABC):
     """Abstract base class for exchange rate providers."""
 
-    def __init__(self, name: str, api_key: str | None = None):
+    def __init__(self, name: str, api_key: str | None = None) -> None:
         self.name = name
         self.api_key = api_key
         self.client = httpx.AsyncClient(
@@ -47,7 +47,7 @@ class ExchangeProvider(ABC):
         """Get current BTC/EUR exchange rate."""
         pass
 
-    async def close(self):
+    async def close(self) -> None:
         """Close HTTP client."""
         await self.client.aclose()
 
@@ -55,7 +55,7 @@ class ExchangeProvider(ABC):
 class CoinGeckoProvider(ExchangeProvider):
     """CoinGecko exchange rate provider (free tier)."""
 
-    def __init__(self, api_key: str | None = None):
+    def __init__(self, api_key: str | None = None) -> None:
         super().__init__("coingecko", api_key)
         self.base_url = "https://api.coingecko.com/api/v3"
 
@@ -79,7 +79,7 @@ class CoinGeckoProvider(ExchangeProvider):
 class CoinMarketCapProvider(ExchangeProvider):
     """CoinMarketCap exchange rate provider (requires API key)."""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str) -> None:
         super().__init__("coinmarketcap", api_key)
         self.base_url = "https://pro-api.coinmarketcap.com/v1"
 
@@ -104,7 +104,7 @@ class CoinMarketCapProvider(ExchangeProvider):
 class FallbackProvider(ExchangeProvider):
     """Fallback provider with static rates for emergencies."""
 
-    def __init__(self, fallback_rate: Decimal = Decimal("45000.00")):
+    def __init__(self, fallback_rate: Decimal = Decimal("45000.00")) -> None:
         super().__init__("fallback")
         self.fallback_rate = fallback_rate
 
@@ -116,7 +116,7 @@ class FallbackProvider(ExchangeProvider):
 class RateCache:
     """Simple in-memory cache for exchange rates."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache: dict[str, ExchangeRate] = {}
         self._lock = asyncio.Lock()
 
@@ -131,12 +131,12 @@ class RateCache:
                 del self._cache[key]
             return None
 
-    async def set(self, key: str, rate: ExchangeRate):
+    async def set(self, key: str, rate: ExchangeRate) -> None:
         """Cache exchange rate."""
         async with self._lock:
             self._cache[key] = rate
 
-    async def clear(self):
+    async def clear(self) -> None:
         """Clear all cached rates."""
         async with self._lock:
             self._cache.clear()
@@ -152,7 +152,7 @@ class BTCConversionService:
         cache_ttl_seconds: int = 300,  # 5 minutes
         circuit_breaker_failures: int = 3,
         circuit_breaker_timeout: int = 60,
-    ):
+    ) -> None:
         self.providers = providers
         self.cache = cache or RateCache()
         self.cache_ttl = cache_ttl_seconds
@@ -300,7 +300,7 @@ class BTCConversionService:
 
         return True
 
-    async def _rate_limit(self):
+    async def _rate_limit(self) -> None:
         """Implement rate limiting between requests."""
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -325,7 +325,7 @@ class BTCConversionService:
             "cache_ttl": self.cache_ttl,
         }
 
-    async def close(self):
+    async def close(self) -> None:
         """Close all provider connections."""
         for provider in self.providers:
             await provider.close()

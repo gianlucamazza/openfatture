@@ -3,10 +3,12 @@
 import asyncio
 import time
 from datetime import UTC, datetime
+from typing import Any
 
 from openfatture.core.events.base import get_global_event_bus
 from openfatture.lightning.domain.enums import InvoiceStatus
 from openfatture.lightning.domain.events import LightningPaymentSettled
+from openfatture.lightning.domain.models import LightningInvoiceRecord
 from openfatture.lightning.infrastructure.lnd_client import ProductionLNDClient
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
 
@@ -20,7 +22,7 @@ class LightningPaymentService:
         invoice_repository: LightningInvoiceRepository,
         polling_interval_seconds: int = 30,
         max_concurrent_checks: int = 10,
-    ):
+    ) -> None:
         """Initialize the payment service.
 
         Args:
@@ -39,7 +41,7 @@ class LightningPaymentService:
         self._monitoring_task: asyncio.Task | None = None
         self._is_monitoring = False
 
-    async def start_monitoring(self):
+    async def start_monitoring(self) -> None:
         """Start the payment monitoring loop."""
         if self._is_monitoring:
             return
@@ -48,7 +50,7 @@ class LightningPaymentService:
         self._monitoring_task = asyncio.create_task(self._monitoring_loop())
         print("Lightning payment monitoring started")
 
-    async def stop_monitoring(self):
+    async def stop_monitoring(self) -> None:
         """Stop the payment monitoring loop."""
         self._is_monitoring = False
         if self._monitoring_task:
@@ -59,7 +61,7 @@ class LightningPaymentService:
                 pass
         print("Lightning payment monitoring stopped")
 
-    async def _monitoring_loop(self):
+    async def _monitoring_loop(self) -> None:
         """Main monitoring loop that checks for settled payments."""
         while self._is_monitoring:
             try:
@@ -70,7 +72,7 @@ class LightningPaymentService:
 
             await asyncio.sleep(self.polling_interval)
 
-    async def _check_pending_invoices(self):
+    async def _check_pending_invoices(self) -> None:
         """Check all pending invoices for settlement."""
         pending_invoices = self.invoice_repo.find_pending()
 
@@ -80,7 +82,7 @@ class LightningPaymentService:
         # Process invoices in batches to avoid overwhelming LND
         semaphore = asyncio.Semaphore(self.max_concurrent)
 
-        async def check_invoice(invoice_record):
+        async def check_invoice(invoice_record: LightningInvoiceRecord) -> None:
             async with semaphore:
                 await self._check_single_invoice(invoice_record)
 
@@ -88,7 +90,7 @@ class LightningPaymentService:
         tasks = [check_invoice(invoice) for invoice in pending_invoices]
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    async def _check_single_invoice(self, invoice_record):
+    async def _check_single_invoice(self, invoice_record: LightningInvoiceRecord) -> None:
         """Check a single invoice for settlement."""
         try:
             # Query LND for current invoice status
@@ -101,7 +103,9 @@ class LightningPaymentService:
         except Exception as e:
             print(f"Error checking invoice {invoice_record.payment_hash}: {e}")
 
-    async def _process_settlement(self, invoice_record, lnd_data: dict):
+    async def _process_settlement(
+        self, invoice_record: LightningInvoiceRecord, lnd_data: dict[str, Any]
+    ) -> None:
         """Process a settled invoice."""
         # Update invoice record
         invoice_record.status = InvoiceStatus.SETTLED
@@ -120,11 +124,20 @@ class LightningPaymentService:
         # Save to database
         self.invoice_repo.save(invoice_record)
 
+        # Zero-amount invoices carry no amount until settlement: LND reports the
+        # amount actually paid, which is what the domain event must carry.
+        settled_amount_msat = lnd_data.get("amt_paid_msat") or invoice_record.amount_msat
+        if settled_amount_msat is None:
+            raise ValueError(
+                f"Settled invoice {invoice_record.payment_hash} has no amount: "
+                "neither amt_paid_msat nor a stored amount_msat is available"
+            )
+
         # Publish domain event
         event = LightningPaymentSettled(
             payment_hash=invoice_record.payment_hash,
             preimage=preimage,
-            amount_msat=invoice_record.amount_msat,
+            amount_msat=settled_amount_msat,
             fee_paid_msat=fee_paid_msat,
             settled_at=invoice_record.settled_at,
             fattura_id=invoice_record.fattura_id,
@@ -136,7 +149,7 @@ class LightningPaymentService:
             f"({invoice_record.amount_msat} msat)"
         )
 
-    async def _cleanup_expired_invoices(self):
+    async def _cleanup_expired_invoices(self) -> None:
         """Mark expired pending invoices."""
         expired_invoices = self.invoice_repo.find_expired_pending()
 
@@ -203,7 +216,10 @@ class LightningPaymentService:
             / max(1, len(settled_invoices) + len(self.invoice_repo.find_expired_pending())),
         }
 
-    async def simulate_payment(self, payment_hash: str) -> bool:
+    #: Amount credited when simulating the payment of a zero-amount invoice.
+    DEFAULT_SIMULATED_AMOUNT_MSAT = 1_000_000  # 1000 sat
+
+    async def simulate_payment(self, payment_hash: str, amount_msat: int | None = None) -> bool:
         """Simulate a payment for testing purposes.
 
         This method is only available in mock/development mode.
@@ -211,6 +227,9 @@ class LightningPaymentService:
 
         Args:
             payment_hash: Payment hash to simulate payment for
+            amount_msat: Amount the simulated payer sends. Defaults to the
+                invoice amount, or to DEFAULT_SIMULATED_AMOUNT_MSAT for
+                zero-amount invoices, which carry no amount of their own.
 
         Returns:
             True if simulation succeeded
@@ -224,12 +243,19 @@ class LightningPaymentService:
         if not invoice_record:
             raise ValueError(f"Invoice not found: {payment_hash}")
 
+        paid_msat = (
+            amount_msat
+            if amount_msat is not None
+            else invoice_record.amount_msat or self.DEFAULT_SIMULATED_AMOUNT_MSAT
+        )
+
         # Simulate settlement in mock LND client
-        mock_lnd_data = {
+        mock_lnd_data: dict[str, Any] = {
             "settled": True,
             "settle_date": int(time.time()),
             "payment_preimage": "00" * 32,  # Mock preimage
             "fee_paid_msat": 1000,  # Mock fee
+            "amt_paid_msat": paid_msat,
         }
 
         # Update mock LND client state if available

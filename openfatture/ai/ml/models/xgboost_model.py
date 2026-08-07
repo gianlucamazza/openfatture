@@ -472,7 +472,7 @@ class XGBoostModel:
             Mean Absolute Error (MAE)
         """
         y_pred = self._predict_array(X)
-        mae = np.mean(np.abs(y.values - y_pred))
+        mae = float(np.mean(np.abs(y.values - y_pred)))
 
         logger.info("xgboost_model_scored", mae=mae, sample_count=len(X))
 

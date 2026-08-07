@@ -15,6 +15,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from types import TracebackType
 from typing import Any
 
 from openfatture.utils.logging import get_logger
@@ -223,7 +224,7 @@ def get_metrics_collector() -> MetricsCollector:
 class MetricsTimer:
     """Context manager for timing operations."""
 
-    def __init__(self, operation_name: str, tags: dict[str, str] | None = None):
+    def __init__(self, operation_name: str, tags: dict[str, str] | None = None) -> None:
         self.operation_name = operation_name
         self.tags = tags or {}
         self.start_time: float | None = None
@@ -233,7 +234,12 @@ class MetricsTimer:
         self.start_time = time.perf_counter()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         if self.start_time is not None:
             duration_ms = (time.perf_counter() - self.start_time) * 1000
             self.collector.record_timing(self.operation_name, duration_ms, self.tags)

@@ -55,7 +55,7 @@ class RetrainingScheduler:
         >>> scheduler.stop()
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize retraining scheduler."""
         self.config = get_retraining_config()
         self.trigger_checker = RetrainingTrigger()
