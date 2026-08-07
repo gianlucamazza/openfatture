@@ -7,8 +7,8 @@ from pydantic import validate_call
 
 from openfatture.ai.rag import KnowledgeIndexer, get_rag_config
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
-from openfatture.utils.logging import get_logger
-from openfatture.utils.security import sanitize_string_input, validate_integer_input
+from openfatture.platform.logging import get_logger
+from openfatture.platform.security import sanitize_string_input, validate_integer_input
 
 logger = get_logger(__name__)
 

@@ -48,7 +48,7 @@ class MockResponseStream:
         try:
             return next(self._events)
         except StopIteration:
-            raise StopAsyncIteration
+            raise StopAsyncIteration from None
 
     async def get_final_response(self):
         return self._final_response
@@ -732,7 +732,7 @@ class TestStreamingToolCalls:
 
         # Extract text from StreamEvent objects
         text_parts = [e.get_text() for e in events if hasattr(e, "get_text")]
-        full_text = " ".join(text_parts)
+        _full_text = " ".join(text_parts)
 
         # Verify that tool calls were detected and executed
         # Note: Text might be in progress/status events, not just content
@@ -791,7 +791,7 @@ class TestStreamingPerformance:
         start_time = time.time()
         first_chunk_time = None
 
-        async for chunk in agent.execute_stream(context):
+        async for _chunk in agent.execute_stream(context):
             if first_chunk_time is None:
                 first_chunk_time = time.time()
                 # Time to first chunk should be very low (< 100ms)
@@ -808,7 +808,7 @@ class TestStreamingPerformance:
 
         # Process chunks one at a time
         chunk_count = 0
-        async for chunk in agent.execute_stream(context):
+        async for _chunk in agent.execute_stream(context):
             # In real streaming, we'd process and discard each chunk
             chunk_count += 1
 

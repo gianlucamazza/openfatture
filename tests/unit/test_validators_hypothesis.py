@@ -12,7 +12,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from openfatture.utils.validators import (
+from openfatture.platform.validators import (
     format_importo,
     validate_codice_destinatario,
     validate_codice_fiscale,

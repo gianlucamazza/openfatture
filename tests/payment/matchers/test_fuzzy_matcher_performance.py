@@ -116,7 +116,7 @@ class TestFuzzyMatcherPerformance:
         latencies = []
         for trans in transactions:
             start_time = time.perf_counter()
-            results = matcher.match(trans, payments)
+            _results = matcher.match(trans, payments)
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             latencies.append(elapsed_ms)
 
@@ -142,7 +142,7 @@ class TestFuzzyMatcherPerformance:
         latencies = []
         for trans in transactions:
             start_time = time.perf_counter()
-            results = matcher.match(trans, payments)
+            _results = matcher.match(trans, payments)
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             latencies.append(elapsed_ms)
 

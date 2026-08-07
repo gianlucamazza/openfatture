@@ -8,9 +8,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 
+from openfatture.platform.config import get_settings
+from openfatture.platform.validators import validate_codice_fiscale, validate_partita_iva
 from openfatture.storage.database.base import init_db
-from openfatture.utils.config import get_settings
-from openfatture.utils.validators import validate_codice_fiscale, validate_partita_iva
 
 app = typer.Typer()
 console = Console()
@@ -58,7 +58,6 @@ def init(
         console.print("[bold yellow]Let's configure your company data[/bold yellow]\n")
 
         env_file = Path(".env")
-        env_content = []
 
         if env_file.exists():
             if not Confirm.ask(
@@ -71,7 +70,7 @@ def init(
             # Copy example if starting fresh
             example = Path(".env.example")
             if example.exists():
-                env_content = example.read_text().splitlines()
+                example.read_text().splitlines()
 
         # Gather company data
         console.print("\n[bold]Company Information (Cedente Prestatore)[/bold]")

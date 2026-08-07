@@ -265,7 +265,7 @@ class TestInvoiceAssistantAgent:
         )
 
         # Execute to trigger prompt building
-        response = await invoice_assistant.execute(context)
+        _response = await invoice_assistant.execute(context)
 
         # Verify prompt manager was called with correct variables
         call_args = invoice_assistant.prompt_manager.render_with_examples.call_args

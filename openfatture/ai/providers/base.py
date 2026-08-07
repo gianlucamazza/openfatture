@@ -145,7 +145,7 @@ class BaseLLMProvider(ABC):
         """
         # Default implementation - subclasses should override
         return
-        yield  # pragma: no cover
+        yield
 
     @abstractmethod
     def count_tokens(self, text: str) -> int:

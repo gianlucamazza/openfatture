@@ -10,7 +10,7 @@ from typing import Any, Protocol
 import structlog
 from sqlalchemy.orm import Session
 
-from openfatture.core.events.base import BaseEvent, EventBus
+from openfatture.events.base import BaseEvent, EventBus
 from openfatture.lightning.domain.events import (
     LightningAMLAlertEvent,
     LightningAMLVerified,
@@ -43,13 +43,15 @@ class LightningPaymentSettledHandler:
         Args:
             event: LightningPaymentSettled domain event
         """
-        print(f"Processing Lightning payment settlement: {event.payment_hash[:8]}...")
+        logger.info(f"Processing Lightning payment settlement: {event.payment_hash[:8]}...")
 
         try:
             # Find the invoice record
             invoice_record = self.invoice_repo.find_by_payment_hash(event.payment_hash)
             if not invoice_record:
-                print(f"Warning: Invoice record not found for payment hash {event.payment_hash}")
+                logger.warning(
+                    f"Warning: Invoice record not found for payment hash {event.payment_hash}"
+                )
                 return
 
             # If linked to a fattura, update fattura and pagamento
@@ -58,15 +60,19 @@ class LightningPaymentSettledHandler:
                     invoice_record.fattura_id, event.amount_msat, event.settled_at
                 )
 
-            # Log successful payment
-            print(
-                f"Lightning payment processed: {event.amount_msat} msat "
-                f"for fattura {invoice_record.fattura_id}"
+            logger.info(
+                "lightning_payment_processed",
+                amount_msat=event.amount_msat,
+                fattura_id=invoice_record.fattura_id,
             )
 
         except Exception as e:
-            print(f"Error processing Lightning payment settlement: {e}")
-            # In production, you might want to implement retry logic or dead letter queue
+            logger.error(
+                "lightning_payment_settlement_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            raise
 
     async def _update_fattura_payment(
         self, fattura_id: int, amount_msat: int, settled_at: datetime
@@ -78,36 +84,34 @@ class LightningPaymentSettledHandler:
             amount_msat: Payment amount in millisatoshis
             settled_at: When the payment was settled
         """
-        # Convert msat to EUR (simplified conversion)
-        # In production, this would use the same BTC converter as invoice service
-        amount_sat = amount_msat / 1000
-        amount_btc = amount_sat / 100_000_000
-        # Mock conversion: 1 BTC = 45,000 EUR
-        amount_eur = amount_btc * 45_000
+        from decimal import Decimal
 
-        # Find fattura
+        from openfatture.lightning.infrastructure.rate_provider import (
+            create_btc_conversion_service,
+        )
+        from openfatture.platform.config import get_settings
+
+        # Same conversion path as invoice issuance (no hardcoded mock rate).
+        converter = create_btc_conversion_service(get_settings())
+        amount_btc = Decimal(amount_msat) / Decimal(1000) / Decimal(100_000_000)
+        amount_eur = await converter.convert_btc_to_eur(amount_btc)
+
         fattura = self.session.query(Fattura).filter(Fattura.id == fattura_id).first()
         if not fattura:
-            print(f"Warning: Fattura {fattura_id} not found")
+            logger.warning("lightning_settlement_fattura_missing", fattura_id=fattura_id)
             return
 
-        # Find associated pagamento
         pagamento = self.session.query(Pagamento).filter(Pagamento.fattura_id == fattura_id).first()
 
         if pagamento:
-            # Update pagamento with Lightning payment
-            from decimal import Decimal
-
-            pagamento.apply_payment(Decimal(str(amount_eur)), settled_at.date())
-
-            # Mark as paid via Lightning (could add a field for payment method)
+            pagamento.apply_payment(amount_eur, settled_at.date())
             if hasattr(pagamento, "modalita"):
                 pagamento.modalita = "Lightning Network"
-
-            print(f"Updated pagamento for fattura {fattura_id}: applied {amount_eur:.2f} EUR")
-
-        # Update fattura status if fully paid
-        # This would typically be handled by existing business logic
+            logger.info(
+                "lightning_pagamento_updated",
+                fattura_id=fattura_id,
+                amount_eur=str(amount_eur),
+            )
 
         self.session.commit()
 
@@ -129,13 +133,15 @@ class LightningInvoiceExpiredHandler:
         Args:
             event: LightningInvoiceExpired domain event
         """
-        print(f"Processing Lightning invoice expiry: {event.payment_hash[:8]}...")
+        logger.info(f"Processing Lightning invoice expiry: {event.payment_hash[:8]}...")
 
         try:
             # Find the invoice record
             invoice_record = self.invoice_repo.find_by_payment_hash(event.payment_hash)
             if not invoice_record:
-                print(f"Warning: Invoice record not found for payment hash {event.payment_hash}")
+                logger.warning(
+                    f"Warning: Invoice record not found for payment hash {event.payment_hash}"
+                )
                 return
 
             # If linked to a fattura, we might want to trigger reminders
@@ -143,10 +149,10 @@ class LightningInvoiceExpiredHandler:
             if invoice_record.fattura_id:
                 await self._handle_fattura_invoice_expired(invoice_record.fattura_id)
 
-            print(f"Lightning invoice expiry processed: {event.payment_hash[:8]}...")
+            logger.info(f"Lightning invoice expiry processed: {event.payment_hash[:8]}...")
 
         except Exception as e:
-            print(f"Error processing Lightning invoice expiry: {e}")
+            logger.error(f"Error processing Lightning invoice expiry: {e}")
 
     async def _handle_fattura_invoice_expired(self, fattura_id: int) -> None:
         """Handle expiry of Lightning invoice for a fattura.
@@ -161,8 +167,11 @@ class LightningInvoiceExpiredHandler:
 
         fattura = self.session.query(Fattura).filter(Fattura.id == fattura_id).first()
         if fattura:
-            print(f"Lightning invoice expired for fattura {fattura_id} (numero: {fattura.numero})")
-            # In production, you might queue a reminder or notification here
+            logger.info(
+                "lightning_invoice_expired",
+                fattura_id=fattura_id,
+                numero=fattura.numero,
+            )
 
 
 class LightningPaymentTaxableEventHandler:
@@ -504,7 +513,7 @@ def register_lightning_event_handlers(event_bus: EventBus) -> None:
             await handler.handle(event)
 
         event_bus.subscribe(event_type, async_handler)
-        print(f"Registered Lightning event handler: {event_type.__name__}")
+        logger.info(f"Registered Lightning event handler: {event_type.__name__}")
 
 
 def initialize_lightning_integration() -> None:
@@ -512,8 +521,8 @@ def initialize_lightning_integration() -> None:
 
     This should be called during application startup.
     """
-    from openfatture.core.events.base import get_global_event_bus
+    from openfatture.events.base import get_global_event_bus
 
     event_bus = get_global_event_bus()
     register_lightning_event_handlers(event_bus)
-    print("Lightning integration initialized")
+    logger.info("Lightning integration initialized")

@@ -15,7 +15,7 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -32,7 +32,7 @@ class AutoUpdateConfig(BaseSettings):
         False
         >>>
         >>> # Override via environment
-        >>> os.environ['OPENFATTURE_RAG_AUTO_UPDATE_ENABLED'] = 'true'
+        >>> os.environ["OPENFATTURE_RAG_AUTO_UPDATE_ENABLED"] = "true"
         >>> config = AutoUpdateConfig()
         >>> print(config.enabled)
         True

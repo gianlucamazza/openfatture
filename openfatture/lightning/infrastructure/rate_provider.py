@@ -11,8 +11,8 @@ from decimal import Decimal
 
 import httpx
 
-from ...utils.config import Settings
-from ...utils.logging import get_logger
+from openfatture.platform.config import Settings
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

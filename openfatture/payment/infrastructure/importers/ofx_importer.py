@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Any
 
 from ofxparse import OfxParser
 
-from ....utils.logging import get_logger
+from openfatture.platform.logging import get_logger
+
 from ...domain.enums import ImportSource
 from ...domain.models import BankTransaction
 from .base import BaseImporter

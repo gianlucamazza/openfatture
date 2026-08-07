@@ -30,12 +30,13 @@ try:
 except ImportError:
     XGBOOST_AVAILABLE = False
     warnings.warn(
-        "XGBoost not installed. Install with: pip install xgboost",
+        "XGBoost not installed. Install with: uv sync --extra ml "
+        "(or: pip install 'openfatture[ml]')",
         ImportWarning,
         stacklevel=2,
     )
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -108,18 +109,11 @@ class XGBoostModel:
 
     Example:
         >>> model = XGBoostModel(
-        ...     max_depth=6,
-        ...     learning_rate=0.1,
-        ...     n_estimators=100,
-        ...     use_asymmetric_loss=True
+        ...     max_depth=6, learning_rate=0.1, n_estimators=100, use_asymmetric_loss=True
         ... )
         >>>
         >>> # Fit with early stopping
-        >>> model.fit(
-        ...     X_train, y_train,
-        ...     eval_set=[(X_val, y_val)],
-        ...     early_stopping_rounds=10
-        ... )
+        >>> model.fit(X_train, y_train, eval_set=[(X_val, y_val)], early_stopping_rounds=10)
         >>>
         >>> # Make prediction
         >>> prediction = model.predict_single(X_test.iloc[0])

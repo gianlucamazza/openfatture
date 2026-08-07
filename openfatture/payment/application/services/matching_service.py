@@ -40,7 +40,7 @@ class MatchingService:
         >>> matching_service = MatchingService(
         ...     tx_repo=BankTransactionRepository(session),
         ...     payment_repo=PaymentRepository(session),
-        ...     strategies=[ExactAmountMatcher(), CompositeMatcher()]
+        ...     strategies=[ExactAmountMatcher(), CompositeMatcher()],
         ... )
         >>> matches = await matching_service.match_transaction(transaction)
         >>> print(f"Found {len(matches)} matches")
@@ -150,7 +150,7 @@ class MatchingService:
         if self.insight_service and filtered_matches:
             try:
                 insight = await self.insight_service.analyze(transaction, candidates)
-            except Exception as exc:  # pragma: no cover - defensive logging
+            except Exception as exc:
                 logger.warning(
                     "matching_insight_failed",
                     transaction_id=transaction.id,

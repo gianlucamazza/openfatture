@@ -233,7 +233,7 @@ with open(ftl_file) as f:
 
 - **Source**: `openfatture/i18n/`
 - **Tests**: `tests/i18n/test_basic.py`
-- **Config**: `openfatture/utils/config.py` (Settings.locale)
+- **Config**: `openfatture/platform/config.py` (Settings.locale)
 - **Docs**: `openfatture/i18n/README.md`
 
 ## Summary

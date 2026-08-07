@@ -9,7 +9,7 @@ from typing import cast
 
 import structlog
 
-from openfatture.utils.config import Settings, get_settings
+from openfatture.platform.config import Settings, get_settings
 
 from .events import InMemoryEventBus, PaymentEvent
 

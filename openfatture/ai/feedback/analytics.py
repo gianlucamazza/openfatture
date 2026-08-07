@@ -5,13 +5,13 @@ from datetime import datetime, timedelta
 from sqlalchemy import Integer, func
 
 from openfatture.ai.feedback.models import FeedbackStats, PredictionFeedbackStats
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import (
     FeedbackType,
     ModelPredictionFeedback,
     UserFeedback,
 )
 from openfatture.storage.session import db_session
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -130,7 +130,7 @@ class FeedbackAnalytics:
                 db.query(func.count(ModelPredictionFeedback.id))
                 .filter(
                     ModelPredictionFeedback.created_at >= cutoff_date,
-                    ModelPredictionFeedback.user_accepted == True,  # noqa: E712
+                    ModelPredictionFeedback.user_accepted.is_(True),
                 )
                 .scalar()
                 or 0
@@ -161,7 +161,7 @@ class FeedbackAnalytics:
             # Unprocessed count (for retraining queue)
             unprocessed_count = (
                 db.query(func.count(ModelPredictionFeedback.id))
-                .filter(ModelPredictionFeedback.processed == False)  # noqa: E712
+                .filter(ModelPredictionFeedback.processed.is_(False))
                 .scalar()
                 or 0
             )
@@ -277,7 +277,7 @@ class FeedbackAnalytics:
                 )
                 .filter(
                     ModelPredictionFeedback.confidence_score < threshold,
-                    ModelPredictionFeedback.processed == False,  # noqa: E712
+                    ModelPredictionFeedback.processed.is_(False),
                 )
                 .order_by(ModelPredictionFeedback.confidence_score.asc())
                 .limit(limit)

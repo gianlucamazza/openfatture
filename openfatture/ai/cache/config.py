@@ -8,7 +8,7 @@ from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 
 class CacheConfig(BaseModel):

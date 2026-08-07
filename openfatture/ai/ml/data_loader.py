@@ -21,9 +21,9 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import and_
 
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.storage.session import db_session
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -90,10 +90,7 @@ class InvoiceDataLoader:
 
     Example:
         >>> loader = InvoiceDataLoader()
-        >>> dataset = loader.load_dataset(
-        ...     min_date=date(2023, 1, 1),
-        ...     max_date=date(2024, 12, 31)
-        ... )
+        >>> dataset = loader.load_dataset(min_date=date(2023, 1, 1), max_date=date(2024, 12, 31))
         >>> print(f"Train: {len(dataset.X_train)}, Val: {len(dataset.X_val)}")
     """
 

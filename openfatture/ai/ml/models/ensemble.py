@@ -23,7 +23,7 @@ import pandas as pd
 
 from openfatture.ai.ml.models.prophet_model import ProphetModel, ProphetPrediction
 from openfatture.ai.ml.models.xgboost_model import XGBoostModel, XGBoostPrediction
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -96,10 +96,7 @@ class CashFlowEnsemble:
     Weights can be optimized via cross-validation to maximize accuracy.
 
     Example:
-        >>> ensemble = CashFlowEnsemble(
-        ...     prophet_weight=0.4,
-        ...     xgboost_weight=0.6
-        ... )
+        >>> ensemble = CashFlowEnsemble(prophet_weight=0.4, xgboost_weight=0.6)
         >>>
         >>> # Fit both models
         >>> ensemble.fit(X_train, y_train, X_val, y_val)

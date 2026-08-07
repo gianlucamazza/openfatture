@@ -28,9 +28,9 @@ from openfatture.ai.domain.response import AgentResponse, UsageMetrics
 from openfatture.ai.orchestration.workflows.compliance_check import ComplianceCheckWorkflow
 from openfatture.ai.orchestration.workflows.invoice_creation import InvoiceCreationWorkflow
 from openfatture.ai.providers.base import BaseLLMProvider
+from openfatture.platform import config
 from openfatture.storage.database import base
 from openfatture.storage.database.models import Fattura, StatoFattura
-from openfatture.utils import config
 
 
 class FakeLLMProvider(BaseLLMProvider):

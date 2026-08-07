@@ -199,7 +199,7 @@ class LightningInvoiceRepository:
             LightningInvoiceRecord.status == InvoiceStatus.SETTLED,
             LightningInvoiceRecord.eur_amount_declared.is_not(None),
             LightningInvoiceRecord.eur_amount_declared >= Decimal(str(threshold_eur)),
-            LightningInvoiceRecord.aml_verified == False,  # noqa: E712
+            LightningInvoiceRecord.aml_verified.is_(False),
         )
         return list(self.session.execute(stmt).scalars())
 

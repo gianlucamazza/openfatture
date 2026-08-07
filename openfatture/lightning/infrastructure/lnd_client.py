@@ -2,7 +2,13 @@
 
 Provides a secure, resilient client for interacting with LND via gRPC.
 Implements circuit breaker pattern and connection pooling for production use.
+
+Honesty gate: mock invoice/node responses are only used when
+``allow_mock=True`` (wired from ``settings.lightning_allow_mock``). Default
+is fail-closed so production never silently pretends LND works.
 """
+
+from __future__ import annotations
 
 import asyncio
 import time
@@ -11,10 +17,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ParamSpec, TypeVar
 
-import grpc
-from grpc.aio import Channel
+from openfatture.platform.extras import MissingExtraError
 
 from ..domain.value_objects import ChannelInfo, LightningInvoice, NodeInfo
+
+try:
+    import grpc
+    from grpc.aio import Channel
+except ImportError as exc:
+    raise MissingExtraError("lightning", feature="LND gRPC client", cause=exc) from exc
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -80,12 +91,14 @@ class ProductionLNDClient:
         max_retries: int = 3,
         circuit_breaker_failures: int = 5,
         circuit_breaker_timeout: int = 300,
+        allow_mock: bool = False,
     ) -> None:
         self.host = host
         self.cert_path = cert_path
         self.macaroon_path = macaroon_path
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
+        self.allow_mock = allow_mock
 
         # Circuit breaker state
         self.circuit_failures = 0
@@ -100,6 +113,21 @@ class ProductionLNDClient:
         # LND service stubs (will be initialized when we add lnd-grpc dependency)
         self._lightning_stub = None
         self._router_stub = None
+
+    @property
+    def rpc_ready(self) -> bool:
+        """True when real LND gRPC stubs are initialized."""
+        return self._lightning_stub is not None
+
+    def _unavailable(self, operation: str) -> LNDClientError:
+        """Build a fail-closed error when RPC stubs are missing."""
+        return LNDClientError(
+            f"{operation} unavailable: gRPC stubs are not initialized. "
+            "Real LND protobuf integration is not implemented yet. "
+            "Use tests/lightning MockLNDClient in tests, or construct "
+            "ProductionLNDClient(allow_mock=True) only for local development "
+            "(settings.lightning_allow_mock)."
+        )
 
     async def _ensure_connected(self) -> None:
         """Ensure we have an active gRPC connection to LND."""
@@ -138,10 +166,9 @@ class ProductionLNDClient:
                     ],
                 )
 
-            # TODO: Initialize LND service stubs when lnd-grpc dependency is added
-            # from lndgrpc import rpc_pb2_grpc
-            # self._lightning_stub = rpc_pb2_grpc.LightningStub(self._channel)
-            # self._router_stub = rpc_pb2_grpc.RouterStub(self._channel)
+            # Real LightningStub/RouterStub wiring is not implemented yet;
+            # _lightning_stub stays None until a protobuf client is added.
+            # rpc_ready remains False → fail-closed unless allow_mock=True.
 
             # Reset circuit breaker on successful connection
             self.circuit_failures = 0
@@ -149,7 +176,7 @@ class ProductionLNDClient:
         except Exception as e:
             self.circuit_failures += 1
             self.circuit_last_failure = time.time()
-            raise LNDConnectionError(f"Failed to connect to LND: {e}")
+            raise LNDConnectionError(f"Failed to connect to LND: {e}") from e
 
     def _is_circuit_open(self) -> bool:
         """Check if circuit breaker is open."""
@@ -207,10 +234,11 @@ class ProductionLNDClient:
 
         async def _create_invoice() -> LightningInvoice:
             if not self._lightning_stub:
-                # Fallback to mock for now until lnd-grpc is added
-                return await self._create_mock_invoice(amount_msat, description, expiry_seconds)
+                if self.allow_mock:
+                    return await self._create_mock_invoice(amount_msat, description, expiry_seconds)
+                raise self._unavailable("create_invoice")
 
-            # TODO: Implement real LND invoice creation when stubs are available
+            # Real AddInvoice path requires protobuf stubs (rpc_ready)
             # request = rpc_pb2.Invoice(
             #     value_msat=amount_msat,
             #     memo=description,
@@ -226,7 +254,7 @@ class ProductionLNDClient:
     async def _create_mock_invoice(
         self, amount_msat: int | None, description: str, expiry_seconds: int
     ) -> LightningInvoice:
-        """Create a mock invoice for development (fallback when LND not available)."""
+        """Dev-only mock invoice (requires ``allow_mock=True``)."""
         import hashlib
 
         # Generate payment hash from description and timestamp
@@ -237,7 +265,15 @@ class ProductionLNDClient:
         # Generate mock BOLT-11 payment request
         # This is a simplified mock - real BOLT-11 encoding is complex
         amount_part = f"{amount_msat // 1000 if amount_msat else 1}"
-        mock_payment_request = f"lnbc{amount_part}u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqh58yjmdan79s6qqdhdzgynm4zwqd5d7xmw5fk98klysy043l2ahrqsfpp3qjmp7lwpagxun9pygexvgpjdc4jdj85fr9yq20q82gphp2nflc7jtzrcazrra7wwgzxqc8u7754cdlpfrmccae92qgzqvzq2ps8pqqqqqqpqqqqq9qqqvpeuqafqxu92d8lr6fvg0r5gv0heeeqgcrqlnm6jhphu9y00rrhy4grqszsvpcgpy9qqqqqqgqqqqq7qqzqj9n4evl6mr5aj9f58zp6fyjzup6ywn3x6sk8akg5v4tgn2q8g4fhx05wf6juaxu9760yp46454gpg5mtzgerlzezqcqvjnhjh8z3g2qqdhhwkj"
+        mock_payment_request = (
+            f"lnbc{amount_part}u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqf"
+            "qqqsyqcyq5rqwzqfqypqh58yjmdan79s6qqdhdzgynm4zwqd5d7xmw5fk98klysy043l2ahrq"
+            "sfpp3qjmp7lwpagxun9pygexvgpjdc4jdj85fr9yq20q82gphp2nflc7jtzrcazrra7wwgzxqc"
+            "8u7754cdlpfrmccae92qgzqvzq2ps8pqqqqqqpqqqqq9qqqvpeuqafqxu92d8lr6fvg0r5gv0he"
+            "eeqgcrqlnm6jhphu9y00rrhy4grqszsvpcgpy9qqqqqqgqqqqq7qqzqj9n4evl6mr5aj9f58zp"
+            "6fyjzup6ywn3x6sk8akg5v4tgn2q8g4fhx05wf6juaxu9760yp46454gpg5mtzgerlzezqcqv"
+            "jnhjh8z3g2qqdhhwkj"
+        )
 
         return LightningInvoice(
             payment_hash=payment_hash,
@@ -254,9 +290,9 @@ class ProductionLNDClient:
 
         async def _lookup_invoice() -> dict[str, Any]:
             if not self._lightning_stub:
-                raise LNDInvoiceError("LND connection not available - requires lnd-grpc dependency")
+                raise self._unavailable("lookup_invoice")
 
-            # TODO: Implement real invoice lookup
+            # Real LookupInvoice path requires protobuf stubs (rpc_ready)
             # request = rpc_pb2.PaymentHash(r_hash=bytes.fromhex(payment_hash))
             # response = await self._lightning_stub.LookupInvoice(request)
             # return self._convert_lnd_invoice_lookup_to_dict(response)
@@ -270,21 +306,22 @@ class ProductionLNDClient:
 
         async def _get_node_info() -> NodeInfo:
             if not self._lightning_stub:
-                # Return mock data for development
-                return NodeInfo(
-                    pubkey="03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad",
-                    alias="OpenFattureNode",
-                    color="#FF6B35",
-                    num_peers=0,
-                    num_channels=0,
-                    total_capacity_sat=0,
-                    addresses=[],
-                    features={},
-                    synced_to_chain=False,
-                    synced_to_graph=False,
-                )
+                if self.allow_mock:
+                    return NodeInfo(
+                        pubkey="03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad",
+                        alias="OpenFattureNode",
+                        color="#FF6B35",
+                        num_peers=0,
+                        num_channels=0,
+                        total_capacity_sat=0,
+                        addresses=[],
+                        features={},
+                        synced_to_chain=False,
+                        synced_to_graph=False,
+                    )
+                raise self._unavailable("get_node_info")
 
-            # TODO: Implement real node info retrieval
+            # Real GetInfo path requires protobuf stubs (rpc_ready)
             # request = rpc_pb2.GetInfoRequest()
             # response = await self._lightning_stub.GetInfo(request)
             # return self._convert_lnd_node_info_to_domain(response)
@@ -298,10 +335,11 @@ class ProductionLNDClient:
 
         async def _list_channels() -> list[ChannelInfo]:
             if not self._lightning_stub:
-                # Return empty list for development
-                return []
+                if self.allow_mock:
+                    return []
+                raise self._unavailable("list_channels")
 
-            # TODO: Implement real channel listing
+            # Real ListChannels path requires protobuf stubs (rpc_ready)
             # request = rpc_pb2.ListChannelsRequest()
             # response = await self._lightning_stub.ListChannels(request)
             # return [self._convert_lnd_channel_to_domain(ch) for ch in response.channels]

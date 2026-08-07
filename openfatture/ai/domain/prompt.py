@@ -7,7 +7,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, ConfigDict, Field
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -181,10 +181,10 @@ class PromptManager:
             return template
 
         except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML in template '{name}': {e}")
+            raise ValueError(f"Invalid YAML in template '{name}': {e}") from e
 
         except Exception as e:
-            raise ValueError(f"Error loading template '{name}': {e}")
+            raise ValueError(f"Error loading template '{name}': {e}") from e
 
     def render(
         self,

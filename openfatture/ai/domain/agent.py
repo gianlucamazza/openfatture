@@ -11,7 +11,8 @@ from openfatture.ai.domain.context import AgentContext
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus
 from openfatture.ai.providers.base import BaseLLMProvider, ProviderError
-from openfatture.utils.logging import get_logger
+from openfatture.ai.streaming.events import StreamEvent
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -276,12 +277,13 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
         self,
         context: ContextT,
         **kwargs: Any,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncIterator[str | StreamEvent]:
         """
         Execute the agent with streaming response.
 
         This method yields response chunks as they arrive from the LLM,
-        enabling real-time token-by-token rendering in UIs.
+        enabling real-time token-by-token rendering in UIs. Specialized agents
+        may yield typed :class:`StreamEvent` values instead of bare strings.
 
         Flow:
         1. Validate input
@@ -294,7 +296,7 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
             **kwargs: Additional arguments
 
         Yields:
-            str: Response chunks as they arrive
+            ``str`` tokens or typed :class:`StreamEvent` items
 
         Raises:
             ValueError: If streaming is not enabled in config

@@ -7,15 +7,15 @@ and semantic search.
 import uuid
 from collections.abc import Mapping, Sequence
 from datetime import datetime
-from typing import Any, cast
-
-import chromadb
-from chromadb.api.models.Collection import Collection
-from chromadb.config import Settings
+from typing import TYPE_CHECKING, Any, cast
 
 from openfatture.ai.rag.config import RAGConfig
 from openfatture.ai.rag.embeddings import EmbeddingStrategy
-from openfatture.utils.logging import get_logger
+from openfatture.platform.extras import require_extra
+from openfatture.platform.logging import get_logger
+
+if TYPE_CHECKING:
+    from chromadb.api.models.Collection import Collection
 
 logger = get_logger(__name__)
 
@@ -63,6 +63,10 @@ class VectorStore:
         """
         self.config = config
         self.embedding_strategy = embedding_strategy
+
+        require_extra("rag", feature="RAG vector store (ChromaDB)")
+        import chromadb
+        from chromadb.config import Settings
 
         # Keep RAG local-only: the application never starts or connects to a
         # ChromaDB server and does not enable remote model-code execution.

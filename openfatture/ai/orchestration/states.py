@@ -16,14 +16,10 @@ Architecture:
 - AgentResult: Standardized agent output format
 
 Example:
-    >>> state = InvoiceCreationState(
-    ...     user_input="consulenza Python 5h",
-    ...     correlation_id="req-123"
-    ... )
+    >>> state = InvoiceCreationState(user_input="consulenza Python 5h", correlation_id="req-123")
     >>> # Agent updates state
     >>> state.description_result = DescriptionResult(
-    ...     content="Consulenza tecnica Python...",
-    ...     confidence=0.92
+    ...     content="Consulenza tecnica Python...", confidence=0.92
     ... )
 """
 
@@ -35,7 +31,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from openfatture.utils.datetime import utc_now
+from openfatture.platform.datetime import utc_now
 
 
 class WorkflowStatus(Enum):
@@ -215,10 +211,7 @@ class InvoiceCreationState(BaseWorkflowState):
     3. After Compliance Check (if warnings/errors)
 
     Example:
-        >>> state = InvoiceCreationState(
-        ...     user_input="consulenza DevOps 3 giorni",
-        ...     client_id=123
-        ... )
+        >>> state = InvoiceCreationState(user_input="consulenza DevOps 3 giorni", client_id=123)
     """
 
     # User inputs

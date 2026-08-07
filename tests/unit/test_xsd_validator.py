@@ -12,7 +12,7 @@ pytestmark = pytest.mark.unit
 class TestFatturaPAValidator:
     """Tests for FatturaPA XSD validator."""
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_init_default_path(self, mock_settings, tmp_path):
         """Test validator initialization with default XSD path."""
         mock_settings_instance = Mock()
@@ -31,7 +31,7 @@ class TestFatturaPAValidator:
 
         assert validator.xsd_path == custom_path
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_load_schema_file_not_found(self, mock_settings, tmp_path):
         """Test load_schema raises FileNotFoundError if XSD missing."""
         mock_settings_instance = Mock()
@@ -46,7 +46,7 @@ class TestFatturaPAValidator:
         assert "XSD schema not found" in str(exc_info.value)
         assert "Download from:" in str(exc_info.value)
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_load_schema_success(self, mock_settings, tmp_path):
         """Test successful schema loading."""
         mock_settings_instance = Mock()
@@ -69,7 +69,7 @@ class TestFatturaPAValidator:
 
         assert validator._schema is not None
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_validate_loads_schema_automatically(self, mock_settings, tmp_path):
         """Test validate() loads schema automatically if not loaded."""
         mock_settings_instance = Mock()
@@ -85,7 +85,7 @@ class TestFatturaPAValidator:
         assert is_valid is False
         assert "XSD schema not found" in error
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_validate_invalid_xml_syntax(self, mock_settings, tmp_path):
         """Test validate() catches XML syntax errors."""
         mock_settings_instance = Mock()
@@ -112,7 +112,7 @@ class TestFatturaPAValidator:
         assert is_valid is False
         assert "XML syntax error" in error
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_validate_valid_xml(self, mock_settings, tmp_path):
         """Test validate() with valid XML against schema."""
         mock_settings_instance = Mock()
@@ -139,7 +139,7 @@ class TestFatturaPAValidator:
         assert is_valid is True
         assert error is None
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_validate_invalid_against_schema(self, mock_settings, tmp_path):
         """Test validate() detects XML that doesn't match schema."""
         mock_settings_instance = Mock()
@@ -172,7 +172,7 @@ class TestFatturaPAValidator:
         assert is_valid is False
         assert "Validation error" in error
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_validate_file_not_found(self, mock_settings, tmp_path):
         """Test validate_file() with non-existent file."""
         mock_settings_instance = Mock()
@@ -187,7 +187,7 @@ class TestFatturaPAValidator:
         assert is_valid is False
         assert "File not found" in error
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_validate_file_success(self, mock_settings, tmp_path):
         """Test validate_file() with existing XML file."""
         mock_settings_instance = Mock()
@@ -215,7 +215,7 @@ class TestFatturaPAValidator:
         assert is_valid is True
         assert error is None
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_schema_cached_after_first_load(self, mock_settings, tmp_path):
         """Test that schema is cached and not reloaded on subsequent validations."""
         mock_settings_instance = Mock()
@@ -246,7 +246,7 @@ class TestFatturaPAValidator:
 
         assert validator._schema is schema_obj  # Same object
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_get_default_xsd_path_structure(self, mock_settings, tmp_path):
         """Test that default XSD path follows expected structure."""
         mock_settings_instance = Mock()
@@ -263,7 +263,7 @@ class TestFatturaPAValidator:
 class TestDownloadXSDSchema:
     """Tests for download_xsd_schema function."""
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_download_xsd_schema_creates_dir(self, mock_settings, tmp_path):
         """Test that download_xsd_schema creates schema directory."""
         mock_settings_instance = Mock()
@@ -280,7 +280,7 @@ class TestDownloadXSDSchema:
 
         assert schema_dir.exists()
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_download_xsd_schema_file_exists(self, mock_settings, tmp_path):
         """Test download_xsd_schema returns existing file."""
         mock_settings_instance = Mock()
@@ -298,7 +298,7 @@ class TestDownloadXSDSchema:
         assert result == xsd_file
         assert result.exists()
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     def test_download_xsd_schema_file_not_exists(self, mock_settings, tmp_path):
         """Test download_xsd_schema raises error with instructions if file missing."""
         mock_settings_instance = Mock()
@@ -314,7 +314,7 @@ class TestDownloadXSDSchema:
         assert "fatturapa.gov.it" in error_msg
         assert "FatturaPA_v1.2.2.xsd" in error_msg
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     @patch("urllib.request.urlopen")
     def test_download_xsd_schema_auto_download_success(self, mock_urlopen, mock_settings, tmp_path):
         """Test auto_download successfully downloads schema."""
@@ -342,7 +342,7 @@ class TestDownloadXSDSchema:
         assert "fatturapa.gov.it" in call_args
         assert "FatturaPA_v1.2.2.xsd" in call_args
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     @patch("urllib.request.urlopen")
     def test_download_xsd_schema_network_error(self, mock_urlopen, mock_settings, tmp_path):
         """Test auto_download handles network errors."""
@@ -362,7 +362,7 @@ class TestDownloadXSDSchema:
         assert "Failed to download XSD schema" in error_msg
         assert "fatturapa.gov.it" in error_msg
 
-    @patch("openfatture.utils.config.get_settings")
+    @patch("openfatture.platform.config.get_settings")
     @patch("urllib.request.urlopen")
     def test_download_xsd_schema_write_error(self, mock_urlopen, mock_settings, tmp_path):
         """Test auto_download handles file write errors."""

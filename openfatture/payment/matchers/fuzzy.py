@@ -6,7 +6,6 @@ Levenshtein distance calculations.
 
 Performance Optimizations (v2.0):
 - Early termination for high-confidence matches (≥95% similarity)
-- Mock object handling for test compatibility
 - Short-circuit evaluation for partial matching
 """
 
@@ -206,16 +205,16 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         """
         scores: dict[str, float] = {}
 
-        # Safely extract transaction attributes (handle Mock objects in tests)
-        def safe_get_text(obj: object, attr: str) -> str:
+        def text_attr(obj: object, attr: str) -> str:
+            """Only real strings participate in fuzzy text scoring."""
             val = getattr(obj, attr, None)
-            if val and not hasattr(val, "_mock_name"):
-                return self._normalize_text(str(val))
-            return ""
+            if not isinstance(val, str):
+                return ""
+            return self._normalize_text(val)
 
-        trans_desc = safe_get_text(transaction, "description")
-        trans_ref = safe_get_text(transaction, "reference")
-        trans_counterparty = safe_get_text(transaction, "counterparty")
+        trans_desc = text_attr(transaction, "description")
+        trans_ref = text_attr(transaction, "reference")
+        trans_counterparty = text_attr(transaction, "counterparty")
 
         payment_targets = self._collect_payment_texts(payment)
         if not payment_targets:
@@ -280,12 +279,13 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         """Collect normalized textual representations from payment and related entities."""
         texts: list[str] = []
 
-        def add_text(value: str | None) -> None:
-            # Skip None and Mock objects (tests may have MagicMock as unset attributes)
-            if value and not hasattr(value, "_mock_name"):
-                normalized = self._normalize_text(str(value))
-                if normalized:
-                    texts.append(normalized)
+        def add_text(value: object | None) -> None:
+            # Fuzzy matching is text-only; ignore non-strings (e.g. unset ORM attrs).
+            if not isinstance(value, str):
+                return
+            normalized = self._normalize_text(value)
+            if normalized:
+                texts.append(normalized)
 
         add_text(getattr(payment, "description", None))
         add_text(getattr(payment, "descrizione", None))

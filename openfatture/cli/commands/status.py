@@ -1,23 +1,35 @@
 """Read-only application status command."""
 
 import json
+from pathlib import Path
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from openfatture import __version__
-from openfatture.utils.config import get_settings
+from openfatture.platform.config import get_settings
+from openfatture.platform.extras import available_extras
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 
 
-@app.command()
-def status(json_output: bool = typer.Option(False, "--json", help="Emit status as JSON.")) -> None:
-    """Show local configuration and storage readiness without changing state."""
+def _hooks_dir() -> Path:
+    """Default hooks directory used by the hooks engine."""
+    return Path.home() / ".openfatture" / "hooks"
+
+
+def _build_status() -> dict:
     settings = get_settings()
-    data = {
+    extras = available_extras()
+    hooks_dir = _hooks_dir()
+    hook_scripts = []
+    if hooks_dir.is_dir():
+        hook_scripts = sorted(
+            p.name for p in hooks_dir.iterdir() if p.is_file() and not p.name.startswith(".")
+        )
+    return {
         "version": __version__,
         "database": str(settings.database_url),
         "data_dir": str(settings.data_dir),
@@ -25,13 +37,71 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
         "ai_provider": settings.ai_provider,
         "ai_model": settings.ai_model,
         "ai_api_key_configured": bool(settings.ai_api_key),
+        "extras": extras,
+        "extensions": {
+            # Supported extension mechanism: user hook scripts (see docs/CORE_VS_EXTENSIONS.md)
+            "hooks_dir": str(hooks_dir),
+            "hooks_present": hooks_dir.is_dir(),
+            "hooks_scripts": hook_scripts,
+            # In-process plugins are not a product API (package removed / unsupported)
+            "in_process_plugins": "unsupported",
+        },
+        "feature_flags": {
+            "lightning_enabled": settings.lightning_enabled,
+            "lightning_allow_mock": settings.lightning_allow_mock,
+            "lightning_rpc_ready": False,  # true only when LND gRPC stubs are wired
+            "assistant_available": bool(extras.get("ai")),
+            "rag_auto_update_default": False,  # OPENFATTURE_RAG_AUTO_UPDATE_ENABLED default
+        },
+        "limitations": {
+            "lightning": (
+                "experimental: real LND gRPC not implemented; "
+                "mock only if lightning_allow_mock=true"
+            ),
+            "rag_auto_update": (
+                "requires reindex_callback (AutoIndexingService); no silent simulation"
+            ),
+        },
     }
+
+
+@app.command()
+def status(json_output: bool = typer.Option(False, "--json", help="Emit status as JSON.")) -> None:
+    """Show local configuration and storage readiness without changing state."""
+    data = _build_status()
     if json_output:
-        console.print(json.dumps(data, indent=2, default=str))
+        # Pure stdout for machine consumers; diagnostics use stderr via logging.
+        print(json.dumps(data, indent=2, default=str))
         return
+
     table = Table(title="OpenFatture status")
     table.add_column("Setting", style="cyan")
     table.add_column("Value")
-    for key, value in data.items():
-        table.add_row(key.replace("_", " ").title(), str(value))
+    for key in (
+        "version",
+        "database",
+        "data_dir",
+        "archive_dir",
+        "ai_provider",
+        "ai_model",
+        "ai_api_key_configured",
+    ):
+        table.add_row(key.replace("_", " ").title(), str(data[key]))
     console.print(table)
+
+    extras_table = Table(title="Optional extras (feature modules)")
+    extras_table.add_column("Extra", style="cyan")
+    extras_table.add_column("Installed")
+    for name, installed in sorted(data["extras"].items()):
+        extras_table.add_row(name, "yes" if installed else "no")
+    console.print(extras_table)
+
+    ext = data["extensions"]
+    ext_table = Table(title="Extensions")
+    ext_table.add_column("Mechanism", style="cyan")
+    ext_table.add_column("Detail")
+    ext_table.add_row(
+        "hooks (supported)", f"{ext['hooks_dir']} ({len(ext['hooks_scripts'])} scripts)"
+    )
+    ext_table.add_row("in-process plugins", str(ext["in_process_plugins"]))
+    console.print(ext_table)

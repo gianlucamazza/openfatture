@@ -60,7 +60,7 @@ async def test_transaction_insight_service_returns_payment_insight():
         "summary": "Pagamento parziale del 40% per INV-2024-001",
     }
 
-    service = TransactionInsightService(agent=StubInsightAgent(payload))  # type: ignore
+    service = TransactionInsightService(agent=StubInsightAgent(payload))
     insight = await service.analyze(transaction, [payment])
 
     assert isinstance(insight, PaymentInsight)
@@ -80,7 +80,7 @@ async def test_transaction_insight_service_handles_agent_failure():
         import_source=ImportSource.MANUAL,
     )
 
-    service = TransactionInsightService(agent=FailingInsightAgent())  # type: ignore
+    service = TransactionInsightService(agent=FailingInsightAgent())
     insight = await service.analyze(transaction, [])
 
     assert insight is None
@@ -97,7 +97,7 @@ async def test_transaction_insight_service_handles_non_success_status():
         import_source=ImportSource.MANUAL,
     )
 
-    service = TransactionInsightService(agent=StubInsightAgent({}, ResponseStatus.ERROR))  # type: ignore
+    service = TransactionInsightService(agent=StubInsightAgent({}, ResponseStatus.ERROR))
     insight = await service.analyze(transaction, [])
 
     assert insight is None
@@ -114,7 +114,7 @@ async def test_transaction_insight_service_handles_missing_payload():
         import_source=ImportSource.MANUAL,
     )
 
-    service = TransactionInsightService(agent=StubInsightAgent(None))  # type: ignore
+    service = TransactionInsightService(agent=StubInsightAgent(None))
     insight = await service.analyze(transaction, [])
 
     assert insight is None
@@ -122,7 +122,7 @@ async def test_transaction_insight_service_handles_missing_payload():
 
 def test_serialize_payment():
     """Test the _serialize_payment method."""
-    service = TransactionInsightService(agent=None)  # type: ignore
+    service = TransactionInsightService(agent=None)
 
     payment = Pagamento(
         fattura_id=1,

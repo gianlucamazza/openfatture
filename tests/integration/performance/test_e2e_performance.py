@@ -215,9 +215,9 @@ class TestMemoryUnderLoad:
         metrics.print_summary()
 
         # Target: <400MB for indexing 200 invoices
-        assert (
-            metrics.memory_peak_mb < 400.0
-        ), f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 400MB target"
+        assert metrics.memory_peak_mb < 400.0, (
+            f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 400MB target"
+        )
 
         print(f"\nMemory per invoice: {metrics.memory_peak_mb / 200:.3f} MB")
 
@@ -237,9 +237,9 @@ class TestMemoryUnderLoad:
         metrics.print_summary()
 
         # Target: <200MB for concurrent searches
-        assert (
-            metrics.memory_peak_mb < 200.0
-        ), f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 200MB target"
+        assert metrics.memory_peak_mb < 200.0, (
+            f"Memory usage {metrics.memory_peak_mb:.2f}MB exceeds 200MB target"
+        )
 
 
 @pytest.mark.performance
@@ -262,7 +262,7 @@ class TestSystemLatencyBreakdown:
             results = await e2e_retriever.retrieve(query, top_k=5)
 
         with PerformanceProfiler("formatting", iterations=1) as fmt_prof:
-            formatted = e2e_retriever.format_results(results)
+            _formatted = e2e_retriever.format_results(results)
 
         print("\n" + "=" * 70)
         print("COMPONENT LATENCY BREAKDOWN")

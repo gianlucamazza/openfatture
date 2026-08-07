@@ -465,7 +465,7 @@ class TestLRUCacheEdgeCases:
             await cache.set("key1", "value1")
 
             # Should expire immediately
-            value = await cache.get("key1")
+            _value = await cache.get("key1")
             # Note: Due to timing, this might still return the value
             # if checked within microseconds
             # The important thing is it expires very quickly

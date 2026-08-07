@@ -19,7 +19,7 @@ from pathlib import Path
 
 from openfatture.ai.session.file_store import FileSessionStore
 from openfatture.ai.session.store import SessionStore
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

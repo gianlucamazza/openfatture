@@ -101,8 +101,8 @@ Before issuing invoices, confirm the PEC credentials work:
 ```bash
 # Using uv
 uv run python -c "
-from openfatture.utils.config import get_settings
-from openfatture.utils.email.sender import TemplatePECSender
+from openfatture.platform.config import get_settings
+from openfatture.platform.email.sender import TemplatePECSender
 
 settings = get_settings()
 sender = TemplatePECSender(settings=settings)
@@ -303,7 +303,7 @@ uv run python create_invoice.py
 from pathlib import Path
 from openfatture.storage.database.models import Fattura
 from openfatture.storage.database.session import get_session
-from openfatture.core.xml.generator import FatturaXMLGenerator
+from openfatture.billing.xml.generator import FatturaXMLGenerator
 
 session = next(get_session())
 
@@ -339,8 +339,8 @@ uv run python generate_xml.py
 from pathlib import Path
 from openfatture.storage.database.models import Fattura
 from openfatture.storage.database.session import get_session
-from openfatture.utils.config import get_settings
-from openfatture.utils.email.sender import TemplatePECSender
+from openfatture.platform.config import get_settings
+from openfatture.platform.email.sender import TemplatePECSender
 
 session = next(get_session())
 settings = get_settings()
@@ -411,8 +411,8 @@ If you download PEC notifications manually:
 from pathlib import Path
 from openfatture.sdi.notifiche.processor import NotificationProcessor
 from openfatture.storage.database.session import get_session
-from openfatture.utils.config import get_settings
-from openfatture.utils.email.sender import TemplatePECSender
+from openfatture.platform.config import get_settings
+from openfatture.platform.email.sender import TemplatePECSender
 
 session = next(get_session())
 settings = get_settings()
@@ -450,9 +450,9 @@ from pathlib import Path
 from datetime import date
 from decimal import Decimal
 from openfatture.storage.database.models import Cliente, Fattura
-from openfatture.utils.config import get_settings
-from openfatture.utils.email.renderer import TemplateRenderer
-from openfatture.utils.email.models import FatturaInvioContext
+from openfatture.platform.config import get_settings
+from openfatture.platform.email.renderer import TemplateRenderer
+from openfatture.platform.email.models import FatturaInvioContext
 
 settings = get_settings()
 renderer = TemplateRenderer(settings=settings, locale="it")
@@ -515,8 +515,8 @@ Restart the application to apply the changes.
 ```bash
 # 1. PEC test
 uv run python -c "
-from openfatture.utils.config import get_settings
-from openfatture.utils.email.sender import TemplatePECSender
+from openfatture.platform.config import get_settings
+from openfatture.platform.email.sender import TemplatePECSender
 sender = TemplatePECSender(settings=get_settings())
 success, _ = sender.send_test_email()
 print('PEC OK' if success else 'PEC ERROR')
@@ -533,7 +533,7 @@ print(f'Database OK ({count} customers)')
 
 # 3. Configuration test
 uv run python -c "
-from openfatture.utils.config import get_settings
+from openfatture.platform.config import get_settings
 s = get_settings()
 print(f'Cedente: {s.cedente_denominazione}')
 print(f'PEC: {s.pec_address}')
@@ -562,7 +562,7 @@ Now that OpenFatture is configured:
 ```bash
 # Check credentials
 uv run python -c "
-from openfatture.utils.config import get_settings
+from openfatture.platform.config import get_settings
 s = get_settings()
 print(f'PEC: {s.pec_address}')
 print(f'SMTP: {s.pec_smtp_server}:{s.pec_smtp_port}')
@@ -591,7 +591,7 @@ print('Database ricreato')
 
 ```bash
 # Inspect available templates
-ls -la openfatture/utils/email/templates/
+ls -la openfatture/platform/email/templates/
 ```
 
 ---

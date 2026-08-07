@@ -23,7 +23,7 @@ Example:
     >>> result = await workflow.execute(
     ...     user_input="consulenza DevOps 3 giorni cliente Acme",
     ...     client_id=123,
-    ...     require_approvals=True
+    ...     require_approvals=True,
     ... )
     >>> print(f"Created invoice #{result.invoice_id}")
 """
@@ -46,7 +46,10 @@ from openfatture.ai.orchestration.states import (
     InvoiceCreationState,
 )
 from openfatture.ai.providers import BaseLLMProvider, create_provider
-from openfatture.core.fatture.service import InvoiceService
+from openfatture.billing.fatture.service import InvoiceService
+from openfatture.platform.config import Settings, get_settings
+from openfatture.platform.datetime import utc_now
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
@@ -57,9 +60,6 @@ from openfatture.storage.database.models import (
     TipoDocumento,
 )
 from openfatture.storage.session import db_session
-from openfatture.utils.config import Settings, get_settings
-from openfatture.utils.datetime import utc_now
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -68,9 +68,16 @@ if TYPE_CHECKING:
     from langgraph.graph import END as _END
     from langgraph.graph import StateGraph as _StateGraph
 else:
-    _graph_module = import_module("langgraph.graph")
-    _StateGraph = _graph_module.StateGraph
-    _END = _graph_module.END
+    try:
+        _graph_module = import_module("langgraph.graph")
+        _StateGraph = _graph_module.StateGraph
+        _END = _graph_module.END
+    except ImportError as exc:
+        from openfatture.platform.extras import MissingExtraError
+
+        raise MissingExtraError(
+            "ai", feature="LangGraph invoice creation workflow", cause=exc
+        ) from exc
 
 StateGraph = _StateGraph
 END = _END
@@ -366,13 +373,14 @@ class InvoiceCreationWorkflow:
             return state
 
     async def _description_approval_node(self, state: InvoiceCreationState) -> InvoiceCreationState:
-        """Human approval checkpoint for description."""
-        logger.info("awaiting_description_approval", workflow_id=state.workflow_id)
+        """Confidence auto-gate for description (experimental workflow).
 
-        state.status = "awaiting_approval"
+        High confidence continues automatically. Low confidence sets
+        ``awaiting_approval`` without fabricating a human review decision.
+        A real human interrupt is not wired on the public CLI (see AI_ARCHITECTURE).
+        """
+        logger.info("description_confidence_gate", workflow_id=state.workflow_id)
 
-        # In real implementation, this would trigger UI or CLI prompt
-        # For now, we simulate approval based on confidence
         if (
             state.description_result
             and state.description_result.confidence > self.confidence_threshold
@@ -381,12 +389,11 @@ class InvoiceCreationWorkflow:
 
             state.description_review = HumanReview(
                 decision=ApprovalDecision.APPROVE,
-                feedback="Auto-approved (high confidence)",
+                feedback="Auto-approved by confidence gate (no human interrupt)",
                 reviewer="system",
             )
             state.status = "approved"
         else:
-            # Would pause here for human input
             state.status = "awaiting_approval"
 
         state.updated_at = utc_now()
@@ -457,16 +464,19 @@ class InvoiceCreationWorkflow:
             return state
 
     async def _tax_approval_node(self, state: InvoiceCreationState) -> InvoiceCreationState:
-        """Human approval checkpoint for tax suggestion."""
-        logger.info("awaiting_tax_approval", workflow_id=state.workflow_id)
+        """Confidence auto-gate for tax suggestion (experimental workflow).
 
-        # Simulate approval logic
+        Same policy as description: auto-continue only above threshold; otherwise
+        leave ``awaiting_approval`` without inventing a human decision.
+        """
+        logger.info("tax_confidence_gate", workflow_id=state.workflow_id)
+
         if state.tax_result and state.tax_result.confidence > self.confidence_threshold:
             from openfatture.ai.orchestration.states import HumanReview
 
             state.tax_review = HumanReview(
                 decision=ApprovalDecision.APPROVE,
-                feedback="Auto-approved (high confidence)",
+                feedback="Auto-approved by confidence gate (no human interrupt)",
                 reviewer="system",
             )
             state.status = "approved"

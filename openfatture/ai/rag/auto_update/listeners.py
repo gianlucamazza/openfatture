@@ -16,8 +16,8 @@ from sqlalchemy.orm import Mapper
 
 from openfatture.ai.rag.auto_update.config import get_auto_update_config
 from openfatture.ai.rag.auto_update.tracker import ChangeType, get_change_tracker
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Cliente, Fattura
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -10,7 +10,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.orm import Session
 
-from openfatture.core.fatture.service import InvoiceService
+from openfatture.billing.fatture.service import InvoiceService
 from openfatture.sdi.pec_sender.sender import PECSender
 from openfatture.storage.database.models import (
     Cliente,

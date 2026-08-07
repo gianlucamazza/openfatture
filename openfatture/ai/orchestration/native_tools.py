@@ -28,8 +28,8 @@ from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import AgentResponse, ToolCall
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.tools.registry import ToolRegistry
-from openfatture.utils.config import DebugConfig
-from openfatture.utils.logging import get_dynamic_logger, get_logger
+from openfatture.platform.config import DebugConfig
+from openfatture.platform.logging import get_dynamic_logger, get_logger
 
 logger = get_logger(__name__)
 
@@ -244,7 +244,7 @@ class NativeToolOrchestrator:
                 }
             )
 
-        except Exception as exc:  # pragma: no cover - defensive
+        except Exception as exc:
             self.metrics["tool_calls_failed"] += 1
             content = f"Error executing tool: {exc}"
             tool_call.error = str(exc)

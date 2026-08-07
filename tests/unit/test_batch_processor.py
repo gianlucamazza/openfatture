@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from openfatture.core.batch.processor import (
+from openfatture.billing.batch.processor import (
     BatchProcessor,
     BatchResult,
     ProgressTracker,
@@ -86,7 +86,10 @@ class TestBatchProcessor:
 
     def test_init(self):
         """Test initialization."""
-        func = lambda x: x * 2
+
+        def func(x):
+            return x * 2
+
         processor = BatchProcessor(process_func=func, batch_size=50)
 
         assert processor.process_func == func

@@ -695,7 +695,7 @@ class TestReconciliationService:
         )
 
         # Should not raise, but log errors
-        result = await reconciliation_service.reconcile_batch(
+        _result = await reconciliation_service.reconcile_batch(
             account_id=1,
             auto_apply=True,
         )

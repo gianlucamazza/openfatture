@@ -4,8 +4,8 @@ import typer
 from rich.console import Console
 
 from openfatture import __version__
-from openfatture.utils.config import get_settings
-from openfatture.utils.logging import configure_dynamic_logging
+from openfatture.platform.config import get_settings
+from openfatture.platform.logging import configure_dynamic_logging
 
 from .commands import assistant, config, init, interactive, status
 

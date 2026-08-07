@@ -15,6 +15,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from openfatture.platform.config import Settings
 from openfatture.storage.database.base import Base
 from openfatture.storage.database.models import (
     Cliente,
@@ -23,7 +24,6 @@ from openfatture.storage.database.models import (
     StatoFattura,
     TipoDocumento,
 )
-from openfatture.utils.config import Settings
 
 # Test constants - use secure test values
 TEST_PEC_PASSWORD = "test_pec_password_secure_123"
@@ -109,7 +109,7 @@ def runtime_db(tmp_path, monkeypatch):
     shares the same database.
     """
     import openfatture.storage.database.base as db_base
-    from openfatture.utils import config as config_module
+    from openfatture.platform import config as config_module
 
     url = f"sqlite:///{tmp_path / 'runtime.db'}"
     monkeypatch.setenv("DATABASE_URL", url)

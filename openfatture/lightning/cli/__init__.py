@@ -1,5 +1,5 @@
-"""CLI commands for Lightning Network management."""
+"""Internal Lightning helpers (not registered on the public CLI)."""
 
-from .lightning_cli import app
+from .lightning_cli import get_lnd_client, get_services
 
-__all__ = ["app"]
+__all__ = ["get_lnd_client", "get_services"]

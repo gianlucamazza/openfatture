@@ -13,8 +13,9 @@ from typing import Any
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
-from ...core.events.base import get_global_event_bus
-from ...utils.logging import get_logger
+from openfatture.events.base import get_global_event_bus
+from openfatture.platform.logging import get_logger
+
 from ..domain.events import (
     LightningChannelClosed,
     LightningChannelOpened,
@@ -69,7 +70,7 @@ class LightningWebhookHandler:
 
         except Exception as e:
             logger.error("webhook_processing_error", error=str(e), exc_info=True)
-            raise HTTPException(status_code=500, detail="Webhook processing failed")
+            raise HTTPException(status_code=500, detail="Webhook processing failed") from e
 
     async def _verify_signature(self, request: Request) -> None:
         """Verify webhook signature for security.
@@ -81,9 +82,9 @@ class LightningWebhookHandler:
             HTTPException: If signature verification fails
         """
         # This method should only be called when webhook_secret is set
-        assert (
-            self.webhook_secret is not None
-        ), "webhook_secret must be set for signature verification"
+        assert self.webhook_secret is not None, (
+            "webhook_secret must be set for signature verification"
+        )
 
         signature = request.headers.get("X-LND-Signature")
         if not signature:

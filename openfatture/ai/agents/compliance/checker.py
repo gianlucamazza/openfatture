@@ -28,9 +28,9 @@ from openfatture.ai.agents.compliance.sdi_patterns import (
     SDIPatternDatabase,
     SDIRejectionPattern,
 )
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Fattura
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

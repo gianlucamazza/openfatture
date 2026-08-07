@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-from ...utils.datetime import utc_now
+from openfatture.platform.datetime import utc_now
 
 # Naming convention for constraints (helps with Alembic migrations)
 convention = {

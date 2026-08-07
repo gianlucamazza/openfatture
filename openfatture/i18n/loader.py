@@ -12,7 +12,7 @@ from typing import Any
 import structlog
 from fluent.runtime import FluentBundle, FluentLocalization, FluentResource, FluentResourceLoader
 
-from openfatture.utils.config import get_settings
+from openfatture.platform.config import get_settings
 
 logger = structlog.get_logger(__name__)
 

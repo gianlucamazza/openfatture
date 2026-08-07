@@ -12,9 +12,9 @@ from openfatture.ai.orchestration.react import ReActOrchestrator
 from openfatture.ai.providers import BaseLLMProvider
 from openfatture.ai.streaming import StreamEvent
 from openfatture.ai.tools import ToolRegistry, get_tool_registry
-from openfatture.utils.config import DebugConfig
-from openfatture.utils.logging import get_dynamic_logger, get_logger
-from openfatture.utils.metrics import MetricsTimer, get_metrics_collector, record_ai_request
+from openfatture.platform.config import DebugConfig
+from openfatture.platform.logging import get_dynamic_logger, get_logger
+from openfatture.platform.metrics import MetricsTimer, get_metrics_collector, record_ai_request
 
 logger = get_logger(__name__)
 
@@ -338,7 +338,7 @@ class ChatAgent(BaseAgent[ChatContext]):
 
         return None
 
-    async def execute_stream(  # type: ignore[override]
+    async def execute_stream(
         self, context: ChatContext, **kwargs: Any
     ) -> AsyncIterator[StreamEvent]:
         """
@@ -378,8 +378,11 @@ class ChatAgent(BaseAgent[ChatContext]):
             )
 
             # Wrap ReAct string chunks in StreamEvent.content()
-            async for chunk in orchestrator.stream(context):
-                yield StreamEvent.content(chunk)
+            async for react_chunk in orchestrator.stream(context):
+                if isinstance(react_chunk, str):
+                    yield StreamEvent.content(react_chunk)
+                else:
+                    yield react_chunk
 
         elif (
             self.enable_tools and self.provider.supports_tools and len(context.available_tools) > 0
@@ -408,8 +411,14 @@ class ChatAgent(BaseAgent[ChatContext]):
             )
 
             # Wrap BaseAgent string chunks in StreamEvent.content()
-            async for chunk in super().execute_stream(context, **kwargs):
-                yield StreamEvent.content(chunk)
+            parent_stream: AsyncIterator[str | StreamEvent] = super().execute_stream(
+                context, **kwargs
+            )
+            async for item in parent_stream:
+                if isinstance(item, str):
+                    yield StreamEvent.content(item)
+                else:
+                    yield item
 
     async def _execute_stream_with_tools(
         self,

@@ -14,14 +14,8 @@ Architecture:
 - ResilientProvider: Wrapper with automatic failover
 
 Example:
-    >>> policy = ResiliencePolicy(
-    ...     max_retries=3,
-    ...     fallback_providers=["openai", "ollama"]
-    ... )
-    >>> provider = ResilientProvider(
-    ...     primary_provider=anthropic_provider,
-    ...     policy=policy
-    ... )
+    >>> policy = ResiliencePolicy(max_retries=3, fallback_providers=["openai", "ollama"])
+    >>> provider = ResilientProvider(primary_provider=anthropic_provider, policy=policy)
     >>> response = await provider.chat_with_resilience(messages)
 """
 
@@ -38,8 +32,8 @@ from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
-from openfatture.utils.datetime import utc_now
-from openfatture.utils.logging import get_logger
+from openfatture.platform.datetime import utc_now
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -335,13 +329,8 @@ class ResilientProvider:
     Provides automatic retry, fallback, and circuit breaker protection.
 
     Example:
-        >>> policy = ResiliencePolicy(
-        ...     fallback_providers=["openai", "ollama"]
-        ... )
-        >>> provider = ResilientProvider(
-        ...     primary_provider=anthropic_provider,
-        ...     policy=policy
-        ... )
+        >>> policy = ResiliencePolicy(fallback_providers=["openai", "ollama"])
+        >>> provider = ResilientProvider(primary_provider=anthropic_provider, policy=policy)
         >>> response = await provider.generate_with_resilience(messages)
     """
 
@@ -521,8 +510,7 @@ def create_resilient_provider(
 
     Example:
         >>> provider = create_resilient_provider(
-        ...     primary_provider_name="anthropic",
-        ...     fallback_providers=["openai", "ollama"]
+        ...     primary_provider_name="anthropic", fallback_providers=["openai", "ollama"]
         ... )
         >>> response = await provider.generate_with_resilience(messages)
     """

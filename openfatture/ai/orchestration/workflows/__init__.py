@@ -20,10 +20,7 @@ Each workflow is a StateGraph that:
 Example:
     >>> from openfatture.ai.orchestration.workflows import InvoiceCreationWorkflow
     >>> workflow = InvoiceCreationWorkflow()
-    >>> result = await workflow.execute(
-    ...     user_input="consulenza Python 5h",
-    ...     client_id=123
-    ... )
+    >>> result = await workflow.execute(user_input="consulenza Python 5h", client_id=123)
     >>> print(f"Invoice created: {result.invoice_id}")
 """
 

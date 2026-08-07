@@ -9,7 +9,7 @@ import time
 import pytest
 
 from openfatture import __version__
-from openfatture.utils.logging import (
+from openfatture.platform.logging import (
     LogPerformance,
     add_app_context,
     add_correlation_id,

@@ -13,7 +13,7 @@ OpenFatture includes a professional email template system for SDI notifications,
 ## Architecture
 
 ```
-openfatture/utils/email/
+openfatture/platform/email/
 ├── models.py           # Pydantic context models
 ├── renderer.py         # Jinja2 template engine + i18n
 ├── sender.py           # TemplatePECSender (enhanced PEC sender)
@@ -52,8 +52,8 @@ LOCALE=it
 ### 2. Send Invoice to SDI
 
 ```python
-from openfatture.utils.email.sender import TemplatePECSender
-from openfatture.utils.config import get_settings
+from openfatture.platform.email.sender import TemplatePECSender
+from openfatture.platform.config import get_settings
 
 settings = get_settings()
 sender = TemplatePECSender(settings=settings)
@@ -103,7 +103,7 @@ success, error, notification = processor.process_file(
 ### 5. Batch Operation Summary
 
 ```python
-from openfatture.core.batch.processor import BatchResult
+from openfatture.billing.batch.processor import BatchResult
 
 result = BatchResult(total=100, start_time=datetime.now())
 result.succeeded = 95
@@ -137,7 +137,7 @@ The renderer will automatically use your custom templates.
 Create a custom branding configuration:
 
 ```python
-from openfatture.utils.email.styles import EmailBranding
+from openfatture.platform.email.styles import EmailBranding
 
 branding = EmailBranding(
     primary_color="#FF5722",  # Orange
@@ -186,7 +186,7 @@ sender = TemplatePECSender(settings=settings, locale="en")
 
 ### Add Custom Translations
 
-Edit `openfatture/utils/email/i18n/it.json`:
+Edit `openfatture/platform/email/i18n/it.json`:
 
 ```json
 {
@@ -211,8 +211,8 @@ Use in templates:
 Generate HTML preview without sending:
 
 ```python
-from openfatture.utils.email.renderer import TemplateRenderer
-from openfatture.utils.email.models import FatturaInvioContext
+from openfatture.platform.email.renderer import TemplateRenderer
+from openfatture.platform.email.models import FatturaInvioContext
 
 renderer = TemplateRenderer(settings=settings)
 
@@ -237,7 +237,7 @@ print(f"Preview: file://{preview_path}")
 ### Custom Rate Limiting
 
 ```python
-from openfatture.utils.rate_limiter import RateLimiter
+from openfatture.platform.rate_limiter import RateLimiter
 
 # Allow 5 emails per minute
 custom_limiter = RateLimiter(max_calls=5, period=60)
@@ -252,7 +252,7 @@ sender = TemplatePECSender(
 ### Manual Email Composition
 
 ```python
-from openfatture.utils.email.models import EmailMessage, EmailAttachment
+from openfatture.platform.email.models import EmailMessage, EmailAttachment
 
 message = EmailMessage(
     subject="Custom Subject",

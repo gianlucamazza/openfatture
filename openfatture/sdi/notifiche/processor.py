@@ -10,9 +10,12 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from openfatture.core.events import SDINotificationReceivedEvent, get_global_event_bus
+from openfatture.events import SDINotificationReceivedEvent, get_global_event_bus
+from openfatture.platform.logging import get_logger
 from openfatture.sdi.notifiche.parser import NotificaSDI, SDINotificationParser, TipoNotifica
 from openfatture.storage.database.models import Fattura, LogSDI, StatoFattura
+
+logger = get_logger(__name__)
 
 
 class NotificationProcessor:
@@ -256,7 +259,7 @@ class NotificationProcessor:
         except Exception as e:
             # Log error but don't fail the notification processing
             # In production, use proper logging
-            print(f"Warning: Failed to send email notification: {e}")
+            logger.warning("notification_email_failed", error=str(e))
 
 
 def process_notification_directory(

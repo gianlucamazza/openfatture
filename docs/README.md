@@ -8,7 +8,12 @@ This is the current documentation index for the CLI-first, agentic product.
 - [CLI reference](CLI_REFERENCE.md)
 - [Configuration](CONFIGURATION.md)
 - [Project status](STATUS.md)
-- [Architecture](AI_ARCHITECTURE.md)
+- [Release notes v2.0.0](releases/v2.0.0.md)
+- [Architecture](ARCHITECTURE.md)
+- [Core vs extras vs extensions](CORE_VS_EXTENSIONS.md)
+- [AI-era redesign](ARCHITECTURE_REDESIGN.md)
+- [AI architecture](AI_ARCHITECTURE.md)
+- [Technical debt](TECHNICAL_DEBT.md)
 - [Security](../SECURITY.md)
 - [Contributing](../CONTRIBUTING.md)
 

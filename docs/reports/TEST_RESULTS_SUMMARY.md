@@ -32,7 +32,7 @@
 ## Modules Completed (100% Coverage)
 
 ### 1. Service Layer
-**File:** `openfatture/core/fatture/service.py`
+**File:** `openfatture/billing/fatture/service.py`
 - **Coverage:** 0% **100%**
 - **Tests:** 11 new tests in `tests/unit/test_invoice_service.py`
 - **Features Tested:**
@@ -58,7 +58,7 @@ test_full_xml_generation_workflow
 ---
 
 ### 2. Structured Logging
-**File:** `openfatture/utils/logging.py`
+**File:** `openfatture/platform/logging.py`
 - **Coverage:** 0% **100%**
 - **Tests:** 20 new tests in `tests/unit/test_logging.py`
 - **Features Tested:**
@@ -92,7 +92,7 @@ test_full_logging_workflow
 ---
 
 ### 3. Security & Secrets Management
-**File:** `openfatture/utils/security.py`
+**File:** `openfatture/platform/security.py`
 - **Coverage:** 0% **100%**
 - **Tests:** 38 new tests in `tests/unit/test_security.py`
 - **Features Tested:**
@@ -130,7 +130,7 @@ test_full_encryption_workflow
 ---
 
 ### 4. Validators
-**File:** `openfatture/utils/validators.py`
+**File:** `openfatture/platform/validators.py`
 - **Coverage:** 33% **100%**
 - **Tests:** Enhanced in `tests/unit/test_validators_hypothesis.py`
 - **Features Tested:**

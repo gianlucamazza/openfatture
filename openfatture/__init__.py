@@ -5,6 +5,6 @@ A modern, CLI-first invoicing system with AI-powered workflows and full
 compliance with FatturaPA and SDI requirements.
 """
 
-__version__ = "1.3.1"
+__version__ = "2.0.0"
 __author__ = "Venere Labs"
 __license__ = "MIT"

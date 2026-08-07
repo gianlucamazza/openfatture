@@ -20,7 +20,7 @@ uv sync --all-extras
 uv run openfatture --help
 uv run python -m pytest -q
 uv run ruff check .
-uv run black --check .
+uv run ruff format --check .
 uv run mypy openfatture/
 ```
 

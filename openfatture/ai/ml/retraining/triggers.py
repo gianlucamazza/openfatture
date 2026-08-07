@@ -24,8 +24,8 @@ from typing import Any
 from openfatture.ai.feedback.service import FeedbackService
 from openfatture.ai.ml.config import get_ml_config
 from openfatture.ai.ml.retraining.config import get_retraining_config
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import PredictionType
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -203,24 +203,24 @@ class RetrainingTrigger:
         return None
 
     def _check_accuracy_drift(self, model_name: str) -> TriggerReason | None:
-        """Check if model accuracy has drifted.
+        """Accuracy-drift signal (not implemented — never triggers).
 
-        Note: This is a placeholder for future implementation.
-        Requires tracking validation metrics over time.
+        Returning ``None`` means **this signal is unavailable**, not that
+        accuracy is fine. Drift detection would need hold-out metrics over
+        time; until then feedback-count and time-elapsed are the only real
+        triggers.
 
         Args:
             model_name: Name of the model
 
         Returns:
-            TriggerReason if drift detected, None otherwise
+            Always ``None`` (signal unavailable).
         """
-        # TODO: Implement accuracy drift detection
-        # This would require:
-        # 1. Periodic evaluation on a hold-out validation set
-        # 2. Tracking metrics over time in a time series
-        # 3. Detecting significant degradation (e.g., MAE increase > 5%)
-        #
-        # For now, return None (not implemented)
+        logger.debug(
+            "accuracy_drift_signal_unavailable",
+            model_name=model_name,
+            status="not_implemented",
+        )
         return None
 
     def get_trigger_summary(self, model_name: str = "cash_flow") -> dict[str, Any]:
@@ -266,6 +266,11 @@ class RetrainingTrigger:
             "should_trigger": should_trigger,
             "trigger_count": len(reasons),
             "triggers": [r.to_dict() for r in reasons],
+            "accuracy_drift": {
+                "status": "unavailable",
+                "reason": "not_implemented",
+                "triggers_retraining": False,
+            },
             "feedback_stats": {
                 "unprocessed_count": unprocessed_count,
                 "threshold": self.retrain_config.min_feedback_count,

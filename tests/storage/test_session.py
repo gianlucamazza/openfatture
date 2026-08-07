@@ -39,11 +39,9 @@ class TestDbSession:
 
     def test_auto_cleanup(self, test_db):
         """Test that session is automatically closed on exit."""
-        session_id = None
-
         with db_session() as db:
             session_id = id(db)
-            # Session is open
+            assert session_id is not None
 
         # Session should be closed after exiting context
         # Note: We can't directly test if closed, but we verify no errors
@@ -144,13 +142,13 @@ class TestDbSessionErrors:
         # Patch the import inside db_session() function
         with patch("openfatture.storage.database.base.SessionLocal", None):
             with pytest.raises(RuntimeError, match="Database not initialized"):
-                with db_session() as db:
+                with db_session() as _db:
                     pass
 
     def test_exception_propagates_after_rollback(self, test_db):
         """Test that exceptions are propagated after rollback."""
         with pytest.raises(ValueError, match="Test error"):
-            with db_session() as db:
+            with db_session() as _db:
                 raise ValueError("Test error")
 
 

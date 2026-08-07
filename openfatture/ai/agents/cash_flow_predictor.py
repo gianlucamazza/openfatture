@@ -23,7 +23,7 @@ Example Usage:
     >>>
     >>> # Forecast multiple months
     >>> forecast = await agent.forecast_cash_flow(months=3)
-    >>> for month_data in forecast['monthly']:
+    >>> for month_data in forecast["monthly"]:
     ...     print(f"{month_data['month']}: €{month_data['expected']:.2f}")
 """
 
@@ -47,9 +47,9 @@ from openfatture.ai.ml.retraining.evaluator import ModelEvaluator
 from openfatture.ai.ml.retraining.versioning import ModelVersionManager
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Fattura, PredictionType, StatoFattura
 from openfatture.storage.session import db_session
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

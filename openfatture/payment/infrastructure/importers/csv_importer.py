@@ -11,7 +11,9 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, overload
 
-from dateutil import parser as dateutil_parser  # type: ignore[import-untyped]
+from dateutil import parser as dateutil_parser
+
+from openfatture.platform.logging import get_logger
 
 from ...domain.enums import ImportSource
 from ...domain.models import BankTransaction
@@ -19,6 +21,8 @@ from .base import BaseImporter
 
 if TYPE_CHECKING:
     from ...domain.models import BankAccount
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -161,9 +165,12 @@ class CSVImporter(BaseImporter):
                     transactions.append(transaction)
 
                 except Exception as e:
-                    # Log error but continue processing
-                    # In production, would use proper logging
-                    print(f"Warning: Skipping row {row_num}: {e}")
+                    logger.warning(
+                        "csv_row_skipped",
+                        row_num=row_num,
+                        error=str(e),
+                        error_type=type(e).__name__,
+                    )
                     continue
 
         return transactions
@@ -185,13 +192,13 @@ class CSVImporter(BaseImporter):
             sniffer = csv.Sniffer()
             dialect = sniffer.sniff(sample)
             return dialect.delimiter
-        except csv.Error:
+        except csv.Error as exc:
             # Fallback: Try common delimiters
             for delim in [",", ";", "\t", "|"]:
                 if delim in sample:
                     return delim
 
-            raise ValueError("Could not detect CSV delimiter")
+            raise ValueError("Could not detect CSV delimiter") from exc
 
     def _parse_row(self, account: "BankAccount", row: dict[str, str]) -> BankTransaction:
         """Parse a single CSV row into BankTransaction.

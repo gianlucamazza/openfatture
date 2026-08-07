@@ -169,10 +169,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --all-extras --python "$(command -v python3)"
 
-      - name: Run Black on payment module
-        run: uv run --extra dev python -m black --check openfatture/payment/ tests/payment/
+      - name: Run Ruff format on payment module
+        run: uv run --extra dev ruff format --check openfatture/payment/ tests/payment/
 
-      - name: Run Ruff on payment module
+      - name: Run Ruff check on payment module
         run: uv run --extra dev ruff check openfatture/payment/ tests/payment/
 
       - name: Run MyPy on payment module

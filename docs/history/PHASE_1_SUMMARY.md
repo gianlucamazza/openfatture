@@ -313,8 +313,8 @@ tests/
 - `tests/unit/test_xsd_validator.py`
 
 ### Files Modified
-- `openfatture/utils/logging.py` (2 TODOs fixed)
-- `openfatture/utils/security.py` (1 TODO fixed)
+- `openfatture/platform/logging.py` (2 TODOs fixed)
+- `openfatture/platform/security.py` (1 TODO fixed)
 - `openfatture/sdi/validator/xsd_validator.py` (1 TODO fixed)
 
 ### Previously Created (Session)

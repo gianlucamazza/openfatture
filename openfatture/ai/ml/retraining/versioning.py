@@ -11,7 +11,7 @@ Example:
     >>> version_id = manager.save_version(
     ...     model_name="cash_flow",
     ...     metrics={"mae": 2.5, "rmse": 3.1},
-    ...     notes="Retrained with 100 new feedback samples"
+    ...     notes="Retrained with 100 new feedback samples",
     ... )
     >>>
     >>> # List all versions
@@ -29,7 +29,7 @@ from typing import Any
 
 from openfatture.ai.ml.config import get_ml_config
 from openfatture.ai.ml.retraining.config import get_retraining_config
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

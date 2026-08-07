@@ -14,7 +14,7 @@ from openfatture.ai.cache.strategy import CacheStrategy
 from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers.base import BaseLLMProvider
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

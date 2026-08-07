@@ -202,7 +202,7 @@ class CompositeMatcher(IMatcherStrategy):
             return value
         try:
             return Decimal(str(value))
-        except (InvalidOperation, ValueError, TypeError) as exc:  # pragma: no cover - defensive
+        except (InvalidOperation, ValueError, TypeError) as exc:
             raise ValueError(f"Cannot convert {value!r} to Decimal") from exc
 
     def __repr__(self) -> str:

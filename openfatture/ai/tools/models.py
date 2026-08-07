@@ -146,7 +146,7 @@ class Tool(BaseModel):
         import asyncio
         import time
 
-        from openfatture.utils.rate_limiter import ExponentialBackoff
+        from openfatture.platform.rate_limiter import ExponentialBackoff
 
         start_time = time.time()
 
@@ -164,7 +164,6 @@ class Tool(BaseModel):
 
             # Execute function with retry logic
             backoff = ExponentialBackoff(base=0.5, max_delay=5.0)
-            last_exception = None
             max_retries = 3
 
             for attempt in range(max_retries):
@@ -187,7 +186,6 @@ class Tool(BaseModel):
                     )
 
                 except Exception as e:
-                    last_exception = e
                     error_type = type(e).__name__
 
                     # Check if this is a retryable error

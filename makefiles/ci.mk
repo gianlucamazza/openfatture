@@ -26,8 +26,8 @@ ci-test: ## Run tests for CI
 
 ci-lint: ## Run linters for CI
 	@echo "$(BLUE)Running linters (CI mode)...$(NC)"
-	$(UV) run black --check $(PROJECT_ROOT)
-	$(UV) run ruff check $(PROJECT_ROOT)
+	$(UV) run ruff format --check $(PROJECT_ROOT) tests/
+	$(UV) run ruff check $(PROJECT_ROOT) tests/
 	@echo "$(GREEN)Linters passed$(NC)"
 
 ci-type-check: ## Run type checking for CI

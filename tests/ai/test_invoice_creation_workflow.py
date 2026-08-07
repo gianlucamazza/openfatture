@@ -483,8 +483,10 @@ class TestInvoiceCreationWorkflow:
         workflow = InvoiceCreationWorkflow(provider=mock_provider, enable_checkpointing=False)
 
         # Set approval decision
+        from openfatture.ai.orchestration.states import ApprovalDecision
+
         sample_workflow_state.description_review = HumanReview(
-            decision="approve",  # type: ignore
+            decision=ApprovalDecision.APPROVE,
             feedback="Looks good",
             reviewer="test",
         )

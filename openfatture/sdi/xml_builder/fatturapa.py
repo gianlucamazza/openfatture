@@ -7,8 +7,8 @@ from typing import cast
 
 from lxml import etree
 
+from openfatture.platform.config import Settings
 from openfatture.storage.database.models import Fattura
-from openfatture.utils.config import Settings
 
 
 class FatturaPABuilder:

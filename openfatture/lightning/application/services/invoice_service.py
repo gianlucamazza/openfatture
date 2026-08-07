@@ -6,7 +6,7 @@ import hashlib
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from openfatture.core.events.base import get_global_event_bus
+from openfatture.events.base import get_global_event_bus
 from openfatture.lightning.domain.events import LightningInvoiceCreated
 from openfatture.lightning.domain.value_objects import LightningInvoice
 from openfatture.lightning.infrastructure.lnd_client import ProductionLNDClient
@@ -15,12 +15,15 @@ from openfatture.lightning.infrastructure.rate_provider import (
     create_btc_conversion_service,
 )
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
-from openfatture.utils.config import Settings, get_settings
+from openfatture.platform.config import Settings, get_settings
+from openfatture.platform.logging import get_logger
 
 if TYPE_CHECKING:
     from openfatture.lightning.application.services.tax_calculation_service import (
         TaxCalculationService,
     )
+
+logger = get_logger(__name__)
 
 
 class LightningInvoiceService:
@@ -147,7 +150,9 @@ class LightningInvoiceService:
             except Exception as e:
                 # Tax tracking failure should not block invoice creation
                 # Log error but continue
-                print(f"Warning: Tax tracking failed for invoice {invoice.payment_hash}: {e}")
+                logger.warning(
+                    f"Warning: Tax tracking failed for invoice {invoice.payment_hash}: {e}"
+                )
 
         # Publish domain event
         event = LightningInvoiceCreated(
@@ -293,7 +298,7 @@ class LightningInvoiceService:
             return True
 
         except Exception as e:
-            print(f"Error finalizing tax data for {payment_hash}: {e}")
+            logger.error(f"Error finalizing tax data for {payment_hash}: {e}")
             return False
 
     async def calculate_fees_estimate(self, amount_msat: int, description: str = "") -> dict:
@@ -356,6 +361,7 @@ def create_lightning_invoice_service(
         max_retries=settings.lightning_max_retries,
         circuit_breaker_failures=settings.lightning_circuit_breaker_failures,
         circuit_breaker_timeout=settings.lightning_circuit_breaker_timeout,
+        allow_mock=settings.lightning_allow_mock,
     )
 
     # Create BTC converter

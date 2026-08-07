@@ -8,8 +8,12 @@ freelancers.
 ```bash
 git clone https://github.com/venerelabs/openfatture.git
 cd openfatture
+# Full stack (recommended for development and AI). Core-only: uv sync
 uv sync --all-extras
 ```
+
+Feature extras (`ai`, `rag`, `ml`, `lightning`) are documented in
+[CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Initialize
 

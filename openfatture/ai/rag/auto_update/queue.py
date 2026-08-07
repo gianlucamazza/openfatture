@@ -19,8 +19,8 @@ from collections.abc import Callable
 from typing import Any
 
 from openfatture.ai.rag.auto_update.config import get_auto_update_config
-from openfatture.ai.rag.auto_update.tracker import ChangeType, EntityChange, get_change_tracker
-from openfatture.utils.logging import get_logger
+from openfatture.ai.rag.auto_update.tracker import EntityChange, get_change_tracker
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -200,53 +200,32 @@ class ReindexQueue:
             entity_type: Type of entity (invoice, client, product)
             changes: Changes for this entity type
         """
-        # Separate by change type
-        creates = [c for c in changes if c.change_type == ChangeType.CREATE]
-        updates = [c for c in changes if c.change_type == ChangeType.UPDATE]
-        deletes = [c for c in changes if c.change_type == ChangeType.DELETE]
-
-        # Call reindex callback if provided
-        if self.reindex_callback:
-            try:
-                await self.reindex_callback(changes)
-            except Exception as e:
-                logger.error(
-                    "reindex_callback_failed",
-                    entity_type=entity_type,
-                    error=str(e),
-                )
-                raise
-
-        # Process creates/updates (add/update in vector store)
-        if creates or updates:
-            entity_ids = [c.entity_id for c in creates + updates]
-            logger.debug(
-                "reindexing_entities",
-                entity_type=entity_type,
-                operation="upsert",
-                count=len(entity_ids),
-                ids=entity_ids[:10],  # Log first 10 IDs
+        if not self.reindex_callback:
+            raise RuntimeError(
+                f"ReindexQueue has no reindex_callback for entity_type={entity_type!r}. "
+                "Wire AutoIndexingService (which provides a real indexer callback) "
+                "or disable OPENFATTURE_RAG_AUTO_UPDATE_ENABLED. "
+                "Silent simulation of reindex/delete is not allowed."
             )
 
-            # TODO: Call actual reindexing service
-            # This will be implemented in auto_indexing_service.py
-            # For now, just simulate
-            await asyncio.sleep(0.1)  # Simulate processing time
-
-        # Process deletes (remove from vector store)
-        if deletes and self.config.delete_on_removal:
-            entity_ids = [c.entity_id for c in deletes]
-            logger.debug(
-                "removing_from_vector_store",
+        try:
+            await self.reindex_callback(changes)
+        except Exception as e:
+            logger.error(
+                "reindex_callback_failed",
                 entity_type=entity_type,
-                count=len(entity_ids),
-                ids=entity_ids[:10],
+                error=str(e),
             )
+            raise
 
-            # TODO: Call actual deletion service
-            await asyncio.sleep(0.05)  # Simulate processing time
+        logger.debug(
+            "reindex_callback_completed",
+            entity_type=entity_type,
+            count=len(changes),
+            change_types=sorted({c.change_type.value for c in changes}),
+        )
 
-        # Mark all changes as processed
+        # Mark all changes as processed only after a successful real callback
         all_entity_ids = [c.entity_id for c in changes]
         self.tracker.mark_processed(entity_type, all_entity_ids)
 

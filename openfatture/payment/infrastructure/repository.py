@@ -75,7 +75,7 @@ class BankAccountRepository:
         Returns:
             List of active BankAccount entities
         """
-        stmt = select(BankAccount).where(BankAccount.is_active == True)  # noqa: E712
+        stmt = select(BankAccount).where(BankAccount.is_active.is_(True))
         return list(self.session.execute(stmt).scalars())
 
     def list_accounts(self, include_inactive: bool = True) -> list[BankAccount]:
@@ -89,7 +89,7 @@ class BankAccountRepository:
         """
         stmt = select(BankAccount)
         if not include_inactive:
-            stmt = stmt.where(BankAccount.is_active == True)  # noqa: E712
+            stmt = stmt.where(BankAccount.is_active.is_(True))
         stmt = stmt.order_by(BankAccount.name.asc())
         return list(self.session.execute(stmt).scalars())
 

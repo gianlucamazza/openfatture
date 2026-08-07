@@ -7,7 +7,7 @@ from unittest.mock import Mock, PropertyMock
 
 import pytest
 
-from openfatture.core.batch.operations import (
+from openfatture.billing.batch.operations import (
     bulk_update_status,
     export_invoices_csv,
     import_invoices_csv,

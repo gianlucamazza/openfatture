@@ -157,11 +157,10 @@ class ReminderScheduler:
         >>> scheduler = ReminderScheduler(
         ...     reminder_repo=ReminderRepository(session),
         ...     payment_repo=PaymentRepository(session),
-        ...     notifier=EmailNotifier(smtp_config)
+        ...     notifier=EmailNotifier(smtp_config),
         ... )
         >>> reminders = await scheduler.schedule_reminders(
-        ...     payment_id=123,
-        ...     strategy=ReminderStrategy.DEFAULT
+        ...     payment_id=123, strategy=ReminderStrategy.DEFAULT
         ... )
         >>> print(f"Scheduled {len(reminders)} reminders")
     """
@@ -209,8 +208,7 @@ class ReminderScheduler:
 
         Example:
             >>> reminders = await scheduler.schedule_reminders(
-            ...     payment_id=123,
-            ...     strategy=ReminderStrategy.AGGRESSIVE
+            ...     payment_id=123, strategy=ReminderStrategy.AGGRESSIVE
             ... )
             >>> for r in reminders:
             ...     print(f"{r.reminder_date}: {r.days_before_due} days")

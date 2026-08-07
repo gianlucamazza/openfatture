@@ -67,7 +67,7 @@ class TestBankAccount:
         self, db_session: Session, bank_account: BankAccount, bank_transaction: BankTransaction
     ):
         """Test that deleting account cascades to transactions."""
-        account_id = bank_account.id
+        _account_id = bank_account.id
         tx_id = bank_transaction.id
 
         db_session.delete(bank_account)

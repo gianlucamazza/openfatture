@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 
 from openfatture.ai.session.models import ChatSession, SessionStatus
-from openfatture.utils.config import get_settings
-from openfatture.utils.logging import get_logger
+from openfatture.platform.config import get_settings
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

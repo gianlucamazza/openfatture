@@ -17,7 +17,7 @@ from openfatture.payment.application.listeners import (
     register_default_payment_listeners,
 )
 from openfatture.payment.domain.enums import MatchType
-from openfatture.utils.config import Settings
+from openfatture.platform.config import Settings
 
 
 @pytest.fixture

@@ -526,7 +526,7 @@ class TestReActIntegration:
         )
 
         # Execute
-        result = await orchestrator.execute(sample_chat_context)
+        _result = await orchestrator.execute(sample_chat_context)
 
         # Check metrics
         metrics = orchestrator.get_metrics()
@@ -568,7 +568,7 @@ class TestReActIntegration:
             max_iterations=5,
         )
 
-        result = await orchestrator.execute(sample_chat_context)
+        _result = await orchestrator.execute(sample_chat_context)
 
         metrics = orchestrator.get_metrics()
 
@@ -593,7 +593,7 @@ class TestReActIntegration:
             max_iterations=2,
         )
 
-        result = await orchestrator.execute(sample_chat_context)
+        _result = await orchestrator.execute(sample_chat_context)
 
         metrics = orchestrator.get_metrics()
 

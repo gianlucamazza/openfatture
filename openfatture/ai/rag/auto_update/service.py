@@ -22,7 +22,7 @@ from openfatture.ai.rag.auto_update.queue import ReindexQueue
 from openfatture.ai.rag.auto_update.tracker import ChangeType, EntityChange, get_change_tracker
 from openfatture.ai.rag.indexing import InvoiceIndexer
 from openfatture.ai.rag.vector_store import VectorStore
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

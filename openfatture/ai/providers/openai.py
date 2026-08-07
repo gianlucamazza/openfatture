@@ -8,9 +8,6 @@ import warnings
 from collections.abc import AsyncIterator
 from typing import Any, cast
 
-from openai import AsyncOpenAI
-from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
-from openai.types.responses.response_output_item import ResponseOutputItem
 from pydantic import BaseModel
 
 from openfatture.ai.domain.message import Message, Role
@@ -25,7 +22,15 @@ from openfatture.ai.providers.base import (
     BaseLLMProvider,
     ProviderError,
 )
-from openfatture.utils.logging import get_logger
+from openfatture.platform.extras import MissingExtraError
+from openfatture.platform.logging import get_logger
+
+try:
+    from openai import AsyncOpenAI
+    from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
+    from openai.types.responses.response_output_item import ResponseOutputItem
+except ImportError as exc:
+    raise MissingExtraError("ai", feature="OpenAI provider", cause=exc) from exc
 
 logger = get_logger(__name__)
 
@@ -348,7 +353,7 @@ class OpenAIProvider(BaseLLMProvider):
                 "name": name or "unknown_tool",
                 "arguments": arguments_str,
             }
-        except Exception as exc:  # pragma: no cover - defensive
+        except Exception as exc:
             logger.warning("tool_call_conversion_failed", error=str(exc))
             return None
 
@@ -511,7 +516,7 @@ class OpenAIProvider(BaseLLMProvider):
                 f"Unexpected error calling OpenAI: {e}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
     async def stream(
         self,
@@ -566,7 +571,7 @@ class OpenAIProvider(BaseLLMProvider):
                 f"Error streaming from OpenAI: {e}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
     async def stream_structured(
         self,
@@ -646,9 +651,9 @@ class OpenAIProvider(BaseLLMProvider):
                             if tool_call_delta.function.name:
                                 tool_call["function"]["name"] += tool_call_delta.function.name
                             if tool_call_delta.function.arguments:
-                                tool_call["function"][
-                                    "arguments"
-                                ] += tool_call_delta.function.arguments
+                                tool_call["function"]["arguments"] += (
+                                    tool_call_delta.function.arguments
+                                )
 
                 # Check for finish reason
                 if choice.finish_reason:
@@ -696,7 +701,7 @@ class OpenAIProvider(BaseLLMProvider):
                 f"Error streaming from OpenAI: {e}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
     def count_tokens(self, text: str) -> int:
         """

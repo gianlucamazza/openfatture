@@ -1,170 +1,162 @@
 # Technical Debt Inventory
 
-This document tracks known technical debt, TODOs, and planned improvements in the OpenFatture codebase.
+Honest inventory of remaining debt **after** the 2.0.0 modernization release
+(hygiene, Ruff-only tooling, extras, package reorg, core/extension boundaries,
+D2 tools, D3 runtime, honesty gates).
 
-**Last Updated**: 2025-12-01 (Phase 1.5 completion)
-
----
-
-## Critical (RESOLVED )
-
-### ~~Missing prodotto_id Field~~
-- **Status**: **RESOLVED in Phase 1.5**
-- **Files**: `openfatture/storage/database/models.py`, `openfatture/ai/tools/prodotto_tools.py`
-- **Resolution**: Added `RigaFattura.prodotto_id` field via Alembic migration `692d8837`
-- **Impact**: Product analytics and AI suggestions now functional
+**Last updated:** 2026-08-07  
+Related: [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md), [ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md),
+[releases/v2.0.0.md](releases/v2.0.0.md).
 
 ---
 
-## High Priority (Integration Stubs)
+## Verdict
 
-### LND Client gRPC Integration
-- **Files**: `openfatture/lightning/infrastructure/lnd_client.py:137,204,250,278,295`
-- **Issue**: Lightning Network integration uses mock stubs instead of real gRPC
-- **Impact**: Lightning payments are non-functional in production
-- **Effort**: High (8-12 hours)
-- **Dependencies**: Requires `lnd-grpc` package, LND node access
-- **Notes**: Intentional stub for future implementation
-- **TODOs**: 6 locations with `# TODO: Implement real LND gRPC calls`
+Structural modernization for 2.0.0 is **done**. Remaining debt is mostly
+**product completeness** (Lightning gRPC, oversized modules, experimental
+workflows), not packaging chaos.
 
----
-
-## Medium Priority (Service Improvements)
-
-### Web Service Features
-
-#### Hooks Execution Tracking
-- **Files**: `openfatture/web/services/hooks_service.py:50,51`
-- **TODOs**:
-  - Line 50: Add execution history tracking
-  - Line 51: Add success rate metrics
-- **Effort**: Medium (3-4 hours)
-- **Impact**: Better observability for automation workflows
-
-#### Payment Transaction Lookup
-- **Files**: `openfatture/web/services/payment_service.py:294,312`
-- **TODOs**:
-  - Line 294: Resolve UUID transaction lookup
-  - Line 312: Improve amount/date matching
-- **Effort**: Medium (2-3 hours)
-- **Impact**: Better payment reconciliation accuracy
-
-#### Health Check API
-- **File**: `openfatture/web/utils/health.py:103`
-- **TODO**: Implement comprehensive health check endpoint
-- **Effort**: Low (1-2 hours)
-- **Impact**: Production monitoring readiness
-
-### RAG Auto-Update Queue
-
-#### Service Integration Stubs
-- **Files**: `openfatture/ai/rag/auto_update/queue.py:231,246`
-- **TODOs**:
-  - Line 231: Call actual reindexing service
-  - Line 246: Call actual deletion service
-- **Effort**: Medium (2-3 hours)
-- **Dependencies**: RAG indexing service must be initialized
-- **Impact**: Automated knowledge base updates
+| Area | Debt level | Notes |
+|------|------------|--------|
+| Public CLI surface | Low | Small agentic surface; status/extras clean |
+| Core billing / SDI / payment | Low | Tools → application; billing namespaces re-export use-cases |
+| Package layout | Low | Bounded packages; no empty placeholders |
+| AI runtime | Medium | Product = ChatAgent; LangGraph multi-node is tested helper only |
+| Lightning | Medium–High | Fail-closed; simulate_payment gated; real gRPC still missing |
+| RAG auto-update | Low | Callback required; default auto-update off |
+| Tooling / types | Low | No in-code suppressions; only E501 formatter ignore |
+| Tests | Low | Skips mostly for external services / interactive |
 
 ---
 
-## Low Priority (Future Enhancements)
+## Modernization status
 
-### Plugin System
-- **File**: `openfatture/cli/main.py:69`
-- **TODO**: Implement plugin-specific configuration loading
-- **Effort**: Low (2-3 hours)
-- **Impact**: Better plugin ecosystem
-
-### Voice Features
-- **File**: `openfatture/cli/commands/ai.py:2545`
-- **TODO**: Implement MP3 decoding for in-memory playback
-- **Effort**: Low (1-2 hours)
-- **Impact**: Better voice chat experience (currently saves to temp file)
-
-### Bulkhead Pattern
-- **Files**: `openfatture/ai/tools/registry.py:589,638`
-- **TODOs**:
-  - Track queue length for bulkhead pattern
-- **Effort**: Low (1 hour)
-- **Impact**: Better circuit breaker observability
-
-### Media Module
-- **File**: `openfatture/cli/commands/media.py:25`
-- **TODO**: Clean up optional import dependencies
-- **Effort**: Trivial (15 minutes)
-- **Impact**: Code cleanliness
-
-### ML Retraining
-- **File**: `openfatture/ai/ml/retraining/triggers.py:215`
-- **TODO**: Implement accuracy drift detection
-- **Effort**: Medium (3-4 hours)
-- **Impact**: Automated model quality monitoring
+| Phase | Status |
+|-------|--------|
+| Repo hygiene + docs | done |
+| Ruff-only tooling | done |
+| Optional extras | done |
+| D0 non-core cut | done |
+| D1 package reorg | done |
+| Core vs extras vs extensions | done (plugins package removed) |
+| Honesty gates (Lightning mock, RAG queue) | done |
+| D2 tools → application services | done |
+| D3 single assistant runtime | done |
+| 2.0.0 release notes | done |
 
 ---
 
-## Resolved Issues (History)
+## High priority (real product risk)
 
-### Phase 1.1
-- Retry logic utility implementation
+### 1. AI product path vs LangGraph helper
 
-### Phase 1.2
-- Async bridge utility for sync/async interop
+- **Product path:** `AssistantRuntime` → `ChatAgent` (native tools / ReAct).
+- **Helper:** `ai.runtime.graph.build_tool_loop_graph` (multi-node model↔tools).
+- **Workflows:** `ai.orchestration.workflows.*` remain internal/experimental.
+- **Remaining:** promote graph to product only with parity tests; fix simulated
+  human approval in experimental workflows or rename nodes honestly.
 
-### Phase 1.3
-- Database session management migration (CLI + AI/ML + workflows)
+### 2. Lightning LND real gRPC still missing
 
-### Phase 1.4
-- Logging standardization (Lightning modules)
-- Removed all production `print()` statements
+- **Files:** `openfatture/lightning/infrastructure/lnd_client.py`
+- **Honesty:** Mock is **off by default** (`allow_mock=False` /
+  `lightning_allow_mock=false`). Without stubs, operations raise `LNDClientError`.
+- **Status:** Silent mock **fixed**; full RPC **still open**. Lightning is
+  experimental until real bindings land.
 
-### Phase 1.5
-- Database migration system (Alembic)
-- Added `prodotto_id` field to `RigaFattura`
-- Fixed OFX importer logging
+### 3. AI tools → application services — done
 
----
+- All AI tool modules under `openfatture/ai/tools` are thin adapters.
+- Domain use-cases: `billing.application.*`, `payment.application.*`,
+  `sdi.application.*`, `pdf.tool_ops`.
+- **Follow-up:** split large `*_ops.py` modules where complexity grows.
 
-## Next Phases (Planned)
+### 4. RAG auto-update queue honesty — resolved
 
-### Phase 1.6: Code Modularization
-- **Target**: Split large files (cli/commands/ai.py: 2606 lines)
-- **Effort**: 12-16 hours
-- **Priority**: Medium
-
-### Phase 1.7: Type Safety Enhancement
-- **Target**: Enable strict MyPy, remove remaining `type: ignore`
-- **Effort**: 8-12 hours
-- **Priority**: Medium-High
-
-### Phase 1.8: Coverage Improvement
-- **Target**: Raise coverage from 55% to 60%+
-- **Effort**: 16-24 hours (ongoing)
-- **Priority**: High
-
-### Phase 6: Production Hardening
-- **Prerequisites**: Phases 1.5, 1.7, 1.8 complete
-- **Effort**: 40+ hours
-- **Priority**: Critical for production deployment
+- Requires a real `reindex_callback` (wired by `AutoIndexingService`).
+- Default auto-update remains disabled.
 
 ---
 
-## Priority Guidelines
+## Medium priority
 
-- **Critical**: Blocking features or causing bugs Immediate action
-- **High**: Important integrations or major features Next 2-4 weeks
-- **Medium**: Nice-to-have improvements Next 1-2 months
-- **Low**: Polish and optimizations Backlog
+### Oversized modules
+
+- `ai/agents/cash_flow_predictor.py`, `chat_agent.py`
+- `ai/tools/registry.py`
+- `ai/orchestration/workflows/invoice_creation.py`
+- `billing/application/preventivo_ops.py`, `prodotto_ops.py`, `invoice_commands.py`
+- `storage/database/models.py`
+
+### Empty billing packages — resolved as re-exports
+
+- `billing/clienti`, `billing/prodotti`, `billing/fiscale` re-export
+  application modules (no empty placeholders).
+
+### Experimental workflow human interrupt
+
+- `invoice_creation` / `compliance_check` use **confidence auto-gates** or
+  leave `awaiting_approval` without inventing human decisions. Real CLI
+  interrupt is not on the product path (internal workflows only).
+
+### Type-safety / lint
+
+- **Resolved:** zero in-code `noqa` / `type: ignore` / `pragma: no cover`.
+  Ruff global ignore is only `E501` (formatter-owned).
+- Remaining: `mypy` still ignores entire `tests.*`.
+- Third-party packages without stubs use `ignore_missing_imports` in
+  `pyproject.toml` (external, not project debt).
+
+### Bulkhead / registry TODOs
+
+- `ai/tools/registry.py`: queue length tracking for bulkhead not implemented.
+
+### ML accuracy drift
+
+- Signal **explicitly unavailable** (`status: not_implemented` in
+  `get_trigger_summary`); does not silent-trigger and does not claim
+  “accuracy is fine”.
+
+### Fuzzy matcher — resolved
+
+- No Mock/MagicMock special-casing in production matcher.
+
+### `async_bridge` nested loops
+
+- Documented nested path: `nest_asyncio` optional, else worker thread.
+  Primary path remains `asyncio.run`.
 
 ---
 
-## Contributing
+## Low priority / acceptable
 
-When adding new TODOs:
-1. Add `# TODO: <description>` comment in code
-2. Update this document with file:line reference
-3. Categorize by priority
-4. Estimate effort and impact
-5. Note any dependencies
+| Item | Why acceptable |
+|------|----------------|
+| `except Exception` in hooks/events/email | Intentional isolation |
+| Retry / rate-limit `sleep` | Normal control flow |
+| External-service test skips | Correct for CI |
+| SQLAlchemy `.is_(True)` / `.is_(False)` | Correct ORM boolean comparisons |
+| Ruff `E501` ignore | Line length owned by `ruff format` |
+| `tests/**` E402 per-file | Fixture/path setup before SUT import |
+| `__init__.py` F401 per-file | Public re-export barrels |
 
-For questions: See `docs/DEVELOPMENT.md`
+---
+
+## Counts (approximate)
+
+| Signal | Count / note |
+|--------|----------------|
+| Explicit `TODO` in code | ~15 (LND, bulkhead, ML drift, …) |
+| `type: ignore` / `noqa` / `pragma: no cover` | **0** |
+| AI tools → application layer only | D2 done |
+| Skipped tests | mostly external/interactive |
+
+---
+
+## Recommended burn-down order
+
+1. Session resume polish and graph test coverage (product UX)
+2. Lightning: real gRPC **or** keep hard experimental posture in docs/CLI
+3. Split oversized ops modules
+4. Honest experimental workflow approval nodes
+5. Optional: mypy on tests; import-linter boundaries

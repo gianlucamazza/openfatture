@@ -30,7 +30,7 @@ from tempfile import mkdtemp
 
 from sqlalchemy.orm import Session
 
-from openfatture.services.pdf import (
+from openfatture.pdf import (
     PDFGenerator,
     PDFGeneratorConfig,
 )
@@ -702,7 +702,7 @@ def main():
     print()
     print("Next steps:")
     print("  • Read full documentation: docs/PDF_GENERATION.md")
-    print("  • Customize templates: openfatture/services/pdf/templates/")
+    print("  • Customize templates: openfatture/pdf/templates/")
     print("  • Add your logo: config = PDFGeneratorConfig(logo_path='./logo.png')")
     print("  • Generate invoices: openfatture fattura pdf <id>")
     print()

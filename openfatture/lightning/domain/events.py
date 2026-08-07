@@ -7,7 +7,7 @@ All events are immutable (frozen dataclasses) and include standard metadata.
 from dataclasses import dataclass
 from datetime import datetime
 
-from ...core.events.base import BaseEvent
+from openfatture.events.base import BaseEvent
 
 
 @dataclass(frozen=True)

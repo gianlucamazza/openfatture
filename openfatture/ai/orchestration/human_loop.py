@@ -20,12 +20,9 @@ Example:
     >>> checkpoint = ApprovalCheckpoint(
     ...     name="tax_suggestion",
     ...     require_approval_on_low_confidence=True,
-    ...     confidence_threshold=0.85
+    ...     confidence_threshold=0.85,
     ... )
-    >>> decision = await checkpoint.request_approval(
-    ...     data=tax_result,
-    ...     workflow_state=state
-    ... )
+    >>> decision = await checkpoint.request_approval(data=tax_result, workflow_state=state)
     >>> if decision.approved:
     ...     # Continue workflow
     ...     pass
@@ -45,8 +42,8 @@ from openfatture.ai.orchestration.states import (
     ApprovalDecision,
     HumanReview,
 )
-from openfatture.utils.datetime import utc_now
-from openfatture.utils.logging import get_logger
+from openfatture.platform.datetime import utc_now
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 console = Console()
@@ -106,7 +103,7 @@ class ApprovalCheckpoint:
         >>> checkpoint = ApprovalCheckpoint(
         ...     name="description_review",
         ...     policy=ApprovalPolicy.LOW_CONFIDENCE,
-        ...     confidence_threshold=0.85
+        ...     confidence_threshold=0.85,
         ... )
         >>> response = await checkpoint.request_approval(request)
     """
@@ -298,7 +295,9 @@ class HumanReviewer:
             confidence_color = (
                 "green"
                 if request.confidence >= 0.85
-                else "yellow" if request.confidence >= 0.7 else "red"
+                else "yellow"
+                if request.confidence >= 0.7
+                else "red"
             )
             self.console.print(
                 f"[bold]Confidence Score:[/bold] [{confidence_color}]{request.confidence:.1%}[/{confidence_color}]\n"
@@ -446,9 +445,7 @@ def create_approval_checkpoint(
 
     Example:
         >>> checkpoint = create_approval_checkpoint(
-        ...     name="tax_review",
-        ...     policy="smart",
-        ...     confidence_threshold=0.85
+        ...     name="tax_review", policy="smart", confidence_threshold=0.85
         ... )
     """
     policy_map = {
