@@ -10,14 +10,18 @@ on:
     - cron: '0 2 * * 1'
   workflow_dispatch: # Allow manual triggering
 
+# Least privilege by default; jobs widen this to what they actually need.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   performance-tests:
     name: Run Performance Benchmarks
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write # posts the benchmark summary comment
 
     steps:
       - name: Checkout code
@@ -165,6 +169,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: performance-tests
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    permissions:
+      contents: write # publishes the HTML report to gh-pages
 
     steps:
       - name: Checkout code
@@ -285,8 +291,17 @@ jobs:
               print("No results file")
               sys.exit(0)
 
-          with open(results_file) as f:
-              data = json.load(f)
+          # pytest-benchmark leaves the file empty when no benchmarks ran.
+          raw = results_file.read_text().strip()
+          if not raw:
+              print("Results file is empty; no benchmarks to compare")
+              sys.exit(0)
+
+          try:
+              data = json.loads(raw)
+          except json.JSONDecodeError as exc:
+              print(f"Results file is not valid JSON: {exc}")
+              sys.exit(0)
 
           # Define thresholds
           LATENCY_THRESHOLD = 1.20  # 20% increase
