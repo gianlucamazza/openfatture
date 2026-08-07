@@ -115,8 +115,8 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install dependencies
-        # Feature extras + dev tooling; plain `uv run` then uses this environment.
-        run: uv sync --frozen --all-extras --extra dev --python "$(command -v python3)"
+        # --all-extras includes product extras and the dev optional-dep group.
+        run: uv sync --frozen --all-extras --python "$(command -v python3)"
 
       - name: Run Ruff format
         run: uv run ruff format --check .
