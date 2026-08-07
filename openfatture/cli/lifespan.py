@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import signal
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Coroutine
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
@@ -256,7 +256,7 @@ def setup_signal_handlers() -> None:
     signal.signal(signal.SIGINT, _lifespan_manager.signal_handler)
 
 
-async def run_with_lifespan(main_coro: Any) -> Any:
+async def run_with_lifespan[T](main_coro: Coroutine[Any, Any, T]) -> T:
     """
     Run a coroutine with proper lifespan management.
 
@@ -282,7 +282,7 @@ async def run_with_lifespan(main_coro: Any) -> Any:
         raise
 
 
-def run_sync_with_lifespan(main_coro: Any) -> Any:
+def run_sync_with_lifespan[T](main_coro: Coroutine[Any, Any, T]) -> T | None:
     """
     Run an async coroutine synchronously with lifespan management.
 
@@ -293,7 +293,7 @@ def run_sync_with_lifespan(main_coro: Any) -> Any:
         main_coro: The main coroutine to execute
 
     Returns:
-        The result of the main coroutine
+        The result of the main coroutine, or None on user interruption
     """
     try:
         return run_async(run_with_lifespan(main_coro))

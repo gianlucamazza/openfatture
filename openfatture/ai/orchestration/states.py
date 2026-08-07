@@ -169,7 +169,9 @@ class BaseWorkflowState(BaseModel):
         """Convert SharedContext to dict if needed."""
         if isinstance(v, SharedContext):
             return v.model_dump()
-        return v
+        if isinstance(v, dict):
+            return v
+        raise TypeError(f"context must be a SharedContext or a dict, got {type(v).__name__}")
 
     # Error handling
     errors: list[str] = Field(default_factory=list)

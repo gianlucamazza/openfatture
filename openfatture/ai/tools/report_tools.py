@@ -9,7 +9,10 @@ from pydantic import validate_call
 from sqlalchemy import extract, func
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
-from openfatture.payment.application.services.payment_overview import collect_payment_due_summary
+from openfatture.payment.application.services.payment_overview import (
+    PaymentDueEntry,
+    collect_payment_due_summary,
+)
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 from openfatture.utils.logging import get_logger
@@ -269,7 +272,7 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
             }
 
         # Format entries
-        def format_entry(entry) -> dict[str, Any]:
+        def format_entry(entry: PaymentDueEntry) -> dict[str, Any]:
             return {
                 "invoice_ref": entry.invoice_ref,
                 "client_name": entry.client_name,

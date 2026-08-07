@@ -336,7 +336,7 @@ class ProphetModel:
         forecast = self.model.predict(df_prophet)
 
         # Extract components
-        components = forecast[["ds", "trend", "yhat"]].copy()
+        components: pd.DataFrame = forecast[["ds", "trend", "yhat"]].copy()
 
         # Add seasonality components if available
         if "weekly" in forecast.columns:
@@ -366,7 +366,8 @@ class ProphetModel:
             {"date": self.model.changepoints, "delta": self.model.params["delta"].flatten()}
         )
 
-        return changepoints.sort_values("date")
+        sorted_changepoints: pd.DataFrame = changepoints.sort_values("date")
+        return sorted_changepoints
 
     def save(self, filepath: str) -> None:
         """Save model to file.
@@ -436,7 +437,7 @@ class ProphetModel:
         predictions = self.predict(X)
         y_pred = np.array([p.yhat for p in predictions])
 
-        mae = np.mean(np.abs(y.values - y_pred))
+        mae = float(np.mean(np.abs(y.values - y_pred)))
 
         logger.info("prophet_model_scored", mae=mae, sample_count=len(X))
 

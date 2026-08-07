@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import time
+from types import TracebackType
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -28,7 +29,7 @@ class RegulatoryWebScraper:
     - Error handling and retry logic
     """
 
-    def __init__(self, config: WebScraperConfig):
+    def __init__(self, config: WebScraperConfig) -> None:
         """Initialize the regulatory web scraper.
 
         Args:
@@ -53,12 +54,17 @@ class RegulatoryWebScraper:
             headless=self.config.headless,
         )
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "RegulatoryWebScraper":
         """Async context manager entry."""
         await self.start()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Async context manager exit."""
         await self.stop()
 

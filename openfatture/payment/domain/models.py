@@ -25,7 +25,8 @@ from sqlalchemy import (
     event,
     select,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.engine import Connection
+from sqlalchemy.orm import Mapped, Mapper, mapped_column, relationship
 
 from ...storage.database.base import Base, IntPKMixin, UUIDPKMixin
 from ...utils.datetime import utc_now
@@ -307,7 +308,9 @@ class PaymentReminder(IntPKMixin, Base):
 
 
 @event.listens_for(PaymentReminder, "before_insert")
-def _set_days_before_due_before_insert(mapper, connection, target: PaymentReminder) -> None:
+def _set_days_before_due_before_insert(
+    mapper: Mapper[PaymentReminder], connection: Connection, target: PaymentReminder
+) -> None:
     """Ensure days_before_due has a sensible value before persisting."""
     if target.days_before_due is not None and target.days_before_due != 0:
         return

@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 from collections.abc import Callable
 from dataclasses import asdict
+from typing import cast
 
 import structlog
 
@@ -37,7 +38,8 @@ def _import_listener(path: str) -> Callable[[PaymentEvent], object]:
     handler = getattr(module, attr)
     if not callable(handler):
         raise TypeError(f"Listener '{path}' is not callable")
-    return handler
+    # Dynamically imported: callability is all that can be checked at runtime.
+    return cast(Callable[[PaymentEvent], object], handler)
 
 
 def create_event_bus(settings: Settings | None = None) -> InMemoryEventBus:

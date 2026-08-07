@@ -1,7 +1,9 @@
 """Central registry for AI tools and function calling."""
 
+from __future__ import annotations
+
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from openfatture.ai.orchestration.resilience import (
     BulkheadConfig,
@@ -11,6 +13,10 @@ from openfatture.ai.orchestration.resilience import (
 from openfatture.ai.tools.models import Tool, ToolResult
 from openfatture.utils.logging import get_logger
 from openfatture.utils.rate_limiter import RateLimiter
+
+if TYPE_CHECKING:
+    from openfatture.ai.cache.tool_cache import ToolResultCache
+    from openfatture.ai.tools.metrics import ToolMetricsCollector
 
 logger = get_logger(__name__)
 
@@ -40,12 +46,12 @@ class ToolRegistry:
         self._bulkhead_semaphores: dict[str, asyncio.Semaphore] = {}
 
         # Initialize cache and metrics (lazy loaded)
-        self._cache = None
-        self._metrics = None
+        self._cache: ToolResultCache | None = None
+        self._metrics: ToolMetricsCollector | None = None
 
         logger.info("tool_registry_initialized")
 
-    def _get_cache(self):
+    def _get_cache(self) -> ToolResultCache | None:
         """Lazy load tool cache."""
         if self._cache is None:
             try:
@@ -58,7 +64,7 @@ class ToolRegistry:
                 self._cache = None
         return self._cache
 
-    def _get_metrics(self):
+    def _get_metrics(self) -> ToolMetricsCollector | None:
         """Lazy load metrics collector."""
         if self._metrics is None:
             try:

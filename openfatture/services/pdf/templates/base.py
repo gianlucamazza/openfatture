@@ -19,7 +19,7 @@ class BaseTemplate(ABC):
     - draw_custom_elements(): Draw template-specific elements
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize template."""
         self.page_width, self.page_height = A4
         self.margin = 2 * cm

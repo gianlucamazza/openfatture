@@ -7,7 +7,7 @@ from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ofxparse import OfxParser
 
@@ -125,7 +125,7 @@ class OFXImporter(BaseImporter):
 
         return transactions
 
-    def _find_statement(self, ofx):
+    def _find_statement(self, ofx: Any) -> Any:
         """Find matching account statement in OFX data.
 
         Args:
@@ -157,7 +157,7 @@ class OFXImporter(BaseImporter):
 
         return None
 
-    def _parse_transaction(self, account: "BankAccount", ofx_tx) -> BankTransaction:
+    def _parse_transaction(self, account: "BankAccount", ofx_tx: Any) -> BankTransaction:
         """Parse single OFX transaction into BankTransaction.
 
         Args:
@@ -210,7 +210,7 @@ class OFXImporter(BaseImporter):
             raw_data=raw_data,
         )
 
-    def _build_description(self, ofx_tx) -> str:
+    def _build_description(self, ofx_tx: Any) -> str:
         """Build transaction description from OFX fields.
 
         Priority: MEMO > NAME > TYPE
@@ -223,17 +223,17 @@ class OFXImporter(BaseImporter):
         """
         # Try MEMO first (most descriptive)
         if hasattr(ofx_tx, "memo") and ofx_tx.memo:
-            return ofx_tx.memo.strip()
+            return str(ofx_tx.memo).strip()
 
         # Try NAME/PAYEE
         if hasattr(ofx_tx, "payee") and ofx_tx.payee:
-            return ofx_tx.payee.strip()
+            return str(ofx_tx.payee).strip()
 
         # Fallback: transaction type
         tx_type = ofx_tx.type if hasattr(ofx_tx, "type") else "Unknown"
         return f"{tx_type} Transaction"
 
-    def _extract_counterparty(self, ofx_tx) -> str | None:
+    def _extract_counterparty(self, ofx_tx: Any) -> str | None:
         """Extract counterparty name from OFX transaction.
 
         Args:
@@ -244,11 +244,11 @@ class OFXImporter(BaseImporter):
         """
         # Try PAYEE field
         if hasattr(ofx_tx, "payee") and ofx_tx.payee:
-            return ofx_tx.payee.strip()
+            return str(ofx_tx.payee).strip()
 
         # Try NAME field (alternative)
         if hasattr(ofx_tx, "name") and ofx_tx.name:
-            return ofx_tx.name.strip()
+            return str(ofx_tx.name).strip()
 
         return None
 

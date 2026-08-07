@@ -133,6 +133,8 @@ dev = [
   "types-pyasn1>=0.5.0",
   "types-grpcio>=1.0.0",
   "pandas-stubs>=2.0.0",
+  "lxml-stubs>=0.5.1",
+  "types-python-dateutil>=2.9.0",
 ]
 
 [project.scripts]
@@ -200,18 +202,21 @@ ignore_missing_imports = true
 module = ["fastapi.*", "fastapi", "fastapi.responses"]
 ignore_missing_imports = true
 
-# Voice module - complex type interactions with OpenAI API
 [[tool.mypy.overrides]]
-module = ["openfatture.ai.voice.*"]
-disable_error_code = ["call-overload", "arg-type", "assignment"]
+module = ["sklearn.*", "sklearn"]
+ignore_missing_imports = true
 
-# Moduli pianificati/non implementati (payment import refactoring)
-# Attualmente si usa: openfatture.payment.infrastructure.importers.ofx_importer
 [[tool.mypy.overrides]]
-module = [
-  "openfatture.payment.application.services.bank_import_service",
-  "openfatture.payment.infrastructure.ofx_parser",
-]
+module = ["ofxparse.*", "ofxparse"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pyasn1_modules.*", "pyasn1_modules"]
+ignore_missing_imports = true
+
+# Optional runtime dependency: imported lazily and guarded by ImportError.
+[[tool.mypy.overrides]]
+module = ["nest_asyncio"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

@@ -35,9 +35,10 @@ Migration from old patterns:
 
 import asyncio
 import threading
-from collections.abc import Coroutine
+from collections.abc import Coroutine, Iterator
 from contextlib import contextmanager
-from typing import Any
+from types import TracebackType
+from typing import Any, Protocol
 
 from openfatture.utils.logging import get_logger
 
@@ -162,7 +163,7 @@ def _run_in_thread[T](coro: Coroutine[Any, Any, T]) -> T:
     """
     import concurrent.futures
 
-    def run_in_new_loop():
+    def run_in_new_loop() -> T:
         """Thread target function."""
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
@@ -180,7 +181,7 @@ def run_with_lifespan[T](
     coro: Coroutine[Any, Any, T],
     *,
     debug: bool = False,
-) -> T:
+) -> T | None:
     """Execute async coroutine with CLI lifespan management.
 
     This is specifically for CLI commands that need proper startup/shutdown
@@ -220,8 +221,14 @@ def run_with_lifespan[T](
     return run_sync_with_lifespan(coro)
 
 
+class _CoroutineExecutor(Protocol):
+    """Callable that runs a coroutine on the context's event loop."""
+
+    def __call__[T](self, coro: Coroutine[Any, Any, T]) -> T: ...
+
+
 @contextmanager
-def async_context():
+def async_context() -> Iterator[_CoroutineExecutor]:
     """Context manager for safe async operations in sync code.
 
     Provides a context where async operations can be safely executed,
@@ -283,7 +290,7 @@ class AsyncRunner:
             # Automatic cleanup
     """
 
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False) -> None:
         """Initialize async runner.
 
         Args:
@@ -327,15 +334,19 @@ class AsyncRunner:
             self._loop.close()
             self._loop = None
 
-    def __enter__(self):
+    def __enter__(self) -> "AsyncRunner":
         """Context manager entry."""
         self._ensure_loop()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Context manager exit."""
         self.cleanup()
-        return False
 
 
 # Convenience functions for common patterns
@@ -406,7 +417,7 @@ def run_async_timeout[T](
         )
     """
 
-    async def _with_timeout():
+    async def _with_timeout() -> T:
         return await asyncio.wait_for(coro, timeout=timeout)
 
     try:

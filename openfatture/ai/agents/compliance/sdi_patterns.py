@@ -115,7 +115,7 @@ class SDIPatternDatabase:
     - Common merchant mistakes
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize pattern database."""
         self.patterns = self._load_patterns()
         logger.info("sdi_pattern_database_initialized", patterns_count=len(self.patterns))

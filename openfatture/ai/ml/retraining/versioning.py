@@ -54,7 +54,7 @@ class ModelVersion:
         metrics: dict[str, Any],
         notes: str | None = None,
         config_snapshot: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """Initialize model version metadata."""
         self.version_id = version_id
         self.model_name = model_name
@@ -104,7 +104,7 @@ class ModelVersionManager:
         >>> manager.rollback_to_version("cash_flow", version_id)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize version manager."""
         self.ml_config = get_ml_config()
         self.retrain_config = get_retraining_config()

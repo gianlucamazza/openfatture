@@ -2,6 +2,7 @@
 
 import time
 from collections.abc import AsyncIterator
+from types import TracebackType
 from typing import Any
 
 import httpx
@@ -402,10 +403,14 @@ class OllamaProvider(BaseLLMProvider):
 
         return "\n".join(parts)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "OllamaProvider":
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Async context manager exit - no persistent client to close."""
-        pass

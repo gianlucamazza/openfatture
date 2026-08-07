@@ -18,6 +18,15 @@ from openfatture.utils.config import Settings
 from openfatture.utils.email.styles import EmailBranding, EmailStyles
 
 
+def _read_translation_file(path: Path) -> dict[str, Any]:
+    """Read a locale JSON file, rejecting anything that is not a JSON object."""
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"Translation file {path} must contain a JSON object")
+    return data
+
+
 class TemplateRenderer:
     """
     Email template renderer with i18n and inline CSS.
@@ -85,13 +94,10 @@ class TemplateRenderer:
         translation_file = i18n_dir / f"{self.locale}.json"
 
         try:
-            with open(translation_file, encoding="utf-8") as f:
-                return json.load(f)
+            return _read_translation_file(translation_file)
         except FileNotFoundError:
             # Fallback to Italian
-            fallback_file = i18n_dir / "it.json"
-            with open(fallback_file, encoding="utf-8") as f:
-                return json.load(f)
+            return _read_translation_file(i18n_dir / "it.json")
 
     def _register_filters(self) -> None:
         """Register custom Jinja2 filters."""

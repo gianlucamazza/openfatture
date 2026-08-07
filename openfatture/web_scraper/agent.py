@@ -552,7 +552,9 @@ Decidi: approved (può essere applicato automaticamente), rejected (non applicar
 
             json_match = re.search(r"\{.*\}", content, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group())
+                parsed = json.loads(json_match.group())
+                if isinstance(parsed, dict):
+                    return parsed
 
             # Fallback: extract key information from text
             return {

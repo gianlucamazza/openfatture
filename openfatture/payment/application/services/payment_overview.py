@@ -63,7 +63,7 @@ def _client_name(fattura: Fattura | None) -> str:
     cliente = fattura.cliente
     denominazione = getattr(cliente, "denominazione", None)
     if denominazione:
-        return denominazione
+        return str(denominazione)
 
     nome = getattr(cliente, "nome", "")
     cognome = getattr(cliente, "cognome", "")

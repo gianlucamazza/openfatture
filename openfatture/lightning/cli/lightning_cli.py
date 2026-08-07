@@ -1,7 +1,6 @@
 """CLI commands for Lightning Network management."""
 
 import asyncio
-from decimal import Decimal
 
 import typer
 
@@ -23,7 +22,7 @@ def get_lnd_client() -> ProductionLNDClient:
     return ProductionLNDClient()
 
 
-def get_services():
+def get_services() -> tuple[LightningInvoiceService, LightningPaymentService]:
     """Get Lightning services."""
     lnd_client = get_lnd_client()
     invoice_repo = LightningInvoiceRepository()
@@ -34,10 +33,10 @@ def get_services():
 
 
 @app.command()
-def info():
+def info() -> None:
     """Show Lightning node information."""
 
-    async def _info():
+    async def _info() -> None:
         lnd_client = get_lnd_client()
         try:
             node_info = await lnd_client.get_node_info()
@@ -57,10 +56,10 @@ def info():
 
 
 @app.command()
-def channels():
+def channels() -> None:
     """List Lightning channels."""
 
-    async def _channels():
+    async def _channels() -> None:
         lnd_client = get_lnd_client()
         try:
             channels = await lnd_client.list_channels()
@@ -88,10 +87,10 @@ def channels():
 
 
 @app.command()
-def balance():
+def balance() -> None:
     """Show Lightning wallet balance."""
 
-    async def _balance():
+    async def _balance() -> None:
         lnd_client = get_lnd_client()
         try:
             # In a real LND client, this would be a separate call
@@ -118,24 +117,22 @@ def create_invoice(
     amount: int | None = typer.Option(None, help="Amount in satoshis (omit for zero-amount)"),
     description: str = typer.Option(..., help="Invoice description"),
     expiry_hours: int = typer.Option(24, help="Invoice expiry in hours"),
-):
+) -> None:
     """Create a new Lightning invoice."""
 
-    async def _create_invoice():
+    async def _create_invoice() -> None:
         invoice_service, _ = get_services()
 
         try:
             if amount:
-                # Convert sat to EUR for service (mock conversion)
-                eur_amount = Decimal(str(amount)) / Decimal("100000000") * Decimal("45000")
-                invoice = await invoice_service.create_zero_amount_invoice(
-                    description=description, expiry_hours=expiry_hours
+                invoice = await get_lnd_client().create_invoice(
+                    amount_msat=amount * 1000,
+                    description=description,
+                    expiry_seconds=expiry_hours * 3600,
                 )
-                # Override amount for display
-                invoice = invoice._replace(amount_msat=amount * 1000)
             else:
                 invoice = await invoice_service.create_zero_amount_invoice(
-                    description=description, expiry_hours=expiry_hours
+                    descrizione=description, expiry_hours=expiry_hours
                 )
 
             typer.echo("Lightning Invoice Created:")
@@ -160,10 +157,10 @@ def create_invoice(
 def list_invoices(
     status: str | None = typer.Option(None, help="Filter by status (pending, settled, expired)"),
     limit: int = typer.Option(10, help="Maximum number of invoices to show"),
-):
+) -> None:
     """List Lightning invoices."""
 
-    async def _list_invoices():
+    async def _list_invoices() -> None:
         _, payment_service = get_services()
         invoice_repo = LightningInvoiceRepository()
 
@@ -207,10 +204,10 @@ def list_invoices(
 
 
 @app.command()
-def decode_invoice(payment_request: str):
+def decode_invoice(payment_request: str) -> None:
     """Decode a Lightning invoice (BOLT-11)."""
 
-    async def _decode_invoice():
+    async def _decode_invoice() -> None:
         invoice_service, _ = get_services()
 
         try:
@@ -235,10 +232,10 @@ def decode_invoice(payment_request: str):
 
 
 @app.command()
-def monitor_start():
+def monitor_start() -> None:
     """Start payment monitoring."""
 
-    async def _monitor_start():
+    async def _monitor_start() -> None:
         _, payment_service = get_services()
 
         try:
@@ -261,10 +258,10 @@ def monitor_start():
 
 
 @app.command()
-def monitor_stop():
+def monitor_stop() -> None:
     """Stop payment monitoring."""
 
-    async def _monitor_stop():
+    async def _monitor_stop() -> None:
         _, payment_service = get_services()
 
         try:
@@ -278,10 +275,10 @@ def monitor_stop():
 
 
 @app.command()
-def stats():
+def stats() -> None:
     """Show Lightning payment statistics."""
 
-    async def _stats():
+    async def _stats() -> None:
         _, payment_service = get_services()
 
         try:
@@ -303,10 +300,10 @@ def stats():
 
 
 @app.command()
-def simulate_payment(payment_hash: str):
+def simulate_payment(payment_hash: str) -> None:
     """Simulate a payment for testing (development only)."""
 
-    async def _simulate_payment():
+    async def _simulate_payment() -> None:
         _, payment_service = get_services()
 
         try:

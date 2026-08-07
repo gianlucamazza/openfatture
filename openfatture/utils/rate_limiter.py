@@ -6,10 +6,14 @@ Prevents exceeding rate limits of external services (PEC servers, APIs).
 
 import time
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from functools import wraps
 from threading import Lock
+from typing import ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class RateLimiter:
@@ -27,7 +31,7 @@ class RateLimiter:
             pass
     """
 
-    def __init__(self, max_calls: int, period: int):
+    def __init__(self, max_calls: int, period: int) -> None:
         """
         Initialize rate limiter.
 
@@ -40,7 +44,7 @@ class RateLimiter:
         self.calls: deque[float] = deque()  # Timestamps of recent calls
         self.lock = Lock()
 
-    def __call__(self, func: Callable) -> Callable:
+    def __call__(self, func: Callable[P, R]) -> Callable[P, R]:
         """
         Decorator to apply rate limiting to a function.
 
@@ -52,7 +56,7 @@ class RateLimiter:
         """
 
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             self.acquire()
             return func(*args, **kwargs)
 
@@ -141,7 +145,7 @@ class ExponentialBackoff:
                 time.sleep(backoff.get_delay(attempt))
     """
 
-    def __init__(self, base: float = 1.0, max_delay: float = 60.0, jitter: bool = True):
+    def __init__(self, base: float = 1.0, max_delay: float = 60.0, jitter: bool = True) -> None:
         """
         Initialize exponential backoff.
 
@@ -165,7 +169,7 @@ class ExponentialBackoff:
             Delay in seconds
         """
         # Calculate exponential delay
-        delay = self.base * (2**attempt)
+        delay: float = self.base * float(2**attempt)
 
         # Cap at max delay
         delay = min(delay, self.max_delay)
@@ -189,7 +193,7 @@ class SlidingWindowRateLimiter:
         limiter = SlidingWindowRateLimiter(max_calls=100, window=3600)  # 100/hour
     """
 
-    def __init__(self, max_calls: int, window: int):
+    def __init__(self, max_calls: int, window: int) -> None:
         """
         Initialize sliding window rate limiter.
 
@@ -248,8 +252,8 @@ def retry_with_backoff(
     max_attempts: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
-    exceptions: tuple = (Exception,),
-):
+    exceptions: tuple[type[BaseException], ...] = (Exception,),
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """
     Decorator for retrying with exponential backoff.
 
@@ -266,9 +270,9 @@ def retry_with_backoff(
             pass
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             backoff = ExponentialBackoff(base=base_delay, max_delay=max_delay)
 
             last_exception = None
@@ -282,8 +286,11 @@ def retry_with_backoff(
                         time.sleep(delay)
 
             # All attempts failed
-            if last_exception:
-                raise last_exception
+            raise (
+                last_exception
+                if last_exception
+                else RuntimeError(f"retry_with_backoff exhausted without running {func.__name__}")
+            )
 
         return wrapper
 
@@ -294,8 +301,8 @@ def retry_with_backoff_async(
     max_attempts: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
-    exceptions: tuple = (Exception,),
-):
+    exceptions: tuple[type[BaseException], ...] = (Exception,),
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
     Async decorator for retrying with exponential backoff.
 
@@ -313,9 +320,9 @@ def retry_with_backoff_async(
     """
     import asyncio
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             backoff = ExponentialBackoff(base=base_delay, max_delay=max_delay)
 
             last_exception = None
@@ -329,8 +336,13 @@ def retry_with_backoff_async(
                         await asyncio.sleep(delay)
 
             # All attempts failed
-            if last_exception:
-                raise last_exception
+            raise (
+                last_exception
+                if last_exception
+                else RuntimeError(
+                    f"retry_with_backoff_async exhausted without running {func.__name__}"
+                )
+            )
 
         return wrapper
 

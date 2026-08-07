@@ -1,7 +1,9 @@
 """FatturaPA XML v1.9 builder according to official specifications."""
 
+from collections.abc import Mapping
 from decimal import Decimal
 from pathlib import Path
+from typing import cast
 
 from lxml import etree
 
@@ -49,11 +51,15 @@ class FatturaPABuilder:
         """
         self._validate_invoice(fattura)
 
-        # Create root element
+        # Create root element.
+        # A None prefix declares the default namespace; lxml supports it (its own
+        # `_Element.nsmap` is typed `dict[str | None, str]`) but lxml-stubs 0.5.1
+        # narrows the *argument* to `Mapping[str, str]`, so the mapping is cast.
+        nsmap: Mapping[str | None, str] = {None: self.NS}
         root = etree.Element(
             f"{{{self.NS}}}FatturaElettronica",
             versione="FPR12",
-            nsmap={None: self.NS},
+            nsmap=cast(Mapping[str, str], nsmap),
         )
 
         # Build sections
@@ -86,7 +92,7 @@ class FatturaPABuilder:
         if not fattura.righe:
             raise ValueError("Invoice must have at least one line item")
 
-    def _build_header(self, root: etree.Element, fattura: Fattura) -> None:
+    def _build_header(self, root: etree._Element, fattura: Fattura) -> None:
         """Build FatturaElettronicaHeader section."""
         header = etree.SubElement(root, "FatturaElettronicaHeader")
 
@@ -99,7 +105,7 @@ class FatturaPABuilder:
         # CessionarioCommittente (Client)
         self._build_cessionario_committente(header, fattura)
 
-    def _build_dati_trasmissione(self, header: etree.Element, fattura: Fattura) -> None:
+    def _build_dati_trasmissione(self, header: etree._Element, fattura: Fattura) -> None:
         """Build DatiTrasmissione section."""
         dati_tr = etree.SubElement(header, "DatiTrasmissione")
 
@@ -124,7 +130,7 @@ class FatturaPABuilder:
         if codice_dest == "0000000" and fattura.cliente.pec:
             etree.SubElement(dati_tr, "PECDestinatario").text = fattura.cliente.pec
 
-    def _build_cedente_prestatore(self, header: etree.Element) -> None:
+    def _build_cedente_prestatore(self, header: etree._Element) -> None:
         """Build CedentePrestatore section (your company)."""
         cedente = etree.SubElement(header, "CedentePrestatore")
 
@@ -163,7 +169,7 @@ class FatturaPABuilder:
             if self.settings.cedente_email:
                 etree.SubElement(contatti, "Email").text = self.settings.cedente_email
 
-    def _build_cessionario_committente(self, header: etree.Element, fattura: Fattura) -> None:
+    def _build_cessionario_committente(self, header: etree._Element, fattura: Fattura) -> None:
         """Build CessionarioCommittente section (client)."""
         cliente = fattura.cliente
         cessionario = etree.SubElement(header, "CessionarioCommittente")
@@ -193,7 +199,7 @@ class FatturaPABuilder:
         etree.SubElement(sede, "Provincia").text = cliente.provincia or "EE"
         etree.SubElement(sede, "Nazione").text = cliente.nazione
 
-    def _build_body(self, root: etree.Element, fattura: Fattura) -> None:
+    def _build_body(self, root: etree._Element, fattura: Fattura) -> None:
         """Build FatturaElettronicaBody section."""
         body = etree.SubElement(root, "FatturaElettronicaBody")
 
@@ -206,7 +212,7 @@ class FatturaPABuilder:
         # DatiPagamento (optional but recommended)
         self._build_dati_pagamento(body, fattura)
 
-    def _build_dati_generali(self, body: etree.Element, fattura: Fattura) -> None:
+    def _build_dati_generali(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiGenerali section."""
         dati_gen = etree.SubElement(body, "DatiGenerali")
 
@@ -238,7 +244,7 @@ class FatturaPABuilder:
                 fattura.importo_bollo
             )
 
-    def _build_dati_beni_servizi(self, body: etree.Element, fattura: Fattura) -> None:
+    def _build_dati_beni_servizi(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiBeniServizi section (line items)."""
         dati_beni = etree.SubElement(body, "DatiBeniServizi")
 
@@ -283,7 +289,7 @@ class FatturaPABuilder:
             # EsigibilitaIVA
             etree.SubElement(riepilogo, "EsigibilitaIVA").text = "I"  # Immediata
 
-    def _build_dati_pagamento(self, body: etree.Element, fattura: Fattura) -> None:
+    def _build_dati_pagamento(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiPagamento section."""
         dati_pag = etree.SubElement(body, "DatiPagamento")
 

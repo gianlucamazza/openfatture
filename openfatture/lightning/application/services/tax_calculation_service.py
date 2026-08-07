@@ -19,6 +19,7 @@ from openfatture.lightning.domain.events import (
     LightningPaymentTaxableEvent,
     LightningTaxDataStored,
 )
+from openfatture.lightning.domain.models import LightningInvoiceRecord
 from openfatture.lightning.domain.value_objects import CapitalGain, QuadroRWData
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
 
@@ -38,7 +39,7 @@ class TaxCalculationService:
         invoice_repository: LightningInvoiceRepository,
         aml_threshold_eur: Decimal = Decimal("5000.00"),
         enable_event_publishing: bool = True,
-    ):
+    ) -> None:
         """Initialize the tax calculation service.
 
         Args:
@@ -315,7 +316,7 @@ class TaxCalculationService:
 
     async def _publish_tax_events(
         self,
-        invoice,
+        invoice: LightningInvoiceRecord,
         btc_eur_rate: Decimal,
         eur_amount: Decimal,
     ) -> None:

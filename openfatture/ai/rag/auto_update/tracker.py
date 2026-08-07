@@ -87,7 +87,7 @@ class ChangeTracker:
         >>> tracker.mark_processed([c.entity_id for c in changes])
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize change tracker."""
         self.config = get_auto_update_config()
 

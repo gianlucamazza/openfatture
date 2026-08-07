@@ -162,7 +162,10 @@ class InvoiceDataLoader:
         if cache_path.exists() and not force_reload:
             logger.info("loading_from_cache", cache_path=str(cache_path))
             with open(cache_path, "rb") as f:
-                return pickle.load(f)
+                cached = pickle.load(f)
+            if not isinstance(cached, Dataset):
+                raise ValueError(f"Cache file {cache_path} does not contain a Dataset")
+            return cached
 
         # Load from database
         df = self._load_invoices_from_db(min_date, max_date)

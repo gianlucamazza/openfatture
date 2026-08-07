@@ -10,14 +10,18 @@ on:
     - cron: '0 2 * * 1'
   workflow_dispatch: # Allow manual triggering
 
+# Least privilege by default; jobs widen this to what they actually need.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   performance-tests:
     name: Run Performance Benchmarks
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write # posts the benchmark summary comment
 
     steps:
       - name: Checkout code
@@ -108,9 +112,26 @@ jobs:
 
             let comment = '## Performance Test Results\n\n';
 
+            // pytest-benchmark leaves the file absent or empty when the run
+            // collected no benchmarks, so guard the parse instead of assuming
+            // that an existing file holds valid JSON.
+            let results = null;
             if (fs.existsSync('benchmark-results.json')) {
-              const results = JSON.parse(fs.readFileSync('benchmark-results.json'));
+              const raw = fs.readFileSync('benchmark-results.json', 'utf8').trim();
+              if (raw) {
+                try {
+                  results = JSON.parse(raw);
+                } catch (error) {
+                  comment += `Benchmark results file is not valid JSON: ${error.message}\n`;
+                }
+              } else {
+                comment += 'Benchmark results file is empty (no benchmarks collected)\n';
+              }
+            } else {
+              comment += 'No benchmark results file found\n';
+            }
 
+            if (results) {
               comment += '### Summary\n\n';
               comment += '| Metric | Value |\n';
               comment += '|--------|-------|\n';
@@ -131,8 +152,6 @@ jobs:
                   comment += `| ${bench.name} | ${mean}ms | ${p95}ms |\n`;
                 });
               }
-            } else {
-              comment += 'No benchmark results file found\n';
             }
 
             comment += '\n---\n';
@@ -150,6 +169,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: performance-tests
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    permissions:
+      contents: write # publishes the HTML report to gh-pages
 
     steps:
       - name: Checkout code
@@ -270,8 +291,17 @@ jobs:
               print("No results file")
               sys.exit(0)
 
-          with open(results_file) as f:
-              data = json.load(f)
+          # pytest-benchmark leaves the file empty when no benchmarks ran.
+          raw = results_file.read_text().strip()
+          if not raw:
+              print("Results file is empty; no benchmarks to compare")
+              sys.exit(0)
+
+          try:
+              data = json.loads(raw)
+          except json.JSONDecodeError as exc:
+              print(f"Results file is not valid JSON: {exc}")
+              sys.exit(0)
 
           # Define thresholds
           LATENCY_THRESHOLD = 1.20  # 20% increase
@@ -308,7 +338,21 @@ jobs:
               print("No performance regressions detected")
           EOF
 
-          uv run python check_regression.py || echo "regression_detected=true" >> "$GITHUB_OUTPUT"
+          # The script only uses the standard library, so it runs on the
+          # runner's Python: this job installs neither uv nor the project.
+          # Exit 1 means "regression found"; anything else is a real failure
+          # and must not be reported as a performance regression.
+          set +e
+          python3 check_regression.py
+          status=$?
+          set -e
+
+          if [ "$status" -eq 1 ]; then
+            echo "regression_detected=true" >> "$GITHUB_OUTPUT"
+          elif [ "$status" -ne 0 ]; then
+            echo "::error::check_regression.py exited with status $status"
+            exit "$status"
+          fi
 
       - name: Fail on regression
         if: steps.regression-check.outputs.regression_detected == 'true'

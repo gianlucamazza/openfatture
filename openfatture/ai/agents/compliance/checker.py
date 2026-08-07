@@ -14,6 +14,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from openfatture.ai.agents.compliance.heuristics import (
     AIHeuristicAnalyzer,
 )
@@ -352,10 +354,10 @@ class ComplianceChecker:
 
         return False
 
-    def _get_client_history(self, db: Any, fattura: Fattura, limit: int = 10) -> list[Fattura]:
+    def _get_client_history(self, db: Session, fattura: Fattura, limit: int = 10) -> list[Fattura]:
         """Get client invoice history."""
 
-        return (
+        return list(
             db.query(Fattura)
             .filter(
                 Fattura.cliente_id == fattura.cliente_id,

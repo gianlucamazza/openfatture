@@ -10,28 +10,12 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import (
-    dh,
-    dsa,
-    ec,
-    rsa,
-    x448,
-    x25519,
-)
-from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PrivateKey
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 from cryptography.x509 import Certificate
 
-type PrivateKeyType = (
-    rsa.RSAPrivateKey
-    | dsa.DSAPrivateKey
-    | ec.EllipticCurvePrivateKey
-    | dh.DHPrivateKey
-    | Ed25519PrivateKey
-    | Ed448PrivateKey
-    | x25519.X25519PrivateKey
-    | x448.X448PrivateKey
-)
+# The exact set of key algorithms `pkcs12.load_key_and_certificates` can return.
+# Reuse cryptography's own alias so new algorithms stay covered automatically.
+type PrivateKeyType = PrivateKeyTypes
 
 
 class CertificateManager:
