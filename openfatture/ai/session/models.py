@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from openfatture.ai.domain.message import Role
 
 
-class SessionStatus(str, Enum):
+class SessionStatus(StrEnum):
     """Status of a chat session."""
 
     ACTIVE = "active"

@@ -158,20 +158,20 @@ Italian tax terms are preserved in English where appropriate:
 ```python
 from openfatture.i18n import _, set_locale
 
-set_locale('it')
+set_locale("it")
 
 # Fattura translations
-print(_('cli-fattura-create-title'))
+print(_("cli-fattura-create-title"))
 # Output: [bold blue]Crea Nuova Fattura[/bold blue]
 
-print(_('cli-fattura-client-selected', client_name='Acme Corp'))
+print(_("cli-fattura-client-selected", client_name="Acme Corp"))
 # Output: [green]Cliente: Acme Corp[/green]
 
 # Pluralization
-print(_('cli-ai-forecast-results-title', months=1))
+print(_("cli-ai-forecast-results-title", months=1))
 # Output: [bold green]Previsione Cash Flow - Prossimi 1 mese[/bold green]
 
-print(_('cli-ai-forecast-results-title', months=3))
+print(_("cli-ai-forecast-results-title", months=3))
 # Output: [bold green]Previsione Cash Flow - Prossimi 3 mesi[/bold green]
 ```
 
@@ -351,8 +351,10 @@ def create(
 ):
     pass
 
+
 # After
 from openfatture.i18n import _
+
 
 @app.command()
 def create(

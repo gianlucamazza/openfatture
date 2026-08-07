@@ -282,9 +282,7 @@ agent = InvoiceAssistantAgent(provider=provider)
 
 # Execute
 context = InvoiceContext(
-    servizio_base="sviluppo API REST",
-    ore_lavorate=8.0,
-    tecnologie=["Python", "FastAPI"]
+    servizio_base="sviluppo API REST", ore_lavorate=8.0, tecnologie=["Python", "FastAPI"]
 )
 response = await agent.execute(context)
 

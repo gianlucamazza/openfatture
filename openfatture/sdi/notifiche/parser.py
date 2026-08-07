@@ -10,14 +10,14 @@ Parses XML notifications received from Sistema di Interscambio (SDI):
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class TipoNotifica(str, Enum):
+class TipoNotifica(StrEnum):
     """SDI notification types."""
 
     RICEVUTA_CONSEGNA = "RC"  # Delivery receipt - invoice delivered to recipient

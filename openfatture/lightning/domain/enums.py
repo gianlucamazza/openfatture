@@ -1,9 +1,9 @@
 """Domain enums for Lightning Network integration."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class InvoiceStatus(str, Enum):
+class InvoiceStatus(StrEnum):
     """Lightning invoice status.
 
     Lifecycle:
@@ -21,7 +21,7 @@ class InvoiceStatus(str, Enum):
         return self.value
 
 
-class ChannelStatus(str, Enum):
+class ChannelStatus(StrEnum):
     """Lightning channel status."""
 
     PENDING_OPEN = "pending_open"  # Channel opening in progress
@@ -39,7 +39,7 @@ class ChannelStatus(str, Enum):
         return self in (ChannelStatus.OPEN,)
 
 
-class PaymentStatus(str, Enum):
+class PaymentStatus(StrEnum):
     """Lightning payment status."""
 
     IN_FLIGHT = "in_flight"  # Payment attempt in progress
@@ -50,7 +50,7 @@ class PaymentStatus(str, Enum):
         return self.value
 
 
-class NodeStatus(str, Enum):
+class NodeStatus(StrEnum):
     """Lightning node connection status."""
 
     CONNECTED = "connected"  # Node is reachable
@@ -61,7 +61,7 @@ class NodeStatus(str, Enum):
         return self.value
 
 
-class LiquidityAlertType(str, Enum):
+class LiquidityAlertType(StrEnum):
     """Types of liquidity alerts."""
 
     LOW_INBOUND = "low_inbound"  # Inbound liquidity below minimum threshold

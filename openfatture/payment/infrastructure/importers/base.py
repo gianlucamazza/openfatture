@@ -6,7 +6,7 @@ Defines the contract that all importers must implement using the Adapter pattern
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from ...domain.models import BankAccount, BankTransaction
 
 
-class FileFormat(str, Enum):
+class FileFormat(StrEnum):
     """Supported bank statement file formats."""
 
     CSV = "csv"

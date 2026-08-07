@@ -1,13 +1,13 @@
 """Response models for AI agents."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class ResponseStatus(str, Enum):
+class ResponseStatus(StrEnum):
     """Status of agent response."""
 
     SUCCESS = "success"

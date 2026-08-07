@@ -63,14 +63,15 @@ class LNDConfig:
 ```python
 # Macaroon loading and validation
 def load_macaroon(self) -> bytes:
-    with open(self.macaroon_path, 'rb') as f:
+    with open(self.macaroon_path, "rb") as f:
         return f.read()
+
 
 # gRPC interceptor for authentication
 class MacaroonInterceptor(grpc.UnaryUnaryClientInterceptor):
     def intercept_unary_unary(self, continuation, client_call_details, request):
         metadata = list(client_call_details.metadata)
-        metadata.append(('macaroon', self.macaroon_b64))
+        metadata.append(("macaroon", self.macaroon_b64))
         client_call_details = client_call_details._replace(metadata=metadata)
         return continuation(client_call_details, request)
 ```
@@ -193,7 +194,7 @@ class BitcoinAmount:
         return Decimal(self.sats) / 100_000_000
 
     @classmethod
-    def from_btc(cls, btc: Decimal) -> 'BitcoinAmount':
+    def from_btc(cls, btc: Decimal) -> "BitcoinAmount":
         return cls(int(btc * 100_000_000))
 ```
 
@@ -205,7 +206,7 @@ class EuroAmount:
     eur: Decimal
 
     @classmethod
-    def from_sats(cls, sats: int, rate: Decimal) -> 'EuroAmount':
+    def from_sats(cls, sats: int, rate: Decimal) -> "EuroAmount":
         btc = Decimal(sats) / 100_000_000
         return cls(btc * rate)
 ```
@@ -219,6 +220,7 @@ class InvoiceStatus(Enum):
     CANCELLED = "cancelled"
     ACCEPTED = "accepted"
     EXPIRED = "expired"
+
 
 class PaymentStatus(Enum):
     IN_FLIGHT = "in_flight"
@@ -242,7 +244,7 @@ class InvoiceService:
         lnd_client: LNDClient,
         rate_provider: RateProvider,
         repository: LightningRepository,
-        event_bus: EventBus
+        event_bus: EventBus,
     ):
         self.lnd_client = lnd_client
         self.rate_provider = rate_provider
@@ -254,7 +256,7 @@ class InvoiceService:
         amount_eur: Decimal,
         description: str,
         expiry_hours: int = 24,
-        metadata: dict | None = None
+        metadata: dict | None = None,
     ) -> LightningInvoice:
         # Get current BTC/EUR rate
         rate = await self.rate_provider.get_rate()
@@ -264,9 +266,7 @@ class InvoiceService:
 
         # Create LND invoice
         lnd_invoice = await self.lnd_client.add_invoice(
-            value_sats=amount_sats,
-            memo=description,
-            expiry_seconds=expiry_hours * 3600
+            value_sats=amount_sats, memo=description, expiry_seconds=expiry_hours * 3600
         )
 
         # Create domain invoice
@@ -280,14 +280,12 @@ class InvoiceService:
             expiry_time=datetime.now() + timedelta(hours=expiry_hours),
             status=InvoiceStatus.OPEN,
             created_at=datetime.now(),
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         # Persist and publish event
         await self.repository.save_invoice(invoice)
-        await self.event_bus.publish(
-            InvoiceCreatedEvent(invoice=invoice)
-        )
+        await self.event_bus.publish(InvoiceCreatedEvent(invoice=invoice))
 
         return invoice
 ```
@@ -303,9 +301,7 @@ class PaymentService:
         async for payment_update in self.lnd_client.subscribe_invoices():
             if payment_update.settled:
                 # Get invoice details
-                invoice = await self.repository.get_invoice_by_hash(
-                    payment_update.payment_hash
-                )
+                invoice = await self.repository.get_invoice_by_hash(payment_update.payment_hash)
 
                 if invoice:
                     # Update invoice status
@@ -319,22 +315,19 @@ class PaymentService:
                         amount_sats=payment_update.amount_paid_sats,
                         amount_eur=invoice.amount_eur,
                         fee_sats=0,  # Receiver pays no fee
-                        fee_eur=Decimal('0'),
+                        fee_eur=Decimal("0"),
                         status=PaymentStatus.SUCCEEDED,
                         created_at=datetime.now(),
                         settled_at=datetime.now(),
                         description=invoice.description,
-                        invoice_id=invoice.id
+                        invoice_id=invoice.id,
                     )
 
                     await self.repository.save_payment(payment)
 
                     # Publish settlement event
                     await self.event_bus.publish(
-                        PaymentReceivedEvent(
-                            invoice=invoice,
-                            payment=payment
-                        )
+                        PaymentReceivedEvent(invoice=invoice, payment=payment)
                     )
 ```
 
@@ -353,16 +346,12 @@ class LiquidityService:
 
             if ratio < self.min_ratio:
                 # Need more inbound liquidity
-                await self._rebalance_channel(channel, 'inbound')
+                await self._rebalance_channel(channel, "inbound")
             elif ratio > self.max_ratio:
                 # Too much outbound liquidity
-                await self._rebalance_channel(channel, 'outbound')
+                await self._rebalance_channel(channel, "outbound")
 
-    async def _rebalance_channel(
-        self,
-        channel: Channel,
-        direction: str
-    ) -> None:
+    async def _rebalance_channel(self, channel: Channel, direction: str) -> None:
         # Find suitable peer channels for rebalancing
         # Execute circular payment to rebalance
         # Publish liquidity event
@@ -381,17 +370,20 @@ class InvoiceCreatedEvent:
     invoice: LightningInvoice
     timestamp: datetime = field(default_factory=datetime.now)
 
+
 @dataclass
 class PaymentReceivedEvent:
     invoice: LightningInvoice
     payment: Payment
     timestamp: datetime = field(default_factory=datetime.now)
 
+
 @dataclass
 class PaymentFailedEvent:
     payment_hash: str
     reason: str
     timestamp: datetime = field(default_factory=datetime.now)
+
 
 @dataclass
 class LiquidityEvent:
@@ -433,14 +425,8 @@ Lightning events integrate with OpenFatture's global event system:
 async def initialize_lightning_events():
     if settings.lightning_enabled:
         handlers = LightningEventHandlers(repository)
-        global_event_bus.register_handler(
-            PaymentReceivedEvent,
-            handlers.on_payment_received
-        )
-        global_event_bus.register_handler(
-            InvoiceCreatedEvent,
-            handlers.on_invoice_created
-        )
+        global_event_bus.register_handler(PaymentReceivedEvent, handlers.on_payment_received)
+        global_event_bus.register_handler(InvoiceCreatedEvent, handlers.on_invoice_created)
 ```
 
 ---
@@ -453,43 +439,32 @@ FastAPI-based webhook endpoint for external integrations:
 
 ```python
 class LightningWebhookHandler:
-    def __init__(
-        self,
-        webhook_secret: str,
-        event_bus: EventBus,
-        repository: LightningRepository
-    ):
+    def __init__(self, webhook_secret: str, event_bus: EventBus, repository: LightningRepository):
         self.webhook_secret = webhook_secret
         self.event_bus = event_bus
         self.repository = repository
 
-    async def handle_webhook(
-        self,
-        payload: dict,
-        signature: str | None = None
-    ) -> dict:
+    async def handle_webhook(self, payload: dict, signature: str | None = None) -> dict:
         # Verify webhook signature
         if signature and not self._verify_signature(payload, signature):
             raise HTTPException(status_code=401, detail="Invalid signature")
 
         # Process webhook event
-        event_type = payload.get('event')
+        event_type = payload.get("event")
 
-        if event_type == 'payment_received':
+        if event_type == "payment_received":
             await self._handle_payment_received(payload)
-        elif event_type == 'invoice_created':
+        elif event_type == "invoice_created":
             await self._handle_invoice_created(payload)
         # ... other event types
 
-        return {'status': 'ok'}
+        return {"status": "ok"}
 
     def _verify_signature(self, payload: dict, signature: str) -> bool:
         """Verify webhook signature using HMAC-SHA256"""
         message = json.dumps(payload, sort_keys=True)
         expected = hmac.new(
-            self.webhook_secret.encode(),
-            message.encode(),
-            hashlib.sha256
+            self.webhook_secret.encode(), message.encode(), hashlib.sha256
         ).hexdigest()
         return hmac.compare_digest(signature, expected)
 ```
@@ -578,15 +553,15 @@ class CoinGeckoProvider:
         async with aiohttp.ClientSession() as session:
             headers = {}
             if self.api_key:
-                headers['x-cg-demo-api-key'] = self.api_key
+                headers["x-cg-demo-api-key"] = self.api_key
 
             async with session.get(
-                'https://api.coingecko.com/api/v3/simple/price',
-                params={'ids': 'bitcoin', 'vs_currencies': 'eur'},
-                headers=headers
+                "https://api.coingecko.com/api/v3/simple/price",
+                params={"ids": "bitcoin", "vs_currencies": "eur"},
+                headers=headers,
             ) as response:
                 data = await response.json()
-                return Decimal(str(data['bitcoin']['eur']))
+                return Decimal(str(data["bitcoin"]["eur"]))
 ```
 
 ### CoinMarketCap Integration
@@ -594,19 +569,16 @@ class CoinGeckoProvider:
 ```python
 class CMCProvider:
     async def get_btc_eur_rate(self) -> Decimal:
-        headers = {
-            'X-CMC_PRO_API_KEY': self.api_key,
-            'Accept': 'application/json'
-        }
+        headers = {"X-CMC_PRO_API_KEY": self.api_key, "Accept": "application/json"}
 
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest',
-                params={'symbol': 'BTC', 'convert': 'EUR'},
-                headers=headers
+                "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest",
+                params={"symbol": "BTC", "convert": "EUR"},
+                headers=headers,
             ) as response:
                 data = await response.json()
-                return Decimal(str(data['data']['BTC']['quote']['EUR']['price']))
+                return Decimal(str(data["data"]["BTC"]["quote"]["EUR"]["price"]))
 ```
 
 ---
@@ -630,8 +602,9 @@ class LightningRepository:
     async def get_invoice_by_hash(self, payment_hash: str) -> LightningInvoice | None:
         async with self.session_factory() as session:
             result = await session.execute(
-                select(LightningInvoiceModel)
-                .where(LightningInvoiceModel.payment_hash == payment_hash)
+                select(LightningInvoiceModel).where(
+                    LightningInvoiceModel.payment_hash == payment_hash
+                )
             )
             db_invoice = result.scalar_one_or_none()
             return db_invoice.to_domain() if db_invoice else None
@@ -641,7 +614,7 @@ class LightningRepository:
 
 ```python
 class LightningInvoiceModel(Base):
-    __tablename__ = 'lightning_invoices'
+    __tablename__ = "lightning_invoices"
 
     id: Mapped[str] = mapped_column(primary_key=True)
     amount_sats: Mapped[int] = mapped_column(Integer)
@@ -675,24 +648,19 @@ async def status() -> None:
         console.print(f"Channels: {len(channels)} total")
         console.print(f"Capacity: {sum(c.capacity for c in channels)} sats")
 
+
 @app.command()
-async def invoice_create(
-    amount: float,
-    description: str,
-    expiry_hours: int = 24
-) -> None:
+async def invoice_create(amount: float, description: str, expiry_hours: int = 24) -> None:
     """Create a new Lightning invoice"""
     service = InvoiceService(
         lnd_client=get_lnd_client(),
         rate_provider=get_rate_provider(),
         repository=get_repository(),
-        event_bus=get_event_bus()
+        event_bus=get_event_bus(),
     )
 
     invoice = await service.create_invoice(
-        amount_eur=Decimal(str(amount)),
-        description=description,
-        expiry_hours=expiry_hours
+        amount_eur=Decimal(str(amount)), description=description, expiry_hours=expiry_hours
     )
 
     console.print(f"Invoice created: {invoice.id}")
@@ -749,20 +717,14 @@ async def test_create_invoice():
     event_bus = Mock()
 
     # Setup mocks
-    rate_provider.get_rate.return_value = Decimal('45000')
-    lnd_client.add_invoice.return_value = Mock(
-        payment_request='lnbc123...',
-        payment_hash='hash123'
-    )
+    rate_provider.get_rate.return_value = Decimal("45000")
+    lnd_client.add_invoice.return_value = Mock(payment_request="lnbc123...", payment_hash="hash123")
 
     # Test service
     service = InvoiceService(lnd_client, rate_provider, repository, event_bus)
-    invoice = await service.create_invoice(
-        amount_eur=Decimal('100'),
-        description='Test payment'
-    )
+    invoice = await service.create_invoice(amount_eur=Decimal("100"), description="Test payment")
 
-    assert invoice.amount_eur == Decimal('100')
+    assert invoice.amount_eur == Decimal("100")
     assert invoice.amount_sats == 2222  # 100 / 45000 * 100M
 ```
 
@@ -774,9 +736,9 @@ async def test_create_invoice():
 @pytest.mark.asyncio
 async def test_lnd_integration():
     client = LNDClient(
-        host='localhost:10009',
-        cert_path=Path('~/.lnd/tls.cert'),
-        macaroon_path=Path('~/.lnd/admin.macaroon')
+        host="localhost:10009",
+        cert_path=Path("~/.lnd/tls.cert"),
+        macaroon_path=Path("~/.lnd/admin.macaroon"),
     )
 
     # Test basic connectivity
@@ -784,11 +746,8 @@ async def test_lnd_integration():
     assert info.identity_pubkey
 
     # Test invoice creation
-    invoice = await client.add_invoice(
-        value_sats=1000,
-        memo='Integration test'
-    )
-    assert invoice.payment_request.startswith('lnbc')
+    invoice = await client.add_invoice(value_sats=1000, memo="Integration test")
+    assert invoice.payment_request.startswith("lnbc")
 ```
 
 ### E2E Tests
@@ -798,10 +757,7 @@ async def test_lnd_integration():
 @pytest.mark.e2e
 async def test_payment_workflow():
     # Create invoice
-    invoice = await invoice_service.create_invoice(
-        amount_eur=Decimal('10'),
-        description='E2E test'
-    )
+    invoice = await invoice_service.create_invoice(amount_eur=Decimal("10"), description="E2E test")
 
     # Simulate payment (would need real wallet)
     # payment_hash = await wallet.pay_invoice(invoice.payment_request)
@@ -867,8 +823,8 @@ logger.info(
         "invoice_id": invoice.id,
         "amount_eur": invoice.amount_eur,
         "amount_sats": invoice.amount_sats,
-        "description": invoice.description
-    }
+        "description": invoice.description,
+    },
 )
 ```
 
@@ -889,11 +845,11 @@ async def lightning_health_check() -> HealthStatus:
     # Channel liquidity
     channels = await lnd_client.list_channels()
     total_capacity = sum(c.capacity for c in channels)
-    checks.append(HealthCheck(
-        "channel_capacity",
-        total_capacity > 0,
-        f"Total capacity: {total_capacity} sats"
-    ))
+    checks.append(
+        HealthCheck(
+            "channel_capacity", total_capacity > 0, f"Total capacity: {total_capacity} sats"
+        )
+    )
 
     return HealthStatus("lightning", all(c.healthy for c in checks), checks)
 ```

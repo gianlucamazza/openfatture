@@ -29,12 +29,7 @@ with PerformanceProfiler("my_operation") as profiler:
 profiler.metrics.print_summary()
 
 # Measure over iterations
-metrics = await measure_async_function(
-    my_async_func,
-    arg1, arg2,
-    iterations=20,
-    warmup=5
-)
+metrics = await measure_async_function(my_async_func, arg1, arg2, iterations=20, warmup=5)
 
 # Assert performance target
 assert_performance_target(metrics, target_ms=100.0, percentile="p95")
@@ -87,20 +82,11 @@ Measure function performance over multiple iterations:
 ```python
 # Async function
 metrics = await measure_async_function(
-    async_func,
-    arg1, arg2,
-    iterations=20,
-    warmup=5,
-    kwarg1="value"
+    async_func, arg1, arg2, iterations=20, warmup=5, kwarg1="value"
 )
 
 # Sync function
-metrics = measure_sync_function(
-    sync_func,
-    arg1,
-    iterations=20,
-    warmup=5
-)
+metrics = measure_sync_function(sync_func, arg1, iterations=20, warmup=5)
 ```
 
 ### assert_performance_target
@@ -111,7 +97,7 @@ Assert performance meets target:
 assert_performance_target(
     metrics,
     target_ms=100.0,
-    percentile="p95"  # Options: "mean", "median", "p50", "p95", "p99"
+    percentile="p95",  # Options: "mean", "median", "p50", "p95", "p99"
 )
 ```
 
@@ -209,7 +195,7 @@ Include warmup iterations to stabilize measurements:
 metrics = await measure_async_function(
     func,
     iterations=20,
-    warmup=5  # 5 warmup runs
+    warmup=5,  # 5 warmup runs
 )
 
 # Bad - no warmup
@@ -246,7 +232,7 @@ Match dataset sizes to real-world scenarios:
 
 ```python
 # Production-like sizes
-clienti = generate_clients(count=100)     # ~100 clients
+clienti = generate_clients(count=100)  # ~100 clients
 fatture = generate_invoices(clienti, count=1000)  # ~1000 invoices/year
 documents = generate_rag_documents(count=500)  # ~500 indexed docs
 ```

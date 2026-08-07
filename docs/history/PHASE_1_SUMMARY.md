@@ -60,10 +60,10 @@ Final Coverage: 81%
 
 **Key Tests:**
 ```python
-- test_report_iva_with_data()
-- test_report_iva_with_quarter()
-- test_report_clienti_sorted_by_revenue()
-- test_report_scadenze_placeholder()
+-test_report_iva_with_data()
+-test_report_iva_with_quarter()
+-test_report_clienti_sorted_by_revenue()
+-test_report_scadenze_placeholder()
 ```
 
 ---
@@ -82,10 +82,10 @@ Final Coverage: 81%
 
 **Key Tests:**
 ```python
-- test_load_schema_success()
-- test_validate_valid_xml()
-- test_validate_invalid_against_schema()
-- test_schema_cached_after_first_load()
+-test_load_schema_success()
+-test_validate_valid_xml()
+-test_validate_invalid_against_schema()
+-test_schema_cached_after_first_load()
 ```
 
 ---
@@ -105,6 +105,7 @@ event_dict["version"] = "0.1.0"  # TODO: Get from __version__
 **After:**
 ```python
 from openfatture import __version__
+
 event_dict["version"] = __version__
 ```
 
@@ -120,12 +121,14 @@ import uuid
 
 _correlation_id_var: ContextVar[Optional[str]] = ContextVar("correlation_id", default=None)
 
+
 def set_correlation_id(correlation_id: Optional[str] = None) -> str:
     """Set correlation ID for the current context."""
     if correlation_id is None:
         correlation_id = str(uuid.uuid4())
     _correlation_id_var.set(correlation_id)
     return correlation_id
+
 
 def get_correlation_id() -> Optional[str]:
     """Get the current correlation ID from context."""

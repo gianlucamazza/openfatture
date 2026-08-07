@@ -94,7 +94,7 @@ account = BankAccount(
     name="Conto Corrente Intesa",
     iban="IT60X0542811101000000123456",
     bic_swift="BCITITMM",
-    bank_name="Intesa Sanpaolo"
+    bank_name="Intesa Sanpaolo",
 )
 ```
 
@@ -118,7 +118,7 @@ transaction = BankTransaction(
     date=date(2025, 10, 15),
     amount=Decimal("1220.00"),
     description="Pagamento fattura 2025/001",
-    status=TransactionStatus.UNMATCHED
+    status=TransactionStatus.UNMATCHED,
 )
 ```
 
@@ -148,7 +148,7 @@ reminder = PaymentReminder(
     payment_id=payment.id,
     reminder_date=date(2025, 10, 24),
     strategy=ReminderStrategy.PROGRESSIVE,
-    status=ReminderStatus.PENDING
+    status=ReminderStatus.PENDING,
 )
 ```
 
@@ -173,23 +173,14 @@ from openfatture.payment.matchers import ExactAmountMatcher, FuzzyDescriptionMat
 matching_service = MatchingService(
     tx_repo=tx_repo,
     payment_repo=payment_repo,
-    strategies=[
-        ExactAmountMatcher(date_tolerance_days=30),
-        FuzzyDescriptionMatcher(threshold=0.7)
-    ]
+    strategies=[ExactAmountMatcher(date_tolerance_days=30), FuzzyDescriptionMatcher(threshold=0.7)],
 )
 
 # Match single transaction
-matches = await matching_service.match_transaction(
-    transaction,
-    confidence_threshold=0.60
-)
+matches = await matching_service.match_transaction(transaction, confidence_threshold=0.60)
 
 # Batch matching
-result = await matching_service.match_batch(
-    account_id=1,
-    auto_apply_threshold=0.85
-)
+result = await matching_service.match_batch(account_id=1, auto_apply_threshold=0.85)
 ```
 
 ### ReconciliationService
@@ -201,33 +192,22 @@ from openfatture.payment.application.services import ReconciliationService
 from openfatture.payment.domain.enums import MatchType
 
 reconciliation_service = ReconciliationService(
-    tx_repo=tx_repo,
-    payment_repo=payment_repo,
-    matching_service=matching_service
+    tx_repo=tx_repo, payment_repo=payment_repo, matching_service=matching_service
 )
 
 # Reconcile transaction to payment
 transaction = await reconciliation_service.reconcile(
-    transaction_id=tx_id,
-    payment_id=payment_id,
-    match_type=MatchType.MANUAL,
-    confidence=0.95
+    transaction_id=tx_id, payment_id=payment_id, match_type=MatchType.MANUAL, confidence=0.95
 )
 
 # Reset transaction (undo reconciliation)
 transaction = await reconciliation_service.reset_transaction(tx_id)
 
 # Ignore non-business transaction
-transaction = await reconciliation_service.ignore_transaction(
-    tx_id,
-    reason="Personal expense"
-)
+transaction = await reconciliation_service.ignore_transaction(tx_id, reason="Personal expense")
 
 # Get review queue
-queue = await reconciliation_service.get_review_queue(
-    account_id=1,
-    confidence_range=(0.60, 0.84)
-)
+queue = await reconciliation_service.get_review_queue(account_id=1, confidence_range=(0.60, 0.84))
 ```
 
 ### ReminderScheduler
@@ -244,19 +224,15 @@ smtp_config = SMTPConfig(
     port=587,
     username="your@email.com",
     password="your_password",
-    from_email="noreply@yourcompany.com"
+    from_email="noreply@yourcompany.com",
 )
 email_notifier = EmailNotifier(smtp_config)
 
-scheduler = ReminderScheduler(
-    payment_repo=payment_repo,
-    notifier=email_notifier
-)
+scheduler = ReminderScheduler(payment_repo=payment_repo, notifier=email_notifier)
 
 # Schedule reminders
 count = await scheduler.schedule_reminders(
-    payment_ids=[1, 2, 3],
-    strategy=ReminderStrategy.PROGRESSIVE
+    payment_ids=[1, 2, 3], strategy=ReminderStrategy.PROGRESSIVE
 )
 
 # Process due reminders
@@ -326,7 +302,7 @@ matcher = CompositeMatcher(
     strategies=[
         (ExactAmountMatcher(date_tolerance_days=30), 0.5),
         (FuzzyDescriptionMatcher(threshold=0.7), 0.3),
-        (IBANMatcher(), 0.2)
+        (IBANMatcher(), 0.2),
     ]
 )
 matches = await matcher.match(transaction, candidate_payments)
@@ -356,16 +332,11 @@ from openfatture.payment.infrastructure.importers import CSVImporter
 from openfatture.payment.infrastructure.importers.presets import BankPreset
 
 # Auto-detect bank
-importer = CSVImporter.from_file(
-    file_path=Path("statement.csv"),
-    account=account
-)
+importer = CSVImporter.from_file(file_path=Path("statement.csv"), account=account)
 
 # Or specify preset
 importer = CSVImporter(
-    file_path=Path("statement.csv"),
-    account=account,
-    preset=BankPreset.INTESA_SANPAOLO
+    file_path=Path("statement.csv"), account=account, preset=BankPreset.INTESA_SANPAOLO
 )
 
 transactions = importer.import_transactions()
@@ -402,7 +373,7 @@ mapping = FieldMapping(
     description="Causale",
     date_format="%d/%m/%Y",
     amount_credit="Entrate",
-    amount_debit="Uscite"
+    amount_debit="Uscite",
 )
 
 importer = CSVImporter(
@@ -410,7 +381,7 @@ importer = CSVImporter(
     account=account,
     field_mapping=mapping,
     delimiter=";",
-    encoding="latin-1"
+    encoding="latin-1",
 )
 ```
 

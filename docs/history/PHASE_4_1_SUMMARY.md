@@ -140,6 +140,7 @@ class MyAgent(BaseAgent):
         # Agent-specific response parsing
         pass
 
+
 # Base class handles:
 # - Validation
 # - LLM calls
@@ -196,8 +197,7 @@ max_tokens: 500
 # Usage
 manager = PromptManager(Path("openfatture/ai/prompts"))
 system, user = manager.render(
-    "invoice_assistant",
-    {"servizio_base": "web consulting", "ore_lavorate": 3}
+    "invoice_assistant", {"servizio_base": "web consulting", "ore_lavorate": 3}
 )
 ```
 
@@ -349,9 +349,7 @@ from openfatture.ai import create_provider, Message, Role
 provider = create_provider()
 
 # Create messages
-messages = [
-    Message(role=Role.USER, content="Translate 'hello' to Italian")
-]
+messages = [Message(role=Role.USER, content="Translate 'hello' to Italian")]
 
 # Generate response
 response = await provider.generate(messages)
@@ -366,14 +364,15 @@ print(f"Tokens: {response.usage.total_tokens}")
 from openfatture.ai import BaseAgent, AgentConfig, create_provider
 from openfatture.ai.domain import InvoiceContext, Message, Role
 
+
 class SimpleInvoiceAgent(BaseAgent):
     async def _build_prompt(self, context: InvoiceContext) -> list[Message]:
         return [
             Message(
-                role=Role.USER,
-                content=f"Expand this service description: {context.servizio_base}"
+                role=Role.USER, content=f"Expand this service description: {context.servizio_base}"
             )
         ]
+
 
 # Create agent
 config = AgentConfig(
@@ -412,7 +411,7 @@ system, user = manager.render(
         "servizio_base": "IT consulting",
         "ore_lavorate": 5,
         "tecnologie": ["Python", "FastAPI", "PostgreSQL"],
-    }
+    },
 )
 
 print(system)

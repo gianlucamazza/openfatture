@@ -63,6 +63,7 @@ message = _("common-yes")  # "Yes"
 
 # Temporary locale
 from openfatture.i18n.context import locale_context
+
 with locale_context("fr"):
     message = _("common-yes")  # "Oui"
 ```
@@ -77,17 +78,18 @@ from openfatture.i18n.formatters import (
 )
 
 # Currency (locale-aware)
-format_euro(1234.56)           # "€ 1.234,56" (IT)
-format_euro(1234.56, "en")     # "€1,234.56" (EN)
+format_euro(1234.56)  # "€ 1.234,56" (IT)
+format_euro(1234.56, "en")  # "€1,234.56" (EN)
 
 # Numbers
-format_number(1234567.89)      # "1.234.567,89" (IT)
+format_number(1234567.89)  # "1.234.567,89" (IT)
 
 # Percentages
-format_percentage(0.22)        # "22,00%" (IT)
+format_percentage(0.22)  # "22,00%" (IT)
 
 # Dates
 from datetime import date
+
 format_date_localized(date(2024, 3, 15))  # "15 mar 2024" (IT medium)
 ```
 

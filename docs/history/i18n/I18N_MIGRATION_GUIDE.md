@@ -76,6 +76,7 @@ openfatture/
 # openfatture/i18n/fluent_manager.py
 from fluent.runtime import FluentResourceLoader, FluentLocalization
 
+
 class FluentManager:
     def __init__(self, default_locale="en", supported_locales=None):
         self.default_locale = default_locale
@@ -88,9 +89,15 @@ class FluentManager:
         for locale in self.supported_locales:
             self.bundles[locale] = FluentLocalization(
                 [locale, self.default_locale],
-                ["cli/commands.ftl", "cli/fattura.ftl", "cli/cliente.ftl",
-                 "cli/ai.ftl", "cli/main.ftl", "common.ftl"],
-                loader
+                [
+                    "cli/commands.ftl",
+                    "cli/fattura.ftl",
+                    "cli/cliente.ftl",
+                    "cli/ai.ftl",
+                    "cli/main.ftl",
+                    "common.ftl",
+                ],
+                loader,
             )
 
     def get_translation(self, locale, key, **kwargs):
@@ -105,18 +112,18 @@ class FluentManager:
         """Shorthand alias."""
         return self.get_translation(locale, key, **kwargs)
 
+
 # Global manager instance
 _manager = None
+
 
 def get_fluent_manager():
     global _manager
     if _manager is None:
         from openfatture.platform.config import get_settings
+
         settings = get_settings()
-        _manager = FluentManager(
-            default_locale="en",
-            supported_locales=["en", "it"]
-        )
+        _manager = FluentManager(default_locale="en", supported_locales=["en", "it"])
     return _manager
 ```
 
@@ -276,6 +283,7 @@ console.print("[red]No clients found. Add one first with 'cliente add'[/red]")
 # AFTER
 from openfatture.i18n.fluent_manager import get_fluent_manager
 
+
 def crea_fattura(cliente_id: int | None = typer.Option(None, "--cliente", help="Client ID")):
     # Get locale from settings
     settings = get_settings()
@@ -299,6 +307,7 @@ def crea_fattura(cliente_id: int | None = typer.Option(None, "--cliente", help="
 from openfatture.platform.config import get_settings
 from openfatture.i18n.fluent_manager import get_fluent_manager
 
+
 def t(key: str, **kwargs) -> str:
     """
     Translate string using current locale from settings.
@@ -311,6 +320,7 @@ def t(key: str, **kwargs) -> str:
     locale = settings.locale or "en"
     fm = get_fluent_manager()
     return fm.t(locale, key, **kwargs)
+
 
 def t_locale(key: str, locale: str, **kwargs) -> str:
     """Translate string using explicit locale."""
@@ -346,11 +356,13 @@ class Settings(BaseSettings):
 import pytest
 from openfatture.i18n.fluent_manager import get_fluent_manager
 
+
 def test_fluent_manager_english():
     fm = get_fluent_manager()
     text = fm.t("en", "invoice-create-title")
     assert "Create New Invoice" in text
     assert "" in text
+
 
 def test_fluent_manager_italian():
     fm = get_fluent_manager()
@@ -358,12 +370,13 @@ def test_fluent_manager_italian():
     assert "Crea Nuova Fattura" in text
     assert "" in text
 
+
 def test_fluent_variable_substitution():
     fm = get_fluent_manager()
-    text = fm.t("en", "invoice-item-added",
-                description="Consulting", total=100)
+    text = fm.t("en", "invoice-item-added", description="Consulting", total=100)
     assert "Consulting" in text
     assert "100" in text
+
 
 def test_fallback_to_english():
     fm = get_fluent_manager()
@@ -380,6 +393,7 @@ def test_fattura_commands_english(monkeypatch):
     """Test that fattura commands use English translations."""
     monkeypatch.setenv("OPENFATTURE_LOCALE", "en")
     # Run fattura crea command and verify English strings in output
+
 
 def test_fattura_commands_italian(monkeypatch):
     """Test that fattura commands use Italian translations."""

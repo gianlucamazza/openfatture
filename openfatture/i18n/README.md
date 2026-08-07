@@ -112,18 +112,19 @@ from openfatture.i18n.formatters import (
 )
 
 # Currency
-format_euro(1234.56)           # "€ 1.234,56" (IT)
-format_euro(1234.56, "en")     # "€1,234.56" (EN)
+format_euro(1234.56)  # "€ 1.234,56" (IT)
+format_euro(1234.56, "en")  # "€1,234.56" (EN)
 
 # Numbers
-format_number(1234567.89)      # "1.234.567,89" (IT)
+format_number(1234567.89)  # "1.234.567,89" (IT)
 
 # Percentages
-format_percentage(0.22)        # "22,00%" (IT)
+format_percentage(0.22)  # "22,00%" (IT)
 
 # Dates
 from datetime import date
-format_date_localized(date(2024, 3, 15))           # "15 mar 2024" (IT)
+
+format_date_localized(date(2024, 3, 15))  # "15 mar 2024" (IT)
 format_date_localized(date(2024, 3, 15), "long", "en")  # "March 15, 2024"
 ```
 
@@ -202,8 +203,10 @@ Localized exceptions:
 ```python
 from openfatture.exceptions import LocalizedError
 
+
 class PECNotConfiguredError(LocalizedError):
     message_key = "errors-pec-not-configured"
+
 
 # Raises with localized message
 raise PECNotConfiguredError()  # "Indirizzo PEC non configurato" (IT)
@@ -271,7 +274,7 @@ Add the message ID to `locales/en/cli.ftl`
 **Locale not changing**:
 ```python
 # Ensure you're using set_locale(), not just updating Settings
-set_locale("en") #
+set_locale("en")  #
 ```
 
 **Variables not interpolating**:
