@@ -1,0 +1,11 @@
+Data operazione;Data valuta;Importo;Descrizione;Causale;Ordinante/Beneficiario
+15/01/2025;15/01/2025;"1.220,00";"Bonifico ricevuto";"Fattura 2025/001";"ACME CORPORATION"
+20/01/2025;20/01/2025;"500,50";"Bonifico ricevuto";"Pagamento servizi";"TEST S.R.L."
+25/01/2025;25/01/2025;"-150,00";"Addebito utenze";"Telefonia gennaio";""
+28/01/2025;28/01/2025;"2.000,00";"Bonifico ricevuto";"Consulenza gennaio";"CLIENTE XYZ"
+30/01/2025;30/01/2025;"750,00";"Bonifico ricevuto";"IBAN IT60X0542811101000000123456";""
+05/02/2025;05/02/2025;"-300,00";"Pagamento fornitore";"Ordine 2025-001";"Fornitore ABC"
+10/02/2025;10/02/2025;"1.500,00";"Bonifico ricevuto";"Fattura 2025/010";"STARTUP SRL"
+15/02/2025;15/02/2025;"-25,00";"Addebito canone";"Canone mensile";""
+20/02/2025;20/02/2025;"800,00";"Bonifico ricevuto";"Saldo fattura";"ACME CORPORATION"
+25/02/2025;25/02/2025;"3.000,00";"Bonifico ricevuto";"Pagamento urgente";"Client Payment"

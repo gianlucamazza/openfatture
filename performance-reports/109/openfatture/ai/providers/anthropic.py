@@ -1,0 +1,406 @@
+"""Anthropic (Claude) provider implementation."""
+
+from __future__ import annotations
+
+import asyncio
+import inspect
+import time
+import warnings
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any, cast
+
+from openfatture.ai.domain.message import Message, Role
+from openfatture.ai.domain.response import (
+    AgentResponse,
+    ResponseStatus,
+    ToolCall,
+    UsageMetrics,
+)
+from openfatture.ai.providers.base import (
+    BaseLLMProvider,
+    ProviderAuthError,
+    ProviderError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+)
+from openfatture.platform.extras import MissingExtraError
+from openfatture.platform.logging import get_logger
+
+try:
+    from anthropic import AnthropicError, AsyncAnthropic, RateLimitError
+except ImportError as exc:
+    raise MissingExtraError("ai", feature="Anthropic provider", cause=exc) from exc
+
+if TYPE_CHECKING:
+    from anthropic.types import MessageParam
+else:
+    MessageParam = Any
+
+
+logger = get_logger(__name__)
+
+
+class AnthropicProvider(BaseLLMProvider):
+    """
+    Anthropic provider implementation.
+
+    Supports Claude 4.5, Claude 3, and earlier models.
+    Includes prompt caching support for reduced costs.
+    """
+
+    # Pricing per 1M tokens (as of October 2025)
+    PRICING = {
+        # Claude 4.5 Series (2025)
+        "claude-4.5-opus": {"input": 12.00, "output": 60.00},
+        "claude-4.5-sonnet": {"input": 2.50, "output": 12.50},
+        "claude-4.5-haiku": {"input": 0.20, "output": 1.00},
+        # Claude 3 Series (legacy)
+        "claude-3-opus-20240229": {"input": 15.00, "output": 75.00},
+        "claude-3-sonnet-20240229": {"input": 3.00, "output": 15.00},
+        "claude-3-haiku-20240307": {"input": 0.25, "output": 1.25},
+        # Claude 2 Series (deprecated)
+        "claude-2.1": {"input": 8.00, "output": 24.00},
+    }
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "claude-4.5-sonnet",  # Updated to Claude 4.5 (October 2025)
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        timeout: int = 30,
+        base_url: str | None = None,
+        enable_prompt_caching: bool = True,
+    ) -> None:
+        """
+        Initialize Anthropic provider.
+
+        Args:
+            api_key: Anthropic API key
+            model: Model name (default: claude-4.5-sonnet)
+            temperature: Generation temperature
+            max_tokens: Maximum tokens to generate
+            timeout: Request timeout in seconds
+            base_url: Custom API base URL
+            enable_prompt_caching: Enable prompt caching for cost reduction
+        """
+        super().__init__(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+        )
+
+        self.enable_prompt_caching = enable_prompt_caching
+
+        # Check for deprecated models
+        if model in self._get_deprecated_models():
+            warnings.warn(
+                f"Model '{model}' is deprecated and will be removed in a future version. "
+                f"Please use a newer model like 'claude-4.5-sonnet' or 'claude-4.5-opus'.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        # Initialize async client
+        self.client = AsyncAnthropic(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=timeout,
+        )
+
+    def _get_deprecated_models(self) -> list[str]:
+        """Get list of deprecated model names."""
+        return [
+            "claude-2.1",
+            "claude-3-opus-20240229",
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+        ]
+
+    async def generate(
+        self,
+        messages: list[Message],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        **kwargs: Any,
+    ) -> AgentResponse:
+        """Generate response using Anthropic API."""
+        start_time = time.time()
+
+        try:
+            # Prepare messages for Claude
+            prepared_messages = self._prepare_claude_messages(messages)
+
+            logger.info(
+                "anthropic_request_started",
+                model=self.model,
+                message_count=len(prepared_messages),
+                has_system=system_prompt is not None,
+            )
+
+            # Call API
+            response = await self.client.messages.create(
+                model=self.model,
+                messages=prepared_messages,
+                system=system_prompt or "",
+                temperature=self._get_temperature(temperature),
+                max_tokens=self._get_max_tokens(max_tokens),
+                **kwargs,
+            )
+
+            # Extract content and tool calls
+            content = ""
+            tool_calls: list[ToolCall] = []
+            for block in response.content:
+                block_type = getattr(block, "type", None)
+                if block_type == "tool_use":
+                    tool_calls.append(
+                        ToolCall(
+                            id=block.id,
+                            name=block.name,
+                            arguments=(dict(block.input) if isinstance(block.input, dict) else {}),
+                        )
+                    )
+                elif hasattr(block, "text"):
+                    content += block.text
+
+            # Calculate usage
+            usage = UsageMetrics(
+                prompt_tokens=response.usage.input_tokens if response.usage else 0,
+                completion_tokens=response.usage.output_tokens if response.usage else 0,
+                total_tokens=(
+                    response.usage.input_tokens + response.usage.output_tokens
+                    if response.usage
+                    else 0
+                ),
+            )
+
+            # Estimate cost
+            usage.estimated_cost_usd = self.estimate_cost(usage)
+
+            # Calculate latency
+            latency_ms = (time.time() - start_time) * 1000
+
+            logger.info(
+                "anthropic_request_completed",
+                model=self.model,
+                tokens=usage.total_tokens,
+                cost_usd=usage.estimated_cost_usd,
+                latency_ms=latency_ms,
+                stop_reason=response.stop_reason,
+            )
+
+            agent_response = AgentResponse(
+                content=content,
+                status=ResponseStatus.SUCCESS,
+                model=self.model,
+                provider=self.provider_name,
+                usage=usage,
+                latency_ms=latency_ms,
+                tool_calls=tool_calls,
+            )
+
+            if response.stop_reason:
+                agent_response.metadata["stop_reason"] = response.stop_reason
+
+            return agent_response
+
+        except RateLimitError as e:
+            logger.warning("anthropic_rate_limit", error=str(e))
+            raise ProviderRateLimitError(
+                "Anthropic rate limit exceeded",
+                provider=self.provider_name,
+                original_error=e,
+            ) from e
+
+        except AnthropicError as e:
+            error_msg = str(e)
+
+            if "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+                logger.error("anthropic_auth_error", error=error_msg)
+                raise ProviderAuthError(
+                    f"Anthropic authentication failed: {error_msg}",
+                    provider=self.provider_name,
+                    original_error=e,
+                ) from e
+
+            if "timeout" in error_msg.lower():
+                logger.error("anthropic_timeout", error=error_msg)
+                raise ProviderTimeoutError(
+                    f"Anthropic request timeout: {error_msg}",
+                    provider=self.provider_name,
+                    original_error=e,
+                ) from e
+
+            logger.error("anthropic_error", error=error_msg, error_type=type(e).__name__)
+            raise ProviderError(
+                f"Anthropic error: {error_msg}",
+                provider=self.provider_name,
+                original_error=e,
+            ) from e
+
+        except Exception as e:
+            logger.error("anthropic_unexpected_error", error=str(e), error_type=type(e).__name__)
+            raise ProviderError(
+                f"Unexpected error calling Anthropic: {e}",
+                provider=self.provider_name,
+                original_error=e,
+            ) from e
+
+    async def stream(
+        self,
+        messages: list[Message],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """Stream response tokens from Anthropic."""
+        try:
+            # Prepare messages
+            prepared_messages = self._prepare_claude_messages(messages)
+
+            logger.info(
+                "anthropic_stream_started",
+                model=self.model,
+                message_count=len(prepared_messages),
+            )
+
+            # Stream API call
+            async with self.client.messages.stream(
+                model=self.model,
+                messages=prepared_messages,
+                system=system_prompt or "",
+                temperature=self._get_temperature(temperature),
+                max_tokens=self._get_max_tokens(max_tokens),
+                **kwargs,
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+
+            logger.info("anthropic_stream_completed", model=self.model)
+
+        except Exception as e:
+            logger.error("anthropic_stream_error", error=str(e))
+            raise ProviderError(
+                f"Error streaming from Anthropic: {e}",
+                provider=self.provider_name,
+                original_error=e,
+            ) from e
+
+    def count_tokens(self, text: str) -> int:
+        """
+        Count tokens for Claude using official Anthropic token counter.
+
+        Uses the client's count_tokens method for accurate token counting,
+        which is model-specific and accounts for Claude's tokenization.
+
+        Falls back to approximation if API call fails.
+        """
+        count_tokens_fn = getattr(self.client, "count_tokens", None)
+
+        if callable(count_tokens_fn):
+            try:
+                result = count_tokens_fn(text)
+
+                if inspect.isawaitable(result):
+                    logger.debug("awaiting_async_count_tokens")
+                    result = asyncio.get_event_loop().run_until_complete(result)
+
+                if isinstance(result, dict):
+                    token_count = result.get("input_tokens") or result.get("tokens")
+                    if token_count is not None:
+                        return int(token_count)
+
+                return int(result)
+            except Exception as exc:
+                logger.warning(
+                    "anthropic_count_tokens_failed",
+                    error=str(exc),
+                    model=self.model,
+                )
+
+        logger.debug(
+            "count_tokens_approximation",
+            reason="anthropic_sdk_no_sync_counter",
+            model=self.model,
+        )
+        return len(text) // 4
+
+    def estimate_cost(self, usage: UsageMetrics) -> float:
+        """Estimate cost based on token usage."""
+        # Get pricing for model (use Claude 4.5 Sonnet as default)
+        pricing = self.PRICING.get(
+            self.model,
+            {"input": 2.50, "output": 12.50},  # Default to Claude 4.5 Sonnet pricing
+        )
+
+        # Calculate cost per million tokens
+        input_cost = (usage.prompt_tokens / 1_000_000) * pricing["input"]
+        output_cost = (usage.completion_tokens / 1_000_000) * pricing["output"]
+
+        return input_cost + output_cost
+
+    async def health_check(self) -> bool:
+        """Check if Anthropic API is accessible."""
+        try:
+            # Try a simple API call
+            response = await self.client.messages.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=5,
+            )
+
+            return response is not None
+
+        except Exception as e:
+            logger.warning("anthropic_health_check_failed", error=str(e))
+            return False
+
+    @property
+    def provider_name(self) -> str:
+        """Get provider name."""
+        return "anthropic"
+
+    @property
+    def supports_streaming(self) -> bool:
+        """Anthropic supports streaming."""
+        return True
+
+    @property
+    def supports_tools(self) -> bool:
+        """Anthropic Claude 3+ models support native tool use."""
+        # Claude 3, Claude 4.x and later all support native tool calling.
+        # Only the legacy Claude 2 series lacks it.
+        return "claude-2" not in self.model
+
+    def _prepare_claude_messages(self, messages: list[Message]) -> list[MessageParam]:
+        """
+        Prepare messages for Claude API.
+
+        Claude requires alternating user/assistant messages
+        and system prompts are passed separately.
+
+        Args:
+            messages: List of Message objects
+
+        Returns:
+            List of message dicts for Claude API
+        """
+        prepared: list[MessageParam] = []
+
+        # Filter out system messages (handled separately)
+        for msg in messages:
+            if msg.role == Role.SYSTEM:
+                continue  # System handled separately
+
+            # Convert role to Claude format
+            role = "user" if msg.role == Role.USER else "assistant"
+
+            prepared.append(cast(MessageParam, {"role": role, "content": msg.content}))
+
+        return prepared
