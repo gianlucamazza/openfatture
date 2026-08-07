@@ -47,7 +47,8 @@ def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
         next_steps.append("Set AI_API_KEY (or use AI_PROVIDER=ollama)")
     if core_ready and assistant_ready:
         next_steps.append('Try: openfatture assistant "Elenca le fatture aperte"')
-    elif core_ready and not assistant_ready:
+    elif core_ready and not ai_extra:
+        # Only when the ai extra itself is missing — not when credentials alone fail.
         next_steps.append("Core is ready; enable the ai extra to use the assistant")
     if not next_steps:
         next_steps.append("openfatture --help")
