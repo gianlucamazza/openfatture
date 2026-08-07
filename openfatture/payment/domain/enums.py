@@ -1,9 +1,9 @@
 """Domain enums for payment tracking system."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class TransactionStatus(str, Enum):
+class TransactionStatus(StrEnum):
     """Bank transaction matching status.
 
     Lifecycle:
@@ -20,7 +20,7 @@ class TransactionStatus(str, Enum):
         return self.value
 
 
-class MatchType(str, Enum):
+class MatchType(StrEnum):
     """Type of payment matching algorithm used.
 
     Confidence levels:
@@ -41,7 +41,7 @@ class MatchType(str, Enum):
         return self.value
 
 
-class ReminderStatus(str, Enum):
+class ReminderStatus(StrEnum):
     """Payment reminder status.
 
     Lifecycle:
@@ -59,7 +59,7 @@ class ReminderStatus(str, Enum):
         return self.value
 
 
-class ReminderStrategy(str, Enum):
+class ReminderStrategy(StrEnum):
     """Reminder sending strategy for overdue payments.
 
     Schedules:
@@ -93,7 +93,7 @@ class ReminderStrategy(str, Enum):
         return schedules[self]
 
 
-class ImportSource(str, Enum):
+class ImportSource(StrEnum):
     """Source of bank transaction import.
 
     Supported formats:

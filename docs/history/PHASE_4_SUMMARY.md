@@ -81,13 +81,16 @@ Total LOC: 6,700+ (ML: 2,753 | Orchestration: 3,376 | Agents: ~500)
 ```python
 class Message(BaseModel):
     """Standardized message format across providers."""
+
     role: MessageRole  # system, user, assistant, tool
     content: str
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[str] = None
 
+
 class AIResponse(BaseModel):
     """Unified response model."""
+
     content: str
     model: str
     provider: str
@@ -107,6 +110,7 @@ class AIResponse(BaseModel):
 ```python
 class AISettings(BaseSettings):
     """Pydantic Settings with environment variables."""
+
     openai_api_key: Optional[SecretStr] = None
     anthropic_api_key: Optional[SecretStr] = None
     ollama_base_url: str = "http://localhost:11434"
@@ -125,34 +129,22 @@ class AIProvider(ABC):
 
     @abstractmethod
     async def chat(
-        self,
-        messages: List[Message],
-        tools: Optional[List[Tool]] = None,
-        **kwargs
+        self, messages: List[Message], tools: Optional[List[Tool]] = None, **kwargs
     ) -> AIResponse:
         """Execute chat completion."""
 
     @abstractmethod
-    async def chat_stream(
-        self,
-        messages: List[Message],
-        **kwargs
-    ) -> AsyncIterator[str]:
+    async def chat_stream(self, messages: List[Message], **kwargs) -> AsyncIterator[str]:
         """Stream chat completion."""
 ```
 
 **Factory Pattern:**
 ```python
 def create_provider(
-    provider_name: str = "anthropic",
-    settings: Optional[AISettings] = None
+    provider_name: str = "anthropic", settings: Optional[AISettings] = None
 ) -> AIProvider:
     """Create provider instance."""
-    providers = {
-        "openai": OpenAIProvider,
-        "anthropic": AnthropicProvider,
-        "ollama": OllamaProvider
-    }
+    providers = {"openai": OpenAIProvider, "anthropic": AnthropicProvider, "ollama": OllamaProvider}
     return providers[provider_name](settings or AISettings())
 ```
 
@@ -203,16 +195,16 @@ Total: ~1,682 LOC
 
 **Example:**
 ```python
-Input:  "Python consulting 5h"
+Input: "Python consulting 5h"
 Output: {
     "descrizione": "Technical consulting for Python software development",
     "dettagli": [
         "Requirements and architecture analysis",
         "Backend component development",
-        "Code review and optimisations"
+        "Code review and optimisations",
     ],
     "ore": 5.0,
-    "competenze": ["Python", "Backend", "Architettura"]
+    "competenze": ["Python", "Backend", "Architettura"],
 }
 ```
 
@@ -226,12 +218,12 @@ Output: {
 
 **Example:**
 ```python
-Input:  "IT services provided to an EU company"
+Input: "IT services provided to an EU company"
 Output: {
     "aliquota_iva": 0,
     "natura": "N3.2",
     "motivo": "Cross-border EU services (reverse charge)",
-    "riferimento_normativo": "Art. 7-ter DPR 633/1972"
+    "riferimento_normativo": "Art. 7-ter DPR 633/1972",
 }
 ```
 
@@ -379,24 +371,18 @@ class BaseAgent(ABC):
         self,
         provider: AIProvider,
         prompt_template: str,
-        context_enricher: Optional[ContextEnricher] = None
+        context_enricher: Optional[ContextEnricher] = None,
     ):
         self.provider = provider
         self.prompt_template = prompt_template
         self.context_enricher = context_enricher
 
     async def execute(
-        self,
-        user_input: str,
-        context: Optional[Dict[str, Any]] = None
+        self, user_input: str, context: Optional[Dict[str, Any]] = None
     ) -> AIResponse:
         """Execute agent logic."""
 
-    async def execute_stream(
-        self,
-        user_input: str,
-        **kwargs
-    ) -> AsyncIterator[str]:
+    async def execute_stream(self, user_input: str, **kwargs) -> AsyncIterator[str]:
         """Stream agent response."""
 ```
 
@@ -405,6 +391,7 @@ class BaseAgent(ABC):
 @dataclass
 class ChatSession:
     """Chat session model."""
+
     id: str
     created_at: datetime
     updated_at: datetime
@@ -412,6 +399,7 @@ class ChatSession:
     metadata: Dict[str, Any]
     total_tokens: int
     total_cost: float
+
 
 class SessionManager:
     """Session CRUD operations."""
@@ -522,13 +510,11 @@ class FeatureEngineer:
             "client": ClientBehaviorExtractor(),
             "amount": AmountFeatureExtractor(),
             "temporal": TemporalFeatureExtractor(),
-            "seasonal": SeasonalIndicatorExtractor()
+            "seasonal": SeasonalIndicatorExtractor(),
         }
 
     def transform(
-        self,
-        invoices: List[Fattura],
-        client_stats: Optional[Dict] = None
+        self, invoices: List[Fattura], client_stats: Optional[Dict] = None
     ) -> pd.DataFrame:
         """Transform invoices to feature matrix."""
 ```
@@ -539,10 +525,7 @@ class InvoiceDataLoader:
     """Load and prepare invoice data for ML."""
 
     def __init__(
-        self,
-        db_session: Session,
-        feature_engineer: FeatureEngineer,
-        min_samples: int = 50
+        self, db_session: Session, feature_engineer: FeatureEngineer, min_samples: int = 50
     ):
         self.db_session = db_session
         self.feature_engineer = feature_engineer
@@ -552,16 +535,12 @@ class InvoiceDataLoader:
         self,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
-        exclude_outliers: bool = True
+        exclude_outliers: bool = True,
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """Load data for training."""
 
     def _chronological_split(
-        self,
-        X: pd.DataFrame,
-        y: pd.Series,
-        train_ratio: float = 0.7,
-        val_ratio: float = 0.15
+        self, X: pd.DataFrame, y: pd.Series, train_ratio: float = 0.7, val_ratio: float = 0.15
     ) -> Tuple[pd.DataFrame, ...]:
         """
         Chronological train/val/test split.
@@ -605,22 +584,19 @@ class ProphetModel:
         seasonality_mode: str = "additive",
         yearly_seasonality: bool = True,
         weekly_seasonality: bool = True,
-        daily_seasonality: bool = False
+        daily_seasonality: bool = False,
     ):
         self.model = Prophet(
             changepoint_prior_scale=changepoint_prior_scale,
             seasonality_prior_scale=seasonality_prior_scale,
             holidays_prior_scale=holidays_prior_scale,
-            seasonality_mode=seasonality_mode
+            seasonality_mode=seasonality_mode,
         )
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
         """Fit Prophet model."""
         # Convert to Prophet format (ds, y)
-        df = pd.DataFrame({
-            "ds": pd.to_datetime(X["data_emissione"]),
-            "y": y.values
-        })
+        df = pd.DataFrame({"ds": pd.to_datetime(X["data_emissione"]), "y": y.values})
 
         # Add regressors (client features, amount, etc.)
         for col in X.columns:
@@ -637,7 +613,7 @@ class ProphetModel:
 
         return (
             forecast["yhat"].values,  # Point predictions
-            forecast[["yhat_lower", "yhat_upper"]].values  # Intervals
+            forecast[["yhat_lower", "yhat_upper"]].values,  # Intervals
         )
 ```
 
@@ -658,7 +634,7 @@ class XGBoostModel:
         max_depth: int = 6,
         learning_rate: float = 0.1,
         underestimate_penalty: float = 2.0,
-        **kwargs
+        **kwargs,
     ):
         self.underestimate_penalty = underestimate_penalty
         self.model = XGBRegressor(
@@ -666,13 +642,11 @@ class XGBoostModel:
             max_depth=max_depth,
             learning_rate=learning_rate,
             objective=self._asymmetric_loss,
-            **kwargs
+            **kwargs,
         )
 
     def _asymmetric_loss(
-        self,
-        y_true: np.ndarray,
-        y_pred: np.ndarray
+        self, y_true: np.ndarray, y_pred: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Asymmetric loss function:
@@ -687,12 +661,12 @@ class XGBoostModel:
         grad = np.where(
             error < 0,
             -2.0 * error,  # Underestimate penalty (2x)
-            error          # Overestimate penalty (1x)
+            error,  # Overestimate penalty (1x)
         )
         hess = np.where(
             error < 0,
             2.0,  # Higher gradient for underestimates
-            1.0
+            1.0,
         )
         return grad, hess
 ```
@@ -714,7 +688,7 @@ class EnsembleModel:
         prophet_weight: float = 0.4,
         xgboost_weight: float = 0.6,
         prophet_config: Optional[Dict] = None,
-        xgboost_config: Optional[Dict] = None
+        xgboost_config: Optional[Dict] = None,
     ):
         """
         Default weights:
@@ -732,14 +706,10 @@ class EnsembleModel:
         prophet_pred, _ = self.prophet.predict(X)
         xgboost_pred = self.xgboost.predict(X)
 
-        return (
-            self.prophet_weight * prophet_pred +
-            self.xgboost_weight * xgboost_pred
-        )
+        return self.prophet_weight * prophet_pred + self.xgboost_weight * xgboost_pred
 
     def predict_with_uncertainty(
-        self,
-        X: pd.DataFrame
+        self, X: pd.DataFrame
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Prediction with confidence intervals.
@@ -811,16 +781,11 @@ class MLConfig(BaseModel):
     models_dir: Path = Path("models/")
     versioning: bool = True
 
+
 class ModelPersistence:
     """Save/load trained models."""
 
-    def save_model(
-        self,
-        model: Any,
-        model_name: str,
-        version: str,
-        metadata: Dict[str, Any]
-    ):
+    def save_model(self, model: Any, model_name: str, version: str, metadata: Dict[str, Any]):
         """
         Save model with metadata.
 
@@ -837,51 +802,33 @@ class ModelPersistence:
 class CashFlowPredictorAgent:
     """Main agent for cash flow forecasting."""
 
-    def __init__(
-        self,
-        db_session: Session,
-        config: Optional[MLConfig] = None
-    ):
+    def __init__(self, db_session: Session, config: Optional[MLConfig] = None):
         self.db_session = db_session
         self.config = config or MLConfig()
 
         # Initialize ML pipeline
         self.feature_engineer = FeatureEngineer()
-        self.data_loader = InvoiceDataLoader(
-            db_session, self.feature_engineer
-        )
+        self.data_loader = InvoiceDataLoader(db_session, self.feature_engineer)
         self.model = EnsembleModel(
-            prophet_weight=config.prophet_weight,
-            xgboost_weight=config.xgboost_weight
+            prophet_weight=config.prophet_weight, xgboost_weight=config.xgboost_weight
         )
         self.trained = False
 
-    async def train(
-        self,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None
-    ):
+    async def train(self, start_date: Optional[date] = None, end_date: Optional[date] = None):
         """Train models on historical data."""
 
     async def predict_invoice(
-        self,
-        invoice_id: int,
-        include_insights: bool = True
+        self, invoice_id: int, include_insights: bool = True
     ) -> PredictionResult:
         """Predict payment delay for single invoice."""
 
     async def forecast_monthly(
-        self,
-        months: int = 6,
-        include_breakdown: bool = True
+        self, months: int = 6, include_breakdown: bool = True
     ) -> MonthlyForecast:
         """Forecast cash flow for next N months."""
 
     def _calculate_risk_level(
-        self,
-        predicted_days: float,
-        confidence: float,
-        client_history: Dict[str, Any]
+        self, predicted_days: float, confidence: float, client_history: Dict[str, Any]
     ) -> str:
         """
         Risk level calculation:
@@ -929,9 +876,11 @@ class PredictionResult:
 ```python
 class ComplianceLevel(Enum):
     """Validation levels."""
-    BASIC = "basic"        # Fast, deterministic
+
+    BASIC = "basic"  # Fast, deterministic
     STANDARD = "standard"  # + SDI patterns
     ADVANCED = "advanced"  # + AI reasoning
+
 
 class ComplianceCheckResult:
     """Validation result."""
@@ -947,9 +896,7 @@ class ComplianceCheckResult:
 **B. Incremental Validation (Early Stopping)**
 ```python
 async def check_compliance(
-    self,
-    invoice_id: int,
-    level: ComplianceLevel = ComplianceLevel.STANDARD
+    self, invoice_id: int, level: ComplianceLevel = ComplianceLevel.STANDARD
 ) -> ComplianceCheckResult:
     """
     Incremental validation workflow:
@@ -974,41 +921,44 @@ async def check_compliance(
 
 **C. Deterministic Rules (BASIC)**
 ```python
-def _check_basic_compliance(
-    self,
-    fattura: Fattura
-) -> List[ComplianceIssue]:
+def _check_basic_compliance(self, fattura: Fattura) -> List[ComplianceIssue]:
     """Fast, deterministic checks."""
 
     issues = []
 
     # Required fields
     if not fattura.numero:
-        issues.append(ComplianceIssue(
-            severity="ERROR",
-            field="numero",
-            message="Numero fattura obbligatorio",
-            code="MISSING_NUMERO"
-        ))
+        issues.append(
+            ComplianceIssue(
+                severity="ERROR",
+                field="numero",
+                message="Numero fattura obbligatorio",
+                code="MISSING_NUMERO",
+            )
+        )
 
     # Format validation
     if fattura.cliente.codice_fiscale:
         if not self._validate_codice_fiscale(fattura.cliente.codice_fiscale):
-            issues.append(ComplianceIssue(
-                severity="ERROR",
-                field="cliente.codice_fiscale",
-                message="Codice fiscale non valido",
-                code="INVALID_CF"
-            ))
+            issues.append(
+                ComplianceIssue(
+                    severity="ERROR",
+                    field="cliente.codice_fiscale",
+                    message="Codice fiscale non valido",
+                    code="INVALID_CF",
+                )
+            )
 
     # Business logic
     if fattura.totale <= 0:
-        issues.append(ComplianceIssue(
-            severity="ERROR",
-            field="totale",
-            message="Totale deve essere > 0",
-            code="INVALID_AMOUNT"
-        ))
+        issues.append(
+            ComplianceIssue(
+                severity="ERROR",
+                field="totale",
+                message="Totale deve essere > 0",
+                code="INVALID_AMOUNT",
+            )
+        )
 
     return issues
 ```
@@ -1020,48 +970,45 @@ SDI_REJECTION_PATTERNS = [
         "pattern": "CAP non valido per provincia",
         "check": lambda f: validate_cap_provincia(f.cliente.cap, f.cliente.provincia),
         "severity": "ERROR",
-        "suggestion": "Verifica corrispondenza CAP-Provincia"
+        "suggestion": "Verifica corrispondenza CAP-Provincia",
     },
     {
         "pattern": "Partita IVA non valida",
         "check": lambda f: validate_partita_iva(f.cliente.partita_iva),
         "severity": "ERROR",
-        "suggestion": "Verifica formato Partita IVA (11 cifre)"
+        "suggestion": "Verifica formato Partita IVA (11 cifre)",
     },
     {
         "pattern": "Natura IVA non coerente con aliquota",
         "check": lambda f: validate_natura_aliquota(f.linee),
         "severity": "ERROR",
-        "suggestion": "Se aliquota=0, specificare Natura (N1-N7)"
+        "suggestion": "Se aliquota=0, specificare Natura (N1-N7)",
     },
     # ... 15+ rejection patterns
 ]
 
-def _check_sdi_patterns(
-    self,
-    fattura: Fattura
-) -> List[ComplianceIssue]:
+
+def _check_sdi_patterns(self, fattura: Fattura) -> List[ComplianceIssue]:
     """Check against known SDI rejection patterns."""
 
     issues = []
     for pattern_def in SDI_REJECTION_PATTERNS:
         if not pattern_def["check"](fattura):
-            issues.append(ComplianceIssue(
-                severity=pattern_def["severity"],
-                message=pattern_def["pattern"],
-                suggestion=pattern_def["suggestion"],
-                code=f"SDI_{pattern_def['pattern'][:20].upper()}"
-            ))
+            issues.append(
+                ComplianceIssue(
+                    severity=pattern_def["severity"],
+                    message=pattern_def["pattern"],
+                    suggestion=pattern_def["suggestion"],
+                    code=f"SDI_{pattern_def['pattern'][:20].upper()}",
+                )
+            )
 
     return issues
 ```
 
 **E. AI Heuristic Validation (ADVANCED)**
 ```python
-async def _ai_heuristic_check(
-    self,
-    fattura: Fattura
-) -> List[ComplianceIssue]:
+async def _ai_heuristic_check(self, fattura: Fattura) -> List[ComplianceIssue]:
     """
     AI-powered heuristic validation.
 
@@ -1080,7 +1027,7 @@ async def _ai_heuristic_check(
     Descrizione: {fattura.descrizione}
     Totale: €{fattura.totale}
     IVA: {fattura.linee[0].aliquota_iva}%
-    Natura: {fattura.linee[0].natura or 'N/A'}
+    Natura: {fattura.linee[0].natura or "N/A"}
 
     Check for:
     1. Description clarity and professionalism
@@ -1091,10 +1038,12 @@ async def _ai_heuristic_check(
     Return issues in JSON format.
     """
 
-    response = await self.provider.chat([
-        Message(role="system", content="You are a FatturaPA compliance expert."),
-        Message(role="user", content=prompt)
-    ])
+    response = await self.provider.chat(
+        [
+            Message(role="system", content="You are a FatturaPA compliance expert."),
+            Message(role="user", content=prompt),
+        ]
+    )
 
     # Parse AI response to ComplianceIssue objects
     return parse_ai_compliance_issues(response.content)
@@ -1110,20 +1059,12 @@ class ChromaDBClient:
     """ChromaDB client for vector storage."""
 
     def __init__(
-        self,
-        persist_directory: Path = Path("chroma_db"),
-        embedding_function: Optional[Any] = None
+        self, persist_directory: Path = Path("chroma_db"), embedding_function: Optional[Any] = None
     ):
-        self.client = chromadb.PersistentClient(
-            path=str(persist_directory)
-        )
+        self.client = chromadb.PersistentClient(path=str(persist_directory))
         self.embedding_function = embedding_function or OpenAIEmbeddings()
 
-    def get_or_create_collection(
-        self,
-        name: str,
-        metadata: Optional[Dict] = None
-    ) -> Collection:
+    def get_or_create_collection(self, name: str, metadata: Optional[Dict] = None) -> Collection:
         """Get existing or create new collection."""
 
     def add_documents(
@@ -1131,7 +1072,7 @@ class ChromaDBClient:
         collection_name: str,
         documents: List[str],
         metadatas: List[Dict[str, Any]],
-        ids: List[str]
+        ids: List[str],
     ):
         """Add documents with embeddings."""
 
@@ -1140,7 +1081,7 @@ class ChromaDBClient:
         collection_name: str,
         query_text: str,
         n_results: int = 5,
-        where: Optional[Dict] = None
+        where: Optional[Dict] = None,
     ) -> List[Dict[str, Any]]:
         """Semantic search."""
 ```
@@ -1150,36 +1091,23 @@ class ChromaDBClient:
 class EmbeddingService:
     """Generate embeddings for documents."""
 
-    def __init__(
-        self,
-        provider: str = "openai",
-        model: str = "text-embedding-3-small"
-    ):
+    def __init__(self, provider: str = "openai", model: str = "text-embedding-3-small"):
         if provider == "openai":
             self.embedder = OpenAIEmbeddings(model=model)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
-    async def embed_documents(
-        self,
-        texts: List[str]
-    ) -> List[List[float]]:
+    async def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Batch embedding generation."""
 
-    async def embed_query(
-        self,
-        text: str
-    ) -> List[float]:
+    async def embed_query(self, text: str) -> List[float]:
         """Single query embedding."""
 ```
 
 **C. RAG Context Enrichment**
 ```python
 async def enrich_with_rag(
-    self,
-    user_query: str,
-    client_id: Optional[int] = None,
-    n_results: int = 5
+    self, user_query: str, client_id: Optional[int] = None, n_results: int = 5
 ) -> RAGContext:
     """
     Retrieve relevant context via RAG.
@@ -1200,7 +1128,7 @@ async def enrich_with_rag(
         collection_name="conversations",
         query_text=user_query,
         n_results=n_results,
-        where={"client_id": client_id} if client_id else None
+        where={"client_id": client_id} if client_id else None,
     )
 
     # Search invoices collection
@@ -1208,13 +1136,13 @@ async def enrich_with_rag(
         collection_name="invoices",
         query_text=user_query,
         n_results=n_results,
-        where={"client_id": client_id} if client_id else None
+        where={"client_id": client_id} if client_id else None,
     )
 
     return RAGContext(
         similar_conversations=conversations,
         relevant_invoices=invoices,
-        relevance_scores=[r["distance"] for r in conversations + invoices]
+        relevance_scores=[r["distance"] for r in conversations + invoices],
     )
 ```
 
@@ -1225,36 +1153,23 @@ async def enrich_with_rag(
 **A. Provider-Level Streaming**
 ```python
 # All providers support streaming
-async def chat_stream(
-    self,
-    messages: List[Message],
-    **kwargs
-) -> AsyncIterator[str]:
+async def chat_stream(self, messages: List[Message], **kwargs) -> AsyncIterator[str]:
     """Stream chat completion tokens."""
 
     # OpenAI
     async for chunk in await self.client.chat.completions.create(
-        messages=messages,
-        stream=True,
-        **kwargs
+        messages=messages, stream=True, **kwargs
     ):
         if chunk.choices[0].delta.content:
             yield chunk.choices[0].delta.content
 
     # Anthropic
-    async with self.client.messages.stream(
-        messages=messages,
-        **kwargs
-    ) as stream:
+    async with self.client.messages.stream(messages=messages, **kwargs) as stream:
         async for text in stream.text_stream:
             yield text
 
     # Ollama
-    async for chunk in await self.client.chat(
-        messages=messages,
-        stream=True,
-        **kwargs
-    ):
+    async for chunk in await self.client.chat(messages=messages, stream=True, **kwargs):
         yield chunk["message"]["content"]
 ```
 
@@ -1263,11 +1178,7 @@ async def chat_stream(
 class BaseAgent:
     """Base agent with streaming support."""
 
-    async def execute_stream(
-        self,
-        user_input: str,
-        **kwargs
-    ) -> AsyncIterator[str]:
+    async def execute_stream(self, user_input: str, **kwargs) -> AsyncIterator[str]:
         """Stream agent response."""
 
         messages = self._build_messages(user_input, **kwargs)
@@ -1281,10 +1192,8 @@ class BaseAgent:
 from rich.live import Live
 from rich.markdown import Markdown
 
-async def display_streaming_response(
-    agent: BaseAgent,
-    user_input: str
-):
+
+async def display_streaming_response(agent: BaseAgent, user_input: str):
     """Display streaming response with Rich Live."""
 
     accumulated_text = ""
@@ -1315,7 +1224,7 @@ class LRUCache:
     def __init__(
         self,
         max_size: int = 1000,
-        default_ttl: int = 3600  # 1 hour
+        default_ttl: int = 3600,  # 1 hour
     ):
         self.max_size = max_size
         self.default_ttl = default_ttl
@@ -1342,12 +1251,7 @@ class LRUCache:
 
             return None
 
-    async def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[int] = None
-    ):
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None):
         """Set cached value with TTL."""
         async with self.lock:
             # Evict LRU if at capacity
@@ -1357,7 +1261,7 @@ class LRUCache:
             self.cache[key] = CacheEntry(
                 value=value,
                 created_at=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(seconds=ttl or self.default_ttl)
+                expires_at=datetime.utcnow() + timedelta(seconds=ttl or self.default_ttl),
             )
             self.cache.move_to_end(key)
 
@@ -1368,10 +1272,7 @@ class LRUCache:
 
             async with self.lock:
                 now = datetime.utcnow()
-                expired_keys = [
-                    key for key, entry in self.cache.items()
-                    if now >= entry.expires_at
-                ]
+                expired_keys = [key for key, entry in self.cache.items() if now >= entry.expires_at]
                 for key in expired_keys:
                     del self.cache[key]
 ```
@@ -1381,11 +1282,7 @@ class LRUCache:
 class CachedProvider:
     """Transparent caching wrapper for providers."""
 
-    def __init__(
-        self,
-        provider: AIProvider,
-        cache: Optional[LRUCache] = None
-    ):
+    def __init__(self, provider: AIProvider, cache: Optional[LRUCache] = None):
         self.provider = provider
         self.cache = cache or LRUCache(max_size=1000, default_ttl=3600)
 
@@ -1393,27 +1290,19 @@ class CachedProvider:
         self.cache_hits = 0
         self.cache_misses = 0
 
-    def _generate_cache_key(
-        self,
-        messages: List[Message],
-        **kwargs
-    ) -> str:
+    def _generate_cache_key(self, messages: List[Message], **kwargs) -> str:
         """Generate SHA256 cache key from request."""
         key_data = {
             "messages": [m.dict() for m in messages],
             "model": kwargs.get("model", self.provider.default_model),
             "temperature": kwargs.get("temperature", 0.7),
-            "max_tokens": kwargs.get("max_tokens", 4096)
+            "max_tokens": kwargs.get("max_tokens", 4096),
         }
 
         key_str = json.dumps(key_data, sort_keys=True)
         return hashlib.sha256(key_str.encode()).hexdigest()
 
-    async def chat(
-        self,
-        messages: List[Message],
-        **kwargs
-    ) -> AIResponse:
+    async def chat(self, messages: List[Message], **kwargs) -> AIResponse:
         """Chat with caching."""
 
         cache_key = self._generate_cache_key(messages, **kwargs)
@@ -1486,11 +1375,7 @@ User Experience: Instant responses for common queries
 class AnthropicProvider:
     """Anthropic provider with official token counter."""
 
-    def count_tokens(
-        self,
-        messages: List[Message],
-        model: Optional[str] = None
-    ) -> int:
+    def count_tokens(self, messages: List[Message], model: Optional[str] = None) -> int:
         """Count tokens using official Anthropic API."""
 
         try:
@@ -1501,24 +1386,15 @@ class AnthropicProvider:
             else:
                 # Sync context, use official API
                 response = self.client.messages.count_tokens(
-                    model=model or self.default_model,
-                    messages=[m.dict() for m in messages]
+                    model=model or self.default_model, messages=[m.dict() for m in messages]
                 )
                 return response.input_tokens
 
         except Exception as e:
-            logger.warning(
-                "token_count_fallback",
-                error=str(e),
-                method="official_api"
-            )
+            logger.warning("token_count_fallback", error=str(e), method="official_api")
             return self._count_tokens_fallback(messages, model)
 
-    def _count_tokens_fallback(
-        self,
-        messages: List[Message],
-        model: Optional[str] = None
-    ) -> int:
+    def _count_tokens_fallback(self, messages: List[Message], model: Optional[str] = None) -> int:
         """Fallback token counter (heuristic)."""
         # Approximation: 1 token ≈ 4 characters
         total_chars = sum(len(m.content) for m in messages)
@@ -1540,11 +1416,7 @@ After (official API):
 
 **C. Cost Calculation Enhancement**
 ```python
-def calculate_cost(
-    self,
-    usage: TokenUsage,
-    model: Optional[str] = None
-) -> float:
+def calculate_cost(self, usage: TokenUsage, model: Optional[str] = None) -> float:
     """Calculate accurate cost."""
 
     model = model or self.default_model
@@ -1552,25 +1424,22 @@ def calculate_cost(
     # Official pricing (October 2025)
     pricing = {
         "claude-3-5-sonnet-20241022": {
-            "input": 0.003 / 1000,   # $3 per MTok
-            "output": 0.015 / 1000   # $15 per MTok
+            "input": 0.003 / 1000,  # $3 per MTok
+            "output": 0.015 / 1000,  # $15 per MTok
         },
         "claude-3-opus-20240229": {
-            "input": 0.015 / 1000,   # $15 per MTok
-            "output": 0.075 / 1000   # $75 per MTok
+            "input": 0.015 / 1000,  # $15 per MTok
+            "output": 0.075 / 1000,  # $75 per MTok
         },
         "claude-3-haiku-20240307": {
             "input": 0.00025 / 1000,  # $0.25 per MTok
-            "output": 0.00125 / 1000  # $1.25 per MTok
-        }
+            "output": 0.00125 / 1000,  # $1.25 per MTok
+        },
     }
 
     rates = pricing.get(model, pricing["claude-3-5-sonnet-20241022"])
 
-    cost = (
-        usage.input_tokens * rates["input"] +
-        usage.output_tokens * rates["output"]
-    )
+    cost = usage.input_tokens * rates["input"] + usage.output_tokens * rates["output"]
 
     return round(cost, 6)  # 6 decimal places
 ```
@@ -1642,6 +1511,7 @@ Total Phase 4.3: ~4,000 LOC
 ```python
 class WorkflowStatus(Enum):
     """Workflow execution status."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     AWAITING_APPROVAL = "awaiting_approval"
@@ -1651,9 +1521,11 @@ class WorkflowStatus(Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+
 @dataclass
 class AgentResult:
     """Standardized agent execution result."""
+
     agent_type: AgentType  # DESCRIPTION, TAX, COMPLIANCE, CASH_FLOW
     success: bool
     content: str
@@ -1662,8 +1534,10 @@ class AgentResult:
     error: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+
 class BaseWorkflowState(BaseModel):
     """Base workflow state."""
+
     workflow_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     status: WorkflowStatus = WorkflowStatus.PENDING
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -1671,8 +1545,10 @@ class BaseWorkflowState(BaseModel):
     error: Optional[str] = None
     context: SharedContext = Field(default_factory=SharedContext)
 
+
 class InvoiceCreationState(BaseWorkflowState):
     """State for Invoice Creation workflow."""
+
     user_input: str
     client_id: int
 
@@ -1709,11 +1585,7 @@ class InvoiceCreationState(BaseWorkflowState):
 class InvoiceCreationWorkflow:
     """LangGraph-based invoice creation workflow."""
 
-    def __init__(
-        self,
-        db_session: Session,
-        ai_settings: Optional[AISettings] = None
-    ):
+    def __init__(self, db_session: Session, ai_settings: Optional[AISettings] = None):
         self.db_session = db_session
         self.ai_settings = ai_settings or AISettings()
 
@@ -1751,11 +1623,7 @@ class InvoiceCreationWorkflow:
         workflow.add_conditional_edges(
             "description_agent",
             self._should_approve_description,
-            {
-                "approve": "description_approval",
-                "skip": "tax_agent",
-                "error": "handle_error"
-            }
+            {"approve": "description_approval", "skip": "tax_agent", "error": "handle_error"},
         )
 
         workflow.add_edge("description_approval", "tax_agent")
@@ -1764,11 +1632,7 @@ class InvoiceCreationWorkflow:
         workflow.add_conditional_edges(
             "tax_agent",
             self._should_approve_tax,
-            {
-                "approve": "tax_approval",
-                "skip": "compliance_check",
-                "error": "handle_error"
-            }
+            {"approve": "tax_approval", "skip": "compliance_check", "error": "handle_error"},
         )
 
         workflow.add_edge("tax_approval", "compliance_check")
@@ -1777,11 +1641,7 @@ class InvoiceCreationWorkflow:
         workflow.add_conditional_edges(
             "compliance_check",
             self._should_approve_compliance,
-            {
-                "approve": "compliance_approval",
-                "skip": "create_invoice",
-                "error": "handle_error"
-            }
+            {"approve": "compliance_approval", "skip": "create_invoice", "error": "handle_error"},
         )
 
         workflow.add_edge("compliance_approval", "create_invoice")
@@ -1790,10 +1650,7 @@ class InvoiceCreationWorkflow:
 
         return workflow.compile(checkpointer=MemorySaver())
 
-    def _should_approve_description(
-        self,
-        state: InvoiceCreationState
-    ) -> str:
+    def _should_approve_description(self, state: InvoiceCreationState) -> str:
         """Determine if description approval is needed."""
         if not state.require_description_approval:
             return "skip"
@@ -1866,22 +1723,14 @@ class ComplianceCheckWorkflow:
         workflow.add_conditional_edges(
             "rules_check",
             self._should_check_sdi_patterns,
-            {
-                "check": "sdi_patterns",
-                "skip": "aggregate_results",
-                "error": "handle_error"
-            }
+            {"check": "sdi_patterns", "skip": "aggregate_results", "error": "handle_error"},
         )
 
         # Conditional: AI analysis?
         workflow.add_conditional_edges(
             "sdi_patterns",
             self._should_run_ai_analysis,
-            {
-                "analyze": "ai_analysis",
-                "skip": "aggregate_results",
-                "error": "handle_error"
-            }
+            {"analyze": "ai_analysis", "skip": "aggregate_results", "error": "handle_error"},
         )
 
         workflow.add_edge("ai_analysis", "aggregate_results")
@@ -1890,19 +1739,13 @@ class ComplianceCheckWorkflow:
 
         return workflow.compile()
 
-    def _should_check_sdi_patterns(
-        self,
-        state: ComplianceCheckState
-    ) -> str:
+    def _should_check_sdi_patterns(self, state: ComplianceCheckState) -> str:
         """Determine if SDI patterns check is needed."""
         if self.level == ComplianceLevel.BASIC:
             return "skip"
 
         # Skip if critical errors found
-        critical_errors = [
-            i for i in state.rules_issues
-            if i.severity == "ERROR"
-        ]
+        critical_errors = [i for i in state.rules_issues if i.severity == "ERROR"]
         if critical_errors:
             return "skip"  # No need to continue
 
@@ -1954,10 +1797,7 @@ class CashFlowAnalysisWorkflow:
 
         return workflow.compile()
 
-    async def _predict_batch_node(
-        self,
-        state: CashFlowAnalysisState
-    ):
+    async def _predict_batch_node(self, state: CashFlowAnalysisState):
         """Predict payment delays for all invoices."""
 
         invoice_ids = state.metadata.get("invoice_ids", [])
@@ -1966,16 +1806,17 @@ class CashFlowAnalysisWorkflow:
         for invoice_id in invoice_ids:
             try:
                 result = await self.cash_flow_agent.predict_invoice(
-                    invoice_id=invoice_id,
-                    include_insights=False
+                    invoice_id=invoice_id, include_insights=False
                 )
 
-                state.predictions.append({
-                    "invoice_id": invoice_id,
-                    "expected_days": result.expected_days,
-                    "confidence_score": result.confidence_score,
-                    "risk_level": result.risk_level
-                })
+                state.predictions.append(
+                    {
+                        "invoice_id": invoice_id,
+                        "expected_days": result.expected_days,
+                        "confidence_score": result.confidence_score,
+                        "risk_level": result.risk_level,
+                    }
+                )
 
                 if result.risk_level == "HIGH":
                     state.high_risk_invoices.append(invoice_id)
@@ -1994,24 +1835,22 @@ class CashFlowAnalysisWorkflow:
 ```python
 class CircuitState(Enum):
     """Circuit breaker states."""
-    CLOSED = "closed"        # Normal operation
-    OPEN = "open"            # Failures detected, circuit is open
+
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Failures detected, circuit is open
     HALF_OPEN = "half_open"  # Testing if service recovered
+
 
 class CircuitBreaker:
     """Circuit Breaker pattern implementation."""
 
-    def __init__(
-        self,
-        name: str,
-        config: Optional[CircuitBreakerConfig] = None
-    ):
+    def __init__(self, name: str, config: Optional[CircuitBreakerConfig] = None):
         self.name = name
         self.config = config or CircuitBreakerConfig(
-            failure_threshold=5,      # Open after 5 failures
-            success_threshold=2,      # Close after 2 successes
-            timeout_seconds=60,       # Try recovery after 60s
-            half_open_max_calls=3     # Limited calls in half-open
+            failure_threshold=5,  # Open after 5 failures
+            success_threshold=2,  # Close after 2 successes
+            timeout_seconds=60,  # Try recovery after 60s
+            half_open_max_calls=3,  # Limited calls in half-open
         )
         self.state = CircuitBreakerState(state=CircuitState.CLOSED)
 
@@ -2061,7 +1900,7 @@ class CircuitBreaker:
             name=self.name,
             failure_type=failure_type.value,
             state=self.state.state.value,
-            failure_count=self.state.failure_count
+            failure_count=self.state.failure_count,
         )
 
     def record_success(self):
@@ -2077,11 +1916,7 @@ class CircuitBreaker:
                 self.state.state = CircuitState.CLOSED
                 self.state.success_count = 0
 
-        logger.info(
-            "circuit_breaker_success",
-            name=self.name,
-            state=self.state.state.value
-        )
+        logger.info("circuit_breaker_success", name=self.name, state=self.state.state.value)
 ```
 
 **State Transitions:**
@@ -2119,8 +1954,7 @@ class RetryConfig:
     def get_delay(self, attempt: int) -> float:
         """Calculate delay with jitter."""
         delay = min(
-            self.initial_delay_seconds * (self.exponential_base ** attempt),
-            self.max_delay_seconds
+            self.initial_delay_seconds * (self.exponential_base**attempt), self.max_delay_seconds
         )
 
         if self.jitter:
@@ -2129,6 +1963,7 @@ class RetryConfig:
             delay += random.uniform(-jitter_amount, jitter_amount)
 
         return max(0.0, delay)
+
 
 # Usage
 config = RetryConfig()
@@ -2165,28 +2000,17 @@ With Jitter (±25%):
 class ResilientProvider:
     """AI Provider with automatic retry and fallback."""
 
-    def __init__(
-        self,
-        primary_provider: AIProvider,
-        policy: Optional[ResiliencePolicy] = None
-    ):
+    def __init__(self, primary_provider: AIProvider, policy: Optional[ResiliencePolicy] = None):
         self.primary_provider = primary_provider
-        self.policy = policy or ResiliencePolicy(
-            fallback_providers=["openai", "ollama"]
-        )
+        self.policy = policy or ResiliencePolicy(fallback_providers=["openai", "ollama"])
 
         self.circuit_breaker = CircuitBreaker(
-            name=f"provider_{primary_provider.provider}",
-            config=policy.get_circuit_config()
+            name=f"provider_{primary_provider.provider}", config=policy.get_circuit_config()
         )
 
         self.fallback_providers: List[AIProvider] = []
 
-    async def chat_with_resilience(
-        self,
-        messages: List[Message],
-        **kwargs
-    ) -> AIResponse:
+    async def chat_with_resilience(self, messages: List[Message], **kwargs) -> AIResponse:
         """Execute chat with retry, fallback, and circuit breaker."""
 
         retry_config = self.policy.get_retry_config()
@@ -2200,7 +2024,7 @@ class ResilientProvider:
             try:
                 response = await asyncio.wait_for(
                     self.primary_provider.chat(messages, **kwargs),
-                    timeout=self.policy.operation_timeout_seconds
+                    timeout=self.policy.operation_timeout_seconds,
                 )
 
                 self.circuit_breaker.record_success()
@@ -2277,11 +2101,13 @@ Availability: 99.9% (with 3 providers)
 ```python
 class ApprovalPolicy(Enum):
     """Approval policy types."""
-    ALWAYS = "always"              # Always require approval
-    NEVER = "never"                # Never require approval (auto-approve)
+
+    ALWAYS = "always"  # Always require approval
+    NEVER = "never"  # Never require approval (auto-approve)
     LOW_CONFIDENCE = "low_confidence"  # Approve if confidence < threshold
-    ON_ERROR = "on_error"          # Approve only if errors/warnings
-    SMART = "smart"                # Combination of confidence + error checks
+    ON_ERROR = "on_error"  # Approve only if errors/warnings
+    SMART = "smart"  # Combination of confidence + error checks
+
 
 class ApprovalCheckpoint:
     """Approval checkpoint for workflow decisions."""
@@ -2292,7 +2118,7 @@ class ApprovalCheckpoint:
         policy: ApprovalPolicy = ApprovalPolicy.SMART,
         confidence_threshold: float = 0.85,
         auto_approve_on_high_confidence: bool = True,
-        reviewer: Optional[HumanReviewer] = None
+        reviewer: Optional[HumanReviewer] = None,
     ):
         self.name = name
         self.policy = policy
@@ -2300,10 +2126,7 @@ class ApprovalCheckpoint:
         self.auto_approve_on_high_confidence = auto_approve_on_high_confidence
         self.reviewer = reviewer or HumanReviewer()
 
-    def should_request_approval(
-        self,
-        request: ApprovalRequest
-    ) -> bool:
+    def should_request_approval(self, request: ApprovalRequest) -> bool:
         """Determine if approval should be requested."""
 
         if self.policy == ApprovalPolicy.ALWAYS:
@@ -2324,17 +2147,13 @@ class ApprovalCheckpoint:
             # Combination: low confidence OR errors/warnings
             has_issues = len(request.errors) > 0 or len(request.warnings) > 0
             low_confidence = (
-                request.confidence is not None and
-                request.confidence < self.confidence_threshold
+                request.confidence is not None and request.confidence < self.confidence_threshold
             )
             return has_issues or low_confidence
 
         return True
 
-    async def request_approval(
-        self,
-        request: ApprovalRequest
-    ) -> ApprovalResponse:
+    async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
         """Request human approval."""
 
         # Check if approval is needed
@@ -2343,21 +2162,21 @@ class ApprovalCheckpoint:
                 approved=True,
                 decision=ApprovalDecision.APPROVE,
                 feedback="Auto-approved (policy skip)",
-                reviewer="system"
+                reviewer="system",
             )
 
         # Auto-approve on high confidence if enabled
         if (
-            self.auto_approve_on_high_confidence and
-            request.confidence is not None and
-            request.confidence >= self.confidence_threshold and
-            len(request.errors) == 0
+            self.auto_approve_on_high_confidence
+            and request.confidence is not None
+            and request.confidence >= self.confidence_threshold
+            and len(request.errors) == 0
         ):
             return ApprovalResponse(
                 approved=True,
                 decision=ApprovalDecision.APPROVE,
                 feedback=f"Auto-approved (confidence: {request.confidence:.1%})",
-                reviewer="system"
+                reviewer="system",
             )
 
         # Request human review
@@ -2367,7 +2186,7 @@ class ApprovalCheckpoint:
             "approval_decision",
             checkpoint=self.name,
             decision=response.decision.value,
-            approved=response.approved
+            approved=response.approved,
         )
 
         return response
@@ -2381,20 +2200,19 @@ class HumanReviewer:
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
 
-    async def review(
-        self,
-        request: ApprovalRequest
-    ) -> ApprovalResponse:
+    async def review(self, request: ApprovalRequest) -> ApprovalResponse:
         """Interactive review session."""
 
         # Display header
         self.console.print()
-        self.console.print(Panel(
-            f"[bold yellow]Human Approval Required[/bold yellow]\n\n"
-            f"Checkpoint: {request.checkpoint_name}\n"
-            f"Workflow: {request.workflow_id}",
-            border_style="yellow"
-        ))
+        self.console.print(
+            Panel(
+                f"[bold yellow]Human Approval Required[/bold yellow]\n\n"
+                f"Checkpoint: {request.checkpoint_name}\n"
+                f"Workflow: {request.workflow_id}",
+                border_style="yellow",
+            )
+        )
         self.console.print()
 
         # Display data
@@ -2403,8 +2221,10 @@ class HumanReviewer:
         # Display confidence if available
         if request.confidence is not None:
             confidence_color = (
-                "green" if request.confidence >= 0.85
-                else "yellow" if request.confidence >= 0.7
+                "green"
+                if request.confidence >= 0.85
+                else "yellow"
+                if request.confidence >= 0.7
                 else "red"
             )
             self.console.print(
@@ -2437,14 +2257,10 @@ class HumanReviewer:
             "1": ApprovalDecision.APPROVE,
             "2": ApprovalDecision.REQUEST_CHANGES,
             "3": ApprovalDecision.REJECT,
-            "4": ApprovalDecision.SKIP
+            "4": ApprovalDecision.SKIP,
         }
 
-        choice = Prompt.ask(
-            "Your decision",
-            choices=["1", "2", "3", "4"],
-            default="1"
-        )
+        choice = Prompt.ask("Your decision", choices=["1", "2", "3", "4"], default="1")
 
         decision = decision_map[choice]
 
@@ -2467,7 +2283,7 @@ class HumanReviewer:
             approved=approved,
             decision=decision,
             feedback=feedback if feedback else None,
-            reviewer="human"
+            reviewer="human",
         )
 ```
 
@@ -2476,11 +2292,7 @@ class HumanReviewer:
 class ReviewDecisionLogger:
     """Logs all approval decisions for audit trail."""
 
-    def log_decision(
-        self,
-        request: ApprovalRequest,
-        response: ApprovalResponse
-    ):
+    def log_decision(self, request: ApprovalRequest, response: ApprovalResponse):
         """Log approval decision."""
 
         logger.info(
@@ -2494,7 +2306,7 @@ class ReviewDecisionLogger:
             has_errors=len(request.errors) > 0,
             has_warnings=len(request.warnings) > 0,
             reviewer=response.reviewer,
-            timestamp=response.timestamp.isoformat()
+            timestamp=response.timestamp.isoformat(),
         )
 ```
 
@@ -2604,10 +2416,7 @@ Total Phase 4.4: 3,344 LOC
 **Full Type Hints**
 ```python
 async def chat(
-    self,
-    messages: List[Message],
-    tools: Optional[List[Tool]] = None,
-    **kwargs
+    self, messages: List[Message], tools: Optional[List[Tool]] = None, **kwargs
 ) -> AIResponse:
     """All functions fully typed."""
 ```
@@ -2616,6 +2425,7 @@ async def chat(
 ```python
 class AIResponse(BaseModel):
     """Validated response model."""
+
     content: str
     model: str
     usage: TokenUsage
@@ -2627,16 +2437,18 @@ class AIResponse(BaseModel):
 T = TypeVar("T")
 R = TypeVar("R")
 
+
 class BatchProcessor(Generic[T, R]):
     """Type-safe batch processing."""
-    def process(self, items: List[T]) -> BatchResult[R]:
-        ...
+
+    def process(self, items: List[T]) -> BatchResult[R]: ...
 ```
 
 **Enum Classes**
 ```python
 class WorkflowStatus(Enum):
     """Fixed value sets."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     # ...
@@ -2675,8 +2487,10 @@ async def chat_stream(self, messages: List[Message]) -> AsyncIterator[str]:
 class ProviderError(Exception):
     """Base provider error."""
 
+
 class RateLimitError(ProviderError):
     """Rate limit exceeded."""
+
 
 class AuthenticationError(ProviderError):
     """Invalid API key."""
@@ -2707,7 +2521,7 @@ logger.info(
     input_tokens=usage.input_tokens,
     output_tokens=usage.output_tokens,
     cost=response.cost,
-    duration_ms=duration_ms
+    duration_ms=duration_ms,
 )
 ```
 
@@ -2740,7 +2554,7 @@ logger.info(
 ```python
 @given(
     amount=st.floats(min_value=0.01, max_value=1000000),
-    client_history=st.lists(st.integers(min_value=0, max_value=365))
+    client_history=st.lists(st.integers(min_value=0, max_value=365)),
 )
 def test_payment_prediction_invariants(amount, client_history):
     """Test prediction invariants with random inputs."""
@@ -2788,6 +2602,7 @@ def mock_provider():
 ```python
 class AISettings(BaseSettings):
     """Pydantic Settings with SecretStr."""
+
     openai_api_key: Optional[SecretStr] = None
     anthropic_api_key: Optional[SecretStr] = None
     # Never logged or printed
@@ -2807,11 +2622,7 @@ class AISettings(BaseSettings):
 
 **Comprehensive Docstrings**
 ```python
-def predict_invoice(
-    self,
-    invoice_id: int,
-    include_insights: bool = True
-) -> PredictionResult:
+def predict_invoice(self, invoice_id: int, include_insights: bool = True) -> PredictionResult:
     """
     Predict payment delay for a single invoice.
 
@@ -2837,11 +2648,7 @@ def predict_invoice(
 
 **Type Hints as Documentation**
 ```python
-def forecast_monthly(
-    self,
-    months: int = 6,
-    include_breakdown: bool = True
-) -> MonthlyForecast:
+def forecast_monthly(self, months: int = 6, include_breakdown: bool = True) -> MonthlyForecast:
     """Type hints clarify expected inputs/outputs."""
 ```
 

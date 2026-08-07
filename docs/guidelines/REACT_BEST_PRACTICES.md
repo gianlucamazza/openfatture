@@ -305,25 +305,22 @@ if iteration >= max_iterations:
 ```python
 # In ReActOrchestrator
 self.metrics = {
-    "total_executions": 0,          # Total execute() calls
-    "tool_calls_attempted": 0,      # Tools attempted
-    "tool_calls_succeeded": 0,      # Successful tool calls
-    "tool_calls_failed": 0,         # Failed tool calls
-    "max_iterations_reached": 0,    # Hit iteration limit
-    "total_iterations": 0,          # Sum of all iterations
+    "total_executions": 0,  # Total execute() calls
+    "tool_calls_attempted": 0,  # Tools attempted
+    "tool_calls_succeeded": 0,  # Successful tool calls
+    "tool_calls_failed": 0,  # Failed tool calls
+    "max_iterations_reached": 0,  # Hit iteration limit
+    "total_iterations": 0,  # Sum of all iterations
 }
+
 
 # Get derived metrics
 def get_metrics(self) -> dict:
-    success_rate = (
-        self.metrics["tool_calls_succeeded"] /
-        max(1, self.metrics["tool_calls_attempted"])
+    success_rate = self.metrics["tool_calls_succeeded"] / max(
+        1, self.metrics["tool_calls_attempted"]
     )
 
-    avg_iterations = (
-        self.metrics["total_iterations"] /
-        max(1, self.metrics["total_executions"])
-    )
+    avg_iterations = self.metrics["total_iterations"] / max(1, self.metrics["total_executions"])
 
     return {
         **self.metrics,
@@ -347,17 +344,20 @@ def get_metrics(self) -> dict:
 from functools import lru_cache
 from datetime import datetime, timedelta
 
+
 # Cache invoice stats for 1 hour
 @lru_cache(maxsize=128)
 def get_invoice_stats_cached(year: int, cache_key: str) -> dict:
     """Cached version of get_invoice_stats."""
     return get_invoice_stats(year)
 
+
 # Generate cache key based on time
 def get_cache_key() -> str:
     """Cache key that changes every hour."""
     now = datetime.now()
     return f"{now.year}-{now.month}-{now.day}-{now.hour}"
+
 
 # Use in tool
 def get_invoice_stats(year: int = 2025) -> dict:
@@ -373,10 +373,7 @@ def get_invoice_stats(year: int = 2025) -> dict:
 # TODO: Implement parallel execution for independent tools
 async def execute_tools_parallel(tool_calls: list[ToolCall]) -> list[ToolResult]:
     """Execute multiple independent tools in parallel."""
-    tasks = [
-        tool_registry.execute_tool(tc.tool_name, tc.parameters)
-        for tc in tool_calls
-    ]
+    tasks = [tool_registry.execute_tool(tc.tool_name, tc.parameters) for tc in tool_calls]
     return await asyncio.gather(*tasks, return_exceptions=True)
 ```
 
@@ -436,20 +433,12 @@ logger.info(
 from prometheus_client import Counter, Histogram, Gauge
 
 tool_calls_total = Counter(
-    'react_tool_calls_total',
-    'Total tool calls attempted',
-    ['tool_name', 'success']
+    "react_tool_calls_total", "Total tool calls attempted", ["tool_name", "success"]
 )
 
-iterations_histogram = Histogram(
-    'react_iterations',
-    'Number of iterations per execution'
-)
+iterations_histogram = Histogram("react_iterations", "Number of iterations per execution")
 
-success_rate_gauge = Gauge(
-    'react_success_rate',
-    'Current tool call success rate'
-)
+success_rate_gauge = Gauge("react_success_rate", "Current tool call success rate")
 
 # Update metrics
 tool_calls_total.labels(tool_name=name, success=str(success)).inc()
@@ -496,6 +485,7 @@ alerts:
 ```python
 # tests/ai/test_react_orchestration.py
 
+
 def test_parser_xml_valid():
     """Test XML parsing with valid input."""
     parser = ToolCallParser()
@@ -509,6 +499,7 @@ def test_parser_xml_valid():
     assert parsed.is_final is False
     assert parsed.tool_call.tool_name == "get_invoice_stats"
     assert parsed.tool_call.parameters == {"year": 2025}
+
 
 def test_parser_fallback_to_legacy():
     """Test fallback when XML not present."""
@@ -531,15 +522,14 @@ Action Input: {"year": 2025}
 ```python
 # tests/ai/test_react_orchestration_integration.py
 
+
 @pytest.mark.asyncio
-async def test_orchestrator_single_tool_call(
-    mock_provider, mock_tool_registry
-):
+async def test_orchestrator_single_tool_call(mock_provider, mock_tool_registry):
     """Test successful single tool call."""
     # Setup mock responses
     mock_provider._response_queue = [
-        '<thought>Get stats</thought><action>get_invoice_stats</action><action_input>{}</action_input>',
-        '<thought>Done</thought><final_answer>You have 42 invoices</final_answer>',
+        "<thought>Get stats</thought><action>get_invoice_stats</action><action_input>{}</action_input>",
+        "<thought>Done</thought><final_answer>You have 42 invoices</final_answer>",
     ]
 
     # Execute
@@ -558,6 +548,7 @@ async def test_orchestrator_single_tool_call(
 ```python
 # tests/ai/test_react_e2e_ollama.py
 
+
 @pytest.mark.e2e
 @pytest.mark.ollama
 async def test_e2e_invoice_query(ollama_qwen3_provider):
@@ -570,10 +561,12 @@ async def test_e2e_invoice_query(ollama_qwen3_provider):
         max_iterations=5,
     )
 
-    result = await orchestrator.execute(ChatContext(
-        user_input="Quante fatture ho emesso quest'anno?",
-        enable_tools=True,
-    ))
+    result = await orchestrator.execute(
+        ChatContext(
+            user_input="Quante fatture ho emesso quest'anno?",
+            enable_tools=True,
+        )
+    )
 
     # Should contain real data from tools
     assert result is not None
@@ -601,10 +594,12 @@ async def test_success_rate_across_10_queries(ollama_provider):
 
     successes = 0
     for query in test_queries:
-        result = await orchestrator.execute(ChatContext(
-            user_input=query,
-            enable_tools=True,
-        ))
+        result = await orchestrator.execute(
+            ChatContext(
+                user_input=query,
+                enable_tools=True,
+            )
+        )
 
         # Check if result contains real data (not hallucinated)
         if any(real_data_indicator in result for real_data_indicator in [...]):

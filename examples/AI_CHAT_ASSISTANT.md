@@ -520,9 +520,11 @@ Add your own tools to the Chat Assistant:
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
 from openfatture.ai.tools.registry import ToolRegistry
 
+
 # Define custom tool
 def my_custom_tool(param: str) -> dict:
     return {"result": f"Processed: {param}"}
+
 
 # Create tool definition
 custom_tool = Tool(
@@ -534,10 +536,10 @@ custom_tool = Tool(
             name="param",
             type=ToolParameterType.STRING,
             description="Input parameter",
-            required=True
+            required=True,
         )
     ],
-    func=my_custom_tool
+    func=my_custom_tool,
 )
 
 # Register tool

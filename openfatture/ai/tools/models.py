@@ -1,13 +1,13 @@
 """Data models for AI tools and function calling."""
 
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ToolParameterType(str, Enum):
+class ToolParameterType(StrEnum):
     """Parameter type for tools."""
 
     STRING = "string"

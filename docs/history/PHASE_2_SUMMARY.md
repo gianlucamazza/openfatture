@@ -123,6 +123,7 @@ class TipoNotifica(str, Enum):
     NOTIFICA_ESITO = "NE"
     ATTESTAZIONE_TRASMISSIONE = "AT"
 
+
 class NotificaSDI(BaseModel):
     tipo: TipoNotifica
     identificativo_sdi: str
@@ -250,7 +251,7 @@ tests/unit/test_rate_limiter.py (301 lines, 23 tests)
 pec_sender = PECSender(
     settings=settings,
     rate_limit=RateLimiter(max_calls=10, period=60),  # 10 emails/minute
-    max_retries=3
+    max_retries=3,
 )
 
 # Automatic rate limiting and retry
@@ -360,26 +361,20 @@ tests/unit/test_batch_operations.py (365 lines, 20 tests)
 success, error = export_invoices_csv(
     invoices=fatture,
     output_path=Path("export.csv"),
-    include_lines=True  # Include invoice line items
+    include_lines=True,  # Include invoice line items
 )
 ```
 
 **Import from CSV:**
 ```python
-result = import_invoices_csv(
-    csv_path=Path("import.csv"),
-    db_session=session,
-    default_cliente_id=1
-)
+result = import_invoices_csv(csv_path=Path("import.csv"), db_session=session, default_cliente_id=1)
 print(f"Imported {result.succeeded}/{result.total} invoices")
 ```
 
 **Validate Batch:**
 ```python
 result = validate_batch(
-    invoices=fatture,
-    xml_generator=generate_xml_func,
-    validator=FatturaPAValidator()
+    invoices=fatture, xml_generator=generate_xml_func, validator=FatturaPAValidator()
 )
 print(f"Success rate: {result.success_rate:.1f}%")
 ```
@@ -390,7 +385,7 @@ result = send_batch(
     invoices=fatture,
     pec_sender=sender,
     xml_paths=xml_files,
-    max_concurrent=5  # Rate limiting
+    max_concurrent=5,  # Rate limiting
 )
 ```
 

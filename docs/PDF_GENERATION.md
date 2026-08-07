@@ -112,7 +112,7 @@ config = PDFGeneratorConfig(
     company_address="Via Roma 123",
     company_city="Milano, 20100 MI",
     logo_path="./logo.png",
-    enable_qr_code=True
+    enable_qr_code=True,
 )
 
 # 2. Create generator
@@ -247,7 +247,7 @@ config = PDFGeneratorConfig(
     template="professional",
     logo_path="./logo.png",
     company_name="ACME S.r.l.",
-    company_vat="12345678901"
+    company_vat="12345678901",
 )
 generator = PDFGenerator(config)
 ```
@@ -302,10 +302,10 @@ generator = PDFGenerator(config)
 config = PDFGeneratorConfig(
     template="branded",
     logo_path="./logo.png",
-    primary_color="#1E3A8A",      # Royal blue
-    secondary_color="#60A5FA",     # Light blue
+    primary_color="#1E3A8A",  # Royal blue
+    secondary_color="#60A5FA",  # Light blue
     watermark_text="COPIA",
-    enable_qr_code=True
+    enable_qr_code=True,
 )
 generator = PDFGenerator(config)
 ```
@@ -338,28 +338,22 @@ from openfatture.pdf import PDFGeneratorConfig
 config = PDFGeneratorConfig(
     # Template selection
     template="professional",  # minimalist/professional/branded
-
     # Company information (header)
     company_name="ACME S.r.l.",
     company_vat="12345678901",
     company_address="Via Roma 123",
     company_city="Milano, 20100 MI",
     logo_path="./logo.png",
-
     # Branding (for branded template)
-    primary_color="#2C3E50",      # Dark blue-grey
-    secondary_color="#95A5A6",    # Light grey
-
+    primary_color="#2C3E50",  # Dark blue-grey
+    secondary_color="#95A5A6",  # Light grey
     # QR Code
-    enable_qr_code=True,          # Enable payment QR
-    qr_code_type="sepa",          # sepa or pagopa
-
+    enable_qr_code=True,  # Enable payment QR
+    qr_code_type="sepa",  # sepa or pagopa
     # PDF/A compliance
-    enable_pdfa=True,             # Legal archiving
-
+    enable_pdfa=True,  # Legal archiving
     # Watermark (for drafts)
-    watermark_text="BOZZA",       # None to disable
-
+    watermark_text="BOZZA",  # None to disable
     # Footer
     footer_text="Documento generato da OpenFatture",
 )
@@ -439,7 +433,7 @@ y_after_header = draw_header(
     company_address="Via Roma 123",
     company_city="Milano, 20100 MI",
     logo_path="./logo.png",
-    primary_color="#2C3E50"
+    primary_color="#2C3E50",
 )
 ```
 
@@ -467,7 +461,7 @@ draw_footer(
     page_number=1,
     total_pages=1,
     show_digital_signature_note=True,
-    footer_text="Documento generato da OpenFatture"
+    footer_text="Documento generato da OpenFatture",
 )
 ```
 
@@ -494,16 +488,13 @@ righe_data = [
         "imponibile": 800.00,
         "aliquota_iva": 22,
         "iva": 176.00,
-        "totale": 976.00
+        "totale": 976.00,
     },
     # ... more lines
 ]
 
 y_after_table, needs_pagination = draw_invoice_table(
-    canvas,
-    y_position,
-    righe_data,
-    primary_color="#2C3E50"
+    canvas, y_position, righe_data, primary_color="#2C3E50"
 )
 
 if needs_pagination:
@@ -533,17 +524,11 @@ qr_data = generate_sepa_qr_data(
     iban="IT60X0542811101000000123456",
     amount=1708.00,
     reference="Fattura 001/2025",
-    bic="BCITITMM"  # Optional
+    bic="BCITITMM",  # Optional
 )
 
 # Draw QR code
-draw_qr_code(
-    canvas,
-    x_position=15.5 * cm,
-    y_position=2.5 * cm,
-    data=qr_data,
-    size=3 * cm
-)
+draw_qr_code(canvas, x_position=15.5 * cm, y_position=2.5 * cm, data=qr_data, size=3 * cm)
 ```
 
 **Parameters**:
@@ -589,10 +574,7 @@ All Italian banks supporting SEPA Instant Credit Transfer (SCT Inst):
 #### Usage
 
 ```python
-config = PDFGeneratorConfig(
-    enable_qr_code=True,
-    qr_code_type="sepa"
-)
+config = PDFGeneratorConfig(enable_qr_code=True, qr_code_type="sepa")
 ```
 
 ### pagoPa Integration (Planned)
@@ -602,7 +584,7 @@ config = PDFGeneratorConfig(
 ```python
 config = PDFGeneratorConfig(
     enable_qr_code=True,
-    qr_code_type="pagopa"  # Not yet implemented
+    qr_code_type="pagopa",  # Not yet implemented
 )
 ```
 
@@ -744,9 +726,7 @@ from openfatture.pdf import create_pdf_generator
 
 # Create generator with factory
 generator = create_pdf_generator(
-    template="professional",
-    company_name="ACME S.r.l.",
-    enable_qr_code=True
+    template="professional", company_name="ACME S.r.l.", enable_qr_code=True
 )
 
 pdf_path = generator.generate(fattura)
@@ -780,6 +760,7 @@ Create custom templates by extending `BaseTemplate`:
 from openfatture.pdf.templates import BaseTemplate
 from reportlab.pdfgen.canvas import Canvas
 
+
 class CustomTemplate(BaseTemplate):
     """Custom template with unique design."""
 
@@ -790,11 +771,7 @@ class CustomTemplate(BaseTemplate):
         """Draw invoice number and date with custom styling."""
         canvas.setFillColor(self.get_primary_color())
         canvas.setFont("Helvetica-Bold", 16)
-        canvas.drawString(
-            2 * cm,
-            y,
-            f"INVOICE #{fattura_data['numero']}/{fattura_data['anno']}"
-        )
+        canvas.drawString(2 * cm, y, f"INVOICE #{fattura_data['numero']}/{fattura_data['anno']}")
         return y - 1 * cm
 
     # Implement other required methods...
@@ -819,16 +796,17 @@ Create reusable components:
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib.units import cm
 
+
 def draw_custom_badge(canvas: Canvas, x: float, y: float, text: str):
     """Draw a custom badge on the invoice."""
     # Draw rounded rectangle
     canvas.setFillColorRGB(0.2, 0.6, 0.8)
-    canvas.roundRect(x, y, 4*cm, 1*cm, 0.2*cm, fill=1)
+    canvas.roundRect(x, y, 4 * cm, 1 * cm, 0.2 * cm, fill=1)
 
     # Draw text
     canvas.setFillColorRGB(1, 1, 1)
     canvas.setFont("Helvetica-Bold", 10)
-    canvas.drawCentredString(x + 2*cm, y + 0.3*cm, text)
+    canvas.drawCentredString(x + 2 * cm, y + 0.3 * cm, text)
 ```
 
 ---
@@ -875,11 +853,7 @@ config = PDFGeneratorConfig(watermark_text=None)
 
 ```python
 # Fast generation (no logo, no QR)
-config = PDFGeneratorConfig(
-    template="minimalist",
-    logo_path=None,
-    enable_qr_code=False
-)
+config = PDFGeneratorConfig(template="minimalist", logo_path=None, enable_qr_code=False)
 
 # Batch generation (reuse generator)
 generator = PDFGenerator(config)
@@ -923,7 +897,7 @@ except Exception as e:
 
 ```python
 # Generate QR with larger size
-draw_qr_code(canvas, x, y, qr_data, size=4*cm)
+draw_qr_code(canvas, x, y, qr_data, size=4 * cm)
 ```
 
 ### Table Overflow
@@ -969,12 +943,12 @@ verapdf --format text fattura.pdf
 ```python
 # Slow (creates new generator each time)
 for fattura in invoices:
-    generator = PDFGenerator(config) #
+    generator = PDFGenerator(config)  #
     generator.generate(fattura)
 
 # Fast (reuse generator)
 generator = PDFGenerator(config)
-for fattura in invoices: #
+for fattura in invoices:  #
     generator.generate(fattura)
 ```
 

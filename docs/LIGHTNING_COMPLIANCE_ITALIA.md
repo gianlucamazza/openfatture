@@ -425,7 +425,7 @@ invoice_service.create_invoice_from_fattura(
     totale_eur=Decimal("1000.00"),
     descrizione="Consulenza IT",
     cliente_nome="Acme Corp",
-    acquisition_cost_eur=Decimal("800.00") # IMPORTANTE
+    acquisition_cost_eur=Decimal("800.00"),  # IMPORTANTE
 )
 ```
 

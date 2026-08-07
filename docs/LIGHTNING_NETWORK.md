@@ -287,6 +287,7 @@ Webhooks include an `X-Lightning-Signature` header for verification:
 import hmac
 import hashlib
 
+
 def verify_webhook(payload, signature, secret):
     expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
     return hmac.compare_digest(signature, expected)
@@ -481,26 +482,27 @@ import hashlib
 
 app = Flask(__name__)
 
-@app.route('/webhooks/lightning', methods=['POST'])
+
+@app.route("/webhooks/lightning", methods=["POST"])
 def lightning_webhook():
     payload = request.get_data()
-    signature = request.headers.get('X-Lightning-Signature')
-    secret = 'your_webhook_secret'
+    signature = request.headers.get("X-Lightning-Signature")
+    secret = "your_webhook_secret"
 
     # Verify signature
     expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(signature, expected):
-        return jsonify({'error': 'Invalid signature'}), 401
+        return jsonify({"error": "Invalid signature"}), 401
 
     # Process payment
     data = request.get_json()
-    if data['event'] == 'payment_received':
+    if data["event"] == "payment_received":
         # Update invoice status
         # Send confirmation email
         # Update accounting system
         pass
 
-    return jsonify({'status': 'ok'})
+    return jsonify({"status": "ok"})
 ```
 
 ---

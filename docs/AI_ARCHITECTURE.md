@@ -43,6 +43,7 @@ product path requires explicit parity tests.
 
 ```python
 from openfatture.ai.runtime.graph import build_assistant_graph
+
 graph = build_assistant_graph(runtime)
 await graph.ainvoke({"user_input": "..."})
 ```

@@ -360,7 +360,7 @@ print(f"Sending invoice {fattura.numero}/{fattura.anno} to SDI...")
 success, error = sender.send_invoice_to_sdi(
     fattura=fattura,
     xml_path=xml_path,
-    signed=False  # Set to True if the XML was digitally signed
+    signed=False,  # Set to True if the XML was digitally signed
 )
 
 if success:
@@ -421,7 +421,7 @@ settings = get_settings()
 sender = TemplatePECSender(settings=settings)
 processor = NotificationProcessor(
     db_session=session,
-    email_sender=sender # Enables automatic emails!
+    email_sender=sender,  # Enables automatic emails!
 )
 
 # Process the SDI notification file

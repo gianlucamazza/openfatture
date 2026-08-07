@@ -167,24 +167,19 @@ Automatic quality checks before every commit:
 logger = get_logger(__name__)
 
 # Automatic enrichment
-logger.info(
-    "invoice_created",
-    invoice_id=123,
-    amount=1000.00,
-    client="Acme Corp"
-)
+logger.info("invoice_created", invoice_id=123, amount=1000.00, client="Acme Corp")
 
 # Output (JSON in production):
 {
-  "timestamp": "2025-01-09T15:30:00Z",
-  "level": "info",
-  "event": "invoice_created",
-  "invoice_id": 123,
-  "amount": 1000.00,
-  "client": "Acme Corp",
-  "app": "openfatture",
-  "version": "0.1.0",
-  "correlation_id": "abc-123"
+    "timestamp": "2025-01-09T15:30:00Z",
+    "level": "info",
+    "event": "invoice_created",
+    "invoice_id": 123,
+    "amount": 1000.00,
+    "client": "Acme Corp",
+    "app": "openfatture",
+    "version": "0.1.0",
+    "correlation_id": "abc-123",
 }
 ```
 
@@ -199,15 +194,10 @@ logger.info(
 **Never log secrets**:
 ```python
 # Automatic redaction
-logger.info("pec_configured",
-            address="test@pec.it",
-            password="secret123")
+logger.info("pec_configured", address="test@pec.it", password="secret123")
 
 # Logs as:
-{
-  "address": "test@pec.it",
-  "password": "***REDACTED***"
-}
+{"address": "test@pec.it", "password": "***REDACTED***"}
 ```
 
 **Supports**:

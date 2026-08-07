@@ -161,7 +161,7 @@ agent = TaxAdvisorAgent(provider=provider)
 context = TaxContext(
     user_input="IT consulting for a construction company",
     tipo_servizio="IT consulting",
-    importo=5000.0
+    importo=5000.0,
 )
 
 # Execute agent
@@ -312,11 +312,7 @@ from openfatture.ai.domain.context import TaxContext
 from openfatture.models.fattura import Fattura, LineaDettaglio
 
 # 1. Get VAT suggestion
-context = TaxContext(
-    user_input="IT consulting",
-    tipo_servizio="IT consulting",
-    importo=5000.0
-)
+context = TaxContext(user_input="IT consulting", tipo_servizio="IT consulting", importo=5000.0)
 tax_response = await tax_advisor.execute(context)
 suggestion = tax_response.metadata["parsed_model"]
 
@@ -326,7 +322,7 @@ linea = LineaDettaglio(
     quantita=1,
     prezzo_unitario=5000.0,
     aliquota_iva=suggestion["aliquota_iva"],  # 22.0
-    natura=suggestion.get("codice_natura"),   # None for standard
+    natura=suggestion.get("codice_natura"),  # None for standard
 )
 
 # 3. Add note if needed
@@ -356,7 +352,7 @@ metrics = agent.get_metrics()
     "total_tokens": 5250,
     "avg_tokens_per_request": 350,
     "total_cost_usd": 0.075,
-    "avg_latency_ms": 450.0
+    "avg_latency_ms": 450.0,
 }
 ```
 

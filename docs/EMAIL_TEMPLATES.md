@@ -62,7 +62,7 @@ sender = TemplatePECSender(settings=settings)
 success, error = sender.send_invoice_to_sdi(
     fattura=my_invoice,
     xml_path=Path("invoice.xml"),
-    signed=True  # If digitally signed
+    signed=True,  # If digitally signed
 )
 
 if success:
@@ -91,13 +91,11 @@ from openfatture.sdi.notifiche.processor import NotificationProcessor
 sender = TemplatePECSender(settings=settings)
 processor = NotificationProcessor(
     db_session=db_session,
-    email_sender=sender  # Enable email notifications
+    email_sender=sender,  # Enable email notifications
 )
 
 # Process notification - automatically sends email
-success, error, notification = processor.process_file(
-    Path("RC_IT12345678901_00001.xml")
-)
+success, error, notification = processor.process_file(Path("RC_IT12345678901_00001.xml"))
 ```
 
 ### 5. Batch Operation Summary
@@ -111,11 +109,7 @@ result.failed = 5
 result.end_time = datetime.now()
 
 sender = TemplatePECSender(settings=settings)
-sender.send_batch_summary(
-    result=result,
-    operation_type="import",
-    recipients=["admin@example.com"]
-)
+sender.send_batch_summary(result=result, operation_type="import", recipients=["admin@example.com"])
 ```
 
 ## Template Customization
@@ -144,7 +138,7 @@ branding = EmailBranding(
     secondary_color="#212121",  # Dark gray
     success_color="#4CAF50",
     logo_url="https://mycompany.com/logo.png",
-    footer_text="My Custom Footer"
+    footer_text="My Custom Footer",
 )
 
 renderer = TemplateRenderer(settings=settings, branding=branding)
@@ -221,14 +215,12 @@ context = FatturaInvioContext(
     cedente={...},
     destinatario="sdi@pec.it",
     is_signed=False,
-    xml_filename="test.xml"
+    xml_filename="test.xml",
 )
 
 # Generate preview HTML file
 preview_path = renderer.preview(
-    template_name="sdi/invio_fattura.html",
-    context=context,
-    output_path=Path("/tmp/preview.html")
+    template_name="sdi/invio_fattura.html", context=context, output_path=Path("/tmp/preview.html")
 )
 
 print(f"Preview: file://{preview_path}")
@@ -242,11 +234,7 @@ from openfatture.platform.rate_limiter import RateLimiter
 # Allow 5 emails per minute
 custom_limiter = RateLimiter(max_calls=5, period=60)
 
-sender = TemplatePECSender(
-    settings=settings,
-    rate_limit=custom_limiter,
-    max_retries=5
-)
+sender = TemplatePECSender(settings=settings, rate_limit=custom_limiter, max_retries=5)
 ```
 
 ### Manual Email Composition
@@ -260,12 +248,8 @@ message = EmailMessage(
     text_body="Custom text",
     recipients=["recipient@example.com"],
     attachments=[
-        EmailAttachment(
-            filename="document.pdf",
-            content=pdf_bytes,
-            mime_type="application/pdf"
-        )
-    ]
+        EmailAttachment(filename="document.pdf", content=pdf_bytes, mime_type="application/pdf")
+    ],
 )
 
 # Send manually

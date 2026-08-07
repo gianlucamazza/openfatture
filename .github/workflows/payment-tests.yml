@@ -89,7 +89,7 @@ jobs:
 
       - name: Archive coverage HTML report
         if: always() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: payment-coverage-${{ matrix.os }}-py${{ matrix.python-version }}
           path: htmlcov/
@@ -247,7 +247,7 @@ jobs:
           df -h
 
       - name: Build minimal Docker image (payment module only)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile.payment

@@ -1,12 +1,12 @@
 """Message and role definitions for AI agents."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     """Message role in conversation."""
 
     SYSTEM = "system"

@@ -17,7 +17,7 @@ Example:
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from openfatture.ai.rag.auto_update.config import get_auto_update_config
@@ -26,7 +26,7 @@ from openfatture.platform.logging import get_logger
 logger = get_logger(__name__)
 
 
-class ChangeType(str, Enum):
+class ChangeType(StrEnum):
     """Type of change operation."""
 
     CREATE = "create"

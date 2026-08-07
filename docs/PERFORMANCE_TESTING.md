@@ -59,6 +59,7 @@ from tests.performance.utils import (
     assert_performance_target,
 )
 
+
 # Profile a function
 async def my_function():
     with PerformanceProfiler("operation_name") as profiler:
@@ -66,13 +67,9 @@ async def my_function():
         pass
     profiler.metrics.print_summary()
 
+
 # Measure over multiple iterations
-metrics = await measure_async_function(
-    my_async_func,
-    arg1, arg2,
-    iterations=20,
-    warmup=5
-)
+metrics = await measure_async_function(my_async_func, arg1, arg2, iterations=20, warmup=5)
 
 # Assert performance target
 assert_performance_target(metrics, target_ms=100.0, percentile="p95")
@@ -155,6 +152,7 @@ from tests.performance.utils import (
     assert_performance_target,
 )
 
+
 @pytest.mark.performance
 @pytest.mark.asyncio
 class TestMyFeaturePerformance:
@@ -167,11 +165,7 @@ class TestMyFeaturePerformance:
             # ... perform operation ...
             pass
 
-        metrics = await measure_async_function(
-            my_operation,
-            iterations=20,
-            warmup=5
-        )
+        metrics = await measure_async_function(my_operation, iterations=20, warmup=5)
 
         metrics.print_summary()
         assert_performance_target(metrics, target_ms=100.0, percentile="median")
@@ -198,12 +192,7 @@ async def test_operation_scaling(self):
 
     for size in sizes:
         dataset = generate_test_data(size)
-        metrics = await measure_async_function(
-            process_dataset,
-            dataset,
-            iterations=5,
-            warmup=1
-        )
+        metrics = await measure_async_function(process_dataset, dataset, iterations=5, warmup=1)
         results[size] = metrics.mean_latency_ms
         print(f"\nSize {size}: {metrics.mean_latency_ms:.2f}ms")
 
@@ -217,11 +206,7 @@ async def test_operation_scaling(self):
 ```python
 async def test_memory_usage(self):
     """Test peak memory usage (target: <200MB)."""
-    metrics = await measure_async_function(
-        large_operation,
-        iterations=3,
-        warmup=1
-    )
+    metrics = await measure_async_function(large_operation, iterations=3, warmup=1)
 
     assert metrics.memory_peak_mb < 200.0
 ```
