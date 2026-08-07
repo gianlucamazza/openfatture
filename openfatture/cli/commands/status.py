@@ -1,14 +1,17 @@
 """Read-only application status command."""
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from openfatture import __version__
-from openfatture.platform.config import get_settings
+from openfatture.platform.config import Settings, get_settings
 from openfatture.platform.extras import available_extras
 
 app = typer.Typer(no_args_is_help=True)
@@ -20,7 +23,50 @@ def _hooks_dir() -> Path:
     return Path.home() / ".openfatture" / "hooks"
 
 
-def _build_status() -> dict:
+def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
+    """Compute honest setup readiness (core invoicing vs assistant)."""
+    company_ok = bool(
+        (settings.cedente_partita_iva or "").strip()
+        and (settings.cedente_denominazione or "").strip()
+    )
+    data_dir_ok = settings.data_dir.exists()
+    archive_ok = settings.archivio_dir.exists()
+    ai_extra = bool(extras.get("ai"))
+    provider = (settings.ai_provider or "").lower()
+    # Ollama needs no cloud key; cloud providers need a key for real calls.
+    ai_credentials_ok = provider == "ollama" or bool(settings.ai_api_key)
+    assistant_ready = ai_extra and ai_credentials_ok
+    core_ready = company_ok and data_dir_ok
+
+    next_steps: list[str] = []
+    if not data_dir_ok or not company_ok:
+        next_steps.append("Run: openfatture init")
+    if not ai_extra:
+        next_steps.append("For the assistant: uv sync --extra ai")
+    elif not ai_credentials_ok:
+        next_steps.append("Set AI_API_KEY (or use AI_PROVIDER=ollama)")
+    if core_ready and assistant_ready:
+        next_steps.append('Try: openfatture assistant "Elenca le fatture aperte"')
+    elif core_ready and not assistant_ready:
+        next_steps.append("Core is ready; enable the ai extra to use the assistant")
+    if not next_steps:
+        next_steps.append("openfatture --help")
+
+    return {
+        "core_ready": core_ready,
+        "assistant_ready": assistant_ready,
+        "checks": {
+            "company_profile": company_ok,
+            "data_dir": data_dir_ok,
+            "archive_dir": archive_ok,
+            "ai_extra": ai_extra,
+            "ai_credentials": ai_credentials_ok,
+        },
+        "next_steps": next_steps,
+    }
+
+
+def _build_status() -> dict[str, Any]:
     settings = get_settings()
     extras = available_extras()
     hooks_dir = _hooks_dir()
@@ -29,6 +75,7 @@ def _build_status() -> dict:
         hook_scripts = sorted(
             p.name for p in hooks_dir.iterdir() if p.is_file() and not p.name.startswith(".")
         )
+    readiness = _readiness(settings, extras)
     return {
         "version": __version__,
         "database": str(settings.database_url),
@@ -37,6 +84,7 @@ def _build_status() -> dict:
         "ai_provider": settings.ai_provider,
         "ai_model": settings.ai_model,
         "ai_api_key_configured": bool(settings.ai_api_key),
+        "readiness": readiness,
         "extras": extras,
         "extensions": {
             # Supported extension mechanism: user hook scripts (see docs/CORE_VS_EXTENSIONS.md)
@@ -74,6 +122,14 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
         print(json.dumps(data, indent=2, default=str))
         return
 
+    ready = data["readiness"]
+    core_label = "ready" if ready["core_ready"] else "not ready"
+    asst_label = "ready" if ready["assistant_ready"] else "not ready"
+    console.print(
+        f"[bold]Readiness[/bold]  core: [cyan]{core_label}[/cyan]  "
+        f"assistant: [cyan]{asst_label}[/cyan]\n"
+    )
+
     table = Table(title="OpenFatture status")
     table.add_column("Setting", style="cyan")
     table.add_column("Value")
@@ -88,6 +144,19 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
     ):
         table.add_row(key.replace("_", " ").title(), str(data[key]))
     console.print(table)
+
+    checks = Table(title="Readiness checks")
+    checks.add_column("Check", style="cyan")
+    checks.add_column("OK")
+    for name, ok in ready["checks"].items():
+        checks.add_row(name.replace("_", " "), "yes" if ok else "no")
+    console.print(checks)
+
+    if ready["next_steps"]:
+        console.print("\n[bold]Next steps[/bold]")
+        for step in ready["next_steps"]:
+            console.print(f"  • {step}")
+        console.print()
 
     extras_table = Table(title="Optional extras (feature modules)")
     extras_table.add_column("Extra", style="cyan")

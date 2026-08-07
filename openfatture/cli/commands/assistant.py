@@ -16,6 +16,47 @@ app = typer.Typer(no_args_is_help=True)
 console = Console()
 logger = get_logger(__name__)
 
+_SLASH_HELP = """[bold]Slash commands[/bold]
+  /help     Show this help
+  /exit     End the session (also: exit, quit, q)
+  /session  Show current session id
+  /clear    Clear persisted session messages (keeps the same id)
+"""
+
+
+def _handle_slash_command(user_input: str, *, runtime: object) -> str | None:
+    """Handle in-chat slash commands.
+
+    Returns:
+        ``\"exit\"`` to end the loop, ``\"handled\"`` if consumed,
+        or ``None`` if the input is a normal user message.
+    """
+    if not user_input.startswith("/"):
+        return None
+    cmd = user_input.strip().split(maxsplit=1)[0].lower()
+    if cmd in {"/help", "/?"}:
+        console.print(_SLASH_HELP)
+        return "handled"
+    if cmd in {"/exit", "/quit", "/q"}:
+        return "exit"
+    if cmd == "/session":
+        sid = getattr(runtime, "session_id", None)
+        console.print(f"[dim]Session: {sid or '(not persisted)'}[/dim]")
+        return "handled"
+    if cmd == "/clear":
+        session = getattr(runtime, "_session", None)
+        store = getattr(runtime, "_session_store", None)
+        if session is not None and hasattr(session, "clear_messages"):
+            session.clear_messages()
+            if store is not None and hasattr(store, "save"):
+                store.save(session)
+            console.print("[dim]Session messages cleared.[/dim]")
+        else:
+            console.print("[dim]No persisted session to clear.[/dim]")
+        return "handled"
+    console.print(f"[yellow]Unknown command {cmd}. Try /help[/yellow]")
+    return "handled"
+
 
 @app.command()
 def assistant(
@@ -110,7 +151,9 @@ async def _run_assistant(
             return
 
         console.print("[bold]OpenFatture assistant[/bold]")
-        console.print("Describe what you need, or type 'exit' to end the session.\n")
+        console.print(
+            "Describe what you need. Slash commands: [dim]/help /exit /session /clear[/dim]\n"
+        )
         # When persistence is on, the session store is the history source of truth.
         # Do not pass a parallel in-memory history that would duplicate turns.
         while True:
@@ -123,6 +166,11 @@ async def _run_assistant(
                 continue
             if user_input.lower() in {"exit", "quit", "q"}:
                 break
+            slash = _handle_slash_command(user_input, runtime=runtime)
+            if slash == "exit":
+                break
+            if slash == "handled":
+                continue
             if stream:
                 console.print("Assistant: ", end="")
                 answer = ""

@@ -53,12 +53,21 @@ openfatture config reload
 
 ## `openfatture status`
 
-Reports version, storage paths, and AI readiness without changing local state.
+Reports version, storage paths, optional extras, and **readiness**
+(`core_ready` / `assistant_ready` plus `next_steps`) without changing local
+state. Use `--json` for machine-readable output.
 
 ```bash
 openfatture status
 openfatture status --json
 ```
+
+Interactive assistant slash commands (when no one-shot message is given):
+
+- `/help` — list commands
+- `/exit` — end the session
+- `/session` — show session id
+- `/clear` — clear persisted messages for the current session
 
 Use `openfatture --help` and command-specific `--help` output as the
 canonical option reference.

@@ -61,16 +61,16 @@ def init(
 
         if env_file.exists():
             if not Confirm.ask(
-                "[yellow]A .env file already exists. Overwrite?[/yellow]",
+                "[yellow]A .env file already exists. Overwrite company/AI settings?[/yellow]",
                 default=False,
             ):
-                console.print("\n[green]Setup complete! Existing .env preserved.[/green]")
+                console.print(
+                    "\n[green]Existing .env preserved.[/green] "
+                    "Dirs and database were still ensured above.\n"
+                )
+                _print_setup_complete()
                 return
-        else:
-            # Copy example if starting fresh
-            example = Path(".env.example")
-            if example.exists():
-                example.read_text().splitlines()
+        # Never silently overwrite; only write after explicit wizard completion.
 
         # Gather company data
         console.print("\n[bold]Company Information (Cedente Prestatore)[/bold]")
@@ -248,13 +248,19 @@ def init(
         env_file.write_text("\n".join(env_lines))
         console.print(f"\n Configuration saved to: {env_file.absolute()}\n")
 
-    # Success message
+    _print_setup_complete()
+
+
+def _print_setup_complete() -> None:
+    """Show post-setup guidance without claiming the assistant is ready."""
     panel = Panel(
-        "[bold green]OpenFatture is ready to use![/bold green]\n\n"
+        "[bold green]Setup finished[/bold green]\n\n"
         "Next steps:\n"
         "  • Check readiness: [cyan]openfatture status[/cyan]\n"
-        "  • Ask the assistant: [cyan]openfatture assistant[/cyan]\n"
-        "  • View help: [cyan]openfatture --help[/cyan]",
+        "  • Configure values: [cyan]openfatture config show[/cyan]\n"
+        "  • Assistant (needs [cyan]uv sync --extra ai[/cyan]):\n"
+        '      [cyan]openfatture assistant "Elenca le fatture aperte"[/cyan]\n'
+        "  • Help: [cyan]openfatture --help[/cyan]",
         title="Setup Complete",
         border_style="green",
     )

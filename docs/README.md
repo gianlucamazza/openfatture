@@ -8,6 +8,7 @@ This is the current documentation index for the CLI-first, agentic product.
 - [CLI reference](CLI_REFERENCE.md)
 - [Configuration](CONFIGURATION.md)
 - [Project status](STATUS.md)
+- [Release notes v2.0.1](releases/v2.0.1.md)
 - [Release notes v2.0.0](releases/v2.0.0.md)
 - [Architecture](ARCHITECTURE.md)
 - [Core vs extras vs extensions](CORE_VS_EXTENSIONS.md)

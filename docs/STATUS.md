@@ -1,6 +1,6 @@
 # OpenFatture project status
 
-**Current version:** 2.0.0  
+**Current version:** 2.0.1  
 **Product posture:** CLI-first, with an interactive terminal mode for guided workflows  
 **Runtime:** Python 3.12+ and `uv`
 
@@ -38,13 +38,15 @@ fix the root cause instead.
 
 ## Current focus (post-2.0)
 
-1. Keep LangGraph multi-node as tested helper; promote to product path only with
-   explicit decision and parity tests (B1-α)
+1. LangGraph remains a tested helper (B1-β); parity tests cover tool-loop shape —
+   flip only with feature flag + full streaming parity
 2. Lightning real LND gRPC **or** keep hard experimental posture
-3. Split oversized application/ops modules (`cash_flow_predictor`, ops facades, …)
-4. Onboarding/feedback quality in the CLI/TUI
+3. Continue splitting oversized modules (`cash_flow_predictor`, ops facades;
+   `ai.tools.registry` is already a package)
+4. Onboarding polish continues (readiness in `status`, slash commands in assistant)
 
-See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) and [releases/v2.0.0.md](releases/v2.0.0.md).
+See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [releases/v2.0.1.md](releases/v2.0.1.md),
+and [releases/v2.0.0.md](releases/v2.0.0.md).
 
 ## Explicit non-goals
 
