@@ -13,12 +13,22 @@ Experimental multi-agent workflows remain under ``ai.orchestration.workflows``.
 from __future__ import annotations
 
 import json
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, Protocol, TypedDict
 
+from openfatture.ai.domain.message import Message, Role
+from openfatture.ai.providers.base import BaseLLMProvider
+from openfatture.ai.tools.registry import ToolRegistry
 from openfatture.platform.extras import require_extra
 from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+class _RuntimeProviderAccess(Protocol):
+    """Minimal surface of AssistantRuntime needed to build a graph."""
+
+    _provider: BaseLLMProvider
+    _tool_registry: ToolRegistry
 
 
 class ToolLoopState(TypedDict, total=False):
@@ -36,32 +46,25 @@ class ToolLoopState(TypedDict, total=False):
     tool_results: list[dict[str, Any]]
 
 
-def _message_to_dict(msg: Any) -> dict[str, Any]:
-    from openfatture.ai.domain.message import Message
-
+def _message_to_dict(msg: Message | dict[str, Any]) -> dict[str, Any]:
     if isinstance(msg, dict):
         return msg
-    if isinstance(msg, Message):
-        data: dict[str, Any] = {
-            "role": msg.role.value if hasattr(msg.role, "value") else str(msg.role),
-            "content": msg.content or "",
-        }
-        if msg.tool_calls:
-            data["tool_calls"] = msg.tool_calls
-        if msg.tool_call_id:
-            data["tool_call_id"] = msg.tool_call_id
-        if msg.name:
-            data["name"] = msg.name
-        return data
-    raise TypeError(f"Unsupported message type: {type(msg)}")
+    data: dict[str, Any] = {
+        "role": msg.role.value,
+        "content": msg.content or "",
+    }
+    if msg.tool_calls:
+        data["tool_calls"] = msg.tool_calls
+    if msg.tool_call_id:
+        data["tool_call_id"] = msg.tool_call_id
+    if msg.name:
+        data["name"] = msg.name
+    return data
 
 
-def _dict_to_message(data: dict[str, Any]) -> Any:
-    from openfatture.ai.domain.message import Message, Role
-
-    role = data.get("role", "user")
-    if isinstance(role, str):
-        role = Role(role)
+def _dict_to_message(data: dict[str, Any]) -> Message:
+    role_raw = data.get("role", "user")
+    role = Role(role_raw) if isinstance(role_raw, str) else role_raw
     return Message(
         role=role,
         content=data.get("content") or "",
@@ -73,8 +76,8 @@ def _dict_to_message(data: dict[str, Any]) -> Any:
 
 def build_tool_loop_graph(
     *,
-    provider: Any,
-    tool_registry: Any,
+    provider: BaseLLMProvider,
+    tool_registry: ToolRegistry,
     max_iterations: int = 5,
 ) -> Any:
     """Compile a LangGraph model↔tools loop.
@@ -92,17 +95,13 @@ def build_tool_loop_graph(
 
         raise MissingExtraError("ai", feature="LangGraph", cause=exc) from exc
 
-    from openfatture.ai.domain.message import Message, Role
-
     def _tool_schemas() -> list[dict[str, Any]]:
-        if getattr(provider, "provider_name", "") == "anthropic":
-            schemas: list[dict[str, Any]] = list(tool_registry.get_anthropic_tools())
-            return schemas
-        openai_schemas: list[dict[str, Any]] = list(tool_registry.get_openai_functions())
-        return openai_schemas
+        if provider.provider_name == "anthropic":
+            return list(tool_registry.get_anthropic_tools())
+        return list(tool_registry.get_openai_functions())
 
     def _tool_choice() -> Any:
-        if getattr(provider, "provider_name", "") == "anthropic":
+        if provider.provider_name == "anthropic":
             return {"type": "auto"}
         return "auto"
 
@@ -110,11 +109,12 @@ def build_tool_loop_graph(
         messages = [_dict_to_message(m) for m in state.get("messages") or []]
         if not messages and state.get("user_input"):
             messages = [Message(role=Role.USER, content=state["user_input"])]
+        use_tools = provider.supports_tools
         response = await provider.generate(
             messages=messages,
             system_prompt=state.get("system_prompt"),
-            tools=_tool_schemas() if getattr(provider, "supports_tools", False) else None,
-            tool_choice=_tool_choice() if getattr(provider, "supports_tools", False) else None,
+            tools=_tool_schemas() if use_tools else None,
+            tool_choice=_tool_choice() if use_tools else None,
         )
         assistant_msg: dict[str, Any] = {
             "role": "assistant",
@@ -136,9 +136,8 @@ def build_tool_loop_graph(
         if not new_messages and state.get("user_input"):
             new_messages.append({"role": "user", "content": state["user_input"]})
         new_messages.append(assistant_msg)
-        tokens = int(getattr(response.usage, "total_tokens", 0) or 0) + int(
-            state.get("tokens") or 0
-        )
+        usage_tokens = response.usage.total_tokens if response.usage is not None else 0
+        tokens = int(usage_tokens or 0) + int(state.get("tokens") or 0)
         return {
             **state,
             "messages": new_messages,
@@ -245,18 +244,18 @@ def build_tool_loop_graph(
     return compiled
 
 
-def build_assistant_graph(runtime: Any) -> Any:
+def build_assistant_graph(runtime: _RuntimeProviderAccess) -> Any:
     """Build a multi-node tool-loop graph from an :class:`AssistantRuntime`.
 
-    Falls back to a single-node graph if the runtime has no tool registry/provider.
+    Uses provider/registry primitives only — never ``runtime.run`` — so the
+    graph cannot re-enter the product facade (backend circularity).
     """
-    provider = getattr(runtime, "_provider", None)
-    agent = getattr(runtime, "_agent", None)
-    registry = getattr(agent, "tool_registry", None) if agent is not None else None
-    if provider is not None and registry is not None and getattr(provider, "supports_tools", False):
+    provider: BaseLLMProvider = runtime._provider
+    registry: ToolRegistry = runtime._tool_registry
+    if provider.supports_tools:
         return build_tool_loop_graph(provider=provider, tool_registry=registry)
 
-    # Fallback: single-node delegation (streaming/non-tool providers)
+    # Fallback: single-node plain generation (no tools / no native tool support)
     require_extra("ai", feature="LangGraph assistant graph")
     from langgraph.graph import END, StateGraph
 
@@ -268,13 +267,16 @@ def build_assistant_graph(runtime: Any) -> Any:
         tokens: int
 
     async def run_turn(state: SimpleState) -> SimpleState:
-        response = await runtime.run(state["user_input"])
+        response = await provider.generate(
+            messages=[Message(role=Role.USER, content=state["user_input"])],
+        )
+        tokens = response.usage.total_tokens if response.usage is not None else 0
         return {
             "user_input": state["user_input"],
             "content": response.content or "",
-            "status": getattr(response.status, "value", str(response.status)),
+            "status": response.status.value,
             "error": response.error,
-            "tokens": int(getattr(response.usage, "total_tokens", 0) or 0),
+            "tokens": int(tokens or 0),
         }
 
     graph = StateGraph(SimpleState)

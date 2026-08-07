@@ -38,8 +38,9 @@ fix the root cause instead.
 
 ## Current focus (post-2.0)
 
-1. LangGraph remains a tested helper (B1-β); parity tests cover tool-loop shape —
-   flip only with feature flag + full streaming parity
+1. **LangGraph product backend is opt-in** (`ASSISTANT_BACKEND=langgraph`);
+   default remains `chat` / `chat_agent_tool_loop`. Parity + stream tests gate
+   any future default flip. Multi-agent workflows stay non-CLI.
 2. Lightning real LND gRPC **or** keep hard experimental posture
 3. Continue splitting oversized modules (`cash_flow_predictor`, ops facades;
    `ai.tools.registry` is already a package)

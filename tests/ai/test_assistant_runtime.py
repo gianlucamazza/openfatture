@@ -16,10 +16,12 @@ async def test_runtime_run_delegates_to_chat_agent() -> None:
         agent_name="chat",
         usage=UsageMetrics(total_tokens=1, estimated_cost_usd=0.0),
     )
+    empty_registry = MagicMock(list_tools=MagicMock(return_value=[]))
     with (
         patch("openfatture.platform.extras.require_extra"),
         patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
-        patch("openfatture.ai.agents.chat_agent.ChatAgent") as mock_agent_cls,
+        patch("openfatture.ai.tools.registry.get_tool_registry", return_value=empty_registry),
+        patch("openfatture.ai.runtime.service.ChatAgent") as mock_agent_cls,
     ):
         mock_prov.return_value = MagicMock(provider_name="openai", model="gpt", supports_tools=True)
         agent = MagicMock()
@@ -33,15 +35,20 @@ async def test_runtime_run_delegates_to_chat_agent() -> None:
         assert result.content == "ok"
         agent.execute.assert_awaited_once()
         assert runtime.session_id is None
+        assert runtime.backend == "chat_agent_tool_loop"
 
 
 def test_build_assistant_graph_compiles() -> None:
+    empty_registry = MagicMock(list_tools=MagicMock(return_value=[]))
     with (
         patch("openfatture.platform.extras.require_extra"),
         patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
-        patch("openfatture.ai.agents.chat_agent.ChatAgent"),
+        patch("openfatture.ai.tools.registry.get_tool_registry", return_value=empty_registry),
+        patch("openfatture.ai.runtime.service.ChatAgent"),
     ):
-        mock_prov.return_value = MagicMock(provider_name="openai", model="gpt")
+        mock_prov.return_value = MagicMock(
+            provider_name="openai", model="gpt", supports_tools=False
+        )
         from openfatture.ai.runtime import create_assistant_runtime
         from openfatture.ai.runtime.graph import build_assistant_graph
 
@@ -59,10 +66,12 @@ async def test_runtime_persist_session_saves_and_reloads(tmp_path: Path) -> None
         agent_name="chat",
         usage=UsageMetrics(total_tokens=2, estimated_cost_usd=0.0),
     )
+    empty_registry = MagicMock(list_tools=MagicMock(return_value=[]))
     with (
         patch("openfatture.platform.extras.require_extra"),
         patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
-        patch("openfatture.ai.agents.chat_agent.ChatAgent") as mock_agent_cls,
+        patch("openfatture.ai.tools.registry.get_tool_registry", return_value=empty_registry),
+        patch("openfatture.ai.runtime.service.ChatAgent") as mock_agent_cls,
         patch("openfatture.ai.session.get_session_store") as mock_store_factory,
     ):
         from openfatture.ai.session.file_store import FileSessionStore
