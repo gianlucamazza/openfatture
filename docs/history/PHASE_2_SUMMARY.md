@@ -221,7 +221,7 @@ class RateLimiter:
 
 **Files Modified/Created:**
 ```
-openfatture/utils/rate_limiter.py (302 lines, 96% coverage)
+openfatture/platform/rate_limiter.py (302 lines, 96% coverage)
 openfatture/sdi/pec_sender/sender.py (+58 lines for rate limiting)
 
 tests/unit/test_rate_limiter.py (301 lines, 23 tests)
@@ -316,7 +316,7 @@ class BatchResult:
 
 **Files Created:**
 ```
-openfatture/core/batch/
+openfatture/billing/batch/
 ├── __init__.py (23 lines)
 ├── processor.py (235 lines, 100% coverage)
 └── operations.py (335 lines, 100% coverage)

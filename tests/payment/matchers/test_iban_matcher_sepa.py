@@ -68,15 +68,14 @@ class TestSEPAIBANFormats:
         assert set(SEPAIBANFormats.FORMATS.keys()) == expected_sepa_countries
 
     def test_iban_format_immutable(self):
-        """Test IBANFormat is frozen (immutable)."""
+        """Test IBANFormat is a frozen dataclass (normal assignment fails)."""
         from dataclasses import FrozenInstanceError
 
         fmt = SEPAIBANFormats.FORMATS["IT"]
 
-        with pytest.raises(
-            FrozenInstanceError
-        ):  # Pydantic V2 frozen model raises FrozenInstanceError
-            fmt.country_code = "XX"  # type: ignore
+        field = "country_code"
+        with pytest.raises(FrozenInstanceError):
+            setattr(fmt, field, "XX")
 
     def test_combined_pattern_generation(self):
         """Test combined regex pattern creation for all SEPA IBANs."""

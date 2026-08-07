@@ -9,8 +9,6 @@ import warnings
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
-from anthropic import AnthropicError, AsyncAnthropic, RateLimitError
-
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import (
     AgentResponse,
@@ -25,11 +23,17 @@ from openfatture.ai.providers.base import (
     ProviderRateLimitError,
     ProviderTimeoutError,
 )
-from openfatture.utils.logging import get_logger
+from openfatture.platform.extras import MissingExtraError
+from openfatture.platform.logging import get_logger
+
+try:
+    from anthropic import AnthropicError, AsyncAnthropic, RateLimitError
+except ImportError as exc:
+    raise MissingExtraError("ai", feature="Anthropic provider", cause=exc) from exc
 
 if TYPE_CHECKING:
     from anthropic.types import MessageParam
-else:  # pragma: no cover - runtime fallback when type hints unavailable
+else:
     MessageParam = Any
 
 
@@ -211,7 +215,7 @@ class AnthropicProvider(BaseLLMProvider):
                 "Anthropic rate limit exceeded",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
         except AnthropicError as e:
             error_msg = str(e)
@@ -222,7 +226,7 @@ class AnthropicProvider(BaseLLMProvider):
                     f"Anthropic authentication failed: {error_msg}",
                     provider=self.provider_name,
                     original_error=e,
-                )
+                ) from e
 
             if "timeout" in error_msg.lower():
                 logger.error("anthropic_timeout", error=error_msg)
@@ -230,14 +234,14 @@ class AnthropicProvider(BaseLLMProvider):
                     f"Anthropic request timeout: {error_msg}",
                     provider=self.provider_name,
                     original_error=e,
-                )
+                ) from e
 
             logger.error("anthropic_error", error=error_msg, error_type=type(e).__name__)
             raise ProviderError(
                 f"Anthropic error: {error_msg}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
         except Exception as e:
             logger.error("anthropic_unexpected_error", error=str(e), error_type=type(e).__name__)
@@ -245,7 +249,7 @@ class AnthropicProvider(BaseLLMProvider):
                 f"Unexpected error calling Anthropic: {e}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
     async def stream(
         self,
@@ -286,7 +290,7 @@ class AnthropicProvider(BaseLLMProvider):
                 f"Error streaming from Anthropic: {e}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
     def count_tokens(self, text: str) -> int:
         """
@@ -303,7 +307,7 @@ class AnthropicProvider(BaseLLMProvider):
             try:
                 result = count_tokens_fn(text)
 
-                if inspect.isawaitable(result):  # pragma: no cover - defensive
+                if inspect.isawaitable(result):
                     logger.debug("awaiting_async_count_tokens")
                     result = asyncio.get_event_loop().run_until_complete(result)
 
@@ -313,7 +317,7 @@ class AnthropicProvider(BaseLLMProvider):
                         return int(token_count)
 
                 return int(result)
-            except Exception as exc:  # pragma: no cover - fallback path
+            except Exception as exc:
                 logger.warning(
                     "anthropic_count_tokens_failed",
                     error=str(exc),

@@ -1,20 +1,16 @@
-"""Tools for invoice operations.
+"""Tools for invoice operations (thin adapters).
 
-This package splits the former monolithic ``invoice_tools.py`` into
-domain-focused submodules while preserving the public API:
+Domain logic lives in application services:
 
-- ``queries``: search_invoices, get_invoice_details, get_invoice_stats
-- ``invoices``: create_invoice, update_invoice, delete_invoice, update_invoice_status
-- ``righe``: create_riga, update_riga, delete_riga
-- ``sdi``: validate_invoice_xml, send_invoice_to_sdi
+- reads: ``billing.application.invoice_queries``
+- writes: ``billing.application.invoice_commands``
+- SDI: ``sdi.application.invoice_sdi_ops``
 
-All database access goes through the single seam ``_db.get_session`` so tests
-can patch ``openfatture.ai.tools.invoice_tools._db.get_session``.
+Public tool functions re-export those use-cases for the ToolRegistry.
 """
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
 
-from ._db import get_session
 from .invoices import (
     create_invoice,
     delete_invoice,
@@ -50,7 +46,6 @@ __all__ = [
     "delete_invoice",
     "update_invoice_status",
     "get_invoice_tools",
-    "get_session",
 ]
 
 

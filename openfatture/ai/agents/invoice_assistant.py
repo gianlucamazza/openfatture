@@ -6,7 +6,7 @@ from openfatture.ai.domain.context import InvoiceContext
 from openfatture.ai.domain.prompt import PromptManager, create_prompt_manager
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.ai.providers import BaseLLMProvider
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

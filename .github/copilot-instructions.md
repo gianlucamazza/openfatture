@@ -20,7 +20,7 @@ Before submitting changes:
 uv sync --all-extras
 uv run python -m pytest -q
 uv run ruff check .
-uv run black --check .
+uv run ruff format --check .
 uv run openfatture --help
 make demo
 ```

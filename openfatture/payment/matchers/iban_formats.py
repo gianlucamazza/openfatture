@@ -228,7 +228,9 @@ class SEPAIBANFormats:
             False
             >>> SEPAIBANFormats.validate_length("NO9386011117947")  # Norway (15 chars)
             True
-            >>> SEPAIBANFormats.validate_length("MT84MALT011000012345MTLCAST001S")  # Malta (31 chars)
+            >>> SEPAIBANFormats.validate_length(
+            ...     "MT84MALT011000012345MTLCAST001S"
+            ... )  # Malta (31 chars)
             True
         """
         country_code = cls.detect_country(iban)

@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import structlog
 from jinja2 import Environment, FileSystemLoader
 
-from openfatture.utils.config import Settings, get_settings
+from openfatture.platform.config import Settings, get_settings
 
 if TYPE_CHECKING:
     from ...domain.models import PaymentReminder
@@ -71,7 +71,7 @@ class EmailNotifier(INotifier):
         ...     port=587,
         ...     username="your@email.com",
         ...     password="yourpassword",
-        ...     from_email="noreply@openfatture.com"
+        ...     from_email="noreply@openfatture.com",
         ... )
         >>> notifier = EmailNotifier(config, template_dir=Path("templates"))
         >>> await notifier.send_reminder(reminder)
@@ -298,13 +298,14 @@ Kind regards,
 
 
 class ConsoleNotifier(INotifier):
-    """Console output notifier for development/testing.
+    """Structured-log notifier for local development.
 
-    Prints reminder details to console instead of sending actual notifications.
+    Emits reminder details via the application logger (not stdout ``print``).
+    Production deployments should use email/webhook notifiers instead.
     """
 
     async def send_reminder(self, reminder: "PaymentReminder") -> bool:
-        """Print reminder to console.
+        """Log reminder details.
 
         Args:
             reminder: PaymentReminder entity
@@ -312,20 +313,25 @@ class ConsoleNotifier(INotifier):
         Returns:
             Always True
         """
+        import structlog
+
+        log = structlog.get_logger(__name__)
         payment = reminder.payment
         invoice = payment.fattura if hasattr(payment, "fattura") else None
 
-        print(f"\n{'=' * 60}")
-        print(f"[REMINDER] Payment #{reminder.payment_id}")
-        print(f"{'=' * 60}")
-        if invoice:
-            print(f"Invoice: {invoice.numero}")
-        print(f"Amount: €{payment.importo_da_pagare if payment else 0}")
-        print(f"Due Date: {payment.data_scadenza.strftime('%d/%m/%Y') if payment else 'N/A'}")
-        print(f"Days to Due: {reminder.days_before_due}")
-        print(f"Strategy: {reminder.strategy.value if reminder.strategy else 'N/A'}")
-        print(f"{'=' * 60}\n")
-
+        log.info(
+            "payment_reminder_console",
+            payment_id=reminder.payment_id,
+            invoice=getattr(invoice, "numero", None) if invoice else None,
+            amount=str(payment.importo_da_pagare) if payment else "0",
+            due_date=(
+                payment.data_scadenza.strftime("%d/%m/%Y")
+                if payment and payment.data_scadenza
+                else None
+            ),
+            days_before_due=reminder.days_before_due,
+            strategy=reminder.strategy.value if reminder.strategy else None,
+        )
         return True
 
 
@@ -336,11 +342,9 @@ class CompositeNotifier(INotifier):
     channels (email + SMS + webhook) simultaneously.
 
     Example:
-        >>> notifier = CompositeNotifier([
-        ...     EmailNotifier(smtp_config),
-        ...     SMSNotifier(sms_config),
-        ...     WebhookNotifier(webhook_url)
-        ... ])
+        >>> notifier = CompositeNotifier(
+        ...     [EmailNotifier(smtp_config), SMSNotifier(sms_config), WebhookNotifier(webhook_url)]
+        ... )
         >>> await notifier.send_reminder(reminder)  # Sends to all channels
     """
 

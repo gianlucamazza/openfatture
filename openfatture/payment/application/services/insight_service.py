@@ -2,24 +2,29 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
 
 from openfatture.payment.domain.value_objects import PaymentInsight
 
 if TYPE_CHECKING:
-    from ....ai.agents.payment_insight_agent import PaymentInsightAgent
     from ....storage.database.models import Pagamento
     from ...domain.models import BankTransaction
 
 logger = structlog.get_logger()
 
 
+class PaymentInsightExecutor(Protocol):
+    """Minimal contract for AI agents used by :class:`TransactionInsightService`."""
+
+    async def execute(self, context: Any) -> Any: ...
+
+
 class TransactionInsightService:
     """Facade around PaymentInsightAgent providing domain-friendly insights."""
 
-    def __init__(self, agent: PaymentInsightAgent) -> None:
+    def __init__(self, agent: PaymentInsightExecutor | None) -> None:
         self.agent = agent
 
     async def analyze(
@@ -32,6 +37,13 @@ class TransactionInsightService:
         # imports it) from eagerly pulling the whole openfatture.ai stack.
         from openfatture.ai.domain.context import PaymentInsightContext
         from openfatture.ai.domain.response import ResponseStatus
+
+        if self.agent is None:
+            logger.info(
+                "payment_insight_agent_unavailable",
+                transaction_id=str(transaction.id),
+            )
+            return None
 
         context = PaymentInsightContext(
             user_input=transaction.description or transaction.reference or "",
@@ -46,7 +58,7 @@ class TransactionInsightService:
 
         try:
             response = await self.agent.execute(context)
-        except Exception as exc:  # pragma: no cover - defensive logging
+        except Exception as exc:
             logger.warning(
                 "payment_insight_agent_failed",
                 error=str(exc),

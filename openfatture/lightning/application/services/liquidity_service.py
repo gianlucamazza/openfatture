@@ -8,10 +8,13 @@ import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from openfatture.core.events.base import get_global_event_bus
+from openfatture.events.base import get_global_event_bus
 from openfatture.lightning.domain.enums import LiquidityAlertType
 from openfatture.lightning.domain.events import LightningLiquidityAlert
 from openfatture.lightning.infrastructure.lnd_client import ProductionLNDClient
+from openfatture.platform.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -84,7 +87,7 @@ class LightningLiquidityService:
             return  # Already running
 
         self._monitoring_task = asyncio.create_task(self._monitor_liquidity_loop())
-        print(f"Started Lightning liquidity monitoring (interval: {self.check_interval}s)")
+        logger.info(f"Started Lightning liquidity monitoring (interval: {self.check_interval}s)")
 
     async def stop_monitoring(self) -> None:
         """Stop automatic liquidity monitoring."""
@@ -97,7 +100,7 @@ class LightningLiquidityService:
             # Keep the (now-cancelled, done) task reference so callers can
             # inspect its state; start_monitoring already restarts when the
             # existing task is done.
-            print("Stopped Lightning liquidity monitoring")
+            logger.info("Stopped Lightning liquidity monitoring")
 
     async def _monitor_liquidity_loop(self) -> None:
         """Main monitoring loop."""
@@ -108,7 +111,7 @@ class LightningLiquidityService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Error in liquidity monitoring: {e}")
+                logger.error(f"Error in liquidity monitoring: {e}")
                 await asyncio.sleep(60)  # Wait before retrying
 
     async def check_liquidity(self) -> LiquidityMetrics:
@@ -212,7 +215,7 @@ class LightningLiquidityService:
                 alerts_emitted.append("unbalanced")
 
         if alerts_emitted:
-            print(f"Emitted liquidity alerts: {', '.join(alerts_emitted)}")
+            logger.info(f"Emitted liquidity alerts: {', '.join(alerts_emitted)}")
 
     async def get_rebalancing_opportunities(self) -> list[RebalancingOpportunity]:
         """Analyze channels and suggest rebalancing opportunities.

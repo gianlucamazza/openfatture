@@ -35,18 +35,25 @@ from openfatture.ai.agents.compliance import (
 from openfatture.ai.orchestration.states import (
     ComplianceCheckState,
 )
+from openfatture.platform.datetime import utc_now
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Fattura
 from openfatture.storage.session import db_session
-from openfatture.utils.datetime import utc_now
-from openfatture.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from langgraph.graph import END as _END
     from langgraph.graph import StateGraph as _StateGraph
 else:
-    _graph_module = import_module("langgraph.graph")
-    _StateGraph = _graph_module.StateGraph
-    _END = _graph_module.END
+    try:
+        _graph_module = import_module("langgraph.graph")
+        _StateGraph = _graph_module.StateGraph
+        _END = _graph_module.END
+    except ImportError as exc:
+        from openfatture.platform.extras import MissingExtraError
+
+        raise MissingExtraError(
+            "ai", feature="LangGraph compliance check workflow", cause=exc
+        ) from exc
 
 StateGraph = _StateGraph
 END = _END
@@ -434,14 +441,17 @@ class ComplianceCheckWorkflow:
             return state
 
     async def _human_review_node(self, state: ComplianceCheckState) -> ComplianceCheckState:
-        """Human review for borderline cases."""
-        logger.info("awaiting_human_review", workflow_id=state.workflow_id)
+        """Borderline-case gate (experimental workflow).
 
+        Marks the workflow as awaiting approval. Does not auto-approve or
+        invent a human decision — a real interrupt is not on the product CLI.
+        """
+        logger.info(
+            "compliance_awaiting_approval",
+            workflow_id=state.workflow_id,
+            note="no human interrupt wired; state left awaiting_approval",
+        )
         state.status = "awaiting_approval"
-
-        # In real implementation, would pause for human input
-        # For now, just mark as reviewed
-
         state.updated_at = utc_now()
         return state
 

@@ -18,11 +18,15 @@ Built for one-person businesses and small studios comfortable in a terminal.
 ## Start
 
 ```bash
+# Full stack (AI + RAG + ML + …). Core-only: uv sync
 uv sync --all-extras
 uv run openfatture init
 uv run openfatture status
 uv run openfatture assistant "Help me prepare an invoice for a software project"
 ```
+
+Optional feature extras: `ai`, `rag`, `ml`, `lightning`, `all`.
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 For a terminal conversation:
 
@@ -47,15 +51,16 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 - FatturaPA XML generation and validation
 - PEC/SDI delivery and notification processing
 - Client, invoice, quote, payment, and batch workflows
-- Event audit trail, reports, hooks, and Lightning integrations
-- Optional AI assistance, RAG, voice, and forecasting workflows
-- Regulatory web scraping as an independent automation module
+- Event audit trail, reports, and hooks
+- Optional AI assistance (assistant + domain tools), RAG, and forecasting extras
+- Optional Lightning Network integration (experimental)
 
 ## Status
 
-Version 1.3.1, Python 3.12+ and `uv`. Current focus is onboarding and feedback
-quality in the CLI/TUI and production hardening — see
-[docs/STATUS.md](docs/STATUS.md).
+Version **2.0.0**, Python 3.12+ and `uv`. Packaging, extras, honesty gates, and
+the unified assistant runtime shipped in 2.0 — see
+[docs/STATUS.md](docs/STATUS.md), [docs/releases/v2.0.0.md](docs/releases/v2.0.0.md),
+and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Explicit non-goal: there is no browser frontend or web application surface,
 and adding one would be a separate product decision.
@@ -64,7 +69,9 @@ and adding one would be a separate product decision.
 
 - [Quick start](QUICKSTART.md)
 - [Configuration](docs/CONFIGURATION.md)
-- [Architecture](docs/AI_ARCHITECTURE.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [AI architecture](docs/AI_ARCHITECTURE.md)
+- [AI-era redesign](docs/ARCHITECTURE_REDESIGN.md)
 - [Current status](docs/STATUS.md)
 - [Contributing](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
@@ -75,7 +82,7 @@ and adding one would be a separate product decision.
 uv sync --all-extras
 uv run python -m pytest -q
 uv run ruff check .
-uv run black --check .
+uv run ruff format --check .
 uv run mypy openfatture/
 ```
 

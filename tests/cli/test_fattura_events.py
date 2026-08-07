@@ -8,9 +8,9 @@ from decimal import Decimal
 import pytest
 from typer.testing import CliRunner
 
-from openfatture.core.events import GlobalEventBus
-from openfatture.core.events.listeners import register_default_listeners
-from openfatture.core.events.repository import EventRepository
+from openfatture.events import GlobalEventBus
+from openfatture.events.listeners import register_default_listeners
+from openfatture.events.repository import EventRepository
 from openfatture.storage.database.base import get_session, init_db
 from openfatture.storage.database.models import Cliente, Fattura, RigaFattura, StatoFattura
 
@@ -106,7 +106,7 @@ def test_invoice_creation_publishes_event(runner, test_client, test_db):
 
         # Publish event (as the CLI does)
         from openfatture.cli.lifespan import get_event_bus
-        from openfatture.core.events import InvoiceCreatedEvent
+        from openfatture.events import InvoiceCreatedEvent
 
         event_bus = get_event_bus()
         if event_bus:
@@ -187,7 +187,7 @@ def test_invoice_validation_publishes_event(test_client, test_db):
 
         # Publish validation event (simulating XML generation success)
         from openfatture.cli.lifespan import get_event_bus
-        from openfatture.core.events import InvoiceValidatedEvent
+        from openfatture.events import InvoiceValidatedEvent
 
         event_bus = get_event_bus()
         if event_bus:
@@ -252,7 +252,7 @@ def test_invoice_deletion_publishes_event(test_client, test_db):
 
         # Publish deletion event (as the CLI does)
         from openfatture.cli.lifespan import get_event_bus
-        from openfatture.core.events import InvoiceDeletedEvent
+        from openfatture.events import InvoiceDeletedEvent
 
         event_bus = get_event_bus()
         if event_bus:
@@ -309,7 +309,7 @@ def test_invoice_sent_publishes_event(test_client, test_db):
 
         # Publish sent event (simulating successful PEC send)
         from openfatture.cli.lifespan import get_event_bus
-        from openfatture.core.events import InvoiceSentEvent
+        from openfatture.events import InvoiceSentEvent
 
         event_bus = get_event_bus()
         if event_bus:
@@ -384,7 +384,7 @@ def test_invoice_timeline_shows_all_events(test_client, test_db):
 
         # Publish multiple events
         from openfatture.cli.lifespan import get_event_bus
-        from openfatture.core.events import (
+        from openfatture.events import (
             InvoiceCreatedEvent,
             InvoiceSentEvent,
             InvoiceValidatedEvent,

@@ -11,7 +11,7 @@ from typing import Any
 
 from openfatture.ai.cache.memory import LRUCache
 from openfatture.ai.tools.models import ToolResult
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

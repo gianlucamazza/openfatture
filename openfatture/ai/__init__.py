@@ -34,7 +34,7 @@ __version__ = "1.3.1"
 
 
 def __getattr__(name: str) -> Any:
-    """Load provider plugins only when a caller explicitly requests one."""
+    """Load LLM provider adapters only when a caller explicitly requests one."""
     if name in {
         "AnthropicProvider",
         "BaseLLMProvider",

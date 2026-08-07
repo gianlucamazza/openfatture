@@ -17,7 +17,6 @@ updates:
       dev-tooling:
         patterns:
           - "ruff"
-          - "black"
           - "mypy"
           - "pytest*"
     commit-message:

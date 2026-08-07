@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, TypeVar
 
 from openfatture.ai.cache.strategy import CacheEntry, CacheStrategy
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -39,9 +39,13 @@ env/
 .pytest_cache/
 .coverage
 coverage.json
+coverage.xml
 htmlcov/
 .tox/
 .hypothesis/
+# Generated coverage dumps (keep intentional configs under reports/coverage/*.ini)
+reports/coverage/*.xml
+reports/coverage/*.json
 
 # MyPy
 .mypy_cache/

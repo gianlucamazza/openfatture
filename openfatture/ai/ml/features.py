@@ -26,9 +26,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy.orm import Session
 
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Fattura
 from openfatture.storage.session import db_session
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -531,7 +531,7 @@ class FeaturePipeline:
 
         feature_names = []
 
-        for name, transformer in self.pipeline.steps:
+        for _name, transformer in self.pipeline.steps:
             if hasattr(transformer, "feature_names_"):
                 feature_names.extend(transformer.feature_names_)
 

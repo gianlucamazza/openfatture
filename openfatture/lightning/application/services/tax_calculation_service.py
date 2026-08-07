@@ -13,7 +13,7 @@ Key responsibilities:
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from openfatture.core.events.base import get_global_event_bus
+from openfatture.events.base import get_global_event_bus
 from openfatture.lightning.domain.events import (
     LightningAMLAlertEvent,
     LightningPaymentTaxableEvent,

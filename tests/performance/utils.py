@@ -367,9 +367,9 @@ def assert_performance_target(
     if actual_latency is None:
         raise ValueError(f"Invalid percentile: {percentile}")
 
-    assert (
-        actual_latency <= target_ms
-    ), f"{metrics.name} {percentile} latency {actual_latency:.3f}ms exceeds target {target_ms}ms"
+    assert actual_latency <= target_ms, (
+        f"{metrics.name} {percentile} latency {actual_latency:.3f}ms exceeds target {target_ms}ms"
+    )
 
     logger.info(
         "performance_target_met",

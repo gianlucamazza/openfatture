@@ -2,7 +2,7 @@
 
 **Professional PDF generation for Italian electronic invoices with legal compliance.**
 
-> **Module**: `openfatture.services.pdf`
+> **Module**: `openfatture.pdf`
 > **Engine**: ReportLab 4.0+
 > **Status**: Production-ready (implemented in Phase 3)
 
@@ -100,7 +100,7 @@ uv sync --all-extras
 ### Basic Usage
 
 ```python
-from openfatture.services.pdf import PDFGenerator, PDFGeneratorConfig
+from openfatture.pdf import PDFGenerator, PDFGeneratorConfig
 from openfatture.storage.database import get_session
 from openfatture.storage.database.models import Fattura
 
@@ -333,7 +333,7 @@ for template in templates:
 Type-safe configuration with Pydantic:
 
 ```python
-from openfatture.services.pdf import PDFGeneratorConfig
+from openfatture.pdf import PDFGeneratorConfig
 
 config = PDFGeneratorConfig(
     # Template selection
@@ -403,7 +403,7 @@ PDF_SECONDARY_COLOR=#60A5FA
 Load in code:
 
 ```python
-from openfatture.utils.config import get_settings
+from openfatture.platform.config import get_settings
 
 settings = get_settings()
 
@@ -424,7 +424,7 @@ config = PDFGeneratorConfig(
 Draws company information at the top of the page.
 
 ```python
-from openfatture.services.pdf.components import draw_header
+from openfatture.pdf.components import draw_header
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib.pagesizes import A4
 
@@ -460,7 +460,7 @@ y_after_header = draw_header(
 Draws page numbers and legal notes at the bottom.
 
 ```python
-from openfatture.services.pdf.components import draw_footer
+from openfatture.pdf.components import draw_footer
 
 draw_footer(
     canvas,
@@ -483,7 +483,7 @@ draw_footer(
 Draws invoice lines with automatic column sizing.
 
 ```python
-from openfatture.services.pdf.components import draw_invoice_table
+from openfatture.pdf.components import draw_invoice_table
 
 righe_data = [
     {
@@ -525,7 +525,7 @@ if needs_pagination:
 Draws payment QR code (SEPA EPC format).
 
 ```python
-from openfatture.services.pdf.components import draw_qr_code, generate_sepa_qr_data
+from openfatture.pdf.components import draw_qr_code, generate_sepa_qr_data
 
 # Generate SEPA QR data
 qr_data = generate_sepa_qr_data(
@@ -720,7 +720,7 @@ openfatture pdf templates
 ### Basic Generation
 
 ```python
-from openfatture.services.pdf import PDFGenerator, PDFGeneratorConfig
+from openfatture.pdf import PDFGenerator, PDFGeneratorConfig
 from openfatture.storage.database import get_session
 from openfatture.storage.database.models import Fattura
 
@@ -740,7 +740,7 @@ with get_session() as session:
 ### Factory Function
 
 ```python
-from openfatture.services.pdf import create_pdf_generator
+from openfatture.pdf import create_pdf_generator
 
 # Create generator with factory
 generator = create_pdf_generator(
@@ -777,7 +777,7 @@ for fattura in invoices:
 Create custom templates by extending `BaseTemplate`:
 
 ```python
-from openfatture.services.pdf.templates import BaseTemplate
+from openfatture.pdf.templates import BaseTemplate
 from reportlab.pdfgen.canvas import Canvas
 
 class CustomTemplate(BaseTemplate):
@@ -803,7 +803,7 @@ class CustomTemplate(BaseTemplate):
 Register template:
 
 ```python
-from openfatture.services.pdf.templates import register_template
+from openfatture.pdf.templates import register_template
 
 register_template("custom", CustomTemplate)
 

@@ -25,10 +25,10 @@ if TYPE_CHECKING:
     from openfatture.ai.ml.retraining import RetrainingScheduler
     from openfatture.ai.rag.auto_update import AutoIndexingService
 
-from openfatture.core.events import GlobalEventBus, initialize_event_system
-from openfatture.core.hooks import HookEventBridge, initialize_hook_system
-from openfatture.utils.async_bridge import run_async
-from openfatture.utils.logging import get_logger
+from openfatture.events import GlobalEventBus, initialize_event_system
+from openfatture.hooks import HookEventBridge, initialize_hook_system
+from openfatture.platform.async_bridge import run_async
+from openfatture.platform.logging import get_logger
 
 # Context variable to hold the shared HTTP client
 _http_client_context: ContextVar[httpx.AsyncClient | None] = ContextVar(
@@ -81,10 +81,8 @@ class LifespanManager:
         self.hook_bridge = initialize_hook_system(self.event_bus)
         logger.info("Hook system initialized and registered with event bus")
 
-        # Initialize Lightning integration (if enabled)
+        # Optional feature extras (never required for core invoicing)
         await self._initialize_lightning()
-
-        # Initialize self-learning systems
         await self._initialize_self_learning()
 
         try:
@@ -101,52 +99,82 @@ class LifespanManager:
             await self._graceful_shutdown()
 
     async def _initialize_self_learning(self) -> None:
-        """Initialize self-learning systems."""
-        try:
-            from openfatture.ai.ml.retraining import (
-                get_scheduler as get_retraining_scheduler,
-            )
-            from openfatture.ai.rag.auto_update import (
-                get_auto_indexing_service,
-                get_auto_update_config,
-                setup_event_listeners,
-            )
+        """Initialize RAG auto-update and ML retraining when those extras are installed.
 
-            # Setup RAG auto-update event listeners
-            logger.debug("Setting up RAG auto-update event listeners")
-            setup_event_listeners()
+        Skipped entirely on core-only installs (no ``rag`` / ``ml`` extras).
+        """
+        from openfatture.platform.extras import has_extra
 
-            # Initialize and start auto-indexing service if enabled
-            auto_update_config = get_auto_update_config()
-            if auto_update_config.enabled:
-                logger.info("RAG auto-update enabled, starting service")
-                self.auto_indexing_service = get_auto_indexing_service()
-                await self.auto_indexing_service.start()
-                logger.info(
-                    "Auto-indexing service started",
-                    tracked_entities=auto_update_config.get_tracked_entities(),
+        want_rag = has_extra("rag")
+        want_ml = has_extra("ml")
+        if not want_rag and not want_ml:
+            logger.debug("Self-learning extras not installed; skipping RAG/ML startup")
+            return
+
+        if want_rag:
+            try:
+                from openfatture.ai.rag.auto_update import (
+                    get_auto_indexing_service,
+                    get_auto_update_config,
+                    setup_event_listeners,
                 )
-            else:
-                logger.debug("RAG auto-update disabled")
 
-            # Initialize and start retraining scheduler if enabled
-            self.retraining_scheduler = get_retraining_scheduler()
+                logger.debug("Setting up RAG auto-update event listeners")
+                setup_event_listeners()
 
-        except Exception as e:
-            logger.error(f"Error initializing self-learning systems: {e}")
+                auto_update_config = get_auto_update_config()
+                if auto_update_config.enabled:
+                    logger.info("RAG auto-update enabled, starting service")
+                    self.auto_indexing_service = get_auto_indexing_service()
+                    await self.auto_indexing_service.start()
+                    logger.info(
+                        "Auto-indexing service started",
+                        tracked_entities=auto_update_config.get_tracked_entities(),
+                    )
+                else:
+                    logger.debug("RAG auto-update disabled by config")
+            except Exception as e:
+                logger.warning(f"RAG auto-update not started: {e}")
+
+        if want_ml:
+            try:
+                from openfatture.ai.ml.retraining import (
+                    get_scheduler as get_retraining_scheduler,
+                )
+
+                self.retraining_scheduler = get_retraining_scheduler()
+                retraining_status = self.retraining_scheduler.get_status()
+                if retraining_status.get("enabled"):
+                    logger.info("ML retraining enabled, starting scheduler")
+                    self.retraining_scheduler.start()
+                    logger.info(
+                        "Retraining scheduler started",
+                        interval_hours=retraining_status.get("interval_hours"),
+                        dry_run=retraining_status.get("dry_run"),
+                    )
+                else:
+                    logger.debug("ML retraining disabled by config")
+            except Exception as e:
+                logger.warning(f"ML retraining not started: {e}")
 
     async def _initialize_lightning(self) -> None:
-        """Initialize Lightning Network integration if enabled."""
-        from openfatture.utils.config import get_settings
+        """Initialize Lightning Network integration if enabled and the extra is installed."""
+        from openfatture.platform.config import get_settings
+        from openfatture.platform.extras import has_extra
 
         settings = get_settings()
         if not settings.lightning_enabled:
             logger.debug("Lightning Network integration disabled")
             return
 
-        logger.debug("Initializing Lightning Network integration")
+        if not has_extra("lightning"):
+            logger.warning(
+                "lightning_enabled is set but the 'lightning' extra is not installed; "
+                "skipping. Install with: uv sync --extra lightning"
+            )
+            return
 
-        # Import and initialize Lightning event handlers
+        logger.debug("Initializing Lightning Network integration")
         try:
             from openfatture.lightning.application.events.handlers import (
                 initialize_lightning_integration,
@@ -156,23 +184,6 @@ class LifespanManager:
             logger.info("Lightning Network integration initialized")
         except Exception as e:
             logger.warning(f"Failed to initialize Lightning integration: {e}")
-
-        # Start retraining scheduler if initialized
-        if self.retraining_scheduler:
-            retraining_status = self.retraining_scheduler.get_status()
-
-            if retraining_status["enabled"]:
-                logger.info("ML retraining enabled, starting scheduler")
-                self.retraining_scheduler.start()
-                logger.info(
-                    "Retraining scheduler started",
-                    interval_hours=retraining_status["interval_hours"],
-                    dry_run=retraining_status["dry_run"],
-                )
-            else:
-                logger.debug("ML retraining disabled")
-
-            logger.info("Self-learning systems initialized successfully")
 
     async def _graceful_shutdown(self) -> None:
         """Perform graceful shutdown of all resources."""
@@ -197,27 +208,27 @@ class LifespanManager:
             logger.error(f"Error during graceful shutdown: {e}")
 
     async def _shutdown_self_learning(self) -> None:
-        """Shutdown self-learning systems gracefully."""
+        """Shutdown optional RAG/ML systems gracefully."""
         try:
-            from openfatture.ai.rag.auto_update import teardown_event_listeners
-
-            # Stop retraining scheduler
             if self.retraining_scheduler:
                 logger.debug("Stopping retraining scheduler")
                 self.retraining_scheduler.stop()
                 self.retraining_scheduler = None
 
-            # Stop auto-indexing service
             if self.auto_indexing_service:
                 logger.debug("Stopping auto-indexing service")
                 await self.auto_indexing_service.stop()
                 self.auto_indexing_service = None
 
-            # Teardown event listeners
-            logger.debug("Tearing down RAG auto-update event listeners")
-            teardown_event_listeners()
+            try:
+                from openfatture.ai.rag.auto_update import teardown_event_listeners
 
-            logger.info("Self-learning systems shutdown completed")
+                logger.debug("Tearing down RAG auto-update event listeners")
+                teardown_event_listeners()
+            except ImportError:
+                pass
+
+            logger.debug("Optional self-learning systems shutdown completed")
 
         except Exception as e:
             logger.error(f"Error shutting down self-learning systems: {e}", exc_info=True)

@@ -9,13 +9,13 @@ from openfatture.ai.feedback.models import (
     ModelPredictionFeedbackCreate,
     ModelPredictionFeedbackResponse,
 )
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.base import get_session as _get_session
 from openfatture.storage.database.models import (
     ModelPredictionFeedback,
     PredictionType,
     UserFeedback,
 )
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -292,7 +292,7 @@ class FeedbackService:
 
         try:
             query = db.query(ModelPredictionFeedback).filter(
-                ModelPredictionFeedback.processed == False  # noqa: E712
+                ModelPredictionFeedback.processed.is_(False)
             )
 
             if prediction_type:

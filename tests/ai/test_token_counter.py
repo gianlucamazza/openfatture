@@ -135,7 +135,7 @@ class TestTokenCounterPerformance:
         text = "Test message" * 100
 
         # Benchmark
-        result = benchmark(provider.count_tokens, text)
+        _result = benchmark(provider.count_tokens, text)
 
         # Should be fast (<10ms)
         assert benchmark.stats.stats.mean < 0.01  # 10ms
@@ -148,7 +148,7 @@ class TestTokenCounterPerformance:
         def approx():
             return len(text) // 4
 
-        result = benchmark(approx)
+        _result = benchmark(approx)
 
         # Should be extremely fast (<1ms)
         assert benchmark.stats.stats.mean < 0.001  # 1ms

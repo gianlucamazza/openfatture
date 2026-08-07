@@ -121,7 +121,7 @@ class TestOpenAIEmbeddings:
             )
 
             # Generate embedding (cache miss)
-            result = await embeddings.embed_text("Test text")
+            _result = await embeddings.embed_text("Test text")
 
             # Verify API was called
             assert mock_client.embeddings.create.call_count == 1

@@ -9,7 +9,7 @@ from rich.table import Table
 
 from openfatture.cli.config_file import save_config
 from openfatture.i18n import _
-from openfatture.utils.config import get_settings, reload_settings
+from openfatture.platform.config import get_settings, reload_settings
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
@@ -222,7 +222,7 @@ def set_config(
     Updates the config.toml file.
     """
 
-    from openfatture.utils.config import dirs
+    from openfatture.platform.config import dirs
 
     try:
         settings = get_settings()
@@ -284,4 +284,4 @@ def set_config(
 
     except Exception as e:
         console.print(_("cli-config-error", error=str(e)))
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e

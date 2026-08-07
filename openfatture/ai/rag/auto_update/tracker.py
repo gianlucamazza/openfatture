@@ -21,7 +21,7 @@ from enum import Enum
 from typing import Any
 
 from openfatture.ai.rag.auto_update.config import get_auto_update_config
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

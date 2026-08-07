@@ -7,11 +7,9 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from openfatture.core.batch.processor import BatchResult
-from openfatture.sdi.notifiche.parser import NotificaSDI, TipoNotifica
-from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
-from openfatture.utils.config import Settings
-from openfatture.utils.email.models import (
+from openfatture.billing.batch.processor import BatchResult
+from openfatture.platform.config import Settings
+from openfatture.platform.email.models import (
     BatchSummaryContext,
     EmailAttachment,
     EmailMessage,
@@ -19,9 +17,11 @@ from openfatture.utils.email.models import (
     InvoiceSummary,
     NotificaSDIContext,
 )
-from openfatture.utils.email.renderer import TemplateRenderer
-from openfatture.utils.email.sender import TemplatePECSender
-from openfatture.utils.email.styles import EmailBranding, EmailStyles
+from openfatture.platform.email.renderer import TemplateRenderer
+from openfatture.platform.email.sender import TemplatePECSender
+from openfatture.platform.email.styles import EmailBranding, EmailStyles
+from openfatture.sdi.notifiche.parser import NotificaSDI, TipoNotifica
+from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 
 pytestmark = pytest.mark.unit
 
@@ -508,7 +508,7 @@ class TestEmailIntegration:
         from pathlib import Path
 
         templates_dir = (
-            Path(__file__).parent.parent.parent / "openfatture" / "utils" / "email" / "templates"
+            Path(__file__).parent.parent.parent / "openfatture" / "platform" / "email" / "templates"
         )
 
         required_templates = [
@@ -542,7 +542,9 @@ class TestEmailIntegration:
         """Test that i18n files exist."""
         from pathlib import Path
 
-        i18n_dir = Path(__file__).parent.parent.parent / "openfatture" / "utils" / "email" / "i18n"
+        i18n_dir = (
+            Path(__file__).parent.parent.parent / "openfatture" / "platform" / "email" / "i18n"
+        )
 
         assert (i18n_dir / "it.json").exists()
         assert (i18n_dir / "en.json").exists()
@@ -605,7 +607,7 @@ class TestEmailIntegration:
 
     def test_get_renderer_factory(self):
         """Test get_renderer factory function."""
-        from openfatture.utils.email.renderer import get_renderer
+        from openfatture.platform.email.renderer import get_renderer
 
         renderer = get_renderer(locale="en")
         assert renderer.locale == "en"

@@ -52,14 +52,13 @@ class MockBTCConverter:
 
 
 class MockLNDClient:
-    """Mock LND client for testing."""
+    """Mock LND client for testing (explicit allow_mock=True)."""
 
-    def __init__(self):
+    def __init__(self, *, allow_mock: bool = True):
         """Initialize mock LND client."""
+        self.allow_mock = allow_mock
         self.invoices: dict[str, dict[str, Any]] = {}
-        self._invoices: dict[str, dict[str, Any]] = (
-            self.invoices
-        )  # For compatibility with simulate_payment
+        self._invoices = self.invoices
         # Valid compressed pubkey (66 hex chars, must start with 02 or 03)
         self.node_info = NodeInfo(
             pubkey="03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad",

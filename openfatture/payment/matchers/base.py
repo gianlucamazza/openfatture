@@ -42,14 +42,16 @@ class IMatcherStrategy(ABC):
         ...         results = []
         ...         for payment in payments:
         ...             if self._custom_logic(transaction, payment):
-        ...                 results.append(MatchResult(
-        ...                     transaction=transaction,
-        ...                     payment=payment,
-        ...                     confidence=0.85,
-        ...                     match_reason="Custom logic matched",
-        ...                     match_type=MatchType.COMPOSITE,
-        ...                     matched_fields=["custom_field"]
-        ...                 ))
+        ...                 results.append(
+        ...                     MatchResult(
+        ...                         transaction=transaction,
+        ...                         payment=payment,
+        ...                         confidence=0.85,
+        ...                         match_reason="Custom logic matched",
+        ...                         match_type=MatchType.COMPOSITE,
+        ...                         matched_fields=["custom_field"],
+        ...                     )
+        ...                 )
         ...         return results
     """
 

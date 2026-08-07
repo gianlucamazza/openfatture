@@ -18,7 +18,7 @@ from typing import Any, Literal
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -35,7 +35,7 @@ class MLConfig(BaseSettings):
         PosixPath('.models')
         >>>
         >>> # Override via environment
-        >>> os.environ['OPENFATTURE_ML_MODEL_PATH'] = '/app/models'
+        >>> os.environ["OPENFATTURE_ML_MODEL_PATH"] = "/app/models"
         >>> config = MLConfig()
         >>> print(config.model_path)
         PosixPath('/app/models')

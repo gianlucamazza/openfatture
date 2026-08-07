@@ -17,7 +17,7 @@ from pathlib import Path
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -34,7 +34,7 @@ class RetrainingConfig(BaseSettings):
         False
         >>>
         >>> # Override via environment
-        >>> os.environ['OPENFATTURE_RETRAIN_ENABLED'] = 'true'
+        >>> os.environ["OPENFATTURE_RETRAIN_ENABLED"] = "true"
         >>> config = RetrainingConfig()
         >>> print(config.enabled)
         True

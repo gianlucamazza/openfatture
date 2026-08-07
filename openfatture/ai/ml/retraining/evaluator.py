@@ -27,7 +27,7 @@ import pandas as pd
 
 from openfatture.ai.ml.models import CashFlowEnsemble
 from openfatture.ai.ml.retraining.config import get_retraining_config
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -76,9 +76,7 @@ class ModelEvaluator:
 
     Example:
         >>> evaluator = ModelEvaluator()
-        >>> result = evaluator.evaluate_and_compare(
-        ...     new_model, current_model, X_val, y_val
-        ... )
+        >>> result = evaluator.evaluate_and_compare(new_model, current_model, X_val, y_val)
         >>> if result.should_deploy:
         ...     print(result.deployment_reason)
     """

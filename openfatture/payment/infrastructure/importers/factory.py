@@ -8,7 +8,7 @@ import csv
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 from .base import BaseImporter, FileFormat
 
@@ -32,10 +32,7 @@ class ImporterFactory:
 
     Example:
         >>> factory = ImporterFactory()
-        >>> importer = factory.create_from_file(
-        ...     Path("statement.csv"),
-        ...     bank_preset="intesa"
-        ... )
+        >>> importer = factory.create_from_file(Path("statement.csv"), bank_preset="intesa")
         >>> result = importer.import_transactions(account)
     """
 
@@ -215,15 +212,11 @@ class ImporterFactory:
         Example:
             >>> # Auto-detect with bank preset
             >>> importer = ImporterFactory.create_from_file(
-            ...     Path("statement.csv"),
-            ...     bank_preset="intesa"
+            ...     Path("statement.csv"), bank_preset="intesa"
             ... )
             >>>
             >>> # Explicit format
-            >>> importer = ImporterFactory.create_from_file(
-            ...     Path("data.txt"),
-            ...     format=FileFormat.CSV
-            ... )
+            >>> importer = ImporterFactory.create_from_file(Path("data.txt"), format=FileFormat.CSV)
         """
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")

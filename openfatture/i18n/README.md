@@ -93,7 +93,7 @@ OPENFATTURE_LOCALE=en
 
 ```python
 # Or programmatically
-from openfatture.utils.config import get_settings
+from openfatture.platform.config import get_settings
 
 settings = get_settings()
 settings.locale = "en"
@@ -227,7 +227,7 @@ uv run python scripts/check_i18n_coverage.py
 Old JSON-based email translations are automatically migrated:
 
 ```python
-# Old (openfatture/utils/email/i18n/it.json)
+# Old (openfatture/platform/email/i18n/it.json)
 {
   "email": {
     "footer": {

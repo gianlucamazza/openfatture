@@ -6,7 +6,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from openfatture.core.preventivi.service import PreventivoService
+from openfatture.billing.preventivi.service import PreventivoService
+from openfatture.platform.config import Settings
 from openfatture.storage.database.base import Base
 from openfatture.storage.database.models import (
     Cliente,
@@ -15,7 +16,6 @@ from openfatture.storage.database.models import (
     StatoPreventivo,
     TipoDocumento,
 )
-from openfatture.utils.config import Settings
 
 
 @pytest.fixture

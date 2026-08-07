@@ -9,8 +9,9 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from openfatture.platform.datetime import utc_now
+
 from ...storage.database.base import Base
-from ...utils.datetime import utc_now
 from .enums import MatchType
 
 if TYPE_CHECKING:

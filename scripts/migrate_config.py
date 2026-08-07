@@ -11,7 +11,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from openfatture.cli.config_file import save_config
-from openfatture.utils.config import dirs, get_settings
+from openfatture.platform.config import dirs, get_settings
 
 
 def migrate():

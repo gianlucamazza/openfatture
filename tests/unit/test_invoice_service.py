@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from openfatture.core.fatture.service import InvoiceService
+from openfatture.billing.fatture.service import InvoiceService
 
 pytestmark = pytest.mark.unit
 

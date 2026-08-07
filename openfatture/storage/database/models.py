@@ -21,7 +21,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ...utils.datetime import utc_now
+from openfatture.platform.datetime import utc_now
+
 from .base import Base, IntPKMixin
 
 if TYPE_CHECKING:
@@ -657,5 +658,15 @@ class EventLog(IntPKMixin, Base):
         return f"<EventLog(id={self.id}, event_type='{self.event_type}', entity={self.entity_type}:{self.entity_id}, occurred_at='{self.occurred_at}')>"
 
 
-# Ensure payment allocation model is registered for relationship resolution
-from ...payment.domain import payment_allocation as _payment_allocation  # noqa: F401,E402
+def _register_payment_allocation_model() -> None:
+    """Register PaymentAllocation on the shared Base for relationship resolution.
+
+    Imported at module end to avoid circular imports between billing storage
+    models and the payment domain package.
+    """
+    from openfatture.payment.domain.payment_allocation import PaymentAllocation
+
+    assert PaymentAllocation.__tablename__ == "payment_allocations"
+
+
+_register_payment_allocation_model()

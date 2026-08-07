@@ -256,7 +256,7 @@ class TestTaxAdvisorAgent:
         )
 
         # Execute to trigger prompt building
-        response = await tax_advisor.execute(context)
+        _response = await tax_advisor.execute(context)
 
         # Verify prompt manager was called with correct variables
         call_args = tax_advisor.prompt_manager.render_with_examples.call_args

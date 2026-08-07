@@ -22,7 +22,7 @@ from openfatture.lightning.application.services.tax_calculation_service import (
 )
 from openfatture.lightning.domain.value_objects import QuadroRWData
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
-from openfatture.utils.async_bridge import run_async
+from openfatture.platform.async_bridge import run_async
 
 
 @dataclass

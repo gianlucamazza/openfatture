@@ -197,7 +197,7 @@ class TestEmailNotifier:
         self, smtp_config, mock_reminder, tmp_path, mocker
     ):
         """Ensure notifier injects company name from application settings."""
-        from openfatture.utils.config import Settings
+        from openfatture.platform.config import Settings
 
         custom_settings = Settings(cedente_denominazione="Venere Labs S.r.l.")
         template_dir = tmp_path / "templates"
@@ -227,7 +227,7 @@ class TestEmailNotifier:
         self, smtp_config, mock_reminder, tmp_path
     ):
         """Ensure fallback text reflects configured company name."""
-        from openfatture.utils.config import Settings
+        from openfatture.platform.config import Settings
 
         custom_settings = Settings(cedente_denominazione="Studio Demo SRL")
         template_dir = tmp_path / "templates"
@@ -252,7 +252,7 @@ class TestEmailNotifier:
 
 
 class TestConsoleNotifier:
-    """Tests for ConsoleNotifier console output."""
+    """Tests for ConsoleNotifier structured-log channel."""
 
     @pytest.fixture
     def console_notifier(self):
@@ -289,22 +289,19 @@ class TestConsoleNotifier:
     # ==========================================================================
 
     @pytest.mark.asyncio
-    async def test_send_reminder_prints_details(self, console_notifier, mock_reminder, capsys):
-        """Test that console notifier prints reminder details."""
-        result = await console_notifier.send_reminder(mock_reminder)
+    async def test_send_reminder_logs_details(self, console_notifier, mock_reminder, caplog):
+        """Test that console notifier logs reminder details via structlog."""
+        with caplog.at_level("INFO"):
+            result = await console_notifier.send_reminder(mock_reminder)
 
-        # Verify return value
         assert result is True
-
-        # Capture printed output
-        captured = capsys.readouterr()
-
-        # Verify output contains key information
-        assert "[REMINDER]" in captured.out
-        assert "Payment #100" in captured.out
-        assert "INV-2024-999" in captured.out
-        assert "€500.00" in captured.out
-        assert "15/11/2024" in captured.out
+        # structlog may render event key in message body
+        joined = " ".join(r.message for r in caplog.records)
+        assert "payment_reminder_console" in joined or any(
+            getattr(r, "msg", None) == "payment_reminder_console"
+            or "payment_reminder_console" in str(r)
+            for r in caplog.records
+        )
 
     @pytest.mark.asyncio
     async def test_send_reminder_always_returns_true(self, console_notifier, mock_reminder):
@@ -314,32 +311,31 @@ class TestConsoleNotifier:
 
     @pytest.mark.asyncio
     async def test_send_reminder_handles_missing_invoice(
-        self, console_notifier, mock_reminder, capsys
+        self, console_notifier, mock_reminder, caplog
     ):
-        """Test console output when invoice is missing."""
-        # Remove invoice
+        """Test logging when invoice is missing."""
         mock_reminder.payment.fattura = None
 
-        result = await console_notifier.send_reminder(mock_reminder)
+        with caplog.at_level("INFO"):
+            result = await console_notifier.send_reminder(mock_reminder)
 
-        # Should still succeed
         assert result is True
-
-        # Verify output doesn't crash
-        captured = capsys.readouterr()
-        assert "[REMINDER]" in captured.out
+        joined = " ".join(str(r) for r in caplog.records)
+        assert "payment_reminder_console" in joined
 
     @pytest.mark.asyncio
-    async def test_send_reminder_formats_correctly(self, console_notifier, mock_reminder, capsys):
-        """Test that console output is properly formatted with separators."""
-        await console_notifier.send_reminder(mock_reminder)
-
-        captured = capsys.readouterr()
-
-        # Verify formatting with separators
-        assert "=" * 60 in captured.out
-        assert "Days to Due:" in captured.out
-        assert "Strategy: default" in captured.out
+    async def test_send_reminder_includes_strategy(self, console_notifier, mock_reminder, mocker):
+        """Test that strategy is passed through to the log event."""
+        with patch("structlog.get_logger") as get_logger:
+            log = mocker.Mock()
+            get_logger.return_value = log
+            await console_notifier.send_reminder(mock_reminder)
+            log.info.assert_called_once()
+            kwargs = log.info.call_args.kwargs
+            assert kwargs["payment_id"] == 100
+            assert kwargs["invoice"] == "INV-2024-999"
+            assert kwargs["strategy"] == "default"
+            assert kwargs["days_before_due"] == 7
 
 
 class TestCompositeNotifier:

@@ -3,35 +3,18 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
 
 from openfatture.cli.lifespan import get_event_bus, run_sync_with_lifespan
-from openfatture.core.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
-from openfatture.utils.config import get_settings
-from openfatture.utils.logging import get_logger
-
-if TYPE_CHECKING:
-    from openfatture.ai.domain.message import ConversationHistory
+from openfatture.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
+from openfatture.platform.config import get_settings
+from openfatture.platform.logging import get_logger
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 logger = get_logger(__name__)
-
-
-def _history(items: list[dict[str, str]]) -> ConversationHistory:
-    from openfatture.ai.domain.message import ConversationHistory, Message, Role
-
-    history = ConversationHistory()
-    for item in items:
-        try:
-            role = Role(item.get("role", "user"))
-        except ValueError:
-            role = Role.USER
-        history.add_message(Message(role=role, content=item.get("content", "")))
-    return history
 
 
 @app.command()
@@ -40,23 +23,40 @@ def assistant(
     message: str | None = typer.Argument(None, help="A request for the OpenFatture assistant."),
     stream: bool = typer.Option(True, "--stream/--no-stream", help="Stream the response."),
     json_output: bool = typer.Option(False, "--json", help="Emit the response as JSON."),
+    session: str | None = typer.Option(
+        None,
+        "--session",
+        help="Resume a file-backed chat session by ID (enables persistence).",
+    ),
 ) -> None:
     """Ask the assistant to explain, inspect, or perform an invoicing task."""
-    run_sync_with_lifespan(_run_assistant(ctx, message, stream, json_output))
+    run_sync_with_lifespan(_run_assistant(ctx, message, stream, json_output, session))
 
 
 async def run_assistant_session(message: str | None = None) -> None:
     """Run the conversational assistant session used by interactive mode."""
-    await _run_assistant(None, message, True, False)
+    await _run_assistant(None, message, True, False, None)
 
 
 async def _run_assistant(
-    ctx: typer.Context | None, message: str | None, stream: bool, json_output: bool
+    ctx: typer.Context | None,
+    message: str | None,
+    stream: bool,
+    json_output: bool,
+    session_id: str | None,
 ) -> None:
-    from openfatture.ai.agents.chat_agent import ChatAgent
-    from openfatture.ai.domain.context import ChatContext
-    from openfatture.ai.providers.factory import create_provider
     from openfatture.cli.formatters.utils import get_format_from_context, render_response
+    from openfatture.platform.extras import MissingExtraError, require_extra
+
+    try:
+        require_extra("ai", feature="the business assistant")
+        from openfatture.ai.runtime import create_assistant_runtime
+    except MissingExtraError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    except ImportError as exc:
+        console.print("[red]AI dependencies are incomplete. Install with: uv sync --extra ai[/red]")
+        raise typer.Exit(code=1) from exc
 
     format_type = get_format_from_context(ctx, json_output)
     started_at = time.time()
@@ -73,25 +73,36 @@ async def _run_assistant(
                 user_input=message or "Interactive assistant session",
                 provider=settings.ai_provider,
                 model=settings.ai_model,
-                parameters={"stream": stream, "interactive": message is None},
+                parameters={
+                    "stream": stream,
+                    "interactive": message is None,
+                    "session_id": session_id,
+                },
             )
         )
 
     try:
-        agent = ChatAgent(
-            provider=create_provider(),
+        # Persist for interactive mode or when resuming/continuing a named session.
+        persist = message is None or session_id is not None
+        runtime = create_assistant_runtime(
             enable_streaming=stream,
             debug_config=settings.debug_config,
+            persist_session=persist,
+            session_id=session_id,
         )
+        if persist and runtime.session_id:
+            console.print(f"[dim]Session: {runtime.session_id}[/dim]\n")
         if message:
-            context = ChatContext(user_input=message)
             if stream and format_type == "rich":
                 console.print("Assistant: ", end="")
-                async for chunk in agent.execute_stream(context):
-                    console.print(chunk, end="")
+                async for chunk in runtime.stream(message):
+                    if isinstance(chunk, str):
+                        console.print(chunk, end="")
+                    elif hasattr(chunk, "is_content") and chunk.is_content():
+                        console.print(chunk.get_text(), end="")
                 console.print()
             else:
-                response = await agent.execute(context)
+                response = await runtime.run(message)
                 render_response(response, format_type, console, show_metrics=False)
                 tokens_used = response.usage.total_tokens
                 cost_usd = response.usage.estimated_cost_usd
@@ -100,7 +111,8 @@ async def _run_assistant(
 
         console.print("[bold]OpenFatture assistant[/bold]")
         console.print("Describe what you need, or type 'exit' to end the session.\n")
-        conversation: list[dict[str, str]] = []
+        # When persistence is on, the session store is the history source of truth.
+        # Do not pass a parallel in-memory history that would duplicate turns.
         while True:
             try:
                 user_input = console.input("You: ").strip()
@@ -111,24 +123,22 @@ async def _run_assistant(
                 continue
             if user_input.lower() in {"exit", "quit", "q"}:
                 break
-            conversation.append({"role": "user", "content": user_input})
-            context = ChatContext(
-                user_input=user_input, conversation_history=_history(conversation)
-            )
             if stream:
                 console.print("Assistant: ", end="")
                 answer = ""
-                async for event in agent.execute_stream(context):
-                    if event.is_content():
+                async for event in runtime.stream(user_input):
+                    if isinstance(event, str):
+                        console.print(event, end="")
+                        answer += event
+                    elif hasattr(event, "is_content") and event.is_content():
                         text = event.get_text()
                         console.print(text, end="")
                         answer += text
                 console.print()
             else:
-                response = await agent.execute(context)
+                response = await runtime.run(user_input)
                 answer = response.content
                 console.print(f"Assistant: {answer}")
-            conversation.append({"role": "assistant", "content": answer})
             console.print()
         success = True
     except Exception as exc:

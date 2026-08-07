@@ -10,6 +10,41 @@ env:
   UV_EXTRA: dev
 
 jobs:
+  # Core install: no AI/ML/scraper extras — public CLI + domain modules only.
+  test-core:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install core + dev only
+        run: uv sync --frozen --extra dev --python "$(command -v python3)"
+
+      - name: Core smoke (status, help)
+        run: |
+          uv run openfatture --help
+          uv run openfatture status --json
+
+      - name: Core tests (no AI / Lightning / scraper suites)
+        run: |
+          uv run --extra dev pytest -q --no-cov \
+            tests/cli tests/core tests/storage tests/payment \
+            tests/services tests/unit tests/utils tests/i18n \
+            tests/integration \
+            --ignore=tests/integration/test_ai_integration.py \
+            -m 'not performance and not benchmark and not slow and not e2e and not ollama'
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -43,7 +78,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install dependencies (full extras)
         run: uv sync --frozen --all-extras
 
       - name: Run tests with pytest
@@ -81,10 +116,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --all-extras --python "$(command -v python3)"
 
-      - name: Run Black
-        run: uv run --extra dev python -m black --check .
+      - name: Run Ruff format
+        run: uv run --extra dev ruff format --check .
 
-      - name: Run Ruff
+      - name: Run Ruff check
         run: uv run --extra dev ruff check .
 
       - name: Run MyPy

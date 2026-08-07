@@ -28,7 +28,7 @@ else:
         _http_client_context = None
         _has_context = False
 from openfatture.ai.providers.base import BaseLLMProvider, ProviderError
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

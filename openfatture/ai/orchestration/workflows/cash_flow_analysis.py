@@ -31,10 +31,10 @@ from openfatture.ai.orchestration.states import (
     CashFlowAnalysisState,
 )
 from openfatture.ai.providers import create_provider
+from openfatture.platform.datetime import utc_now
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Fattura, StatoFattura
 from openfatture.storage.session import db_session
-from openfatture.utils.datetime import utc_now
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -43,9 +43,16 @@ if TYPE_CHECKING:
     from langgraph.graph import END as _END
     from langgraph.graph import StateGraph as _StateGraph
 else:
-    _graph_module = import_module("langgraph.graph")
-    _StateGraph = _graph_module.StateGraph
-    _END = _graph_module.END
+    try:
+        _graph_module = import_module("langgraph.graph")
+        _StateGraph = _graph_module.StateGraph
+        _END = _graph_module.END
+    except ImportError as exc:
+        from openfatture.platform.extras import MissingExtraError
+
+        raise MissingExtraError(
+            "ai", feature="LangGraph cash flow analysis workflow", cause=exc
+        ) from exc
 
 StateGraph = _StateGraph
 END = _END

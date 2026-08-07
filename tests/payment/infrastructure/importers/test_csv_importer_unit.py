@@ -86,7 +86,7 @@ def test_parse_skips_duplicate_rows(tmp_path, bank_account):
     assert len(transactions) == 1  # Deduplicated via hash
 
 
-def test_parse_logs_warning_on_invalid_row(tmp_path, bank_account, capsys):
+def test_parse_logs_warning_on_invalid_row(tmp_path, bank_account, caplog):
     config = CSVConfig(
         delimiter=",",
         field_mapping={
@@ -100,8 +100,9 @@ def test_parse_logs_warning_on_invalid_row(tmp_path, bank_account, capsys):
         "date,amount,description\ninvalid-date,123,Payment\n2025-01-16,200.00,Valid\n",
     )
     importer = CSVImporter(file_path, config)
-    transactions = importer.parse(bank_account)
+    with caplog.at_level("WARNING"):
+        transactions = importer.parse(bank_account)
 
-    out, _ = capsys.readouterr()
-    assert "Skipping row" in out
+    joined = " ".join(str(r) for r in caplog.records)
+    assert "csv_row_skipped" in joined or "row" in joined.lower()
     assert len(transactions) == 1

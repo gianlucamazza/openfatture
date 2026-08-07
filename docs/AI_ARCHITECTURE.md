@@ -1,45 +1,72 @@
 # AI Architecture
 
-OpenFatture exposes one agentic business entry point: the assistant. The
-assistant translates a natural-language request into a bounded sequence of
-domain-tool calls and presents the result in the terminal.
+OpenFatture exposes one agentic business entry point: the assistant. All
+CLI and interactive traffic goes through **`openfatture.ai.runtime`**.
 
-## Flow
+## Product path (only supported entry)
 
 ```
-CLI request
-    |
-    v
-ChatAgent -> provider -> response
-    |
-    +-> read tools  -> local repositories and reports
-    +-> write tools -> validated domain services
-    +-> events      -> audit and metrics
+CLI assistant / interactive
+        │
+        v
+openfatture.ai.runtime.AssistantRuntime
+        │
+        v
+ChatAgent tool loop          ← product backend (status: chat_agent_tool_loop)
+  ├── NativeToolOrchestrator  (providers with native tools)
+  └── ReActOrchestrator       (fallback)
+        │
+        v
+ToolRegistry → application services (billing.*) → storage
 ```
 
-The interactive command uses the same assistant session runner and keeps
-conversation history in the file-backed session store.
+```python
+# Preferred API for embedders / tests
+from openfatture.ai.runtime import create_assistant_runtime, run_assistant
+
+runtime = create_assistant_runtime()
+response = await runtime.run("Elenca le fatture non pagate")
+```
+
+Interactive sessions can persist to the file session store
+(`persist_session=True`) and be resumed with `session_id=...` /
+`openfatture assistant --session <id>`. When persistence is on, history is
+loaded from the store (do not also pass a parallel in-memory history that
+duplicates turns).
+
+## Optional LangGraph multi-node helper (not the product path)
+
+`build_tool_loop_graph` / `build_assistant_graph` compile a model↔tools
+StateGraph for tests, observability, or a future product switch. **2.0.0 does
+not route CLI traffic through this graph** (policy B1-β). Promoting it to the
+product path requires explicit parity tests.
+
+```python
+from openfatture.ai.runtime.graph import build_assistant_graph
+graph = build_assistant_graph(runtime)
+await graph.ainvoke({"user_input": "..."})
+```
 
 ## Boundaries
 
 - Provider selection and credentials come from configuration.
-- Domain validation remains deterministic and executes outside the model.
-- Mutating tools are responsible for their own confirmation and authorization
-  boundaries.
-- The CLI never performs setup implicitly at import or startup.
-- `status` is read-only and does not contact external services.
+- Domain validation stays deterministic outside the model.
+- Mutating tools keep confirmation boundaries.
+- AI tools call **application services** (billing/payment/sdi/pdf), not raw
+  SQLAlchemy sessions.
+- Multi-agent workflows under `ai/orchestration/workflows/` are **internal /
+  experimental** and are **not** registered on the public CLI.
 
 ## Tooling
 
-Tools are registered in `openfatture/ai/tools/registry.py` and grouped by
-domain. Read operations retrieve local data; write operations delegate to
-application services. The assistant is not a replacement for validation,
-signing, or SDI transport rules.
+Tools are registered in `openfatture/ai/tools/registry.py`. Prefer application
+services under `openfatture.billing.application` (and payment/sdi services) for
+new tool logic.
 
-## Sessions and observability
+## Observability
 
-Conversation sessions are persisted as JSON files through
-`openfatture.ai.session.get_session_store`. AI command lifecycle events record
-success, latency, token usage, and estimated cost when available.
+AI command lifecycle events record success, latency, token usage, and cost when
+available.
 
-For the supported user workflow, see [CLI_REFERENCE.md](CLI_REFERENCE.md).
+See [CLI_REFERENCE.md](CLI_REFERENCE.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
+[ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md).

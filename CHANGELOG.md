@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-08-07
+
+### Added
+
+- Unified assistant runtime (`openfatture.ai.runtime.AssistantRuntime`) as the
+  only product entry for CLI and interactive mode.
+- Application-layer use-cases for AI tools under `billing.application`,
+  `payment.application`, `sdi.application`, and `pdf.tool_ops`.
+- Optional multi-node LangGraph tool-loop helper (`ai.runtime.graph`).
+- File-backed interactive session persistence with optional `--session` resume.
+- Honesty gates: `lightning_allow_mock` (default false), RAG reindex callback
+  required, `MissingExtraError` for optional stacks.
+- PEP 621 extras matrix: `ai`, `rag`, `ml`, `lightning`, `all`.
+- Architecture docs: `ARCHITECTURE.md`, `CORE_VS_EXTENSIONS.md`, redesign notes.
+
+### Changed
+
+- Package layout: `billing`, `events`, `hooks`, `platform`, `pdf` replace
+  `core`, `utils`, and `services.pdf`.
+- Tooling is Ruff-only for format and lint (Black/isort removed as drivers).
+- Core install no longer pulls AI/ML/RAG/Lightning by default.
+- Status JSON reports feature flags and experimental Lightning posture.
+
+### Removed
+
+- Voice assistant package, web scraper, orphan analytics agents.
+- In-process experimental plugins package (extensions use hooks only).
+- Compatibility import shims for old package paths.
+
+### Fixed
+
+- Lightning client no longer returns mock invoices/node info unless mock is
+  explicitly allowed.
+- RAG reindex queue no longer simulates work without a callback.
+- Lint debt: no in-code `noqa` / `type: ignore` / `pragma: no cover` suppressions.
+
+See [docs/releases/v2.0.0.md](docs/releases/v2.0.0.md) for migration details.
+
 ## [1.3.1] - 2026-07-24
 
 ### Fixed

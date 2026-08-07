@@ -52,7 +52,7 @@ from contextlib import asynccontextmanager, contextmanager
 
 from sqlalchemy.orm import Session
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 

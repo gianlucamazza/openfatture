@@ -48,12 +48,10 @@ class ReconciliationService:
         >>> reconciliation_service = ReconciliationService(
         ...     tx_repo=BankTransactionRepository(session),
         ...     payment_repo=PaymentRepository(session),
-        ...     matching_service=matching_service
+        ...     matching_service=matching_service,
         ... )
         >>> tx = await reconciliation_service.reconcile(
-        ...     transaction_id=tx_id,
-        ...     payment_id=payment_id,
-        ...     match_type=MatchType.MANUAL
+        ...     transaction_id=tx_id, payment_id=payment_id, match_type=MatchType.MANUAL
         ... )
         >>> print(f"Transaction {tx.id} matched to payment {tx.matched_payment_id}")
     """
@@ -115,9 +113,7 @@ class ReconciliationService:
 
         Example:
             >>> tx = await service.reconcile(
-            ...     transaction_id=UUID("..."),
-            ...     payment_id=123,
-            ...     match_type=MatchType.MANUAL
+            ...     transaction_id=UUID("..."), payment_id=123, match_type=MatchType.MANUAL
             ... )
         """
         logger.info(
@@ -250,8 +246,7 @@ class ReconciliationService:
 
         Example:
             >>> tx = await service.ignore_transaction(
-            ...     transaction_id=UUID("..."),
-            ...     reason="Personal expense"
+            ...     transaction_id=UUID("..."), reason="Personal expense"
             ... )
         """
         logger.info(
@@ -396,10 +391,7 @@ class ReconciliationService:
             List of (transaction, match_suggestions) tuples
 
         Example:
-            >>> queue = await service.get_review_queue(
-            ...     account_id=1,
-            ...     confidence_range=(0.60, 0.84)
-            ... )
+            >>> queue = await service.get_review_queue(account_id=1, confidence_range=(0.60, 0.84))
             >>> for tx, matches in queue:
             ...     print(f"{tx.description}: {len(matches)} suggestions")
         """
@@ -460,9 +452,7 @@ class ReconciliationService:
 
         Example:
             >>> result = await service.reconcile_batch(
-            ...     account_id=1,
-            ...     auto_apply=True,
-            ...     auto_apply_threshold=0.85
+            ...     account_id=1, auto_apply=True, auto_apply_threshold=0.85
             ... )
             >>> print(f"Auto-reconciled: {result.matched_count}")
         """
@@ -577,7 +567,7 @@ class ReconciliationService:
             result = cast(Any, self.event_bus.publish(event))
             if inspect.isawaitable(result):
                 asyncio.ensure_future(result)
-        except Exception as exc:  # pragma: no cover - defensive logging
+        except Exception as exc:
             logger.error(
                 "event_publish_failed",
                 event_type=event.__class__.__name__,

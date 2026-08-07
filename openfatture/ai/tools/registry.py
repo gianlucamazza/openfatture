@@ -11,8 +11,8 @@ from openfatture.ai.orchestration.resilience import (
     CircuitBreakerConfig,
 )
 from openfatture.ai.tools.models import Tool, ToolResult
-from openfatture.utils.logging import get_logger
-from openfatture.utils.rate_limiter import RateLimiter
+from openfatture.platform.logging import get_logger
+from openfatture.platform.rate_limiter import RateLimiter
 
 if TYPE_CHECKING:
     from openfatture.ai.cache.tool_cache import ToolResultCache
@@ -591,9 +591,13 @@ class ToolRegistry:
                 tool_name=tool_name,
                 error_type="bulkhead_limit_exceeded",
             )
-            # Record bulkhead state in result
-            # TODO: Implement proper queue length tracking for bulkhead
-            result.bulkhead_queue_length = 0
+            # Waiting count approximates queue pressure (holders + waiters not exposed;
+            # use _value of semaphore when available).
+            result.bulkhead_queue_length = max(
+                0,
+                bulkhead_config.max_concurrent_executions
+                - getattr(bulkhead_semaphore, "_value", 0),
+            )
             metrics = self._get_metrics()
             if metrics:
                 metrics.record_execution(result)
@@ -601,8 +605,6 @@ class ToolRegistry:
 
         # Check confirmation requirement
         if tool.requires_confirmation and confirm:
-            # In a real implementation, this would ask the user
-            # For now, we'll just log it
             logger.info(
                 "tool_requires_confirmation",
                 name=tool_name,
@@ -640,9 +642,11 @@ class ToolRegistry:
             # Add circuit breaker state to result
             result.circuit_breaker_state = circuit_breaker.state.state.value
 
-            # Add bulkhead state to result
-            # TODO: Implement proper queue length tracking for bulkhead
-            result.bulkhead_queue_length = 0
+            result.bulkhead_queue_length = max(
+                0,
+                bulkhead_config.max_concurrent_executions
+                - getattr(bulkhead_semaphore, "_value", 0),
+            )
 
             # Cache successful results for read operations
             if cache and cache.is_cacheable(tool_name) and result.success:

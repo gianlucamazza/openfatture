@@ -9,11 +9,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
+from openfatture.platform.config import Settings
+from openfatture.platform.logging import get_logger
+from openfatture.platform.rate_limiter import RateLimiter
+from openfatture.platform.retry import RetryConfig, retry_sync
 from openfatture.storage.database.models import Fattura, LogSDI, StatoFattura
-from openfatture.utils.config import Settings
-from openfatture.utils.logging import get_logger
-from openfatture.utils.rate_limiter import RateLimiter
-from openfatture.utils.retry import RetryConfig, retry_sync
 
 logger = get_logger(__name__)
 

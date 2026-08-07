@@ -84,7 +84,7 @@ class TestMatchingService:
         from openfatture.storage.database.models import Pagamento, StatoPagamento
 
         payments = []
-        for i in range(3):
+        for _i in range(3):
             payment = Pagamento(
                 fattura_id=sample_fattura.id,
                 importo=Decimal("1000.00"),

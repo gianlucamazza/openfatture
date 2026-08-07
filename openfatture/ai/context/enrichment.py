@@ -4,9 +4,9 @@ from datetime import datetime
 from typing import Any
 
 from openfatture.ai.domain.context import AgentContext, ChatContext
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -73,11 +73,8 @@ class ContextManager:
             Enriched context with relevant documents
         """
         try:
-            # Availability probe: importing these raises ImportError (caught
-            # below) when the optional RAG stack is not installed, so the chat
-            # degrades gracefully instead of crashing.
-            from openfatture.ai.config.settings import get_ai_settings  # noqa: F401
-            from openfatture.ai.rag import KnowledgeIndexer, RAGSystem  # noqa: F401
+            # Importing the RAG config raises ImportError when the optional
+            # stack is not installed; callers degrade gracefully.
             from openfatture.ai.rag.config import get_rag_config
 
             # Check if RAG is enabled

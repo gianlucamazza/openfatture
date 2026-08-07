@@ -15,7 +15,7 @@ from openfatture.ai.providers.base import (
     ProviderTimeoutError,
     ProviderUnavailableError,
 )
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -148,7 +148,7 @@ class OllamaProvider(BaseLLMProvider):
                 f"Ollama request timeout after {self.timeout}s",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
         except httpx.ConnectError as e:
             logger.error("ollama_connection_error", error=str(e), base_url=self.base_url)
@@ -157,7 +157,7 @@ class OllamaProvider(BaseLLMProvider):
                 "Make sure Ollama is running (ollama serve)",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
         except httpx.HTTPStatusError as e:
             error_msg = str(e)
@@ -168,14 +168,14 @@ class OllamaProvider(BaseLLMProvider):
                     f"Model '{self.model}' not found. Pull it with: ollama pull {self.model}",
                     provider=self.provider_name,
                     original_error=e,
-                )
+                ) from e
 
             logger.error("ollama_http_error", error=error_msg, status=e.response.status_code)
             raise ProviderError(
                 f"Ollama HTTP error: {error_msg}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
         except Exception as e:
             logger.error("ollama_unexpected_error", error=str(e), error_type=type(e).__name__)
@@ -183,7 +183,7 @@ class OllamaProvider(BaseLLMProvider):
                 f"Unexpected error calling Ollama: {e}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
     async def stream(
         self,
@@ -244,7 +244,7 @@ class OllamaProvider(BaseLLMProvider):
                 f"Error streaming from Ollama: {e}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
     def count_tokens(self, text: str) -> int:
         """
@@ -327,7 +327,7 @@ class OllamaProvider(BaseLLMProvider):
                 message=f"Ollama streaming failed: {str(e)}",
                 provider=self.provider_name,
                 original_error=e,
-            )
+            ) from e
 
     async def list_models(self) -> list[str]:
         """

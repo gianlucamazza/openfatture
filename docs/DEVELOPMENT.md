@@ -52,8 +52,9 @@ make test-integration
 make test-payment
 ```
 
-Payment, Lightning, SDI, storage, and AI remain core/domain modules. Their
+Billing, payment, SDI, storage, and AI remain domain modules. Their
 implementation and tests are independent from the public CLI adapters.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for package names after the 2.0 reorg.
 
 ## GitHub Actions
 

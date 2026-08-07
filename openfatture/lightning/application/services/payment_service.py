@@ -5,12 +5,15 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
-from openfatture.core.events.base import get_global_event_bus
+from openfatture.events.base import get_global_event_bus
 from openfatture.lightning.domain.enums import InvoiceStatus
 from openfatture.lightning.domain.events import LightningPaymentSettled
 from openfatture.lightning.domain.models import LightningInvoiceRecord
 from openfatture.lightning.infrastructure.lnd_client import ProductionLNDClient
 from openfatture.lightning.infrastructure.repository import LightningInvoiceRepository
+from openfatture.platform.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class LightningPaymentService:
@@ -48,7 +51,7 @@ class LightningPaymentService:
 
         self._is_monitoring = True
         self._monitoring_task = asyncio.create_task(self._monitoring_loop())
-        print("Lightning payment monitoring started")
+        logger.info("Lightning payment monitoring started")
 
     async def stop_monitoring(self) -> None:
         """Stop the payment monitoring loop."""
@@ -59,7 +62,7 @@ class LightningPaymentService:
                 await self._monitoring_task
             except asyncio.CancelledError:
                 pass
-        print("Lightning payment monitoring stopped")
+        logger.info("Lightning payment monitoring stopped")
 
     async def _monitoring_loop(self) -> None:
         """Main monitoring loop that checks for settled payments."""
@@ -68,7 +71,7 @@ class LightningPaymentService:
                 await self._check_pending_invoices()
                 await self._cleanup_expired_invoices()
             except Exception as e:
-                print(f"Error in payment monitoring loop: {e}")
+                logger.error(f"Error in payment monitoring loop: {e}")
 
             await asyncio.sleep(self.polling_interval)
 
@@ -101,7 +104,7 @@ class LightningPaymentService:
                 await self._process_settlement(invoice_record, lnd_data)
 
         except Exception as e:
-            print(f"Error checking invoice {invoice_record.payment_hash}: {e}")
+            logger.error(f"Error checking invoice {invoice_record.payment_hash}: {e}")
 
     async def _process_settlement(
         self, invoice_record: LightningInvoiceRecord, lnd_data: dict[str, Any]
@@ -144,9 +147,10 @@ class LightningPaymentService:
         )
         await self.event_bus.publish_async(event)
 
-        print(
-            f"Lightning payment settled: {invoice_record.payment_hash[:8]}... "
-            f"({invoice_record.amount_msat} msat)"
+        logger.info(
+            "lightning_payment_settled",
+            payment_hash_prefix=invoice_record.payment_hash[:8],
+            amount_msat=invoice_record.amount_msat,
         )
 
     async def _cleanup_expired_invoices(self) -> None:
@@ -157,7 +161,7 @@ class LightningPaymentService:
             invoice.status = InvoiceStatus.EXPIRED
             self.invoice_repo.save(invoice)
 
-            print(f"Lightning invoice expired: {invoice.payment_hash[:8]}...")
+            logger.info(f"Lightning invoice expired: {invoice.payment_hash[:8]}...")
 
     async def force_check_invoice(self, payment_hash: str) -> bool:
         """Manually check a specific invoice for settlement.
@@ -183,7 +187,7 @@ class LightningPaymentService:
                 return True
 
         except Exception as e:
-            print(f"Error checking invoice {payment_hash}: {e}")
+            logger.error(f"Error checking invoice {payment_hash}: {e}")
 
         return False
 
@@ -220,24 +224,32 @@ class LightningPaymentService:
     DEFAULT_SIMULATED_AMOUNT_MSAT = 1_000_000  # 1000 sat
 
     async def simulate_payment(self, payment_hash: str, amount_msat: int | None = None) -> bool:
-        """Simulate a payment for testing purposes.
+        """Simulate a payment settlement (dev/test only).
 
-        This method is only available in mock/development mode.
-        In production, payments can only be settled by actual Lightning transactions.
+        Requires ``lnd_client.allow_mock is True`` (wired from
+        ``settings.lightning_allow_mock``). Never available on production
+        clients.
 
         Args:
             payment_hash: Payment hash to simulate payment for
             amount_msat: Amount the simulated payer sends. Defaults to the
                 invoice amount, or to DEFAULT_SIMULATED_AMOUNT_MSAT for
-                zero-amount invoices, which carry no amount of their own.
+                zero-amount invoices.
 
         Returns:
             True if simulation succeeded
+
+        Raises:
+            RuntimeError: If the LND client does not allow mock settlement
+            ValueError: If the invoice is not found
         """
-        # This is a development/testing helper
-        # In production LND, this would not exist
-        if not hasattr(self.lnd_client, "_invoices"):
-            raise RuntimeError("Payment simulation only available in mock mode")
+        allow_mock = bool(getattr(self.lnd_client, "allow_mock", False))
+        if not allow_mock:
+            raise RuntimeError(
+                "Payment simulation requires lightning_allow_mock=true "
+                "(ProductionLNDClient(allow_mock=True)). Real settlements "
+                "only come from LND payment events."
+            )
 
         invoice_record = self.invoice_repo.find_by_payment_hash(payment_hash)
         if not invoice_record:
@@ -249,22 +261,17 @@ class LightningPaymentService:
             else invoice_record.amount_msat or self.DEFAULT_SIMULATED_AMOUNT_MSAT
         )
 
-        # Simulate settlement in mock LND client
         mock_lnd_data: dict[str, Any] = {
             "settled": True,
             "settle_date": int(time.time()),
-            "payment_preimage": "00" * 32,  # Mock preimage
-            "fee_paid_msat": 1000,  # Mock fee
+            "payment_preimage": "00" * 32,
+            "fee_paid_msat": 1000,
             "amt_paid_msat": paid_msat,
         }
 
-        # Update mock LND client state if available
-        if hasattr(self.lnd_client, "simulate_payment"):
-            try:
-                await self.lnd_client.simulate_payment(payment_hash)
-            except Exception:
-                # Best-effort update for test environments
-                pass
+        simulate = getattr(self.lnd_client, "simulate_payment", None)
+        if callable(simulate):
+            await simulate(payment_hash)
 
         await self._process_settlement(invoice_record, mock_lnd_data)
         return True

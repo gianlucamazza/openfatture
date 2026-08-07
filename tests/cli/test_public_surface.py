@@ -18,8 +18,17 @@ def test_public_commands_are_agent_first() -> None:
 
 
 def test_status_supports_machine_readable_output() -> None:
+    import json
+
     result = runner.invoke(app, ["status", "--json"])
 
     assert result.exit_code == 0
-    assert '"version"' in result.stdout
-    assert '"ai_provider"' in result.stdout
+    payload = json.loads(result.stdout)
+    assert "version" in payload
+    assert "ai_provider" in payload
+    assert "extras" in payload
+    assert isinstance(payload["extras"], dict)
+    assert payload["extensions"]["in_process_plugins"] == "unsupported"
+    assert "hooks_dir" in payload["extensions"]
+    assert payload["feature_flags"]["lightning_allow_mock"] is False
+    assert "limitations" in payload

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from openfatture.utils.rate_limiter import (
+from openfatture.platform.rate_limiter import (
     ExponentialBackoff,
     RateLimiter,
     SlidingWindowRateLimiter,

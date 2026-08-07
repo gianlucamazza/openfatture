@@ -75,7 +75,7 @@
 ## Files Modified (11)
 
 **New File (1)**
-- `openfatture/core/batch/invoice_processor.py` (245 lines)
+- `openfatture/billing/batch/invoice_processor.py` (245 lines)
 
 **Updated Files (10)**
 1. `openfatture/payment/domain/models.py` – added `matched_at`

@@ -46,7 +46,7 @@
 ### **FASE 1: Event Analytics - COMPLETATA**
 
 **Status**: 96% coverage già raggiunta con 16 test esistenti!
-**File**: `tests/core/events/test_analytics.py` (327 linee)
+**File**: `tests/events/test_analytics.py` (327 linee)
 **Azione**: Nessuna - modulo già in ottima forma
 
 ---
@@ -444,7 +444,7 @@ uv run pytest tests/[module]/ -v --cov=openfatture/[module] --cov-report=html
 open htmlcov/[filename].html
 
 # Run all priority modules
-uv run pytest tests/core/events/ tests/sdi/ tests/storage/ -v --cov
+uv run pytest tests/events/ tests/sdi/ tests/storage/ -v --cov
 
 # Check overall progress
 uv run pytest tests/ --cov=openfatture --cov-report=term | grep "TOTAL"

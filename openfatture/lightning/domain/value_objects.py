@@ -447,8 +447,9 @@ class QuadroRWData:
 
         Note: Verificare con commercialista se applicabile a Lightning/BTC.
         """
-        # IVAFE might not apply to crypto in all interpretations
-        # Return 0 for now, to be confirmed with tax advisor
+        # IVAFE applicability to Lightning/BTC is jurisdiction-sensitive.
+        # We do not invent a tax amount: return zero and leave determination
+        # to the commercialista / compliance report path.
         return Decimal("0")
 
     def to_dict(self) -> dict[str, Any]:

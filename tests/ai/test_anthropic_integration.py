@@ -39,9 +39,9 @@ class TestAnthropicInvoiceAssistant:
         # Check for Italian business terms
         full_text = response.content.lower()
         business_terms = ["consulenza", "web", "sviluppo", "servizio"]
-        assert any(
-            term in full_text for term in business_terms
-        ), f"No business terms found in: {response.content}"
+        assert any(term in full_text for term in business_terms), (
+            f"No business terms found in: {response.content}"
+        )
 
     async def test_complex_invoice_with_client(self, anthropic_provider):
         """Test invoice description with client context."""
@@ -53,7 +53,7 @@ class TestAnthropicInvoiceAssistant:
         response = await agent.execute(context)
 
         assert response.status == ResponseStatus.SUCCESS
-        response_data = json.loads(response.content)
+        _response_data = json.loads(response.content)
 
         # Should include client reference
         full_text = response.content.lower()
@@ -175,7 +175,7 @@ class TestAnthropicTaxAdvisor:
         response = await agent.execute(context)
 
         assert response.status == ResponseStatus.SUCCESS
-        response_data = json.loads(response.content)
+        _response_data = json.loads(response.content)
 
         # Should mention reverse charge or inversione contabile
         full_text = response.content.lower()
@@ -196,7 +196,7 @@ class TestAnthropicTaxAdvisor:
         response = await agent.execute(context)
 
         assert response.status == ResponseStatus.SUCCESS
-        response_data = json.loads(response.content)
+        _response_data = json.loads(response.content)
 
         # Should mention split payment
         full_text = response.content.lower()
@@ -267,7 +267,7 @@ class TestAnthropicTaxAdvisor:
         response = await agent.execute(context)
 
         assert response.status == ResponseStatus.SUCCESS
-        response_data = json.loads(response.content)
+        _response_data = json.loads(response.content)
 
         # In forfettario regime, VAT is included in lump sum
         # Should mention forfettario

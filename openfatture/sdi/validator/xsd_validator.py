@@ -27,7 +27,7 @@ class FatturaPAValidator:
     @staticmethod
     def _get_default_xsd_path() -> Path:
         """Get default XSD path in data directory."""
-        from openfatture.utils.config import get_settings
+        from openfatture.platform.config import get_settings
 
         settings = get_settings()
         return settings.data_dir / "schemas" / "FatturaPA_v1.2.2.xsd"
@@ -123,7 +123,7 @@ def download_xsd_schema(auto_download: bool = False) -> Path:
     """
     import urllib.request
 
-    from openfatture.utils.config import get_settings
+    from openfatture.platform.config import get_settings
 
     settings = get_settings()
     schema_dir = settings.data_dir / "schemas"

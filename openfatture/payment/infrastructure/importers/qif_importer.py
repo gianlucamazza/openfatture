@@ -3,11 +3,15 @@
 Supports legacy Quicken format used by older financial software.
 """
 
+from __future__ import annotations
+
 import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
+
+from openfatture.platform.logging import get_logger
 
 from ...domain.enums import ImportSource
 from ...domain.models import BankTransaction
@@ -15,6 +19,8 @@ from .base import BaseImporter
 
 if TYPE_CHECKING:
     from ...domain.models import BankAccount
+
+logger = get_logger(__name__)
 
 
 class QIFImporter(BaseImporter):
@@ -67,7 +73,7 @@ class QIFImporter(BaseImporter):
         super().__init__(file_path)
         self.date_format = date_format
 
-    def parse(self, account: "BankAccount") -> list[BankTransaction]:
+    def parse(self, account: BankAccount) -> list[BankTransaction]:
         """Parse QIF file and extract transactions.
 
         Algorithm:
@@ -105,9 +111,7 @@ class QIFImporter(BaseImporter):
                 if line.startswith("!Type:"):
                     account_type = line[6:].strip()
                     if account_type not in self.SUPPORTED_TYPES:
-                        print(
-                            f"Warning: Unsupported QIF type '{account_type}', attempting to parse anyway"
-                        )
+                        logger.warning("qif_unsupported_type", account_type=account_type)
                     continue
 
                 # Parse field code
@@ -124,7 +128,7 @@ class QIFImporter(BaseImporter):
                             transaction = self._parse_transaction(account, current_tx)
                             transactions.append(transaction)
                         except Exception as e:
-                            print(f"Warning: Skipping transaction at line {line_num}: {e}")
+                            logger.warning("qif_skip_transaction", line=line_num, error=str(e))
                         current_tx = {}
                     continue
 
@@ -162,12 +166,12 @@ class QIFImporter(BaseImporter):
                 transaction = self._parse_transaction(account, current_tx)
                 transactions.append(transaction)
             except Exception as e:
-                print(f"Warning: Skipping final transaction: {e}")
+                logger.warning("qif_skip_final_transaction", error=str(e))
 
         return transactions
 
     def _parse_transaction(
-        self, account: "BankAccount", tx_data: dict[str, str | list[str]]
+        self, account: BankAccount, tx_data: dict[str, str | list[str]]
     ) -> BankTransaction:
         """Parse accumulated QIF transaction fields into BankTransaction.
 
@@ -376,8 +380,9 @@ class QIFImporter(BaseImporter):
         if not (sample.startswith("!Type:") or sample.startswith("!Account:")):
             # Check if any !Type: exists in first 1KB
             if "!Type:" not in sample and "!Account:" not in sample:
-                print(
-                    f"Warning: QIF file {self.file_path.name} missing !Type: header; attempting import anyway"
+                logger.warning(
+                    "qif_missing_type_header",
+                    file=self.file_path.name,
                 )
 
     def __repr__(self) -> str:

@@ -19,7 +19,7 @@ from openfatture.storage.database.models import Cliente
 class TestSearchClients:
     """Test search_clients tool function."""
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_search_clients_basic(self, mock_get_session):
         """Test basic client search without filters."""
         # Mock database session
@@ -55,7 +55,7 @@ class TestSearchClients:
         assert result["clienti"][0]["fatture_count"] == 2
         assert result["has_more"] is False
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_search_clients_with_query(self, mock_get_session):
         """Test client search with query filter."""
         mock_session = MagicMock(spec=Session)
@@ -82,7 +82,7 @@ class TestSearchClients:
         assert result["count"] == 1
         assert result["clienti"][0]["denominazione"] == "Rossi Company"
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_search_clients_with_limit(self, mock_get_session):
         """Test client search with custom limit."""
         mock_session = MagicMock(spec=Session)
@@ -114,7 +114,7 @@ class TestSearchClients:
         assert len(result["clienti"]) == 3
         assert result["has_more"] is True  # Should indicate more results available
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_search_clients_empty_results(self, mock_get_session):
         """Test client search with no results."""
         mock_session = MagicMock(spec=Session)
@@ -134,7 +134,7 @@ class TestSearchClients:
         assert result["clienti"] == []
         assert result["has_more"] is False
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_search_clients_database_error(self, mock_get_session):
         """Test client search with database error."""
         mock_session = MagicMock(spec=Session)
@@ -153,7 +153,7 @@ class TestSearchClients:
 class TestGetClientDetails:
     """Test get_client_details tool function."""
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_get_client_details_success(self, mock_get_session):
         """Test successful client details retrieval."""
         mock_session = MagicMock(spec=Session)
@@ -216,7 +216,7 @@ class TestGetClientDetails:
         assert len(result["fatture_recenti"]) == 2
         assert result["fatture_recenti"][0]["numero"] == "002"  # Most recent first
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_get_client_details_not_found(self, mock_get_session):
         """Test client details retrieval for non-existent client."""
         mock_session = MagicMock(spec=Session)
@@ -234,7 +234,7 @@ class TestGetClientDetails:
         assert "error" in result
         assert "non trovato" in result["error"]
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_get_client_details_database_error(self, mock_get_session):
         """Test client details retrieval with database error."""
         mock_session = MagicMock(spec=Session)
@@ -248,7 +248,7 @@ class TestGetClientDetails:
         assert "error" in result
         assert "Database connection failed" in result["error"]
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_get_client_details_no_invoices(self, mock_get_session):
         """Test client details retrieval for client with no invoices."""
         mock_session = MagicMock(spec=Session)
@@ -292,7 +292,7 @@ class TestGetClientDetails:
 class TestGetClientStats:
     """Test get_client_stats tool function."""
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_get_client_stats_success(self, mock_get_session):
         """Test successful client statistics retrieval."""
         mock_session = MagicMock(spec=Session)
@@ -309,7 +309,7 @@ class TestGetClientStats:
         assert result["con_email"] == 60
         assert result["con_pec"] == 20
 
-    @patch("openfatture.ai.tools.client_tools.get_session")
+    @patch("openfatture.billing.application.client_queries.get_session")
     def test_get_client_stats_database_error(self, mock_get_session):
         """Test client statistics retrieval with database error."""
         mock_session = MagicMock(spec=Session)

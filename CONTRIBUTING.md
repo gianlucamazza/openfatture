@@ -52,14 +52,14 @@ Be respectful, inclusive, and professional. We're building this tool together fo
 
 4. **Make Changes**
    - Write clean, documented code
-   - Follow existing code style (Black, Ruff)
+   - Follow existing code style (Ruff format + lint)
    - Add tests for new features
    - Update documentation
 
 5. **Run Tests and Linters**
    ```bash
-   # Format code
-   uv run black .
+   # Format and lint (Ruff only)
+   uv run ruff format .
    uv run ruff check .
 
    # Type checking
@@ -126,12 +126,20 @@ Be respectful, inclusive, and professional. We're building this tool together fo
 
 ```
 openfatture/
-├── core/          # Business logic
-├── sdi/           # SDI integration
-├── ai/            # AI features
-├── cli/           # Command-line interface
-├── storage/       # Database and files
-└── utils/         # Shared utilities
+├── cli/           # Public CLI (init, assistant, interactive, config, status)
+├── billing/       # Clients, invoices, quotes, products, batch
+├── sdi/           # FatturaPA XML, PEC, notifications, signature
+├── payment/       # Bank import and reconciliation
+├── events/        # Domain event bus
+├── hooks/         # Lifecycle hooks
+├── pdf/           # Human-readable invoice PDFs
+├── platform/      # Config, logging, email, shared helpers
+├── storage/       # Database models and sessions
+├── ai/            # Assistant, tools, providers (optional extras)
+└── lightning/     # Lightning Network (optional / experimental)
+
+Extensions for users: hooks under ~/.openfatture/hooks/ (not an in-process
+plugin API). See docs/CORE_VS_EXTENSIONS.md.
 ```
 
 ## CLI/TUI Development

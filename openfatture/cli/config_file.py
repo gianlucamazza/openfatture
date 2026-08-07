@@ -4,7 +4,7 @@ from pathlib import Path
 
 import tomlkit
 
-from openfatture.utils.config import Settings
+from openfatture.platform.config import Settings
 
 
 def save_config(settings: Settings, path: Path) -> None:
@@ -17,7 +17,6 @@ def save_config(settings: Settings, path: Path) -> None:
         "certificates_dir",
         "vector_store_path",
         "ai_chat_sessions_dir",
-        "plugins_dir",
         "debug_config",
     }
     path.write_text(

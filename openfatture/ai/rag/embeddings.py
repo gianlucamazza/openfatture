@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from openfatture.ai.rag.config import RAGConfig
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
@@ -31,6 +31,9 @@ def _sentence_transformer(*args: Any, **kwargs: Any) -> SentenceTransformer:
     tests patch, keeping mocking local to this module instead of monkeypatching
     the third-party global.
     """
+    from openfatture.platform.extras import require_extra
+
+    require_extra("rag", feature="local sentence-transformers embeddings")
     from sentence_transformers import SentenceTransformer
 
     model: SentenceTransformer = SentenceTransformer(*args, **kwargs)

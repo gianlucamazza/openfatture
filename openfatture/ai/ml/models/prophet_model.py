@@ -29,12 +29,13 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
     warnings.warn(
-        "Prophet not installed. Install with: pip install prophet",
+        "Prophet not installed. Install with: uv sync --extra ml "
+        "(or: pip install 'openfatture[ml]')",
         ImportWarning,
         stacklevel=2,
     )
 
-from openfatture.utils.logging import get_logger
+from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -112,9 +113,7 @@ class ProphetModel:
 
     Example:
         >>> model = ProphetModel(
-        ...     seasonality_mode='multiplicative',
-        ...     yearly_seasonality=True,
-        ...     weekly_seasonality=True
+        ...     seasonality_mode="multiplicative", yearly_seasonality=True, weekly_seasonality=True
         ... )
         >>>
         >>> # Fit model
@@ -246,7 +245,7 @@ class ProphetModel:
         # Convert to ProphetPrediction objects
         predictions = []
 
-        for idx, row in forecast.iterrows():
+        for _idx, row in forecast.iterrows():
             pred = ProphetPrediction(
                 yhat=row["yhat"],
                 yhat_lower=row["yhat_lower"],

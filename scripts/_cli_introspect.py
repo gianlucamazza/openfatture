@@ -5,7 +5,7 @@ Usage:
     uv run python scripts/_cli_introspect.py <import.path:app_attr>
 
 Example:
-    uv run python scripts/_cli_introspect.py openfatture.payment.cli:app
+    uv run python scripts/_cli_introspect.py openfatture.cli.main:app
 
 Prints a deterministic, sorted representation of every command path and its
 parameter names so a split refactor can be proven behaviour-preserving by

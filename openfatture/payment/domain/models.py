@@ -28,8 +28,9 @@ from sqlalchemy import (
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, Mapper, mapped_column, relationship
 
+from openfatture.platform.datetime import utc_now
+
 from ...storage.database.base import Base, IntPKMixin, UUIDPKMixin
-from ...utils.datetime import utc_now
 from .enums import ImportSource, MatchType, ReminderStatus, ReminderStrategy, TransactionStatus
 
 if TYPE_CHECKING:

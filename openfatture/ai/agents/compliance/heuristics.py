@@ -19,9 +19,9 @@ from openfatture.ai.agents.compliance.rules import ValidationIssue, ValidationSe
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.providers import create_provider
 from openfatture.ai.providers.base import BaseLLMProvider
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Fattura
 from openfatture.storage.session import db_session
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

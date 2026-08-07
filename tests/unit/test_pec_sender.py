@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from openfatture.platform.rate_limiter import RateLimiter
 from openfatture.sdi.pec_sender.sender import PECSender, create_log_entry
 from openfatture.storage.database.models import StatoFattura
-from openfatture.utils.rate_limiter import RateLimiter
 
 pytestmark = pytest.mark.unit
 
@@ -159,7 +159,7 @@ class TestPECSenderRetryLogic:
     """Tests for PEC sender retry logic and error handling."""
 
     @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
-    @patch("openfatture.utils.retry.asyncio.sleep")  # Patch asyncio.sleep in retry module
+    @patch("openfatture.platform.retry.asyncio.sleep")  # Patch asyncio.sleep in retry module
     def test_retry_on_transient_smtp_errors(
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
@@ -200,7 +200,7 @@ class TestPECSenderRetryLogic:
         assert mock_sleep.call_count == 2
 
     @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
-    @patch("openfatture.utils.retry.asyncio.sleep")
+    @patch("openfatture.platform.retry.asyncio.sleep")
     def test_no_retry_on_auth_errors(
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
@@ -233,7 +233,7 @@ class TestPECSenderRetryLogic:
         mock_sleep.assert_not_called()
 
     @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
-    @patch("openfatture.utils.retry.asyncio.sleep")
+    @patch("openfatture.platform.retry.asyncio.sleep")
     def test_max_retries_exceeded(
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):
@@ -265,7 +265,7 @@ class TestPECSenderRetryLogic:
         assert mock_server.send_message.call_count == 4  # 1 initial + 3 retries
 
     @patch("openfatture.sdi.pec_sender.sender.smtplib.SMTP_SSL")
-    @patch("openfatture.utils.retry.asyncio.sleep")
+    @patch("openfatture.platform.retry.asyncio.sleep")
     def test_exponential_backoff_delays(
         self, mock_sleep, mock_smtp_ssl, test_settings, sample_fattura, tmp_path
     ):

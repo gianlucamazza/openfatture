@@ -54,24 +54,24 @@ clean-all: clean ## Clean everything including build artifacts and venv
 # Code formatting
 # ============================================================================
 
-format: ## Format code with black and ruff
+format: ## Format code with ruff
 	@echo "$(BLUE)Formatting code...$(NC)"
-	$(UV) run black $(PROJECT_ROOT)
-	$(UV) run ruff check $(PROJECT_ROOT) --fix
+	$(UV) run ruff format $(PROJECT_ROOT) tests/
+	$(UV) run ruff check $(PROJECT_ROOT) tests/ --fix
 	@echo "$(GREEN)Code formatted$(NC)"
 
 # Code linting
 # ============================================================================
 
-lint: lint-check type-check ## Run all linters (black, ruff, mypy)
+lint: lint-check type-check ## Run all linters (ruff, mypy)
 	@echo "$(GREEN)All linters passed$(NC)"
 
 lint-check: ## Check code formatting and style
 	@echo "$(BLUE)Running linters...$(NC)"
-	@echo "$(BLUE) black...$(NC)"
-	@$(UV) run black --check $(PROJECT_ROOT)
-	@echo "$(BLUE) ruff...$(NC)"
-	@$(UV) run ruff check $(PROJECT_ROOT)
+	@echo "$(BLUE) ruff format...$(NC)"
+	@$(UV) run ruff format --check $(PROJECT_ROOT) tests/
+	@echo "$(BLUE) ruff check...$(NC)"
+	@$(UV) run ruff check $(PROJECT_ROOT) tests/
 	@echo "$(GREEN)Lint checks passed$(NC)"
 
 type-check: ## Run type checking with mypy

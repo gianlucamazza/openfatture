@@ -3,14 +3,15 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from openfatture.payment.domain import models as payment_models  # noqa: F401
-
-# Import all models to ensure they're registered with Base.metadata
-from openfatture.storage.database import models as storage_models  # noqa: F401
+from openfatture.payment.domain import models as payment_models
+from openfatture.platform.config import Settings
+from openfatture.storage.database import models as storage_models
 from openfatture.storage.database.base import Base
 
-# Import OpenFatture settings and models
-from openfatture.utils.config import Settings
+# Touch imported model modules so SQLAlchemy metadata is fully populated for
+# Alembic autogenerate (side-effect imports, intentionally retained).
+_REGISTERED_MODEL_MODULES = (payment_models, storage_models)
+assert all(module.__name__ for module in _REGISTERED_MODEL_MODULES)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

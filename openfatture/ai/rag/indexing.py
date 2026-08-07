@@ -4,9 +4,9 @@ This module handles indexing of invoices and related documents into the vector s
 """
 
 from openfatture.ai.rag.vector_store import VectorStore
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Fattura
 from openfatture.storage.session import db_session
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -17,8 +17,8 @@ from decimal import Decimal
 from enum import Enum
 from typing import cast
 
+from openfatture.platform.logging import get_logger
 from openfatture.storage.database.models import Cliente, Fattura, RigaFattura
-from openfatture.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -480,7 +480,7 @@ class ComplianceRulesEngine:
         # FPA035: Line calculations
         expected_imponibile = riga.quantita * riga.prezzo_unitario
         expected_iva = expected_imponibile * riga.aliquota_iva / 100
-        expected_totale = expected_imponibile + expected_iva
+        expected_imponibile + expected_iva
 
         if abs(riga.imponibile - expected_imponibile) > Decimal("0.01"):
             result.add_issue(
