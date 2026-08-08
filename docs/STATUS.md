@@ -51,9 +51,9 @@ See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [releases/v2.1.0.md](releases/v2.1.0
 
 ## Coverage floors (CI)
 
-| Suite | Floor | Workflow |
-|-------|-------|----------|
-| Full package | 49% | `test.yml` (`--cov-fail-under=49`) |
+| Suite | Floor | Source of truth |
+|-------|-------|-----------------|
+| Full package | 49% | `[tool.coverage.report] fail_under` in `pyproject.toml` (+ `test.yml`) |
 | Payment module | 75% | `payment-tests.yml` (measured ~78%) |
 
 Local default pytest runs **without** coverage (faster). Pass `--cov=openfatture`

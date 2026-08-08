@@ -12,6 +12,8 @@ from pydantic_settings import (
     TomlConfigSettingsSource,
 )
 
+from openfatture.platform.assistant_backends import DEFAULT_ASSISTANT_BACKEND
+
 # Initialize platform directories
 dirs = PlatformDirs("openfatture", "venerelabs")
 
@@ -267,11 +269,12 @@ class Settings(BaseSettings):
 
     # AI Chat Assistant
     assistant_backend: Literal["chat", "langgraph"] = Field(
-        default="langgraph",
+        default=DEFAULT_ASSISTANT_BACKEND,
         description=(
             "Product assistant orchestration backend: "
             "'langgraph' (default StateGraph model↔tools loop) or "
-            "'chat' (ChatAgent rollback; tool loop still uses GraphAssistantBackend)."
+            "'chat' (ChatAgent rollback; tool loop still uses GraphAssistantBackend). "
+            "Default SSOT: openfatture.platform.assistant_backends.DEFAULT_ASSISTANT_BACKEND."
         ),
     )
     ai_chat_enabled: bool = Field(

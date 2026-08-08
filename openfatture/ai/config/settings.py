@@ -309,17 +309,88 @@ class AISettings(BaseSettings):
 _settings: AISettings | None = None
 
 
+def _env_has(name: str) -> bool:
+    """True if an environment variable is set (case-insensitive key match)."""
+    import os
+
+    if not name:
+        return False
+    target = name.upper()
+    return any(key.upper() == target for key in os.environ)
+
+
+def hydrate_ai_settings_from_platform(ai: AISettings) -> AISettings:
+    """Apply product SSOT credentials from platform ``Settings`` (AI_* / init / docs).
+
+    Precedence for mapped fields:
+    1. Explicit ``OPENFATTURE_AI_*`` env (AISettings load) — wins when set
+    2. Platform ``Settings`` (``AI_PROVIDER``, ``AI_API_KEY``, ``AI_MODEL``, …)
+    3. AISettings field defaults
+
+    Advanced multi-key knobs (per-provider models, budgets, chroma) stay on
+    ``AISettings`` / ``OPENFATTURE_AI_*`` only.
+    """
+    from openfatture.platform.config import get_settings
+
+    plat = get_settings()
+    updates: dict[str, object] = {}
+
+    if not _env_has("OPENFATTURE_AI_PROVIDER") and plat.ai_provider:
+        provider_candidate = (plat.ai_provider or "").strip().lower()
+        if provider_candidate in ("openai", "anthropic", "ollama"):
+            updates["provider"] = provider_candidate
+
+    provider = str(updates.get("provider") or ai.provider)
+    model_env = {
+        "openai": "OPENFATTURE_AI_OPENAI_MODEL",
+        "anthropic": "OPENFATTURE_AI_ANTHROPIC_MODEL",
+        "ollama": "OPENFATTURE_AI_OLLAMA_MODEL",
+    }.get(provider, "")
+
+    if plat.ai_model and not _env_has(model_env):
+        if provider == "openai":
+            updates["openai_model"] = plat.ai_model
+        elif provider == "anthropic":
+            updates["anthropic_model"] = plat.ai_model
+        elif provider == "ollama":
+            updates["ollama_model"] = plat.ai_model
+
+    if plat.ai_api_key:
+        from pydantic import SecretStr
+
+        secret = SecretStr(plat.ai_api_key)
+        if provider == "openai" and not _env_has("OPENFATTURE_AI_OPENAI_API_KEY"):
+            updates["openai_api_key"] = secret
+        elif provider == "anthropic" and not _env_has("OPENFATTURE_AI_ANTHROPIC_API_KEY"):
+            updates["anthropic_api_key"] = secret
+
+    if plat.ai_base_url and provider == "ollama" and not _env_has("OPENFATTURE_AI_OLLAMA_BASE_URL"):
+        updates["ollama_base_url"] = plat.ai_base_url
+
+    if not _env_has("OPENFATTURE_AI_TEMPERATURE"):
+        updates["temperature"] = plat.ai_temperature
+    if not _env_has("OPENFATTURE_AI_MAX_TOKENS"):
+        updates["max_tokens"] = plat.ai_max_tokens
+    if not _env_has("OPENFATTURE_AI_TOOLS_ENABLED"):
+        updates["tools_enabled"] = plat.ai_tools_enabled
+
+    if not updates:
+        return ai
+    return ai.model_copy(update=updates)
+
+
 def get_ai_settings() -> AISettings:
     """
     Get global AI settings instance (singleton pattern).
 
-    Returns:
-        AISettings instance
+    Product credentials are hydrated from platform ``Settings`` (see
+    :func:`hydrate_ai_settings_from_platform`) so ``init`` / ``AI_*`` env vars
+    and the provider factory share one source of truth.
     """
     global _settings
 
     if _settings is None:
-        _settings = AISettings()
+        _settings = hydrate_ai_settings_from_platform(AISettings())
 
     return _settings
 

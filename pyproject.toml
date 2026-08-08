@@ -250,6 +250,9 @@ source = ["openfatture"]
 omit = ["*/tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
+# Global package floor (SSOT). Payment module uses a higher floor in
+# payment-tests.yml (75%). CI may also pass --cov-fail-under explicitly.
+fail_under = 49
 exclude_lines = [
   "pragma: no cover",
   "def __repr__",
