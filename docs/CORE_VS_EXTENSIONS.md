@@ -13,7 +13,7 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md), [CONFIGURATION.md](CONFIGURATION.md
 | Layer | Meaning | How you get it | Examples |
 |-------|---------|----------------|----------|
 | **Core** | Required for Italian electronic invoicing and the public CLI | `uv sync` / `pip install openfatture` | billing, SDI, payment, PDF, storage, events, hooks, platform, CLI |
-| **Feature extras** | In-tree modules with heavy or niche deps; same repo, optional install | `uv sync --extra ai` (etc.) | `ai`, `rag`, `ml`, `lightning` |
+| **Feature extras** | In-tree modules with heavy or niche deps; same repo, optional install | `uv sync --extra ai` (etc.) | `ai`, `rag`, `ml` |
 | **Extensions** | User or third-party automation **outside** the core package API | hooks scripts; future MCP/tools | `~/.openfatture/hooks/*` |
 
 There is **no in-process plugin product API**. User extensions use **hooks**
@@ -34,7 +34,7 @@ There is **no in-process plugin product API**. User extensions use **hooks**
    │  sdi        │        │  [ai]        │        │  (~/.openfatture│
    │  payment    │        │  [rag]       │        │   /hooks)      │
    │  pdf        │        │  [ml]        │        │                │
-   │  storage    │        │  [lightning] │        │  no in-process │
+   │  storage    │        │              │        │  no in-process │
    │  events     │        │              │        │  plugin API    │
    │  hooks eng. │        │  same monorepo│        │                │
    │  platform   │        │  optional deps│        │                │
@@ -47,7 +47,7 @@ There is **no in-process plugin product API**. User extensions use **hooks**
 
 ## 2. What is **core**
 
-Must remain installable and useful **without** AI, RAG, ML, or Lightning.
+Must remain installable and useful **without** AI, RAG, or ML.
 
 | Package | Role |
 |---------|------|
@@ -77,11 +77,10 @@ plugins: they are **first-party optional product modules**.
 | `ai` | `openfatture.ai` (assistant, tools, providers, orchestration) | Yes — use domain code only; no assistant |
 | `rag` | `openfatture.ai.rag` (+ embeddings stack) | Yes |
 | `ml` | `openfatture.ai.ml`, cash-flow forecasting | Yes |
-| `lightning` | `openfatture.lightning` | Yes — gated by config; experimental |
 
 **Criteria for staying as an extra (not core):**
 
-- Heavy or native dependencies (torch, prophet, grpc, chromadb, …)
+- Heavy or native dependencies (torch, prophet, chromadb, …)
 - Not required to issue/send a valid FatturaPA invoice
 - Can fail with `MissingExtraError` / clear install hint
 - Must not be imported by `platform` or `storage` at module import time
@@ -147,7 +146,6 @@ the public CLI lifespan and conflicted with the agentic small command surface.
 | “Put payment in a plugin” | **Core** — reconciliation is freelancing core |
 | “Put PDF in a plugin” | **Core** — human-readable invoice is expected offline |
 | “Put AI in core deps” | **`ai` extra** — keep install light |
-| “Put Lightning in core” | **`lightning` extra** — experimental / node-specific |
 | “User Slack notify as Python plugin” | **Hook script** |
 | “New `openfatture fattura` CLI group” | **No** — assistant tool + application service |
 | “Web scraper / voice as core” | **Removed** — not product core |
@@ -186,6 +184,5 @@ When adding a module, ask:
 | Assistant + domain tools | Feature extra | `--extra ai` |
 | RAG | Feature extra | `--extra rag` |
 | Cash-flow ML | Feature extra | `--extra ml` |
-| Lightning | Feature extra | `--extra lightning` + config |
 | In-process plugins API | Not product | **removed** |
-| Voice / web scraper | Removed | — |
+| Voice / web scraper / Lightning LN | Removed | historical under `docs/history/` |

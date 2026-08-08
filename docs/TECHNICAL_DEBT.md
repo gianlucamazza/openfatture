@@ -13,8 +13,9 @@ Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
 ## Verdict
 
 Structural modernization and AI product backend flip are **done**. Remaining
-debt is **product completeness** (Lightning gRPC, oversized modules, experimental
-workflows), not packaging chaos.
+debt is **oversized modules** and **experimental multi-agent workflows**, not
+packaging chaos. Experimental Lightning Network support was **removed** (see
+`docs/history/lightning/`).
 
 | Area | Debt level | Notes |
 |------|------------|--------|
@@ -22,7 +23,7 @@ workflows), not packaging chaos.
 | Core billing / SDI / payment | Low | Tools → application; billing re-exports use-cases |
 | Package layout | Low | Bounded packages; no empty placeholders |
 | AI runtime | Low | Default `langgraph_tool_loop`; single tool-loop; ChatAgent slimmed (structured + rollback) |
-| Lightning | Medium–High | Fail-closed; real LND gRPC still missing |
+| Lightning | **Removed** | Incomplete LND gRPC; archived docs under `docs/history/lightning/` |
 | RAG auto-update | Low | Callback required; default auto-update off |
 | Tooling / types | Low | No in-code suppressions; only E501 formatter ignore |
 | Tests | Low | Skips mostly for external services / interactive |
@@ -46,14 +47,7 @@ workflows), not packaging chaos.
 
 ## High priority (real product risk)
 
-### 1. Lightning LND real gRPC still missing
-
-- **Files:** `openfatture/lightning/infrastructure/lnd_client.py`
-- **Honesty:** Mock is **off by default** (`lightning_allow_mock=false`).
-- **Status:** Silent mock fixed; full RPC still open. Lightning is
-  **experimental** until real bindings land — or document a harder cut.
-
-### 2. AI product path — resolved for 2.1.0
+### 1. AI product path — resolved for 2.1.0
 
 - **Default:** `AssistantRuntime` → `GraphAssistantBackend` (`langgraph_tool_loop`).
 - **Rollback:** `ASSISTANT_BACKEND=chat` → slim `ChatAgent` (structured output +
@@ -61,14 +55,19 @@ workflows), not packaging chaos.
 - **Workflows:** `ai.orchestration.workflows.*` remain internal/experimental;
   not on the public CLI.
 
-### 3. AI tools → application services — done
+### 2. AI tools → application services — done
 
 - Thin adapters under `openfatture/ai/tools`.
 - Follow-up: split large `*_ops.py` / command modules where complexity grows.
 
-### 4. RAG auto-update queue honesty — resolved
+### 3. RAG auto-update queue honesty — resolved
 
 - Requires a real `reindex_callback`; default auto-update remains disabled.
+
+### 4. Lightning Network — removed
+
+- Incomplete experimental module removed from the product tree.
+- Historical docs: `docs/history/lightning/`.
 
 ---
 
@@ -130,8 +129,7 @@ workflows), not packaging chaos.
 
 ## Recommended burn-down order
 
-1. Lightning: real gRPC **or** keep hard experimental posture in docs/CLI
-2. Split oversized modules (`cash_flow_predictor`, invoice commands, models)
-3. Honest experimental workflow approval nodes (if ever productized)
-4. Optional: mypy on selected tests; import-linter boundaries
-5. Optional: Textual TUI (product decision)
+1. Split oversized modules (`cash_flow_predictor`, invoice commands, models)
+2. Honest experimental workflow approval nodes (if ever productized)
+3. Optional: mypy on selected tests; import-linter boundaries
+4. Optional: Textual TUI (product decision)

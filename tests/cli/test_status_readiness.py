@@ -38,7 +38,7 @@ def test_readiness_ai_extra_without_key_does_not_say_enable_extra(tmp_path: Path
     data.mkdir()
     (data / "archivio").mkdir()
     settings = _settings(data_dir=data, ai_provider="openai", ai_api_key="")
-    extras = {"ai": True, "rag": False, "ml": False, "lightning": False}
+    extras = {"ai": True, "rag": False, "ml": False}
 
     result = _readiness(settings, extras)
 
@@ -57,7 +57,7 @@ def test_readiness_missing_ai_extra_suggests_sync(tmp_path: Path) -> None:
     data.mkdir()
     (data / "archivio").mkdir()
     settings = _settings(data_dir=data)
-    extras = {"ai": False, "rag": False, "ml": False, "lightning": False}
+    extras = {"ai": False, "rag": False, "ml": False}
 
     result = _readiness(settings, extras)
 

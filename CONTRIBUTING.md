@@ -136,7 +136,6 @@ openfatture/
 ├── platform/      # Config, logging, email, shared helpers
 ├── storage/       # Database models and sessions
 ├── ai/            # Assistant, tools, providers (optional extras)
-└── lightning/     # Lightning Network (optional / experimental)
 
 Extensions for users: hooks under ~/.openfatture/hooks/ (not an in-process
 plugin API). See docs/CORE_VS_EXTENSIONS.md.
