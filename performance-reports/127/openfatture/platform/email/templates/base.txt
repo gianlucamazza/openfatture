@@ -1,0 +1,26 @@
+{{ "=" * 70 }}
+{{ app_name }}
+{{ "=" * 70 }}
+
+{% block content %}
+<!-- Content goes here -->
+{% endblock %}
+
+{{ "-" * 70 }}
+
+{{ cedente_denominazione }}
+P.IVA: {{ cedente_partita_iva }}
+{{ cedente_indirizzo }}, {{ cedente_cap }} {{ cedente_comune }} ({{ cedente_provincia }})
+{% if cedente_email %}Email: {{ cedente_email }}{% endif %}
+{% if cedente_telefono %}
+Tel: {{ cedente_telefono }}{% endif %}
+
+---
+
+{{ _('email.footer.generated_by') }} OpenFatture
+{{ _('email.footer.do_not_reply') }}
+
+Portale SDI: https://www.fatturapa.gov.it/
+Help: https://github.com/gianlucamazza/openfatture
+
+{{ "=" * 70 }}
