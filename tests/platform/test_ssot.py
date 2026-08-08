@@ -16,20 +16,30 @@ from openfatture.platform.assistant_backends import (
     DEFAULT_ASSISTANT_BACKEND,
     resolve_backend_id,
 )
+from openfatture.platform.extras import available_extras
 
 
-def test_package_version_is_ssot() -> None:
+def test_package_version_settings_ssot() -> None:
+    from openfatture.platform.config import Settings
+
+    assert Settings().app_version == pkg_version
+
+
+def test_lightning_version_reexports_package() -> None:
+    from openfatture.lightning import __version__ as ln_version
+
+    assert ln_version == pkg_version
+
+
+@pytest.mark.skipif(not available_extras().get("ai"), reason="ai extra not installed")
+def test_ai_subpackage_versions_reexport_package() -> None:
     from openfatture.ai import __version__ as ai_version
     from openfatture.ai.orchestration import __version__ as orch_version
     from openfatture.ai.streaming import __version__ as stream_version
-    from openfatture.lightning import __version__ as ln_version
-    from openfatture.platform.config import Settings
 
     assert ai_version == pkg_version
     assert orch_version == pkg_version
     assert stream_version == pkg_version
-    assert ln_version == pkg_version
-    assert Settings().app_version == pkg_version
 
 
 def test_assistant_backend_default_and_ids() -> None:
@@ -51,16 +61,13 @@ def test_status_backend_ids_match_ssot() -> None:
     assert data["version"] == pkg_version
 
 
+@pytest.mark.skipif(not available_extras().get("ai"), reason="ai extra not installed")
 def test_ai_settings_hydrate_from_platform_ai_star(monkeypatch: pytest.MonkeyPatch) -> None:
     """init/docs write AI_*; factory must see them via get_ai_settings()."""
-    from openfatture.ai.config.settings import (
-        AISettings,
-        hydrate_ai_settings_from_platform,
-        reset_ai_settings,
-    )
+    from openfatture.ai.config.settings import AISettings
+    from openfatture.ai.config.settings import hydrate_ai_settings_from_platform, reset_ai_settings
     from openfatture.platform.config import Settings
 
-    # Clear advanced prefix so platform wins
     for key in list(os.environ):
         if key.upper().startswith("OPENFATTURE_AI_"):
             monkeypatch.delenv(key, raising=False)
@@ -83,6 +90,7 @@ def test_ai_settings_hydrate_from_platform_ai_star(monkeypatch: pytest.MonkeyPat
     assert hydrated.max_tokens == 123
 
 
+@pytest.mark.skipif(not available_extras().get("ai"), reason="ai extra not installed")
 def test_openfatture_ai_env_wins_over_platform(monkeypatch: pytest.MonkeyPatch) -> None:
     from openfatture.ai.config.settings import AISettings, hydrate_ai_settings_from_platform
     from openfatture.platform.config import Settings
@@ -97,7 +105,6 @@ def test_openfatture_ai_env_wins_over_platform(monkeypatch: pytest.MonkeyPatch) 
         ai_api_key="sk-ant-test",
     )
     with patch("openfatture.platform.config.get_settings", return_value=plat):
-        # Load AISettings from env first, then hydrate (should not clobber)
         ai = AISettings()
         hydrated = hydrate_ai_settings_from_platform(ai)
 
