@@ -41,12 +41,10 @@ fix the root cause instead.
 `ASSISTANT_BACKEND=chat` rollback; Lightning removed (see
 `docs/history/lightning/`); config SSOT for version/backends/AI credentials.
 
-**Optional next (on demand, not blocking):**
-- Split oversized modules when touched (`cash_flow_predictor`, large ops facades)
-- Product decision only: multi-agent workflows, TUI, MCP (stay non-CLI until then)
+**Optional next (on demand, not blocking):** see [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)
+for IDs and triggers (`D-SIZE`, `D-WF`, product decisions). No release-blocking debt.
 
 See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) and [releases/v2.1.0.md](releases/v2.1.0.md).
-
 ## Coverage floors (CI)
 
 | Suite | Floor | Source of truth |
