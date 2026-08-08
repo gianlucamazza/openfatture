@@ -37,18 +37,15 @@ fix the root cause instead.
 
 ## Current focus (post-2.1)
 
-1. **LangGraph is the default product backend** (`langgraph_tool_loop`);
-   `ASSISTANT_BACKEND=chat` remains a supported rollback. Multi-agent workflows
-   stay non-CLI.
-2. Continue splitting oversized modules (`cash_flow_predictor`, ops facades;
-   `ai.tools.registry` is already a package)
-3. Onboarding polish continues (readiness in `status`, slash commands in assistant)
+**Shipped:** LangGraph default (`langgraph_tool_loop`); ChatAgent slim +
+`ASSISTANT_BACKEND=chat` rollback; Lightning removed (see
+`docs/history/lightning/`); config SSOT for version/backends/AI credentials.
 
-**Removed from product:** experimental Lightning Network module (incomplete LND
-gRPC; archived under `docs/history/lightning/`).
+**Optional next (on demand, not blocking):**
+- Split oversized modules when touched (`cash_flow_predictor`, large ops facades)
+- Product decision only: multi-agent workflows, TUI, MCP (stay non-CLI until then)
 
-See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [releases/v2.1.0.md](releases/v2.1.0.md),
-[releases/v2.0.2.md](releases/v2.0.2.md), and [releases/v2.0.1.md](releases/v2.0.1.md).
+See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) and [releases/v2.1.0.md](releases/v2.1.0.md).
 
 ## Coverage floors (CI)
 
