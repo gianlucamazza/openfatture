@@ -38,7 +38,7 @@ def test_plugins_package_is_not_part_of_product() -> None:
 
 def test_extras_markers_match_feature_modules_only() -> None:
     extras = available_extras()
-    assert set(extras) == {"ai", "rag", "ml", "lightning"}
+    assert set(extras) == {"ai", "rag", "ml"}
     assert "scraper" not in extras
     assert "voice" not in extras
     assert "plugin" not in extras

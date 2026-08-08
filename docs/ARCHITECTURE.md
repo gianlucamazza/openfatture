@@ -27,7 +27,6 @@ openfatture/
   billing/       # clienti, fatture, preventivi, prodotti, batch, fiscale
   sdi/           # FatturaPA XML, PEC, notifications, signature
   payment/       # reconciliation and bank import (DDD layers)
-  lightning/     # Lightning Network (optional / experimental)
   pdf/           # human-readable invoice PDFs
   ai/            # assistant, tools, providers, RAG, ML (feature extras)
   i18n/
@@ -39,14 +38,14 @@ analytics agents, and the experimental in-process `plugins` package. See
 [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md).
 
 **Core vs extras vs extensions:** billing/SDI/payment/PDF are core; AI/RAG/ML/
-Lightning are feature extras; user automation uses **hooks**.
+are feature extras; user automation uses **hooks**.
 
 ### Import rules
 
 1. `cli` may call application services and AI entrypoints only.
 2. `ai` tools call application services; they are not a second domain layer.
 3. Domain packages do not import `cli` or `ai`.
-4. `platform` and `storage` do not depend on `ai` or `lightning`.
+4. `platform` and `storage` do not depend on `ai`.
 5. Optional features fail with an explicit install hint when extras are missing.
 
 ### Optional extras
@@ -57,11 +56,10 @@ Lightning are feature extras; user automation uses **hooks**.
 | `ai` | LLM providers, assistant, tools, orchestration |
 | `rag` | Vector store and embeddings |
 | `ml` | Forecasting models (optional / frozen features) |
-| `lightning` | Lightning Network stack (experimental) |
 | `dev` | Tests and linters |
 | `all` | Union of feature extras |
 
-`payment` and `lightning` keep the DDD layout
+`payment` keeps the DDD layout
 (`application` / `domain` / `infrastructure`).
 
 ## Layers
@@ -76,7 +74,7 @@ CLI / assistant tools
  domain rules + events
         |
         v
- infrastructure (DB, PEC, files, bank importers, LND stubs)
+ infrastructure (DB, PEC, files, bank importers)
 ```
 
 Mutating tools keep their own confirmation and validation boundaries.

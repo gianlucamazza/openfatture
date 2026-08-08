@@ -25,12 +25,6 @@ def test_package_version_settings_ssot() -> None:
     assert Settings().app_version == pkg_version
 
 
-def test_lightning_version_reexports_package() -> None:
-    from openfatture.lightning import __version__ as ln_version
-
-    assert ln_version == pkg_version
-
-
 @pytest.mark.skipif(not available_extras().get("ai"), reason="ai extra not installed")
 def test_ai_subpackage_versions_reexport_package() -> None:
     from openfatture.ai import __version__ as ai_version

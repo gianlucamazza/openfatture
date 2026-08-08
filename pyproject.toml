@@ -95,13 +95,9 @@ ml = [
   "numpy>=1.26.0",
   "apscheduler>=3.10.4",
 ]
-# Lightning Network (gRPC client for LND)
-lightning = [
-  "grpcio>=1.60.0",
-]
 # Full feature set for developers and production AI installs
 all = [
-  "openfatture[ai,rag,ml,lightning]",
+  "openfatture[ai,rag,ml]",
 ]
 dev = [
   # Testing
@@ -127,7 +123,6 @@ dev = [
   "types-reportlab>=4.0.0",
   "types-PyYAML>=6.0.0",
   "types-pyasn1>=0.5.0",
-  "types-grpcio>=1.0.0",
   "pandas-stubs>=2.0.0",
   "lxml-stubs>=0.5.1",
   "types-python-dateutil>=2.9.0",
@@ -211,11 +206,6 @@ ignore_missing_imports = true
 # Grouped by product extra / optional stack for readability.
 [[tool.mypy.overrides]]
 module = ["apscheduler.*", "apscheduler"]
-ignore_missing_imports = true
-
-# lightning webhook stack (optional; not a core install dependency)
-[[tool.mypy.overrides]]
-module = ["fastapi", "fastapi.*"]
 ignore_missing_imports = true
 
 # Optional nested-loop helper (async_bridge); ImportError-guarded at runtime

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Experimental Lightning Network module** (`openfatture.lightning`, extra
+  `lightning`, config flags, lifespan hook, tests). LND gRPC was never
+  product-complete. Docs archived under `docs/history/lightning/`.
+
 ### Changed
 
 - Project config hygiene: pytest local runs no longer force coverage (CI still
@@ -16,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   package `__version__` is re-exported by subpackages; `AISettings` hydrates
   credentials from platform `AI_*` (init/docs) with `OPENFATTURE_AI_*`
   override precedence; coverage `fail_under=49` in pyproject.
+- Feature extras are now `ai`, `rag`, `ml` only (`all` no longer includes lightning).
 
 ## [2.1.0] - 2026-08-08
 

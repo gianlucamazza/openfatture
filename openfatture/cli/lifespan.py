@@ -82,7 +82,6 @@ class LifespanManager:
         logger.info("Hook system initialized and registered with event bus")
 
         # Optional feature extras (never required for core invoicing)
-        await self._initialize_lightning()
         await self._initialize_self_learning()
 
         try:
@@ -156,34 +155,6 @@ class LifespanManager:
                     logger.debug("ML retraining disabled by config")
             except Exception as e:
                 logger.warning(f"ML retraining not started: {e}")
-
-    async def _initialize_lightning(self) -> None:
-        """Initialize Lightning Network integration if enabled and the extra is installed."""
-        from openfatture.platform.config import get_settings
-        from openfatture.platform.extras import has_extra
-
-        settings = get_settings()
-        if not settings.lightning_enabled:
-            logger.debug("Lightning Network integration disabled")
-            return
-
-        if not has_extra("lightning"):
-            logger.warning(
-                "lightning_enabled is set but the 'lightning' extra is not installed; "
-                "skipping. Install with: uv sync --extra lightning"
-            )
-            return
-
-        logger.debug("Initializing Lightning Network integration")
-        try:
-            from openfatture.lightning.application.events.handlers import (
-                initialize_lightning_integration,
-            )
-
-            initialize_lightning_integration()
-            logger.info("Lightning Network integration initialized")
-        except Exception as e:
-            logger.warning(f"Failed to initialize Lightning integration: {e}")
 
     async def _graceful_shutdown(self) -> None:
         """Perform graceful shutdown of all resources."""

@@ -11,7 +11,6 @@
 - Client, invoice, quote, payment, and batch workflows
 - Event audit trail, reports, hooks
 - Optional AI assistance, RAG, and forecasting workflows (feature extras)
-- Optional Lightning Network integration (**experimental**; mock off by default)
 
 ## Quality expectations
 
@@ -41,10 +40,12 @@ fix the root cause instead.
 1. **LangGraph is the default product backend** (`langgraph_tool_loop`);
    `ASSISTANT_BACKEND=chat` remains a supported rollback. Multi-agent workflows
    stay non-CLI.
-2. Lightning real LND gRPC **or** keep hard experimental posture
-3. Continue splitting oversized modules (`cash_flow_predictor`, ops facades;
+2. Continue splitting oversized modules (`cash_flow_predictor`, ops facades;
    `ai.tools.registry` is already a package)
-4. Onboarding polish continues (readiness in `status`, slash commands in assistant)
+3. Onboarding polish continues (readiness in `status`, slash commands in assistant)
+
+**Removed from product:** experimental Lightning Network module (incomplete LND
+gRPC; archived under `docs/history/lightning/`).
 
 See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [releases/v2.1.0.md](releases/v2.1.0.md),
 [releases/v2.0.2.md](releases/v2.0.2.md), and [releases/v2.0.1.md](releases/v2.0.1.md).

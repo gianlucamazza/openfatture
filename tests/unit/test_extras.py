@@ -13,7 +13,7 @@ from openfatture.platform.extras import (
 
 def test_available_extras_keys() -> None:
     extras = available_extras()
-    assert set(extras) == {"ai", "rag", "ml", "lightning"}
+    assert set(extras) == {"ai", "rag", "ml"}
     assert all(isinstance(v, bool) for v in extras.values())
 
 

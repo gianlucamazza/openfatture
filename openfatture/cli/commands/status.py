@@ -113,18 +113,11 @@ def _build_status() -> dict[str, Any]:
             "in_process_plugins": "unsupported",
         },
         "feature_flags": {
-            "lightning_enabled": settings.lightning_enabled,
-            "lightning_allow_mock": settings.lightning_allow_mock,
-            "lightning_rpc_ready": False,  # true only when LND gRPC stubs are wired
             "assistant_available": bool(extras.get("ai")),
             "assistant_backend": assistant_backend,
             "rag_auto_update_default": False,  # OPENFATTURE_RAG_AUTO_UPDATE_ENABLED default
         },
         "limitations": {
-            "lightning": (
-                "experimental: real LND gRPC not implemented; "
-                "mock only if lightning_allow_mock=true"
-            ),
             "rag_auto_update": (
                 "requires reindex_callback (AutoIndexingService); no silent simulation"
             ),

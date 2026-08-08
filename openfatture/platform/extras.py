@@ -5,11 +5,11 @@ Feature stacks live behind PEP 621 extras declared in ``pyproject.toml``:
 - ``ai`` — LLM providers, agents, tools, LangGraph workflows
 - ``rag`` — ChromaDB + embeddings (includes ``ai``)
 - ``ml`` — Prophet / XGBoost forecasting stack (optional; not on default path)
-- ``lightning`` — gRPC client for LND (optional / experimental)
 - ``all`` — union of the above
 
 Core install (no extras) supports billing, SDI, payment, PDF, config, and status.
-Voice and regulatory scraping were removed from the product surface (D0).
+Voice, regulatory scraping, and experimental Lightning Network support were
+removed from the product surface.
 """
 
 from __future__ import annotations
@@ -23,7 +23,6 @@ _EXTRA_MARKERS: Final[dict[str, str]] = {
     "ai": "openai",
     "rag": "chromadb",
     "ml": "prophet",
-    "lightning": "grpc",
 }
 
 _INSTALL_HINT: Final[str] = (

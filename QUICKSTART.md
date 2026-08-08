@@ -12,7 +12,7 @@ cd openfatture
 uv sync --all-extras
 ```
 
-Feature extras (`ai`, `rag`, `ml`, `lightning`) are documented in
+Feature extras (`ai`, `rag`, `ml`) are documented in
 [CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Initialize

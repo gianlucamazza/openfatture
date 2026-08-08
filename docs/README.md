@@ -22,8 +22,6 @@ This is the current documentation index for the CLI-first, agentic product.
 ## Core capabilities
 
 - [PDF generation](PDF_GENERATION.md)
-- [Lightning integration](LIGHTNING_INTEGRATION.md)
-- [Lightning network operations](LIGHTNING_NETWORK.md)
 - [Architecture diagrams](ARCHITECTURE_DIAGRAMS.md)
 - [Internationalization](I18N_CLI_IMPLEMENTATION.md)
 

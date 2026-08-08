@@ -30,7 +30,7 @@ def test_status_supports_machine_readable_output() -> None:
     assert isinstance(payload["extras"], dict)
     assert payload["extensions"]["in_process_plugins"] == "unsupported"
     assert "hooks_dir" in payload["extensions"]
-    assert payload["feature_flags"]["lightning_allow_mock"] is False
+    assert "assistant_available" in payload["feature_flags"]
     assert "limitations" in payload
     readiness = payload["readiness"]
     assert "core_ready" in readiness

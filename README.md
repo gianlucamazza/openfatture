@@ -25,7 +25,7 @@ uv run openfatture status
 uv run openfatture assistant "Help me prepare an invoice for a software project"
 ```
 
-Optional feature extras: `ai`, `rag`, `ml`, `lightning`, `all`.
+Optional feature extras: `ai`, `rag`, `ml`, `all`.
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 For a terminal conversation:
@@ -53,7 +53,6 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 - Client, invoice, quote, payment, and batch workflows
 - Event audit trail, reports, and hooks
 - Optional AI assistance (assistant + domain tools), RAG, and forecasting extras
-- Optional Lightning Network integration (experimental)
 
 ## Status
 
