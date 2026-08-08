@@ -9,6 +9,28 @@ the **2.1.0** LangGraph default flip, and post-2.1 hygiene (#31–#34).
 Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), [releases/v2.1.0.md](releases/v2.1.0.md).
 
+### GitHub tracking
+
+| Role | Link |
+|------|------|
+| Umbrella | [#36 tracker](https://github.com/gianlucamazza/openfatture/issues/36) |
+| Milestone | [Post-2.1 backlog (on-demand)](https://github.com/gianlucamazza/openfatture/milestone/1) |
+| Labels | `technical-debt`, `product-decision`, `on-demand`, `priority:p1`–`p3` |
+
+| ID | Issue | Priority |
+|----|-------|----------|
+| D-SIZE | [#37](https://github.com/gianlucamazza/openfatture/issues/37) | P1 |
+| D-WF | [#38](https://github.com/gianlucamazza/openfatture/issues/38) | P2 + product |
+| D-ML-DRIFT | [#39](https://github.com/gianlucamazza/openfatture/issues/39) | P2 |
+| D-OBS | [#40](https://github.com/gianlucamazza/openfatture/issues/40) | P3 |
+| D-PDF-PAGOPA | [#41](https://github.com/gianlucamazza/openfatture/issues/41) | P2 |
+| D-TYPES-TESTS | [#42](https://github.com/gianlucamazza/openfatture/issues/42) | P3 |
+| D-ASYNC | [#43](https://github.com/gianlucamazza/openfatture/issues/43) | P3 |
+| D-COV | *(acceptable — no issue; baseline floors only)* | — |
+| Product surfaces (TUI/MCP/web) | [#44](https://github.com/gianlucamazza/openfatture/issues/44) | decision |
+
+Close the matching issue and move the row to the closed ledger when debt is burned.
+
 ---
 
 ## Verdict
@@ -78,6 +100,7 @@ if relevant. Prefer fixing debt in the same PR that touches the module.
 
 ### D-SIZE — Oversized modules
 
+**GitHub:** [#37](https://github.com/gianlucamazza/openfatture/issues/37)  
 **Impact:** Harder review, higher merge conflict risk, mixed concerns.  
 **Risk to users:** Low until bugs land in these files.  
 **Trigger:** Split **when you edit** them for a real feature/bug; do not drive
@@ -107,6 +130,7 @@ standalone “LOC reduction” PRs.
 
 ### D-WF — Experimental multi-agent workflows
 
+**GitHub:** [#38](https://github.com/gianlucamazza/openfatture/issues/38)  
 **Location:** `openfatture/ai/orchestration/workflows/`  
 (`invoice_creation`, `compliance_check`, `cash_flow_analysis`)
 
@@ -123,6 +147,7 @@ standalone “LOC reduction” PRs.
 
 ### D-ML-DRIFT — Accuracy-drift signal not implemented
 
+**GitHub:** [#39](https://github.com/gianlucamazza/openfatture/issues/39)  
 **Location:** `ai/ml/retraining/triggers.py` (`_check_accuracy_drift`)  
 **Behavior:** Logs `status: not_implemented`; does **not** claim success.  
 **Impact:** Retraining will not fire on accuracy drift until implemented.  
@@ -131,6 +156,7 @@ standalone “LOC reduction” PRs.
 
 ### D-OBS — Bulkhead queue length is approximate
 
+**GitHub:** [#40](https://github.com/gianlucamazza/openfatture/issues/40)  
 **Location:** `ai/tools/registry/core.py` (+ `ToolResult.bulkhead_queue_length`)  
 **Behavior:** Derived from semaphore `_value` / max concurrent, not a real wait-queue depth.  
 **Impact:** Observability only; concurrency limiting still works.  
@@ -138,12 +164,14 @@ standalone “LOC reduction” PRs.
 
 ### D-PDF-PAGOPA — pagoPA QR not implemented
 
+**GitHub:** [#41](https://github.com/gianlucamazza/openfatture/issues/41)  
 **Location:** `pdf/generator.py` (`pagopa_qr_not_implemented` warning)  
 **Impact:** PDF generation continues without QR when that path is requested.  
 **Trigger:** Customer need for pagoPA QR on generated PDFs.
 
 ### D-TYPES-TESTS — mypy does not type-check `tests.*`
 
+**GitHub:** [#42](https://github.com/gianlucamazza/openfatture/issues/42)  
 **Location:** `pyproject.toml` mypy config  
 **Impact:** Test-only type bugs slip until runtime.  
 **Trigger:** Optional incremental enable for critical test packages.  
@@ -162,6 +190,7 @@ standalone “LOC reduction” PRs.
 
 ### D-ASYNC — Nested event-loop bridge
 
+**GitHub:** [#43](https://github.com/gianlucamazza/openfatture/issues/43)  
 **Location:** platform async bridge (`nest_asyncio` optional, else worker thread;
 primary path `asyncio.run`).  
 **Impact:** Edge cases in nested loops / notebook-like hosts.  
@@ -176,10 +205,10 @@ Documenting them here prevents them from being treated as silent backlog bugs.
 
 | Decision | Default stance | Notes |
 |----------|----------------|--------|
-| Multi-agent workflows on product path | Off / experimental | See D-WF |
-| Textual (or other) TUI | Non-goal | Interactive terminal exists; full TUI is separate |
-| MCP server / external tool bus | Non-goal until designed | Extensions via hooks + tool contracts today |
-| Browser / web app surface | Explicit non-goal | See STATUS |
+| Multi-agent workflows on product path | Off / experimental | [D-WF #38](https://github.com/gianlucamazza/openfatture/issues/38) |
+| Textual (or other) TUI | Non-goal | [#44](https://github.com/gianlucamazza/openfatture/issues/44); interactive terminal exists |
+| MCP server / external tool bus | Non-goal until designed | [#44](https://github.com/gianlucamazza/openfatture/issues/44); hooks + tool contracts today |
+| Browser / web app surface | Explicit non-goal | [#44](https://github.com/gianlucamazza/openfatture/issues/44); see STATUS |
 | Domain CLI command tree growth | Forbidden | Domain ops stay on assistant + application layer |
 | Lightning / LND payments | Removed | Archive only; reintroduce only as greenfield design |
 
