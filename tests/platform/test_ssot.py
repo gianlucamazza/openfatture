@@ -64,8 +64,11 @@ def test_status_backend_ids_match_ssot() -> None:
 @pytest.mark.skipif(not available_extras().get("ai"), reason="ai extra not installed")
 def test_ai_settings_hydrate_from_platform_ai_star(monkeypatch: pytest.MonkeyPatch) -> None:
     """init/docs write AI_*; factory must see them via get_ai_settings()."""
-    from openfatture.ai.config.settings import AISettings
-    from openfatture.ai.config.settings import hydrate_ai_settings_from_platform, reset_ai_settings
+    from openfatture.ai.config.settings import (
+        AISettings,
+        hydrate_ai_settings_from_platform,
+        reset_ai_settings,
+    )
     from openfatture.platform.config import Settings
 
     for key in list(os.environ):
