@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NotificaScarto>
+  <IdentificativoSdI>9876543210</IdentificativoSdI>
+  <DataOraScarto>2025-01-05T09:42:00</DataOraScarto>
+  <NomeFile>IT01234567890_FPA02.xml</NomeFile>
+  <ListaErrori>
+    <Errore>
+      <Codice>00305</Codice>
+      <Descrizione>Formato codice destinatario non valido (atteso 7 caratteri).</Descrizione>
+    </Errore>
+  </ListaErrori>
+  <Note>Demo: usare questo file per mostrare la gestione degli scarti in CLI.</Note>
+</NotificaScarto>

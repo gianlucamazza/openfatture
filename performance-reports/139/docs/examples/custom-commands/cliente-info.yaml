@@ -1,0 +1,40 @@
+# Client Information Lookup
+# Usage: /cliente-info "Client Name or ID"
+# Example: /cliente-info "Rossi"
+
+name: cliente-info
+description: Recupera informazioni complete su un cliente
+category: clients
+aliases: [ci, client, cliente]
+author: OpenFatture Team
+version: "1.0"
+
+template: |
+  Cerca nel database e forniscimi informazioni complete sul seguente cliente:
+
+  **Ricerca:** {{ arg1 }}
+
+  Mostrami:
+  1. Dati anagrafici completi (denominazione, P.IVA, CF, indirizzo)
+  2. Statistiche fatturazione:
+     - Numero totale fatture emesse
+     - Importo totale fatturato (quest'anno e totale)
+     - Valore medio fattura
+     - Fattura più recente (numero e data)
+  3. Stato pagamenti:
+     - Fatture pagate
+     - Fatture in sospeso (con scadenze)
+     - Eventuali ritardi di pagamento
+     - Tempo medio di pagamento
+  4. Note e informazioni fiscali:
+     - Regime fiscale
+     - Codice destinatario / PEC
+     - Particolarità fiscali (PA, reverse charge, split payment)
+  5. Ultime 5 fatture emesse
+
+  Formatta la risposta in modo chiaro con tabelle e evidenzia eventuali criticità (es. pagamenti scaduti).
+
+examples:
+  - "/cliente-info \"Rossi SRL\""
+  - "/ci \"12345678901\""
+  - "/client 42"
