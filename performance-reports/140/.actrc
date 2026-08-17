@@ -1,0 +1,29 @@
+# act configuration file
+# https://github.com/nektos/act
+
+# Container architecture
+--container-architecture linux/amd64
+
+# Artifact storage path
+--artifact-server-path /tmp/artifacts
+
+# Environment and secrets
+--env-file .env.act
+--secret-file .secrets
+
+# Verbose output
+--verbose
+
+# Platform images (using optimized catthehacker images)
+--platform ubuntu-latest=catthehacker/ubuntu:act-latest
+--platform ubuntu-22.04=catthehacker/ubuntu:act-22.04
+--platform macos-latest=catthehacker/ubuntu:act-latest
+
+# Use .gitignore
+--use-gitignore=false
+
+# Reuse containers for faster runs
+--reuse=true
+
+# Bind docker socket (for docker-in-docker)
+--container-options "--privileged"
