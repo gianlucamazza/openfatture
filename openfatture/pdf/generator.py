@@ -310,16 +310,15 @@ class PDFGenerator:
         notes_height = self._calculate_notes_height(fattura_data.get("note"))
         footer_height = 2 * cm  # Footer space at bottom
 
-        # Total space needed after table
-        post_table_space = (
-            summary_height + payment_height + notes_height + footer_height + 1 * cm
-        )  # +1cm safety
+        # Total space needed after table (individual calcs already include margins)
+        post_table_space = summary_height + payment_height + notes_height + footer_height
 
         # Available height for table (ensure summary won't get negative y)
         available_for_table = y - post_table_space
 
         # If not enough space for table + summary, start table on new page
-        if available_for_table < 5 * cm:  # Minimum space for at least header + 1 row
+        # Threshold: table header (~0.8cm) + 1 row (~1.5cm) + small margin = ~3cm
+        if available_for_table < 3 * cm:
             # Start new page for table
             canvas.showPage()
             page_width, page_height = A4
@@ -437,8 +436,8 @@ class PDFGenerator:
             num_lines += 1
 
         box_height = (num_lines * line_height) + 1.4 * cm
-        # Add spacing before summary
-        return box_height + 1.0 * cm + 0.5 * cm  # box + spacing before + spacing after
+        # Add spacing before and after (reduced from 1.5cm total to 1.0cm)
+        return box_height + 0.8 * cm + 0.2 * cm
 
     def _calculate_payment_height(self, pagamento_data: dict[str, Any] | None) -> float:
         """Calculate height needed for payment info section.
@@ -466,8 +465,8 @@ class PDFGenerator:
         if pagamento_data.get("bic_swift"):
             height += 0.5 * cm
 
-        # Spacing after
-        height += 0.5 * cm
+        # Spacing after (reduced from 0.5cm since summary has spacing before)
+        height += 0.3 * cm
 
         return height
 
