@@ -388,6 +388,113 @@ def sample_fattura_with_bollo(db_session: Session, sample_cliente: Cliente) -> F
 
 
 @pytest.fixture
+def sample_fattura_with_natura(db_session: Session, sample_cliente: Cliente) -> Fattura:
+    """Create a sample invoice with natura code (exempt VAT)."""
+    from openfatture.storage.database.models import DatiCassaPrevidenziale
+
+    imponibile = Decimal("1000.00")
+
+    fattura = Fattura(
+        numero="4",
+        anno=2025,
+        data_emissione=date(2025, 4, 1),
+        cliente_id=sample_cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.BOZZA,
+        imponibile=imponibile,
+        iva=Decimal("0.00"),
+        totale=imponibile,
+    )
+
+    db_session.add(fattura)
+    db_session.flush()
+
+    # Add line item with natura code (regime forfettario)
+    riga = RigaFattura(
+        fattura_id=fattura.id,
+        numero_riga=1,
+        descrizione="Consulenza (regime forfettario)",
+        quantita=Decimal("10"),
+        prezzo_unitario=Decimal("100.00"),
+        unita_misura="ore",
+        aliquota_iva=Decimal("0.00"),
+        natura="N2.2",  # Non soggette - altri casi (e.g., regime forfettario)
+        imponibile=imponibile,
+        iva=Decimal("0.00"),
+        totale=imponibile,
+    )
+
+    db_session.add(riga)
+    db_session.commit()
+    db_session.refresh(fattura)
+
+    return fattura
+
+
+@pytest.fixture
+def sample_fattura_with_cassa(db_session: Session, sample_cliente: Cliente) -> Fattura:
+    """Create a sample invoice with social security contribution (DatiCassaPrevidenziale)."""
+    from openfatture.storage.database.models import DatiCassaPrevidenziale
+
+    imponibile = Decimal("1000.00")
+    iva_rate = Decimal("22.00")
+    iva = imponibile * iva_rate / Decimal("100")
+
+    # Cassa previdenziale
+    cassa_rate = Decimal("4.00")  # 4% contribution
+    cassa_importo = imponibile * cassa_rate / Decimal("100")
+    cassa_iva = cassa_importo * iva_rate / Decimal("100")
+
+    totale = imponibile + iva + cassa_importo + cassa_iva
+
+    fattura = Fattura(
+        numero="5",
+        anno=2025,
+        data_emissione=date(2025, 5, 1),
+        cliente_id=sample_cliente.id,
+        tipo_documento=TipoDocumento.TD06,  # Parcella (professional invoice)
+        stato=StatoFattura.BOZZA,
+        imponibile=imponibile,
+        iva=iva + cassa_iva,
+        totale=totale,
+    )
+
+    db_session.add(fattura)
+    db_session.flush()
+
+    # Add line item
+    riga = RigaFattura(
+        fattura_id=fattura.id,
+        numero_riga=1,
+        descrizione="Servizi professionali",
+        quantita=Decimal("10"),
+        prezzo_unitario=Decimal("100.00"),
+        unita_misura="ore",
+        aliquota_iva=iva_rate,
+        imponibile=imponibile,
+        iva=iva,
+        totale=imponibile + iva,
+    )
+    db_session.add(riga)
+
+    # Add cassa previdenziale (e.g., INPS for lawyers)
+    cassa = DatiCassaPrevidenziale(
+        fattura_id=fattura.id,
+        tipo_cassa="TC01",  # Cassa nazionale previdenza avvocati
+        al_cassa=cassa_rate,
+        importo_contributo_cassa=cassa_importo,
+        imponibile_cassa=imponibile,
+        aliquota_iva=iva_rate,
+    )
+    db_session.add(cassa)
+
+    db_session.commit()
+    db_session.refresh(fattura)
+
+    return fattura
+
+
+@pytest.fixture
 def multiple_clienti(db_session: Session) -> list[Cliente]:
     """Create multiple clients for testing."""
     clienti = [

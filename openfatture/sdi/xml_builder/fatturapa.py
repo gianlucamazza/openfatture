@@ -35,6 +35,10 @@ class FatturaPABuilder:
         """
         self.settings = settings
 
+    def _qname(self, name: str) -> str:
+        """Return qualified name with namespace."""
+        return f"{{{self.NS}}}{name}"
+
     def build(self, fattura: Fattura, output_path: Path | None = None) -> str:
         """
         Build FatturaPA XML from invoice model.
@@ -94,7 +98,7 @@ class FatturaPABuilder:
 
     def _build_header(self, root: etree._Element, fattura: Fattura) -> None:
         """Build FatturaElettronicaHeader section."""
-        header = etree.SubElement(root, "FatturaElettronicaHeader")
+        header = etree.SubElement(root, self._qname("FatturaElettronicaHeader"))
 
         # DatiTrasmissione
         self._build_dati_trasmissione(header, fattura)
@@ -107,101 +111,101 @@ class FatturaPABuilder:
 
     def _build_dati_trasmissione(self, header: etree._Element, fattura: Fattura) -> None:
         """Build DatiTrasmissione section."""
-        dati_tr = etree.SubElement(header, "DatiTrasmissione")
+        dati_tr = etree.SubElement(header, self._qname("DatiTrasmissione"))
 
         # IdTrasmittente
-        id_trasf = etree.SubElement(dati_tr, "IdTrasmittente")
-        etree.SubElement(id_trasf, "IdPaese").text = "IT"
-        etree.SubElement(id_trasf, "IdCodice").text = self.settings.cedente_partita_iva
+        id_trasf = etree.SubElement(dati_tr, self._qname("IdTrasmittente"))
+        etree.SubElement(id_trasf, self._qname("IdPaese")).text = "IT"
+        etree.SubElement(id_trasf, self._qname("IdCodice")).text = self.settings.cedente_partita_iva
 
         # ProgressivoInvio (unique transmission ID)
         # Format: PIVA_NUMERO_ANNO (e.g., 12345678901_00001_2025)
         progressivo = f"{self.settings.cedente_partita_iva}_{fattura.numero}_{fattura.anno}"
-        etree.SubElement(dati_tr, "ProgressivoInvio").text = progressivo
+        etree.SubElement(dati_tr, self._qname("ProgressivoInvio")).text = progressivo
 
         # FormatoTrasmissione
-        etree.SubElement(dati_tr, "FormatoTrasmissione").text = "FPR12"
+        etree.SubElement(dati_tr, self._qname("FormatoTrasmissione")).text = "FPR12"
 
         # CodiceDestinatario (7 chars, or 0000000 for PEC)
         codice_dest = fattura.cliente.codice_destinatario or "0000000"
-        etree.SubElement(dati_tr, "CodiceDestinatario").text = codice_dest
+        etree.SubElement(dati_tr, self._qname("CodiceDestinatario")).text = codice_dest
 
         # PEC (if CodiceDestinatario is 0000000)
         if codice_dest == "0000000" and fattura.cliente.pec:
-            etree.SubElement(dati_tr, "PECDestinatario").text = fattura.cliente.pec
+            etree.SubElement(dati_tr, self._qname("PECDestinatario")).text = fattura.cliente.pec
 
     def _build_cedente_prestatore(self, header: etree._Element) -> None:
         """Build CedentePrestatore section (your company)."""
-        cedente = etree.SubElement(header, "CedentePrestatore")
+        cedente = etree.SubElement(header, self._qname("CedentePrestatore"))
 
         # DatiAnagrafici
-        dati_anag = etree.SubElement(cedente, "DatiAnagrafici")
+        dati_anag = etree.SubElement(cedente, self._qname("DatiAnagrafici"))
 
         # IdFiscaleIVA
-        id_fiscale = etree.SubElement(dati_anag, "IdFiscaleIVA")
-        etree.SubElement(id_fiscale, "IdPaese").text = "IT"
-        etree.SubElement(id_fiscale, "IdCodice").text = self.settings.cedente_partita_iva
+        id_fiscale = etree.SubElement(dati_anag, self._qname("IdFiscaleIVA"))
+        etree.SubElement(id_fiscale, self._qname("IdPaese")).text = "IT"
+        etree.SubElement(id_fiscale, self._qname("IdCodice")).text = self.settings.cedente_partita_iva
 
         # CodiceFiscale (if different from P.IVA)
         if self.settings.cedente_codice_fiscale != self.settings.cedente_partita_iva:
-            etree.SubElement(dati_anag, "CodiceFiscale").text = self.settings.cedente_codice_fiscale
+            etree.SubElement(dati_anag, self._qname("CodiceFiscale")).text = self.settings.cedente_codice_fiscale
 
         # Anagrafica
-        anagrafica = etree.SubElement(dati_anag, "Anagrafica")
-        etree.SubElement(anagrafica, "Denominazione").text = self.settings.cedente_denominazione
+        anagrafica = etree.SubElement(dati_anag, self._qname("Anagrafica"))
+        etree.SubElement(anagrafica, self._qname("Denominazione")).text = self.settings.cedente_denominazione
 
         # RegimeFiscale
-        etree.SubElement(dati_anag, "RegimeFiscale").text = self.settings.cedente_regime_fiscale
+        etree.SubElement(dati_anag, self._qname("RegimeFiscale")).text = self.settings.cedente_regime_fiscale
 
         # Sede
-        sede = etree.SubElement(cedente, "Sede")
-        etree.SubElement(sede, "Indirizzo").text = self.settings.cedente_indirizzo
-        etree.SubElement(sede, "CAP").text = self.settings.cedente_cap
-        etree.SubElement(sede, "Comune").text = self.settings.cedente_comune
-        etree.SubElement(sede, "Provincia").text = self.settings.cedente_provincia
-        etree.SubElement(sede, "Nazione").text = self.settings.cedente_nazione
+        sede = etree.SubElement(cedente, self._qname("Sede"))
+        etree.SubElement(sede, self._qname("Indirizzo")).text = self.settings.cedente_indirizzo
+        etree.SubElement(sede, self._qname("CAP")).text = self.settings.cedente_cap
+        etree.SubElement(sede, self._qname("Comune")).text = self.settings.cedente_comune
+        etree.SubElement(sede, self._qname("Provincia")).text = self.settings.cedente_provincia
+        etree.SubElement(sede, self._qname("Nazione")).text = self.settings.cedente_nazione
 
         # Contatti (optional)
         if self.settings.cedente_telefono or self.settings.cedente_email:
-            contatti = etree.SubElement(cedente, "Contatti")
+            contatti = etree.SubElement(cedente, self._qname("Contatti"))
             if self.settings.cedente_telefono:
-                etree.SubElement(contatti, "Telefono").text = self.settings.cedente_telefono
+                etree.SubElement(contatti, self._qname("Telefono")).text = self.settings.cedente_telefono
             if self.settings.cedente_email:
-                etree.SubElement(contatti, "Email").text = self.settings.cedente_email
+                etree.SubElement(contatti, self._qname("Email")).text = self.settings.cedente_email
 
     def _build_cessionario_committente(self, header: etree._Element, fattura: Fattura) -> None:
         """Build CessionarioCommittente section (client)."""
         cliente = fattura.cliente
-        cessionario = etree.SubElement(header, "CessionarioCommittente")
+        cessionario = etree.SubElement(header, self._qname("CessionarioCommittente"))
 
         # DatiAnagrafici
-        dati_anag = etree.SubElement(cessionario, "DatiAnagrafici")
+        dati_anag = etree.SubElement(cessionario, self._qname("DatiAnagrafici"))
 
         # IdFiscaleIVA (if P.IVA exists)
         if cliente.partita_iva:
-            id_fiscale = etree.SubElement(dati_anag, "IdFiscaleIVA")
-            etree.SubElement(id_fiscale, "IdPaese").text = cliente.nazione
-            etree.SubElement(id_fiscale, "IdCodice").text = cliente.partita_iva
+            id_fiscale = etree.SubElement(dati_anag, self._qname("IdFiscaleIVA"))
+            etree.SubElement(id_fiscale, self._qname("IdPaese")).text = cliente.nazione
+            etree.SubElement(id_fiscale, self._qname("IdCodice")).text = cliente.partita_iva
 
         # CodiceFiscale (required if no P.IVA)
         if cliente.codice_fiscale:
-            etree.SubElement(dati_anag, "CodiceFiscale").text = cliente.codice_fiscale
+            etree.SubElement(dati_anag, self._qname("CodiceFiscale")).text = cliente.codice_fiscale
 
         # Anagrafica
-        anagrafica = etree.SubElement(dati_anag, "Anagrafica")
-        etree.SubElement(anagrafica, "Denominazione").text = cliente.denominazione
+        anagrafica = etree.SubElement(dati_anag, self._qname("Anagrafica"))
+        etree.SubElement(anagrafica, self._qname("Denominazione")).text = cliente.denominazione
 
         # Sede
-        sede = etree.SubElement(cessionario, "Sede")
-        etree.SubElement(sede, "Indirizzo").text = cliente.indirizzo or "N/D"
-        etree.SubElement(sede, "CAP").text = cliente.cap or "00000"
-        etree.SubElement(sede, "Comune").text = cliente.comune or "N/D"
-        etree.SubElement(sede, "Provincia").text = cliente.provincia or "EE"
-        etree.SubElement(sede, "Nazione").text = cliente.nazione
+        sede = etree.SubElement(cessionario, self._qname("Sede"))
+        etree.SubElement(sede, self._qname("Indirizzo")).text = cliente.indirizzo or "N/D"
+        etree.SubElement(sede, self._qname("CAP")).text = cliente.cap or "00000"
+        etree.SubElement(sede, self._qname("Comune")).text = cliente.comune or "N/D"
+        etree.SubElement(sede, self._qname("Provincia")).text = cliente.provincia or "EE"
+        etree.SubElement(sede, self._qname("Nazione")).text = cliente.nazione
 
     def _build_body(self, root: etree._Element, fattura: Fattura) -> None:
         """Build FatturaElettronicaBody section."""
-        body = etree.SubElement(root, "FatturaElettronicaBody")
+        body = etree.SubElement(root, self._qname("FatturaElettronicaBody"))
 
         # DatiGenerali
         self._build_dati_generali(body, fattura)
@@ -214,106 +218,148 @@ class FatturaPABuilder:
 
     def _build_dati_generali(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiGenerali section."""
-        dati_gen = etree.SubElement(body, "DatiGenerali")
+        dati_gen = etree.SubElement(body, self._qname("DatiGenerali"))
 
         # DatiGeneraliDocumento
-        dati_doc = etree.SubElement(dati_gen, "DatiGeneraliDocumento")
+        dati_doc = etree.SubElement(dati_gen, self._qname("DatiGeneraliDocumento"))
 
-        etree.SubElement(dati_doc, "TipoDocumento").text = fattura.tipo_documento.value
-        etree.SubElement(dati_doc, "Divisa").text = "EUR"
-        etree.SubElement(dati_doc, "Data").text = fattura.data_emissione.isoformat()
-        etree.SubElement(dati_doc, "Numero").text = f"{fattura.numero}/{fattura.anno}"
+        etree.SubElement(dati_doc, self._qname("TipoDocumento")).text = fattura.tipo_documento.value
+        etree.SubElement(dati_doc, self._qname("Divisa")).text = "EUR"
+        etree.SubElement(dati_doc, self._qname("Data")).text = fattura.data_emissione.isoformat()
+        etree.SubElement(dati_doc, self._qname("Numero")).text = f"{fattura.numero}/{fattura.anno}"
 
         # Ritenuta (withholding tax)
         if fattura.ritenuta_acconto and fattura.ritenuta_acconto > 0:
-            dati_rit = etree.SubElement(dati_doc, "DatiRitenuta")
-            etree.SubElement(dati_rit, "TipoRitenuta").text = "RT01"  # Ritenuta persone fisiche
-            etree.SubElement(dati_rit, "ImportoRitenuta").text = self._format_decimal(
+            dati_rit = etree.SubElement(dati_doc, self._qname("DatiRitenuta"))
+            etree.SubElement(dati_rit, self._qname("TipoRitenuta")).text = "RT01"  # Ritenuta persone fisiche
+            etree.SubElement(dati_rit, self._qname("ImportoRitenuta")).text = self._format_decimal(
                 fattura.ritenuta_acconto
             )
-            etree.SubElement(dati_rit, "AliquotaRitenuta").text = self._format_decimal(
+            etree.SubElement(dati_rit, self._qname("AliquotaRitenuta")).text = self._format_decimal(
                 fattura.aliquota_ritenuta or Decimal("0")
             )
-            etree.SubElement(dati_rit, "CausalePagamento").text = "A"  # Prestazioni lavoro autonomo
+            etree.SubElement(dati_rit, self._qname("CausalePagamento")).text = "A"  # Prestazioni lavoro autonomo
 
         # Bollo (stamp duty)
         if fattura.importo_bollo and fattura.importo_bollo > 0:
-            dati_bollo = etree.SubElement(dati_doc, "DatiBollo")
-            etree.SubElement(dati_bollo, "BolloVirtuale").text = "SI"
-            etree.SubElement(dati_bollo, "ImportoBollo").text = self._format_decimal(
+            dati_bollo = etree.SubElement(dati_doc, self._qname("DatiBollo"))
+            etree.SubElement(dati_bollo, self._qname("BolloVirtuale")).text = "SI"
+            etree.SubElement(dati_bollo, self._qname("ImportoBollo")).text = self._format_decimal(
                 fattura.importo_bollo
             )
 
+        # DatiCassaPrevidenziale (social security contributions)
+        if hasattr(fattura, 'cassa_previdenziale') and fattura.cassa_previdenziale:
+            for cassa in fattura.cassa_previdenziale:
+                dati_cassa = etree.SubElement(dati_doc, self._qname("DatiCassaPrevidenziale"))
+
+                etree.SubElement(dati_cassa, self._qname("TipoCassa")).text = cassa.tipo_cassa
+                etree.SubElement(dati_cassa, self._qname("AlCassa")).text = self._format_decimal(
+                    cassa.al_cassa
+                )
+                etree.SubElement(dati_cassa, self._qname("ImportoContributoCassa")).text = self._format_decimal(
+                    cassa.importo_contributo_cassa
+                )
+
+                # Optional fields
+                if cassa.imponibile_cassa:
+                    etree.SubElement(dati_cassa, self._qname("ImponibileCassa")).text = self._format_decimal(
+                        cassa.imponibile_cassa
+                    )
+
+                etree.SubElement(dati_cassa, self._qname("AliquotaIVA")).text = self._format_decimal(
+                    cassa.aliquota_iva
+                )
+
+                if cassa.ritenuta:
+                    etree.SubElement(dati_cassa, self._qname("Ritenuta")).text = cassa.ritenuta
+
+                if cassa.natura:
+                    etree.SubElement(dati_cassa, self._qname("Natura")).text = cassa.natura
+
+                if cassa.riferimento_amministrazione:
+                    etree.SubElement(dati_cassa, self._qname("RiferimentoAmministrazione")).text = cassa.riferimento_amministrazione
+
     def _build_dati_beni_servizi(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiBeniServizi section (line items)."""
-        dati_beni = etree.SubElement(body, "DatiBeniServizi")
+        dati_beni = etree.SubElement(body, self._qname("DatiBeniServizi"))
 
         # DettaglioLinee (line items)
         for riga in fattura.righe:
-            dettaglio = etree.SubElement(dati_beni, "DettaglioLinee")
+            dettaglio = etree.SubElement(dati_beni, self._qname("DettaglioLinee"))
 
-            etree.SubElement(dettaglio, "NumeroLinea").text = str(riga.numero_riga)
-            etree.SubElement(dettaglio, "Descrizione").text = riga.descrizione
+            etree.SubElement(dettaglio, self._qname("NumeroLinea")).text = str(riga.numero_riga)
+            etree.SubElement(dettaglio, self._qname("Descrizione")).text = riga.descrizione
 
-            etree.SubElement(dettaglio, "Quantita").text = self._format_decimal(riga.quantita)
-            etree.SubElement(dettaglio, "UnitaMisura").text = riga.unita_misura
-            etree.SubElement(dettaglio, "PrezzoUnitario").text = self._format_decimal(
+            etree.SubElement(dettaglio, self._qname("Quantita")).text = self._format_decimal(riga.quantita)
+            etree.SubElement(dettaglio, self._qname("UnitaMisura")).text = riga.unita_misura
+            etree.SubElement(dettaglio, self._qname("PrezzoUnitario")).text = self._format_decimal(
                 riga.prezzo_unitario
             )
-            etree.SubElement(dettaglio, "PrezzoTotale").text = self._format_decimal(riga.imponibile)
-            etree.SubElement(dettaglio, "AliquotaIVA").text = self._format_decimal(
+            etree.SubElement(dettaglio, self._qname("PrezzoTotale")).text = self._format_decimal(riga.imponibile)
+            etree.SubElement(dettaglio, self._qname("AliquotaIVA")).text = self._format_decimal(
                 riga.aliquota_iva
             )
 
-        # DatiRiepilogo (VAT summary by rate)
+            # Natura (for zero-rated, exempt, or out-of-scope VAT)
+            if riga.natura:
+                etree.SubElement(dettaglio, self._qname("Natura")).text = riga.natura
+
+        # DatiRiepilogo (VAT summary by rate and natura)
         from collections import defaultdict
 
-        riepilogo_by_aliquota: dict[Decimal, Decimal] = defaultdict(lambda: Decimal("0"))
+        # Group by (aliquota_iva, natura) tuple to properly handle different natura codes
+        riepilogo_by_key: dict[tuple[Decimal, str | None], Decimal] = defaultdict(lambda: Decimal("0"))
 
         for riga in fattura.righe:
-            riepilogo_by_aliquota[riga.aliquota_iva] += riga.imponibile
+            key = (riga.aliquota_iva, riga.natura)
+            riepilogo_by_key[key] += riga.imponibile
 
-        for aliquota, imponibile in riepilogo_by_aliquota.items():
-            riepilogo = etree.SubElement(dati_beni, "DatiRiepilogo")
+        for (aliquota, natura), imponibile in riepilogo_by_key.items():
+            riepilogo = etree.SubElement(dati_beni, self._qname("DatiRiepilogo"))
 
-            etree.SubElement(riepilogo, "AliquotaIVA").text = self._format_decimal(aliquota)
-            etree.SubElement(riepilogo, "ImponibileImporto").text = self._format_decimal(imponibile)
+            etree.SubElement(riepilogo, self._qname("AliquotaIVA")).text = self._format_decimal(aliquota)
+
+            # Natura (required for zero-rated, exempt, or out-of-scope VAT)
+            if natura:
+                etree.SubElement(riepilogo, self._qname("Natura")).text = natura
+            elif aliquota == Decimal("0"):
+                # Default to N2.2 (non soggette - altri casi) for zero VAT if no natura specified
+                etree.SubElement(riepilogo, self._qname("Natura")).text = "N2.2"
+
+            etree.SubElement(riepilogo, self._qname("ImponibileImporto")).text = self._format_decimal(imponibile)
 
             iva_importo = imponibile * aliquota / Decimal("100")
-            etree.SubElement(riepilogo, "Imposta").text = self._format_decimal(iva_importo)
-
-            # Natura (for zero-rated VAT)
-            if aliquota == Decimal("0"):
-                etree.SubElement(riepilogo, "Natura").text = "N2.2"  # Non soggette ad IVA
+            etree.SubElement(riepilogo, self._qname("Imposta")).text = self._format_decimal(iva_importo)
 
             # EsigibilitaIVA
-            etree.SubElement(riepilogo, "EsigibilitaIVA").text = "I"  # Immediata
+            etree.SubElement(riepilogo, self._qname("EsigibilitaIVA")).text = "I"  # Immediata
 
     def _build_dati_pagamento(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiPagamento section."""
-        dati_pag = etree.SubElement(body, "DatiPagamento")
+        dati_pag = etree.SubElement(body, self._qname("DatiPagamento"))
 
         # CondizioniPagamento
-        etree.SubElement(dati_pag, "CondizioniPagamento").text = "TP02"  # Pagamento completo
+        etree.SubElement(dati_pag, self._qname("CondizioniPagamento")).text = "TP02"  # Pagamento completo
 
         # DettaglioPagamento
-        dettaglio_pag = etree.SubElement(dati_pag, "DettaglioPagamento")
+        dettaglio_pag = etree.SubElement(dati_pag, self._qname("DettaglioPagamento"))
 
         # Modalità pagamento (MP05 = Bonifico)
-        etree.SubElement(dettaglio_pag, "ModalitaPagamento").text = "MP05"
+        etree.SubElement(dettaglio_pag, self._qname("ModalitaPagamento")).text = "MP05"
 
         # Data scadenza (default: 30 giorni)
         from datetime import timedelta
 
         data_scadenza = fattura.data_emissione + timedelta(days=30)
-        etree.SubElement(dettaglio_pag, "DataScadenzaPagamento").text = data_scadenza.isoformat()
+        etree.SubElement(dettaglio_pag, self._qname("DataScadenzaPagamento")).text = data_scadenza.isoformat()
 
         # Importo (total - ritenuta)
         importo_pagamento = fattura.totale
         if fattura.ritenuta_acconto:
             importo_pagamento -= fattura.ritenuta_acconto
 
-        etree.SubElement(dettaglio_pag, "ImportoPagamento").text = self._format_decimal(
+        etree.SubElement(dettaglio_pag, self._qname("ImportoPagamento")).text = self._format_decimal(
             importo_pagamento
         )
 

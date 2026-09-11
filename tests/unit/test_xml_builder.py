@@ -255,3 +255,61 @@ class TestGenerateFilename:
 
         # Should have 5-digit number with padding
         assert "_00001.xml" in filename
+
+    def test_natura_in_line_item(self, test_settings, sample_fattura_with_natura):
+        """Test natura code in line item XML."""
+        builder = FatturaPABuilder(test_settings)
+        xml_content = builder.build(sample_fattura_with_natura)
+
+        root = etree.fromstring(xml_content.encode("utf-8"))
+
+        # Check line item has natura
+        dettaglio = root.find(".//{*}DettaglioLinee")
+        assert dettaglio is not None
+
+        natura = dettaglio.find("{*}Natura")
+        assert natura is not None
+        assert natura.text == "N2.2"
+
+    def test_natura_in_riepilogo(self, test_settings, sample_fattura_with_natura):
+        """Test natura code in DatiRiepilogo XML."""
+        builder = FatturaPABuilder(test_settings)
+        xml_content = builder.build(sample_fattura_with_natura)
+
+        root = etree.fromstring(xml_content.encode("utf-8"))
+
+        # Check riepilogo has natura
+        riepilogo = root.find(".//{*}DatiRiepilogo")
+        assert riepilogo is not None
+
+        natura = riepilogo.find("{*}Natura")
+        assert natura is not None
+        assert natura.text == "N2.2"
+
+    def test_dati_cassa_previdenziale(self, test_settings, sample_fattura_with_cassa):
+        """Test DatiCassaPrevidenziale section in XML."""
+        builder = FatturaPABuilder(test_settings)
+        xml_content = builder.build(sample_fattura_with_cassa)
+
+        root = etree.fromstring(xml_content.encode("utf-8"))
+
+        # Check DatiCassaPrevidenziale exists
+        cassa = root.find(".//{*}DatiCassaPrevidenziale")
+        assert cassa is not None
+
+        # Check required fields
+        tipo_cassa = cassa.find("{*}TipoCassa")
+        assert tipo_cassa is not None
+        assert tipo_cassa.text == "TC01"
+
+        al_cassa = cassa.find("{*}AlCassa")
+        assert al_cassa is not None
+        assert al_cassa.text == "4"
+
+        importo = cassa.find("{*}ImportoContributoCassa")
+        assert importo is not None
+        assert Decimal(importo.text) == Decimal("40.00")
+
+        aliquota_iva = cassa.find("{*}AliquotaIVA")
+        assert aliquota_iva is not None
+        assert aliquota_iva.text == "22"
