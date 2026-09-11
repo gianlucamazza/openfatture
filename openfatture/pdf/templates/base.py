@@ -461,9 +461,7 @@ class BaseTemplate(ABC):
 
         return y_position - block_height - 0.5 * cm
 
-    def draw_bollo_footer(
-        self, canvas: Canvas, importo_bollo: Decimal, y_position: float
-    ) -> float:
+    def draw_bollo_footer(self, canvas: Canvas, importo_bollo: Decimal, y_position: float) -> float:
         """Draw bollo (stamp duty) MEF footer text.
 
         Args:
