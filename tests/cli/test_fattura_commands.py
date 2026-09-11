@@ -147,9 +147,7 @@ def test_fattura_generate_xml_with_output(runtime_db, seed_fattura, tmp_path):
 
 def test_fattura_generate_xml_dry_run(runtime_db, seed_fattura):
     """Test generating XML in dry-run mode (no file written)."""
-    result = runner.invoke(
-        app, ["fattura", "generate-xml", str(seed_fattura.id), "--dry-run"]
-    )
+    result = runner.invoke(app, ["fattura", "generate-xml", str(seed_fattura.id), "--dry-run"])
     assert result.exit_code == 0
     assert "XML generated successfully (dry-run mode)" in result.stdout
     assert "FatturaElettronica" in result.stdout
