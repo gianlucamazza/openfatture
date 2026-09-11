@@ -1,0 +1,38 @@
+name: OpenFatture Media 2025
+timeline:
+  resolution: "3840x2160"
+  frame_rate: 60
+  color_science: DaVinciYRGBColorManaged
+  color_space_timeline: Rec.709 Gamma 2.4
+  color_space_output: Rec.709 Gamma 2.4
+  audio_track_format: Stereo
+  audio_sample_rate: 48000
+  subtitle_track:
+    enabled: true
+    format: WebVTT
+markers:
+  intro:
+    timecode: "00:00:00:00"
+    note: "Animated logo (max 4s)"
+  chapter_1:
+    timecode: "00:00:04:00"
+    note: "Scenario specific hook"
+  outro:
+    timecode: "00:02:25:00"
+    note: "CTA + end card"
+render:
+  deliver_preset: "YouTube 1080p Full HD"
+  filename_pattern: "OF_{scenario}_v2025"
+  formats:
+    - name: Master ProRes
+      container: mov
+      codec: ProRes 422 LT
+    - name: Delivery H264
+      container: mp4
+      codec: H.264
+      bitrate: "18 Mbps"
+    - name: Vertical Clip
+      container: mp4
+      codec: H.264
+      resolution: "1080x1920"
+      frame_rate: 60
