@@ -17,6 +17,9 @@ from .invoices import (
     update_invoice,
     update_invoice_status,
 )
+from .nota_credito import (
+    create_nota_credito_from_fattura,
+)
 from .queries import (
     get_invoice_details,
     get_invoice_stats,
@@ -37,6 +40,7 @@ __all__ = [
     "get_invoice_details",
     "get_invoice_stats",
     "create_invoice",
+    "create_nota_credito_from_fattura",
     "create_riga",
     "update_riga",
     "delete_riga",
@@ -450,5 +454,38 @@ def get_invoice_tools() -> list[Tool]:
                 "update_invoice_status(fattura_id=456, new_status='bozza')",
             ],
             tags=["write", "status", "workflow"],
+        ),
+        Tool(
+            name="create_nota_credito_from_fattura",
+            description="Create a nota di credito (TD04 credit note) from an existing invoice. Links to source invoice with FatturaPA DatiFattureCollegate. Supports full or partial refund.",
+            category="invoices",
+            parameters=[
+                ToolParameter(
+                    name="fattura_id",
+                    type=ToolParameterType.INTEGER,
+                    description="Source invoice ID to create credit note from",
+                    required=True,
+                ),
+                ToolParameter(
+                    name="note",
+                    type=ToolParameterType.STRING,
+                    description="Optional notes for the credit note",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="full_refund",
+                    type=ToolParameterType.BOOLEAN,
+                    description="If True, copies all lines from source; if False, use line_items for partial refund (default True)",
+                    required=False,
+                    default=True,
+                ),
+            ],
+            func=create_nota_credito_from_fattura,
+            requires_confirmation=True,
+            examples=[
+                "create_nota_credito_from_fattura(fattura_id=123, note='Storno completo')",
+                "create_nota_credito_from_fattura(fattura_id=456, full_refund=False, note='Storno parziale')",
+            ],
+            tags=["write", "create", "credit_note", "storno"],
         ),
     ]

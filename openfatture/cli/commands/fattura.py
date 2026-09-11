@@ -283,3 +283,36 @@ def set_status(
 
     console.print(f"[green]✓[/green] {result['message']}")
     console.print(f"Status: {result['old_status']} → {result['new_status']}")
+
+
+@app.command("create-credit-note")
+def create_credit_note(
+    from_invoice: int = typer.Option(..., "--from-invoice", "-i", help="Source invoice ID"),
+    note: str = typer.Option(None, "--note", "-n", help="Notes for credit note"),
+    full_refund: bool = typer.Option(True, "--full", help="Full refund (default: True)"),
+) -> None:
+    """Create nota di credito (TD04) from an existing invoice."""
+    from openfatture.billing.application.nota_credito_ops import (
+        create_nota_credito_from_fattura,
+    )
+
+    result = create_nota_credito_from_fattura(
+        fattura_id=from_invoice,
+        note=note,
+        full_refund=full_refund,
+    )
+
+    if "error" in result:
+        console.print(f"[red]Error:[/red] {result['error']}")
+        raise typer.Exit(code=1)
+
+    console.print(f"[green]✓[/green] {result['message']}")
+    console.print(f"Nota di credito ID: [cyan]{result['nota_credito_id']}[/cyan]")
+    console.print(f"Number: {result['numero']}/{result['anno']}")
+    console.print(f"Type: {result['tipo_documento']}")
+    console.print(f"Client: {result['cliente']}")
+    console.print(f"Total: [bold]€ {result['totale']:.2f}[/bold]")
+    console.print("\n[dim]Source invoice:[/dim]")
+    console.print(f"  ID: {result['source_invoice']['id']}")
+    console.print(f"  Number: {result['source_invoice']['numero']}")
+    console.print(f"  Date: {result['source_invoice']['data']}")
