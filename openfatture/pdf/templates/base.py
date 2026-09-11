@@ -351,3 +351,140 @@ class BaseTemplate(ABC):
             y -= 0.4 * cm
 
         return y - 0.3 * cm
+
+    def draw_cassa_previdenziale(
+        self, canvas: Canvas, cassa_data: list[dict[str, Any]], y_position: float
+    ) -> float:
+        """Draw social security contribution (DatiCassaPrevidenziale) block.
+
+        Args:
+            canvas: ReportLab canvas
+            cassa_data: List of cassa previdenziale entries
+            y_position: Current Y position
+
+        Returns:
+            New Y position after drawing
+        """
+        if not cassa_data:
+            return y_position
+
+        # Add spacing before block
+        y_position -= 0.8 * cm
+
+        primary_color = HexColor(self.get_primary_color())
+
+        # Calculate block dimensions
+        entries_count = len(cassa_data)
+        line_height = 0.5 * cm
+        block_height = (entries_count * 4 * line_height) + 1.2 * cm
+        block_width = 8 * cm
+
+        # Draw background box
+        canvas.setFillColor(HexColor("#F8F9FA"))
+        canvas.setStrokeColor(primary_color)
+        canvas.setLineWidth(1)
+        canvas.rect(
+            2 * cm, y_position - block_height, block_width, block_height, fill=True, stroke=True
+        )
+
+        # Title
+        canvas.setFont("Helvetica-Bold", 10)
+        canvas.setFillColor(primary_color)
+        canvas.drawString(2.3 * cm, y_position - 0.6 * cm, "CASSA PREVIDENZIALE")
+
+        canvas.setFont("Helvetica", 9)
+        canvas.setFillColor(HexColor("#333333"))
+        y = y_position - 1.1 * cm
+
+        # Map tipo_cassa codes to labels
+        tipo_cassa_labels = {
+            "TC01": "Cassa nazionale previdenza avvocati",
+            "TC02": "Cassa previdenza dottori commercialisti",
+            "TC03": "Cassa previdenza e assistenza geometri",
+            "TC04": "Cassa nazionale previdenza e assistenza ingegneri e architetti",
+            "TC05": "Cassa nazionale del notariato",
+            "TC06": "Cassa nazionale previdenza e assistenza ragionieri e periti commerciali",
+            "TC07": "ENPACL (Consulenti del lavoro)",
+            "TC08": "ENPAM (Medici)",
+            "TC09": "ENPAP (Psicologi)",
+            "TC10": "ENPAF (Farmacisti)",
+            "TC11": "ENPAV (Veterinari)",
+            "TC12": "ENPAIA (Periti agrari e agrotecnici)",
+            "TC13": "EPPI (Periti industriali)",
+            "TC14": "EPAP (Attuari, chimici, dottori agronomi e forestali, geologi)",
+            "TC15": "ENPAB (Biologi)",
+            "TC16": "ENPAPI (Infermieri)",
+            "TC17": "ENPAP (Psicologi - duplicato)",
+            "TC18": "ENPAIA (Agrotecnici e periti agrari - duplicato)",
+            "TC19": "EPPI (Periti industriali - duplicato)",
+            "TC20": "EPAP (Attuari, chimici, ecc. - duplicato)",
+            "TC21": "ENPAB (Biologi - duplicato)",
+            "TC22": "INPS",
+        }
+
+        for cassa in cassa_data:
+            tipo_cassa = cassa.get("tipo_cassa", "")
+            tipo_label = tipo_cassa_labels.get(tipo_cassa, tipo_cassa)
+
+            canvas.setFont("Helvetica-Bold", 9)
+            canvas.drawString(2.3 * cm, y, f"Tipo: {tipo_label}")
+            y -= line_height
+
+            canvas.setFont("Helvetica", 9)
+            canvas.drawString(2.3 * cm, y, f"Aliquota: {cassa.get('al_cassa', 0):.2f}%")
+            y -= line_height
+
+            if cassa.get("imponibile_cassa"):
+                canvas.drawString(
+                    2.3 * cm, y, f"Imponibile: € {cassa.get('imponibile_cassa', 0):.2f}"
+                )
+                y -= line_height
+
+            canvas.drawString(
+                2.3 * cm, y, f"Importo: € {cassa.get('importo_contributo_cassa', 0):.2f}"
+            )
+            y -= line_height
+
+            # Show natura if present
+            if cassa.get("natura"):
+                natura = cassa.get("natura", "")
+                natura_labels_map = {
+                    "N1": "Esclusa ex art.15",
+                    "N2.2": "Non soggette - altri casi",
+                }
+                natura_label = natura_labels_map.get(natura, natura)
+                canvas.setFont("Helvetica", 8)
+                canvas.setFillColor(HexColor("#666666"))
+                canvas.drawString(2.3 * cm, y, f"Natura: {natura_label}")
+                canvas.setFillColor(HexColor("#333333"))
+                y -= line_height
+
+        return y_position - block_height - 0.5 * cm
+
+    def draw_bollo_footer(self, canvas: Canvas, importo_bollo: Decimal, y_position: float) -> float:
+        """Draw bollo (stamp duty) MEF footer text.
+
+        Args:
+            canvas: ReportLab canvas
+            importo_bollo: Stamp duty amount
+            y_position: Current Y position
+
+        Returns:
+            New Y position after drawing
+        """
+        if importo_bollo <= 0:
+            return y_position
+
+        # Add spacing before footer
+        y_position -= 0.8 * cm
+
+        # Draw bollo footer text
+        canvas.setFont("Helvetica", 9)
+        canvas.setFillColor(HexColor("#333333"))
+        canvas.drawString(
+            2 * cm,
+            y_position,
+            "Bollo assolto ai sensi del decreto MEF 17 GIUGNO 2014 (ART. 6)",
+        )
+
+        return y_position - 0.5 * cm

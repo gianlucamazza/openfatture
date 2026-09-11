@@ -210,8 +210,10 @@ def generate_pdf(
             template=template,
             company_name=settings.cedente_denominazione or "OpenFatture",
             company_vat=settings.cedente_partita_iva,
+            company_cf=settings.cedente_codice_fiscale,
             company_address=settings.cedente_indirizzo,
             company_city=f"{settings.cedente_cap} {settings.cedente_comune}".strip(),
+            regime_fiscale=settings.cedente_regime_fiscale,
             logo_path=logo,
             enable_qr_code=False,
         )

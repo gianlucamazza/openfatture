@@ -50,8 +50,10 @@ class PDFGeneratorConfig(BaseModel):
     # Company info (for header)
     company_name: str = Field(default="", description="Company name")
     company_vat: str | None = Field(default=None, description="Company VAT number")
+    company_cf: str | None = Field(default=None, description="Company codice fiscale")
     company_address: str | None = Field(default=None, description="Company address")
     company_city: str | None = Field(default=None, description="Company city")
+    regime_fiscale: str | None = Field(default=None, description="Tax regime code (e.g., RF19)")
     logo_path: str | None = Field(default=None, description="Path to logo")
 
     # Colors (for branded template)
@@ -235,6 +237,7 @@ class PDFGenerator:
                     "prezzo_unitario": riga.prezzo_unitario,
                     "unita_misura": riga.unita_misura,
                     "aliquota_iva": riga.aliquota_iva,
+                    "natura": riga.natura,
                     "imponibile": riga.imponibile,
                     "iva": riga.iva,
                     "totale": riga.totale,
@@ -253,6 +256,37 @@ class PDFGenerator:
                 "importo": pag.importo,
             }
 
+        # Cassa previdenziale data
+        cassa_data = []
+        cassa_attr = getattr(fattura, "cassa_previdenziale", None)
+        # Only iterate if it's a real iterable (list/tuple/SQLAlchemy collection), not a Mock
+        if cassa_attr is not None and hasattr(cassa_attr, "__iter__"):
+            try:
+                for cassa in cassa_attr:
+                    cassa_data.append(
+                        {
+                            "tipo_cassa": cassa.tipo_cassa,
+                            "al_cassa": cassa.al_cassa,
+                            "importo_contributo_cassa": cassa.importo_contributo_cassa,
+                            "imponibile_cassa": cassa.imponibile_cassa,
+                            "aliquota_iva": cassa.aliquota_iva,
+                            "natura": cassa.natura,
+                        }
+                    )
+            except (AttributeError, TypeError):
+                # If iteration fails (e.g., Mock object), treat as empty
+                pass
+
+        # Cedente data (from config)
+        cedente_data = {
+            "denominazione": self.config.company_name,
+            "partita_iva": self.config.company_vat,
+            "codice_fiscale": self.config.company_cf,
+            "indirizzo": self.config.company_address,
+            "citta": self.config.company_city,
+            "regime_fiscale": self.config.regime_fiscale,
+        }
+
         return {
             "id": fattura.id,
             "numero": fattura.numero,
@@ -267,9 +301,11 @@ class PDFGenerator:
             "importo_bollo": fattura.importo_bollo or Decimal(0),
             "stato": fattura.stato.value,
             "note": fattura.note,
+            "cedente": cedente_data,
             "cliente": cliente_data,
             "righe": righe_data,
             "pagamento": pagamento_data,
+            "cassa_previdenziale": cassa_data,
         }
 
     def _draw_invoice(self, canvas: Canvas, fattura_data: dict[str, Any]) -> None:
@@ -288,8 +324,10 @@ class PDFGenerator:
             y,
             company_name=self.config.company_name or "OpenFatture",
             company_vat=self.config.company_vat,
+            company_cf=self.config.company_cf,
             company_address=self.config.company_address,
             company_city=self.config.company_city,
+            regime_fiscale=self.config.regime_fiscale,
             logo_path=self.config.logo_path,
             primary_color=self.template.get_primary_color(),
         )
@@ -330,8 +368,10 @@ class PDFGenerator:
                 y,
                 company_name=self.config.company_name or "OpenFatture",
                 company_vat=self.config.company_vat,
+                company_cf=self.config.company_cf,
                 company_address=self.config.company_address,
                 company_city=self.config.company_city,
+                regime_fiscale=self.config.regime_fiscale,
                 logo_path=self.config.logo_path,
                 primary_color=self.template.get_primary_color(),
             )
@@ -405,6 +445,12 @@ class PDFGenerator:
         # Summary (totals)
         y = self.template.draw_summary(canvas, fattura_data, y)
 
+        # Cassa previdenziale (if present)
+        if fattura_data.get("cassa_previdenziale"):
+            y = self.template.draw_cassa_previdenziale(
+                canvas, fattura_data["cassa_previdenziale"], y
+            )
+
         # Payment info
         y = self.template.draw_payment_info(canvas, fattura_data["pagamento"], y)
 
@@ -414,6 +460,10 @@ class PDFGenerator:
 
         # Notes
         y = self.template.draw_notes(canvas, fattura_data.get("note"), y)
+
+        # Bollo footer (if present)
+        if fattura_data.get("importo_bollo", Decimal(0)) > 0:
+            y = self.template.draw_bollo_footer(canvas, fattura_data["importo_bollo"], y)
 
     def _calculate_summary_height(self, fattura_data: dict[str, Any]) -> float:
         """Calculate height needed for summary box.

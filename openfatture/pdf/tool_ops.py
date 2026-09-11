@@ -68,8 +68,10 @@ def generate_invoice_pdf(
             template=template,
             company_name=settings.cedente_denominazione,
             company_vat=settings.cedente_partita_iva or settings.cedente_codice_fiscale,
+            company_cf=settings.cedente_codice_fiscale,
             company_address=settings.cedente_indirizzo,
             company_city=f"{settings.cedente_cap} {settings.cedente_comune} ({settings.cedente_provincia})",
+            regime_fiscale=settings.cedente_regime_fiscale,
             logo_path=settings.email_logo_url if hasattr(settings, "email_logo_url") else None,
             primary_color=(
                 settings.email_primary_color
@@ -152,8 +154,10 @@ def generate_preventivo_pdf(
         config = PDFGeneratorConfig(
             company_name=settings.cedente_denominazione,
             company_vat=settings.cedente_partita_iva or settings.cedente_codice_fiscale,
+            company_cf=settings.cedente_codice_fiscale,
             company_address=settings.cedente_indirizzo,
             company_city=f"{settings.cedente_cap} {settings.cedente_comune} ({settings.cedente_provincia})",
+            regime_fiscale=settings.cedente_regime_fiscale,
             logo_path=settings.email_logo_url if hasattr(settings, "email_logo_url") else None,
             primary_color=(
                 settings.email_primary_color
