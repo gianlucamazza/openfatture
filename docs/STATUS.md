@@ -45,7 +45,7 @@ fix the root cause instead.
 for IDs/triggers, and GitHub [milestone Post-2.1 backlog](https://github.com/gianlucamazza/openfatture/milestone/1)
 / [tracker #36](https://github.com/gianlucamazza/openfatture/issues/36). No release-blocking debt.
 
-See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) and [releases/v2.2.0.md](releases/v2.2.0.md).
+See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [ARCHITECTURE_COMPLETE.md](ARCHITECTURE_COMPLETE.md), and [releases/v2.2.0.md](releases/v2.2.0.md).
 ## Coverage floors (CI)
 
 | Suite | Floor | Source of truth |

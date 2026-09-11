@@ -112,7 +112,7 @@ standalone “LOC reduction” PRs.
 | `ai/orchestration/workflows/invoice_creation.py` | ~921 | Nodes / gates / IO (only if productized) | P2* |
 | `ai/providers/openai.py` | ~855 | Client vs streaming vs tool-call mapping | P2 |
 | `ai/tools/registry/core.py` | ~718 | Already a package; further extract bulkhead/metrics if grows | P3 |
-| `billing/application/invoice_commands.py` | ~714 | Commands vs validation vs side-effects | P2 |
+| `billing/application/invoice_commands.py` | ~714 | Commands vs validation vs side-effects; **nota credito extracted (2.x branch)** | P2 |
 | `storage/database/models.py` | ~672 | Models by bounded context (billing / payment / events) | P2 |
 | `ai/orchestration/react.py` | ~633 | Keep unless ReAct path expands | P3 |
 | `ai/domain/agent.py` | ~623 | Base agent vs helpers | P3 |

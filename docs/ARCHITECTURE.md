@@ -83,6 +83,7 @@ Startup is read-only; setup happens only through `init`.
 
 ## Related docs
 
+- [Architecture complete](ARCHITECTURE_COMPLETE.md) — comprehensive roadmap, public surface, and phased delivery
 - [Core vs extras vs extensions](CORE_VS_EXTENSIONS.md) — what is plugin vs core
 - [AI-era redesign](ARCHITECTURE_REDESIGN.md) — unify under LangGraph; deprecate list
 - [AI architecture](AI_ARCHITECTURE.md) — current assistant flow and tools

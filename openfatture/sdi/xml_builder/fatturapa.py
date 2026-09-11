@@ -238,6 +238,16 @@ class FatturaPABuilder:
         etree.SubElement(dati_doc, self._qname("Data")).text = fattura.data_emissione.isoformat()
         etree.SubElement(dati_doc, self._qname("Numero")).text = f"{fattura.numero}/{fattura.anno}"
 
+        # DatiFattureCollegate (for credit notes and related documents)
+        if fattura.fattura_collegata_numero and fattura.fattura_collegata_data:
+            dati_coll = etree.SubElement(dati_gen, self._qname("DatiFattureCollegate"))
+            etree.SubElement(
+                dati_coll, self._qname("IdDocumento")
+            ).text = fattura.fattura_collegata_numero
+            etree.SubElement(
+                dati_coll, self._qname("Data")
+            ).text = fattura.fattura_collegata_data.isoformat()
+
         # Ritenuta (withholding tax)
         if fattura.ritenuta_acconto and fattura.ritenuta_acconto > 0:
             dati_rit = etree.SubElement(dati_doc, self._qname("DatiRitenuta"))
@@ -295,6 +305,8 @@ class FatturaPABuilder:
                     etree.SubElement(
                         dati_cassa, self._qname("RiferimentoAmministrazione")
                     ).text = cassa.riferimento_amministrazione
+
+        # Note: DatiFattureCollegate inserted earlier, after DatiGeneraliDocumento
 
     def _build_dati_beni_servizi(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiBeniServizi section (line items)."""
