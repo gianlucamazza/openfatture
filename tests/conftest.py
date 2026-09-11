@@ -390,7 +390,6 @@ def sample_fattura_with_bollo(db_session: Session, sample_cliente: Cliente) -> F
 @pytest.fixture
 def sample_fattura_with_natura(db_session: Session, sample_cliente: Cliente) -> Fattura:
     """Create a sample invoice with natura code (exempt VAT)."""
-    from openfatture.storage.database.models import DatiCassaPrevidenziale
 
     imponibile = Decimal("1000.00")
 

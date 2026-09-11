@@ -160,27 +160,28 @@ When implementing transmission, these areas need attention:
 # Example integration point (NOT IMPLEMENTED)
 from openfatture.sdi.signature import sign_xml
 
+
 def prepare_for_sdi(fattura: Fattura) -> Path:
     """Prepare invoice for SDI transmission."""
     # 1. Generate XML
     xml_content = builder.build(fattura)
-    
+
     # 2. Validate against XSD
     is_valid, error = validator.validate(xml_content)
     if not is_valid:
         raise ValueError(f"Invalid XML: {error}")
-    
+
     # 3. Sign XML (REQUIRES IMPLEMENTATION)
     signed_xml = sign_xml(
         xml_content=xml_content,
         certificate_path=settings.cert_path,
         private_key_path=settings.key_path,
     )
-    
+
     # 4. Save signed XML
     signed_path = settings.invoices_dir / f"{fattura.numero}_signed.xml"
     signed_path.write_text(signed_xml)
-    
+
     return signed_path
 ```
 
@@ -188,6 +189,7 @@ def prepare_for_sdi(fattura: Fattura) -> Path:
 ```python
 # Example integration point (NOT IMPLEMENTED)
 from openfatture.sdi.transport import send_via_pec
+
 
 def send_to_pec(fattura: Fattura, signed_xml_path: Path):
     """Send invoice via PEC."""
@@ -205,10 +207,11 @@ def send_to_pec(fattura: Fattura, signed_xml_path: Path):
 # Example integration point (NOT IMPLEMENTED)
 from openfatture.sdi.notifications import process_sdi_notification
 
+
 def handle_sdi_response(notification_xml: str):
     """Process SDI notification (RC, NS, MC, etc.)."""
     notification = process_sdi_notification(notification_xml)
-    
+
     # Update invoice status based on notification type
     if notification.tipo == "NS":  # Notifica Scarto
         # Invoice rejected

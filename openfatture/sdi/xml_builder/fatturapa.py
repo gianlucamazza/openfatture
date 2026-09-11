@@ -144,18 +144,26 @@ class FatturaPABuilder:
         # IdFiscaleIVA
         id_fiscale = etree.SubElement(dati_anag, self._qname("IdFiscaleIVA"))
         etree.SubElement(id_fiscale, self._qname("IdPaese")).text = "IT"
-        etree.SubElement(id_fiscale, self._qname("IdCodice")).text = self.settings.cedente_partita_iva
+        etree.SubElement(
+            id_fiscale, self._qname("IdCodice")
+        ).text = self.settings.cedente_partita_iva
 
         # CodiceFiscale (if different from P.IVA)
         if self.settings.cedente_codice_fiscale != self.settings.cedente_partita_iva:
-            etree.SubElement(dati_anag, self._qname("CodiceFiscale")).text = self.settings.cedente_codice_fiscale
+            etree.SubElement(
+                dati_anag, self._qname("CodiceFiscale")
+            ).text = self.settings.cedente_codice_fiscale
 
         # Anagrafica
         anagrafica = etree.SubElement(dati_anag, self._qname("Anagrafica"))
-        etree.SubElement(anagrafica, self._qname("Denominazione")).text = self.settings.cedente_denominazione
+        etree.SubElement(
+            anagrafica, self._qname("Denominazione")
+        ).text = self.settings.cedente_denominazione
 
         # RegimeFiscale
-        etree.SubElement(dati_anag, self._qname("RegimeFiscale")).text = self.settings.cedente_regime_fiscale
+        etree.SubElement(
+            dati_anag, self._qname("RegimeFiscale")
+        ).text = self.settings.cedente_regime_fiscale
 
         # Sede
         sede = etree.SubElement(cedente, self._qname("Sede"))
@@ -169,7 +177,9 @@ class FatturaPABuilder:
         if self.settings.cedente_telefono or self.settings.cedente_email:
             contatti = etree.SubElement(cedente, self._qname("Contatti"))
             if self.settings.cedente_telefono:
-                etree.SubElement(contatti, self._qname("Telefono")).text = self.settings.cedente_telefono
+                etree.SubElement(
+                    contatti, self._qname("Telefono")
+                ).text = self.settings.cedente_telefono
             if self.settings.cedente_email:
                 etree.SubElement(contatti, self._qname("Email")).text = self.settings.cedente_email
 
@@ -231,14 +241,18 @@ class FatturaPABuilder:
         # Ritenuta (withholding tax)
         if fattura.ritenuta_acconto and fattura.ritenuta_acconto > 0:
             dati_rit = etree.SubElement(dati_doc, self._qname("DatiRitenuta"))
-            etree.SubElement(dati_rit, self._qname("TipoRitenuta")).text = "RT01"  # Ritenuta persone fisiche
+            etree.SubElement(
+                dati_rit, self._qname("TipoRitenuta")
+            ).text = "RT01"  # Ritenuta persone fisiche
             etree.SubElement(dati_rit, self._qname("ImportoRitenuta")).text = self._format_decimal(
                 fattura.ritenuta_acconto
             )
             etree.SubElement(dati_rit, self._qname("AliquotaRitenuta")).text = self._format_decimal(
                 fattura.aliquota_ritenuta or Decimal("0")
             )
-            etree.SubElement(dati_rit, self._qname("CausalePagamento")).text = "A"  # Prestazioni lavoro autonomo
+            etree.SubElement(
+                dati_rit, self._qname("CausalePagamento")
+            ).text = "A"  # Prestazioni lavoro autonomo
 
         # Bollo (stamp duty)
         if fattura.importo_bollo and fattura.importo_bollo > 0:
@@ -249,7 +263,7 @@ class FatturaPABuilder:
             )
 
         # DatiCassaPrevidenziale (social security contributions)
-        if hasattr(fattura, 'cassa_previdenziale') and fattura.cassa_previdenziale:
+        if hasattr(fattura, "cassa_previdenziale") and fattura.cassa_previdenziale:
             for cassa in fattura.cassa_previdenziale:
                 dati_cassa = etree.SubElement(dati_doc, self._qname("DatiCassaPrevidenziale"))
 
@@ -257,19 +271,19 @@ class FatturaPABuilder:
                 etree.SubElement(dati_cassa, self._qname("AlCassa")).text = self._format_decimal(
                     cassa.al_cassa
                 )
-                etree.SubElement(dati_cassa, self._qname("ImportoContributoCassa")).text = self._format_decimal(
-                    cassa.importo_contributo_cassa
-                )
+                etree.SubElement(
+                    dati_cassa, self._qname("ImportoContributoCassa")
+                ).text = self._format_decimal(cassa.importo_contributo_cassa)
 
                 # Optional fields
                 if cassa.imponibile_cassa:
-                    etree.SubElement(dati_cassa, self._qname("ImponibileCassa")).text = self._format_decimal(
-                        cassa.imponibile_cassa
-                    )
+                    etree.SubElement(
+                        dati_cassa, self._qname("ImponibileCassa")
+                    ).text = self._format_decimal(cassa.imponibile_cassa)
 
-                etree.SubElement(dati_cassa, self._qname("AliquotaIVA")).text = self._format_decimal(
-                    cassa.aliquota_iva
-                )
+                etree.SubElement(
+                    dati_cassa, self._qname("AliquotaIVA")
+                ).text = self._format_decimal(cassa.aliquota_iva)
 
                 if cassa.ritenuta:
                     etree.SubElement(dati_cassa, self._qname("Ritenuta")).text = cassa.ritenuta
@@ -278,7 +292,9 @@ class FatturaPABuilder:
                     etree.SubElement(dati_cassa, self._qname("Natura")).text = cassa.natura
 
                 if cassa.riferimento_amministrazione:
-                    etree.SubElement(dati_cassa, self._qname("RiferimentoAmministrazione")).text = cassa.riferimento_amministrazione
+                    etree.SubElement(
+                        dati_cassa, self._qname("RiferimentoAmministrazione")
+                    ).text = cassa.riferimento_amministrazione
 
     def _build_dati_beni_servizi(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiBeniServizi section (line items)."""
@@ -291,12 +307,16 @@ class FatturaPABuilder:
             etree.SubElement(dettaglio, self._qname("NumeroLinea")).text = str(riga.numero_riga)
             etree.SubElement(dettaglio, self._qname("Descrizione")).text = riga.descrizione
 
-            etree.SubElement(dettaglio, self._qname("Quantita")).text = self._format_decimal(riga.quantita)
+            etree.SubElement(dettaglio, self._qname("Quantita")).text = self._format_decimal(
+                riga.quantita
+            )
             etree.SubElement(dettaglio, self._qname("UnitaMisura")).text = riga.unita_misura
             etree.SubElement(dettaglio, self._qname("PrezzoUnitario")).text = self._format_decimal(
                 riga.prezzo_unitario
             )
-            etree.SubElement(dettaglio, self._qname("PrezzoTotale")).text = self._format_decimal(riga.imponibile)
+            etree.SubElement(dettaglio, self._qname("PrezzoTotale")).text = self._format_decimal(
+                riga.imponibile
+            )
             etree.SubElement(dettaglio, self._qname("AliquotaIVA")).text = self._format_decimal(
                 riga.aliquota_iva
             )
@@ -309,7 +329,9 @@ class FatturaPABuilder:
         from collections import defaultdict
 
         # Group by (aliquota_iva, natura) tuple to properly handle different natura codes
-        riepilogo_by_key: dict[tuple[Decimal, str | None], Decimal] = defaultdict(lambda: Decimal("0"))
+        riepilogo_by_key: dict[tuple[Decimal, str | None], Decimal] = defaultdict(
+            lambda: Decimal("0")
+        )
 
         for riga in fattura.righe:
             key = (riga.aliquota_iva, riga.natura)
@@ -318,7 +340,9 @@ class FatturaPABuilder:
         for (aliquota, natura), imponibile in riepilogo_by_key.items():
             riepilogo = etree.SubElement(dati_beni, self._qname("DatiRiepilogo"))
 
-            etree.SubElement(riepilogo, self._qname("AliquotaIVA")).text = self._format_decimal(aliquota)
+            etree.SubElement(riepilogo, self._qname("AliquotaIVA")).text = self._format_decimal(
+                aliquota
+            )
 
             # Natura (required for zero-rated, exempt, or out-of-scope VAT)
             if natura:
@@ -327,10 +351,14 @@ class FatturaPABuilder:
                 # Default to N2.2 (non soggette - altri casi) for zero VAT if no natura specified
                 etree.SubElement(riepilogo, self._qname("Natura")).text = "N2.2"
 
-            etree.SubElement(riepilogo, self._qname("ImponibileImporto")).text = self._format_decimal(imponibile)
+            etree.SubElement(
+                riepilogo, self._qname("ImponibileImporto")
+            ).text = self._format_decimal(imponibile)
 
             iva_importo = imponibile * aliquota / Decimal("100")
-            etree.SubElement(riepilogo, self._qname("Imposta")).text = self._format_decimal(iva_importo)
+            etree.SubElement(riepilogo, self._qname("Imposta")).text = self._format_decimal(
+                iva_importo
+            )
 
             # EsigibilitaIVA
             etree.SubElement(riepilogo, self._qname("EsigibilitaIVA")).text = "I"  # Immediata
@@ -340,7 +368,9 @@ class FatturaPABuilder:
         dati_pag = etree.SubElement(body, self._qname("DatiPagamento"))
 
         # CondizioniPagamento
-        etree.SubElement(dati_pag, self._qname("CondizioniPagamento")).text = "TP02"  # Pagamento completo
+        etree.SubElement(
+            dati_pag, self._qname("CondizioniPagamento")
+        ).text = "TP02"  # Pagamento completo
 
         # DettaglioPagamento
         dettaglio_pag = etree.SubElement(dati_pag, self._qname("DettaglioPagamento"))
@@ -352,16 +382,18 @@ class FatturaPABuilder:
         from datetime import timedelta
 
         data_scadenza = fattura.data_emissione + timedelta(days=30)
-        etree.SubElement(dettaglio_pag, self._qname("DataScadenzaPagamento")).text = data_scadenza.isoformat()
+        etree.SubElement(
+            dettaglio_pag, self._qname("DataScadenzaPagamento")
+        ).text = data_scadenza.isoformat()
 
         # Importo (total - ritenuta)
         importo_pagamento = fattura.totale
         if fattura.ritenuta_acconto:
             importo_pagamento -= fattura.ritenuta_acconto
 
-        etree.SubElement(dettaglio_pag, self._qname("ImportoPagamento")).text = self._format_decimal(
-            importo_pagamento
-        )
+        etree.SubElement(
+            dettaglio_pag, self._qname("ImportoPagamento")
+        ).text = self._format_decimal(importo_pagamento)
 
     @staticmethod
     def _format_decimal(value: Decimal) -> str:

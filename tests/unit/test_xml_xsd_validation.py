@@ -1,7 +1,6 @@
 """Integration tests for FatturaPA XML XSD validation."""
 
 from decimal import Decimal
-from pathlib import Path
 
 import pytest
 
@@ -19,7 +18,9 @@ class TestXSDValidation:
         """Ensure XSD schema is available."""
         xsd_path = test_settings.data_dir / "schemas" / "FatturaPA_v1.2.2.xsd"
         if not xsd_path.exists():
-            pytest.skip("XSD schema not available - download it with `uv run python -c 'from openfatture.sdi.validator.xsd_validator import download_xsd_schema; download_xsd_schema(auto_download=True)'`")
+            pytest.skip(
+                "XSD schema not available - download it with `uv run python -c 'from openfatture.sdi.validator.xsd_validator import download_xsd_schema; download_xsd_schema(auto_download=True)'`"
+            )
 
     def test_basic_invoice_validates(self, test_settings, sample_fattura):
         """Test basic invoice XML validates against XSD."""
