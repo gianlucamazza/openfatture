@@ -7,7 +7,7 @@ from openfatture import __version__
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import configure_dynamic_logging
 
-from .commands import assistant, config, init, interactive, status
+from .commands import assistant, cliente, config, fattura, init, interactive, status
 
 app = typer.Typer(
     name="openfatture",
@@ -56,6 +56,10 @@ app.add_typer(interactive.app, name="interactive", help="Start a conversational 
 app.add_typer(init.app, name="init", help="Initialize OpenFatture")
 app.add_typer(config.app, name="config", help="Manage configuration")
 app.command("status", help="Show local readiness and configuration")(status.status)
+app.add_typer(cliente.app, name="cliente", help="Manage clients (list, show, create)")
+app.add_typer(
+    fattura.app, name="fattura", help="Manage invoices (list, show, create, generate-pdf)"
+)
 
 
 if __name__ == "__main__":

@@ -244,34 +244,68 @@ class BaseTemplate(ABC):
         # Add spacing before payment info
         y_position -= 0.8 * cm
 
-        canvas.setFont("Helvetica-Bold", 11)
-        canvas.setFillColor(HexColor("#333333"))
-        canvas.drawString(2 * cm, y_position, "Payment information:")
+        primary_color = HexColor(self.get_primary_color())
 
-        canvas.setFont("Helvetica", 10)
-        y = y_position - 0.6 * cm
+        # Calculate block height based on content
+        line_count = 1  # Method
+        if pagamento_data.get("data_scadenza"):
+            line_count += 1
+        if pagamento_data.get("iban"):
+            line_count += 1
+        if pagamento_data.get("bic_swift"):
+            line_count += 1
+
+        block_height = (line_count * 0.5 + 0.8) * cm
+        block_width = 8 * cm
+
+        # Draw background box
+        canvas.setFillColor(HexColor("#F8F9FA"))
+        canvas.setStrokeColor(primary_color)
+        canvas.setLineWidth(1)
+        canvas.rect(
+            2 * cm, y_position - block_height, block_width, block_height, fill=True, stroke=True
+        )
+
+        # Title
+        canvas.setFont("Helvetica-Bold", 10)
+        canvas.setFillColor(primary_color)
+        canvas.drawString(2.3 * cm, y_position - 0.6 * cm, "MODALITÀ DI PAGAMENTO")
+
+        canvas.setFont("Helvetica", 9)
+        canvas.setFillColor(HexColor("#333333"))
+        y = y_position - 1.1 * cm
 
         # Payment method
-        canvas.drawString(2 * cm, y, f"Method: {pagamento_data.get('modalita', 'Bank transfer')}")
+        modalita_map = {
+            "MP05": "Bonifico bancario",
+            "MP08": "Carta di credito",
+            "MP01": "Contanti",
+        }
+        modalita_label = modalita_map.get(
+            pagamento_data.get("modalita", ""), pagamento_data.get("modalita", "Bonifico bancario")
+        )
+        canvas.drawString(2.3 * cm, y, f"Modalità: {modalita_label}")
         y -= 0.5 * cm
 
         # Due date
         if pagamento_data.get("data_scadenza"):
             scadenza = pagamento_data["data_scadenza"].strftime("%d/%m/%Y")
-            canvas.drawString(2 * cm, y, f"Due date: {scadenza}")
+            canvas.drawString(2.3 * cm, y, f"Scadenza: {scadenza}")
             y -= 0.5 * cm
 
-        # IBAN
+        # IBAN (prominent for bank transfers)
         if pagamento_data.get("iban"):
-            canvas.drawString(2 * cm, y, f"IBAN: {pagamento_data['iban']}")
+            canvas.setFont("Helvetica-Bold", 9)
+            canvas.drawString(2.3 * cm, y, f"IBAN: {pagamento_data['iban']}")
+            canvas.setFont("Helvetica", 9)
             y -= 0.5 * cm
 
         # BIC
         if pagamento_data.get("bic_swift"):
-            canvas.drawString(2 * cm, y, f"BIC/SWIFT: {pagamento_data['bic_swift']}")
+            canvas.drawString(2.3 * cm, y, f"BIC: {pagamento_data['bic_swift']}")
             y -= 0.5 * cm
 
-        return y - 0.5 * cm
+        return y_position - block_height - 0.5 * cm
 
     def draw_notes(self, canvas: Canvas, note: str | None, y_position: float) -> float:
         """Draw invoice notes.

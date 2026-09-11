@@ -301,6 +301,129 @@ def sample_fattura(db_session: Session, sample_cliente: Cliente) -> Fattura:
 
 
 @pytest.fixture
+def sample_fattura_with_righe(db_session: Session, sample_cliente: Cliente) -> Fattura:
+    """Create a sample invoice with multiple line items (alias for sample_fattura)."""
+    return sample_fattura(db_session, sample_cliente)
+
+
+@pytest.fixture
+def sample_fattura_with_payment(db_session: Session, sample_cliente: Cliente) -> Fattura:
+    """Create a sample invoice with payment information."""
+    from openfatture.storage.database.models import Pagamento
+
+    fattura = Fattura(
+        numero="10",
+        anno=2025,
+        data_emissione=date(2025, 1, 15),
+        cliente_id=sample_cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.BOZZA,
+        imponibile=Decimal("1000.00"),
+        iva=Decimal("220.00"),
+        totale=Decimal("1220.00"),
+    )
+
+    db_session.add(fattura)
+    db_session.flush()
+
+    # Add line item
+    riga = RigaFattura(
+        fattura_id=fattura.id,
+        numero_riga=1,
+        descrizione="Consulenza sviluppo software",
+        quantita=Decimal("10"),
+        prezzo_unitario=Decimal("100.00"),
+        unita_misura="ore",
+        aliquota_iva=Decimal("22.00"),
+        imponibile=Decimal("1000.00"),
+        iva=Decimal("220.00"),
+        totale=Decimal("1220.00"),
+    )
+    db_session.add(riga)
+
+    # Add payment info
+    pagamento = Pagamento(
+        fattura_id=fattura.id,
+        modalita="MP05",
+        importo=Decimal("1220.00"),
+        data_scadenza=date(2025, 2, 15),
+        iban="IT60X0542811101000000123456",
+        bic_swift="BPMOITMMXXX",
+    )
+    db_session.add(pagamento)
+
+    db_session.commit()
+    db_session.refresh(fattura)
+
+    return fattura
+
+
+@pytest.fixture
+def sample_fattura_with_long_descriptions(db_session: Session, sample_cliente: Cliente) -> Fattura:
+    """Create a sample invoice with long line descriptions for testing text wrapping."""
+    fattura = Fattura(
+        numero="11",
+        anno=2025,
+        data_emissione=date(2025, 1, 15),
+        cliente_id=sample_cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.BOZZA,
+        imponibile=Decimal("0.00"),
+        iva=Decimal("0.00"),
+        totale=Decimal("0.00"),
+    )
+
+    db_session.add(fattura)
+    db_session.flush()
+
+    # Add line items with long descriptions
+    long_desc_1 = (
+        "Consulenza specialistica per l'implementazione di un sistema di fatturazione elettronica "
+        "conforme alle specifiche del Sistema di Interscambio (SDI) per la gestione automatizzata "
+        "delle fatture PA e B2B secondo il formato FatturaPA versione 1.2.1"
+    )
+    long_desc_2 = (
+        "Sviluppo di moduli personalizzati per l'integrazione con sistemi ERP aziendali esistenti, "
+        "includendo la sincronizzazione automatica dei dati anagrafici clienti, prodotti e servizi, "
+        "con particolare attenzione alla compliance fiscale italiana e ai requisiti GDPR"
+    )
+
+    righe_data = [
+        (long_desc_1, Decimal("40"), Decimal("80.00")),
+        (long_desc_2, Decimal("30"), Decimal("90.00")),
+    ]
+
+    for idx, (desc, qty, price) in enumerate(righe_data, start=1):
+        imponibile = qty * price
+        iva = imponibile * Decimal("0.22")
+        totale = imponibile + iva
+
+        riga = RigaFattura(
+            fattura_id=fattura.id,
+            numero_riga=idx,
+            descrizione=desc,
+            quantita=qty,
+            prezzo_unitario=price,
+            unita_misura="ore",
+            aliquota_iva=Decimal("22.00"),
+            imponibile=imponibile,
+            iva=iva,
+            totale=totale,
+        )
+        db_session.add(riga)
+
+        # Update fattura totals
+        fattura.imponibile += imponibile
+        fattura.iva += iva
+        fattura.totale += totale
+
+    db_session.commit()
+    db_session.refresh(fattura)
+
+    return fattura
+
+
+@pytest.fixture
 def sample_fattura_with_ritenuta(db_session: Session, sample_cliente: Cliente) -> Fattura:
     """Create a sample invoice with withholding tax."""
     imponibile = Decimal("1000.00")
