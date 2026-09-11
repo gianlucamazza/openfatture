@@ -56,10 +56,11 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 
 ## Status
 
-Version **2.0.2**, Python 3.12+ and `uv`. Packaging, extras, honesty gates, and
-the unified assistant runtime shipped in 2.0 — see
-[docs/STATUS.md](docs/STATUS.md), [docs/releases/v2.0.2.md](docs/releases/v2.0.2.md),
-and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Version **2.2.0**, Python 3.12+ and `uv`. Professional PDF templates, first-class
+CLI commands, FatturaPA XML validation, and natura/DatiCassaPrevidenziale support
+shipped in 2.2 — see [docs/STATUS.md](docs/STATUS.md),
+[docs/releases/v2.2.0.md](docs/releases/v2.2.0.md), and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Explicit non-goal: there is no browser frontend or web application surface,
 and adding one would be a separate product decision.
