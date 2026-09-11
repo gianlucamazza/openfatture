@@ -149,9 +149,7 @@ def create_nota_credito_from_fattura(
                 quantita = Decimal(str(item.get("quantita", 0)))
 
                 if numero_riga not in source_lines_map:
-                    return {
-                        "error": f"Line {numero_riga} not found in source invoice {fattura_id}"
-                    }
+                    return {"error": f"Line {numero_riga} not found in source invoice {fattura_id}"}
 
                 source_riga = source_lines_map[numero_riga]
 

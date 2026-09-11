@@ -231,7 +231,9 @@ def test_create_nota_credito_partial_invalid_quantity(runtime_db, cliente_with_i
     assert "invalid quantity" in result["error"].lower()
 
 
-def test_fatturapa_xml_with_dati_fatture_collegate(runtime_session, cliente_with_invoice, test_settings, runtime_db):
+def test_fatturapa_xml_with_dati_fatture_collegate(
+    runtime_session, cliente_with_invoice, test_settings, runtime_db
+):
     """Test FatturaPA XML generation includes DatiFattureCollegate for TD04."""
     db = runtime_session
     settings = test_settings
@@ -277,7 +279,9 @@ def test_fatturapa_xml_with_dati_fatture_collegate(runtime_session, cliente_with
     assert data[0].text == source_fattura.data_emissione.isoformat()
 
 
-def test_fatturapa_xml_without_linkage_no_dati_fatture_collegate(runtime_db, cliente_with_invoice, test_settings):
+def test_fatturapa_xml_without_linkage_no_dati_fatture_collegate(
+    runtime_db, cliente_with_invoice, test_settings
+):
     """Test FatturaPA XML generation does NOT include DatiFattureCollegate for regular TD01."""
     settings = test_settings
     fattura = cliente_with_invoice["fattura"]
@@ -300,7 +304,9 @@ def test_fatturapa_xml_without_linkage_no_dati_fatture_collegate(runtime_db, cli
     assert len(dati_coll) == 0, "DatiFattureCollegate must not be present for TD01 without linkage"
 
 
-def test_nota_credito_amounts_with_positive_values(runtime_session, cliente_with_invoice, runtime_db):
+def test_nota_credito_amounts_with_positive_values(
+    runtime_session, cliente_with_invoice, runtime_db
+):
     """Test nota di credito uses positive amounts (TD04 standard practice), not negative."""
     db = runtime_session
     source_fattura = cliente_with_invoice["fattura"]

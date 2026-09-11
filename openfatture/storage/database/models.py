@@ -285,9 +285,7 @@ class Fattura(IntPKMixin, Base):
 
     # Linkage for nota di credito (TD04) - DatiFattureCollegate
     # Reference to source invoice when this is a credit note
-    fattura_collegata_id: Mapped[int | None] = mapped_column(
-        ForeignKey("fatture.id"), index=True
-    )
+    fattura_collegata_id: Mapped[int | None] = mapped_column(ForeignKey("fatture.id"), index=True)
     fattura_collegata_numero: Mapped[str | None] = mapped_column(String(20))
     fattura_collegata_data: Mapped[date | None] = mapped_column(Date)
 
