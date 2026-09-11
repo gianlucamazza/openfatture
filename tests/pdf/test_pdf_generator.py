@@ -91,7 +91,7 @@ class TestPDFGeneratorConfig:
         """Test default configuration."""
         config = PDFGeneratorConfig()
 
-        assert config.template == "minimalist"
+        assert config.template == "professional"
         assert config.enable_pdfa is True
         assert config.enable_qr_code is False
         assert config.primary_color == "#2C3E50"

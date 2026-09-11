@@ -45,7 +45,7 @@ class PDFGeneratorConfig(BaseModel):
     """
 
     # Template
-    template: str = Field(default="minimalist", description="Template name")
+    template: str = Field(default="professional", description="Template name")
 
     # Company info (for header)
     company_name: str = Field(default="", description="Company name")
@@ -546,11 +546,11 @@ class PDFGenerator:
         canvas.drawString(15.5 * cm, 2 * cm, "Paga con QR Code")
 
 
-def create_pdf_generator(template: str = "minimalist", **kwargs: Any) -> PDFGenerator:
+def create_pdf_generator(template: str = "professional", **kwargs: Any) -> PDFGenerator:
     """Factory function to create PDF generator.
 
     Args:
-        template: Template name (minimalist/professional/branded)
+        template: Template name (professional/minimalist/branded, default: professional)
         **kwargs: Additional configuration parameters
 
     Returns:

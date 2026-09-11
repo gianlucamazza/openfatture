@@ -11,9 +11,14 @@ def test_public_commands_are_agent_first() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
+    # Core commands
     for command in ("assistant", "interactive", "init", "config", "status"):
         assert command in result.stdout
-    for removed in ("cliente", "fattura", "preventivo", "payment", "ai", "plugin", "web-scraper"):
+    # First-class data commands (added per UX improvements)
+    for command in ("cliente", "fattura"):
+        assert command in result.stdout
+    # Commands that should remain hidden/removed
+    for removed in ("preventivo", "payment", "ai", "plugin", "web-scraper"):
         assert removed not in result.stdout
 
 
