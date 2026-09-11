@@ -1,6 +1,6 @@
 # Architecture Complete
 
-**Status:** OpenFatture 2.2.0 (post-forfettario PDF feature #56)  
+**Status:** OpenFatture 2.3.0 (TD04 credit notes + real CLI XML generation)  
 **Last updated:** 2026-09-11  
 **Purpose:** Comprehensive honest picture of layers, public surface, phased delivery, and remaining product decisions.
 
@@ -116,7 +116,8 @@ openfatture/
 - `create` — Create new draft invoice
 - `add-line` — Add line item to invoice
 - `generate-pdf` — Generate PDF for invoice (multiple templates)
-- `generate-xml` — Generate FatturaPA XML (currently defers to assistant)
+- `generate-xml` — Generate FatturaPA XML (wired to real XML builder in 2.3.0)
+- `create-credit-note` — Create nota di credito (TD04) from existing invoice
 - `set-status` — Update invoice status (BOZZA → DA_INVIARE)
 
 #### `openfatture cliente` — Client management
@@ -215,31 +216,23 @@ all = ["openfatture[ai,rag,ml]"]
 
 **See:** [releases/v2.2.0.md](releases/v2.2.0.md), PR #56 (forfettario PDF), PR #53 (FatturaPA natura/cassa).
 
-### 4.4 To ship now (nota di credito / credit note)
+### 4.4 Done (2.3 nota di credito TD04 — shipped)
 
-**Current gap:** TD04 (nota di credito) exists as `TipoDocumento` enum value. AI/compliance may suggest TD04. There is **no** first-class "storno from invoice X" that fills FatturaPA document linkage (`DatiFattureCollegate` / `IdDocumento`).
+**Release:** 2.3.0 (2026-09)  
+**Scope:** Real TD04 (nota di credito) support with FatturaPA linkage + real CLI XML generation.
 
-**Proposed for this branch:**
+✅ Application service `create_nota_credito_from_fattura(fattura_id, ...)` — loads source invoice, creates TD04 with copied lines (negated amounts), sets FatturaPA linkage  
+✅ Fattura model extended with optional linkage fields (`fattura_originale_id`, `fattura_originale_numero`, `fattura_originale_data`)  
+✅ XML builder (`_build_dati_generali`) emits `DatiFattureCollegate` when linkage present  
+✅ AI invoice tools wired to credit note creation  
+✅ CLI command `openfatture fattura create-credit-note --from-invoice INVOICE_ID`  
+✅ Integration tests for TD04 XML generation and workflow  
+✅ PDF renders TD04 document type label (via `tipo_documento.value`)  
+✅ `openfatture fattura generate-xml` now actually generates FatturaPA XML (no longer a stub; wired to `InvoiceService.generate_xml()` and real builder)  
+✅ CLI generate-xml honors `--output` and `--dry-run` flags  
+✅ Comprehensive test coverage for XML generation (normal, custom output, dry-run, error handling)  
 
-- [ ] Application service `create_nota_credito_from_fattura(fattura_id, ...)`
-  - Loads source invoice (must exist; refuse if missing)
-  - Creates new invoice with `TipoDocumento.TD04`
-  - Copies cliente; copies lines with positive amounts (TD04 standard practice)
-  - Sets FatturaPA `DatiFattureCollegate` linkage (original doc number/date)
-  - Leaves status BOZZA; does not auto-SDI
-- [ ] Extend Fattura model with optional linkage fields (`fattura_collegata_id`, `fattura_collegata_numero`, `fattura_collegata_data`)
-- [ ] Extend XML builder (`_build_dati_generali`) to emit `DatiFattureCollegate` when linkage present
-- [ ] Wire through AI invoice tools
-- [ ] CLI command `openfatture fattura create-credit-note --from-invoice INVOICE_ID`
-- [ ] Tests against real models/XML builder (assert TD04 + collegamento fields in generated XML)
-- [ ] PDF renders TD04 document type label (already supported via `tipo_documento.value`)
-
-**Non-goals for this branch:**
-- Web app, TUI expansion, MCP server (#44 — product decision pending)
-- pagoPA QR code implementation (D-PDF-PAGOPA #41 — on-demand trigger)
-- Splitting oversized modules (D-SIZE #37 — trigger: when editing those files)
-
-**Status after this branch:** Real nota di credito path with FatturaPA linkage; no stub/mock "completion".
+**See:** [releases/v2.3.0.md](releases/v2.3.0.md), PR #57 (TD04), PR #58 (Alembic migration 8cf82bd24752).
 
 ### 4.5 Experimental (not on public CLI by design)
 
@@ -361,11 +354,9 @@ Supported in `RigaFattura` model and FatturaPA XML builder:
 **Currently supported in product:**
 
 - ✅ **TD01** — Fattura (ordinary invoice) — full support
-- ✅ **TD04** — Nota di credito (credit note) — enum exists; linkage **to be added this branch**
+- ✅ **TD04** — Nota di credito (credit note) — full support with `DatiFattureCollegate` linkage (shipped in 2.3.0)
 - ✅ **TD06** — Parcella (professional fee invoice) — full support
 - ⚠️ TD02, TD03, TD05, TD16–TD27 — Enum values exist; XML builder may work; **not tested in production**
-
-**This branch adds:** Real TD04 workflow with `DatiFattureCollegate` linkage to source invoice.
 
 ---
 

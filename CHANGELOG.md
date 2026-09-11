@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-09-11
+
+### Added
+
+- **Nota di credito (TD04) support** (PR #57):
+  - `create_nota_credito_from_fattura` application command for creating credit notes from invoices
+  - CLI command: `openfatture fattura create-credit-note --from-invoice <id>`
+  - FatturaPA XML builder support for TD04 document type
+  - `DatiFattureCollegate` XML element for linking credit notes to original invoices
+  - Alembic migration adding `fattura_originale_id`, `fattura_originale_numero`, `fattura_originale_data` columns for document linkage
+  - Comprehensive integration tests for TD04 XML generation and workflow
+
+### Changed
+
+- **Real CLI: `openfatture fattura generate-xml`** command now actually generates FatturaPA XML:
+  - Wired to existing `InvoiceService.generate_xml()` and FatturaPA XML builder (no stubs, no mocks)
+  - Honors `--output` for custom XML file path
+  - Honors `--dry-run` to display XML without writing to disk
+  - Full test coverage for normal generation, custom output, dry-run mode, and error handling
+- **Slim Alembic migration** (commit 8cf82bd24752):
+  - TD04 linkage columns added with minimal schema footprint
+  - Migration tested and validated in CI
+
 ## [2.2.0] - 2026-09-11
 
 ### Added
