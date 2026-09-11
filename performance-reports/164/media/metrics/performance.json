@@ -1,0 +1,18 @@
+{
+  "2025-10-16": {
+    "scenarios": {
+      "A": {
+        "durations": [
+          45.2,
+          45.0
+        ],
+        "successes": 2,
+        "failures": 0,
+        "avg_duration": 45.1
+      }
+    },
+    "avg_duration_seconds": 45.1,
+    "total_runs": 2,
+    "success_rate": 100.0
+  }
+}

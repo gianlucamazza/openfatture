@@ -1,0 +1,32 @@
+# VAT Suggestion Shortcut
+# Usage: /iva "Service Description" [--pa] [--estero] [--paese XX]
+# Example: /iva "IT consulting for construction company"
+
+name: iva
+description: Suggerimento rapido aliquota IVA e trattamento fiscale
+category: tax
+aliases: [vat, aliquota]
+author: OpenFatture Team
+version: "1.0"
+
+template: |
+  Analizza il seguente servizio/prodotto e suggerisci il trattamento fiscale corretto:
+
+  **Descrizione:** {{ arg1 }}
+  {% if arg2 %}**Cliente:** {{ arg2 }}{% endif %}
+  {% if arg3 %}**Importo:** {{ arg3 }}€{% endif %}
+
+  Fornisci:
+  1. Aliquota IVA applicabile (0%, 4%, 10%, 22%)
+  2. Eventuale codice natura IVA (N1-N7)
+  3. Se applicabile reverse charge, split payment, o regime speciale
+  4. Riferimento normativo specifico (art. DPR 633/72 o simili)
+  5. Nota da inserire in fattura (se necessaria)
+  6. Raccomandazioni per evitare problemi con SDI
+
+  Rispondi in formato strutturato e cita sempre le fonti normative.
+
+examples:
+  - "/iva \"Consulenza IT per azienda edile\""
+  - "/vat \"Formazione professionale\" \"Pubblica Amministrazione\""
+  - "/aliquota \"Servizi digitali\" \"Cliente USA\" \"1500\""
