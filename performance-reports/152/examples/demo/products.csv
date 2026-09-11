@@ -1,0 +1,4 @@
+codice,descrizione,prezzo_unitario,aliquota_iva,unita_misura,categoria,is_servizio,note
+CONS_GDPR,"Consulenza GDPR avanzata",120.00,22.00,ore,Consulenza,true,"Include valutazione DPIA e roadmap remediation"
+DEV_BACKEND,"Sviluppo backend API FastAPI",95.00,22.00,ore,Sviluppo,true,"Sprint backend con test automatici e CI"
+FORMAZIONE_AI,"Workshop AI Assistants per team finance",1500.00,22.00,sessione,Formazione,true,"Sessione di 4h con materiali personalizzati"
