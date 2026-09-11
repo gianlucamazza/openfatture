@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-11
+
+### Added
+
+- **PDF Layout improvements** (PR #51):
+  - Text wrapping for long line descriptions using ReportLab Paragraph objects
+  - Multi-page table rendering with proper `Table.split()` support
+  - Dynamic summary box height with space reservation calculation
+  - HTML entity escaping for invoice descriptions (& < > characters)
+  - Improved spacing between invoice sections
+- **Professional PDF template** (PR #52):
+  - Professional template is now the default (was minimalist)
+  - Enhanced CEDENTE/PRESTATORE header block with better typography
+  - Structured IBAN/payment information block with method mapping
+  - Optional logo support via configuration (graceful fallback if missing)
+  - Italian terminology throughout (Scadenza, Modalità di pagamento)
+- **First-class CLI commands** (PR #52):
+  - `openfatture cliente` command group (list, show, create)
+  - `openfatture fattura` command group (list, show, create, add-line, generate-pdf, generate-xml, set-status)
+  - Rich formatting for terminal output
+- **FatturaPA XML improvements** (PR #53):
+  - Fixed XML namespace qualification to pass XSD validation
+  - Native support for `natura` field on line items (N1-N7 codes for zero-rated, exempt, out-of-scope VAT)
+  - `DatiCassaPrevidenziale` model for social security contributions (TC01-TC22 codes)
+  - Comprehensive XSD validation tests
+  - Documentation: `docs/SDI_TRANSPORT_READINESS.md` (implementation guide, no live SDI emit)
+
 ### Removed
 
 - **Experimental Lightning Network module** (`openfatture.lightning`, extra
@@ -17,12 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Project config hygiene: pytest local runs no longer force coverage (CI still
   does); `Settings.app_version` tracks package `__version__`; bumpversion
-  pin aligned to 2.1.0; technical debt docs updated for LangGraph default.
+  pin aligned; technical debt docs updated for LangGraph default.
 - **SSOT:** assistant backend ids live in `platform.assistant_backends`;
   package `__version__` is re-exported by subpackages; `AISettings` hydrates
   credentials from platform `AI_*` (init/docs) with `OPENFATTURE_AI_*`
   override precedence; coverage `fail_under=49` in pyproject.
 - Feature extras are now `ai`, `rag`, `ml` only (`all` no longer includes lightning).
+- Default PDF template changed from minimalist to professional.
 
 ## [2.1.0] - 2026-08-08
 
@@ -390,6 +418,7 @@ See [docs/releases/v2.0.0.md](docs/releases/v2.0.0.md) for migration details.
 - Encrypted digital signature handling
 - Input validation for all user data
 
+[2.2.0]: https://github.com/gianlucamazza/openfatture/compare/v2.1.0...v2.2.0
 [1.3.1]: https://github.com/gianlucamazza/openfatture/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/gianlucamazza/openfatture/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/gianlucamazza/openfatture/compare/v1.1.0...v1.2.0
