@@ -72,6 +72,7 @@ def mock_fattura():
     fattura.cliente = cliente
     fattura.righe = [riga1, riga2]
     fattura.pagamenti = [pagamento]
+    fattura.cassa_previdenziale = []  # No cassa by default
     fattura.imponibile = Decimal("1400.00")
     fattura.iva = Decimal("308.00")
     fattura.totale = Decimal("1708.00")
@@ -80,6 +81,10 @@ def mock_fattura():
     fattura.importo_bollo = Decimal("0")
     fattura.stato = Mock(value="bozza")
     fattura.note = "Pagamento entro 30 giorni dalla data fattura"
+
+    # Add natura = None to righe
+    for riga in fattura.righe:
+        riga.natura = None
 
     return fattura
 
@@ -548,3 +553,140 @@ class TestCodeRabbitP0Fixes:
         # Should generate without negative y-position errors
         assert pdf_path.exists()
         assert pdf_path.stat().st_size > 3000
+
+
+class TestForfettarioInvoiceFeatures:
+    """Test forfettario invoice features: natura, cassa previdenziale, bollo, CF, regime."""
+
+    def test_forfettario_invoice_with_all_elements(self, tmp_path):
+        """Test forfettario invoice with natura, cassa, bollo, CF and regime fiscale.
+
+        Regression test to ensure professional PDF template includes all required
+        elements for Italian forfettario invoices, matching real SoT templates.
+        """
+        from datetime import date
+        from decimal import Decimal
+        from unittest.mock import Mock
+
+        # Mock cliente
+        cliente = Mock()
+        cliente.denominazione = "Fondazione A.I.B. / CFAIB"
+        cliente.partita_iva = "03427190982"
+        cliente.codice_fiscale = "98167050172"
+        cliente.indirizzo = "Via Cefalonia"
+        cliente.numero_civico = "60"
+        cliente.cap = "25124"
+        cliente.comune = "Brescia"
+        cliente.provincia = "BS"
+
+        # Mock riga with natura
+        riga1 = Mock()
+        riga1.descrizione = "Progettazione e sviluppo software Nate"
+        riga1.quantita = Decimal("1.00")
+        riga1.prezzo_unitario = Decimal("2000.00")
+        riga1.unita_misura = "ore"
+        riga1.aliquota_iva = Decimal("0")
+        riga1.natura = "N2.2"  # Non soggette - altri casi
+        riga1.imponibile = Decimal("2000.00")
+        riga1.iva = Decimal("0.00")
+        riga1.totale = Decimal("2000.00")
+
+        # Mock bollo riga
+        riga2 = Mock()
+        riga2.descrizione = "Imposta di bollo"
+        riga2.quantita = Decimal("1")
+        riga2.prezzo_unitario = Decimal("2")
+        riga2.unita_misura = "pezzi"
+        riga2.aliquota_iva = Decimal("0")
+        riga2.natura = "N1"  # Esclusa ex art.15
+        riga2.imponibile = Decimal("2.00")
+        riga2.iva = Decimal("0.00")
+        riga2.totale = Decimal("2.00")
+
+        # Mock cassa previdenziale
+        cassa = Mock()
+        cassa.tipo_cassa = "TC22"  # INPS
+        cassa.al_cassa = Decimal("4.00")
+        cassa.importo_contributo_cassa = Decimal("80.00")
+        cassa.imponibile_cassa = Decimal("2000.00")
+        cassa.aliquota_iva = Decimal("0")
+        cassa.natura = "N2.2"
+
+        # Mock pagamento
+        pagamento = Mock()
+        pagamento.modalita = "MP05"  # Bonifico bancario
+        pagamento.data_scadenza = date(2026, 9, 7)
+        pagamento.iban = "IT94U0305801604100572272740"
+        pagamento.bic_swift = None
+        pagamento.importo = Decimal("2082.00")
+
+        # Mock fattura
+        fattura = Mock()
+        fattura.id = 1
+        fattura.numero = "1"
+        fattura.anno = 2026
+        fattura.data_emissione = date(2026, 8, 7)
+        fattura.tipo_documento = Mock(value="TD01")
+        fattura.cliente = cliente
+        fattura.righe = [riga1, riga2]
+        fattura.pagamenti = [pagamento]
+        fattura.cassa_previdenziale = [cassa]
+        fattura.imponibile = Decimal("2080.00")
+        fattura.iva = Decimal("0.00")
+        fattura.totale = Decimal("2082.00")
+        fattura.ritenuta_acconto = Decimal("0")
+        fattura.aliquota_ritenuta = Decimal("0")
+        fattura.importo_bollo = Decimal("2.00")
+        fattura.stato = Mock(value="bozza")
+        fattura.note = None
+
+        # Create config with CF and regime
+        config = PDFGeneratorConfig(
+            template="professional",
+            company_name="Gianluca Mazza",
+            company_vat="04192460980",
+            company_cf="MZZGLC89C14B157O",
+            company_address="VIA MILZIADE TIRANDI N 29 SC G",
+            company_city="25128 BRESCIA (BS)",
+            regime_fiscale="RF19",  # Regime forfettario
+        )
+        generator = PDFGenerator(config)
+
+        output_file = tmp_path / "test_forfettario_complete.pdf"
+        pdf_path = generator.generate(fattura, output_path=str(output_file))
+
+        assert pdf_path.exists()
+        assert pdf_path.stat().st_size > 3000
+
+        # Basic validation: PDF was generated without errors
+        # The presence of CF, regime, natura, cassa, and bollo is visually verifiable
+        # Detailed text extraction would require additional dependencies (pypdf, pdfplumber)
+        # This regression test ensures the code paths execute without errors
+
+    def test_invoice_without_forfettario_elements(self, mock_fattura, tmp_path):
+        """Test invoice without forfettario elements still works.
+
+        Ensures backward compatibility - invoices without natura, cassa, CF
+        should still render correctly.
+        """
+        # Add empty cassa_previdenziale attribute
+        mock_fattura.cassa_previdenziale = []
+
+        # Add natura = None to righe
+        for riga in mock_fattura.righe:
+            riga.natura = None
+
+        config = PDFGeneratorConfig(
+            template="professional",
+            company_name="Test Company",
+            company_vat="12345678901",
+            company_cf=None,  # No CF
+            regime_fiscale=None,  # No regime
+        )
+        generator = PDFGenerator(config)
+
+        output_file = tmp_path / "test_no_forfettario.pdf"
+        pdf_path = generator.generate(mock_fattura, output_path=str(output_file))
+
+        assert pdf_path.exists()
+        assert pdf_path.stat().st_size > 2000
