@@ -1,6 +1,6 @@
 # OpenFatture project status
 
-**Current version:** 2.2.0  
+**Current version:** 2.3.0  
 **Product posture:** CLI-first, with an interactive terminal mode for guided workflows  
 **Runtime:** Python 3.12+ and `uv`
 
@@ -35,17 +35,18 @@ fix the root cause instead.
 9. ~~D2: AI tools are adapters over application services~~
 10. ~~2.0.0 release notes and version bump~~
 
-## Current focus (post-2.1)
+## Current focus (post-2.2)
 
-**Shipped:** LangGraph default (`langgraph_tool_loop`); ChatAgent slim +
-`ASSISTANT_BACKEND=chat` rollback; Lightning removed (see
-`docs/history/lightning/`); config SSOT for version/backends/AI credentials.
+**Shipped in 2.3.0:** Real TD04 (nota di credito) support with FatturaPA
+`DatiFattureCollegate` linkage; `openfatture fattura generate-xml` now
+actually generates XML (no longer a stub); `openfatture fattura
+create-credit-note` command; Alembic migration for TD04 linkage columns.
 
 **Optional next (on demand, not blocking):** see [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)
 for IDs/triggers, and GitHub [milestone Post-2.1 backlog](https://github.com/gianlucamazza/openfatture/milestone/1)
 / [tracker #36](https://github.com/gianlucamazza/openfatture/issues/36). No release-blocking debt.
 
-See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [ARCHITECTURE_COMPLETE.md](ARCHITECTURE_COMPLETE.md), and [releases/v2.2.0.md](releases/v2.2.0.md).
+See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [ARCHITECTURE_COMPLETE.md](ARCHITECTURE_COMPLETE.md), and [releases/v2.3.0.md](releases/v2.3.0.md).
 ## Coverage floors (CI)
 
 | Suite | Floor | Source of truth |

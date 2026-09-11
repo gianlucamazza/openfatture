@@ -237,8 +237,11 @@ def generate_xml(
     output: str = typer.Option(None, "--output", "-o", help="Output XML file path"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show XML without writing file"),
 ) -> None:
-    """Generate FatturaPA XML for an invoice (dry-run mode)."""
+    """Generate FatturaPA XML for an invoice."""
+    from pathlib import Path
+
     from openfatture.billing.fatture.service import InvoiceService
+    from openfatture.exceptions import XMLValidationError
 
     settings = get_settings()
     session = get_session()
@@ -250,20 +253,35 @@ def generate_xml(
             console.print(f"[red]Error:[/red] Invoice {fattura_id} not found")
             raise typer.Exit(code=1)
 
-        # Get XML path (or generate)
-        xml_path = service.get_xml_path(fattura)
+        try:
+            xml_content, error = service.generate_xml(fattura, validate=False)
 
-        if xml_path.exists():
-            console.print(f"[green]✓[/green] XML already exists: [cyan]{xml_path}[/cyan]")
+            if error:
+                console.print(f"[red]Error:[/red] {error}")
+                raise typer.Exit(code=1)
 
             if dry_run:
+                console.print("[green]✓[/green] XML generated successfully (dry-run mode)")
                 console.print("\n[bold]XML Content:[/bold]")
-                console.print(xml_path.read_text())
-        else:
-            console.print("[yellow]XML generation not yet implemented in CLI[/yellow]")
-            console.print(
-                f"Use the assistant: [cyan]openfatture assistant 'genera XML per fattura {fattura_id}'[/cyan]"
-            )
+                console.print(xml_content)
+            else:
+                if output:
+                    xml_path = Path(output)
+                else:
+                    xml_path = service.get_xml_path(fattura)
+
+                xml_path.parent.mkdir(parents=True, exist_ok=True)
+                xml_path.write_text(xml_content, encoding="utf-8")
+
+                session.commit()
+
+                console.print("[green]✓[/green] XML generated successfully")
+                console.print(f"Output: [cyan]{xml_path}[/cyan]")
+                console.print(f"Size: {xml_path.stat().st_size:,} bytes")
+
+        except XMLValidationError as e:
+            console.print(f"[red]XML Validation Error:[/red] {e}")
+            raise typer.Exit(code=1) from None
 
     finally:
         session.close()
