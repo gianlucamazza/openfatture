@@ -302,8 +302,41 @@ def sample_fattura(db_session: Session, sample_cliente: Cliente) -> Fattura:
 
 @pytest.fixture
 def sample_fattura_with_righe(db_session: Session, sample_cliente: Cliente) -> Fattura:
-    """Create a sample invoice with multiple line items (alias for sample_fattura)."""
-    return sample_fattura(db_session, sample_cliente)
+    """Create a sample invoice with multiple line items."""
+    fattura = Fattura(
+        numero="1",
+        anno=2025,
+        data_emissione=date(2025, 1, 15),
+        cliente_id=sample_cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.BOZZA,
+        imponibile=Decimal("1000.00"),
+        iva=Decimal("220.00"),
+        totale=Decimal("1220.00"),
+    )
+
+    db_session.add(fattura)
+    db_session.flush()
+
+    # Add line item
+    riga = RigaFattura(
+        fattura_id=fattura.id,
+        numero_riga=1,
+        descrizione="Consulenza sviluppo software",
+        quantita=Decimal("10"),
+        prezzo_unitario=Decimal("100.00"),
+        unita_misura="ore",
+        aliquota_iva=Decimal("22.00"),
+        imponibile=Decimal("1000.00"),
+        iva=Decimal("220.00"),
+        totale=Decimal("1220.00"),
+    )
+
+    db_session.add(riga)
+    db_session.commit()
+    db_session.refresh(fattura)
+
+    return fattura
 
 
 @pytest.fixture
