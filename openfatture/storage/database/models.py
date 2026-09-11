@@ -312,6 +312,9 @@ class Fattura(IntPKMixin, Base):
         back_populates="fattura", cascade="all, delete-orphan"
     )
     preventivo: Mapped[Preventivo | None] = relationship(back_populates="fattura")
+    cassa_previdenziale: Mapped[list[DatiCassaPrevidenziale]] = relationship(
+        back_populates="fattura", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<Fattura(id={self.id}, numero='{self.numero}/{self.anno}', stato='{self.stato.value}')>"
@@ -344,6 +347,10 @@ class RigaFattura(IntPKMixin, Base):
     # IVA
     aliquota_iva: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=22.00)
 
+    # Natura IVA (for zero-rated, exempt, or out-of-scope transactions)
+    # Valid values: N1, N2.1, N2.2, N3.1-N3.6, N4, N5, N6.1-N6.9, N7
+    natura: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
     # Totali
     imponibile: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     iva: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
@@ -351,6 +358,50 @@ class RigaFattura(IntPKMixin, Base):
 
     def __repr__(self) -> str:
         return f"<RigaFattura(id={self.id}, fattura_id={self.fattura_id}, descrizione='{self.descrizione[:30]}...')>"
+
+
+class DatiCassaPrevidenziale(IntPKMixin, Base):
+    """Social security contribution data (DatiCassaPrevidenziale).
+
+    Used for professionals who need to apply social security contributions
+    (e.g., INPS for lawyers, accountants, etc.) on their invoices.
+    """
+
+    __tablename__ = "dati_cassa_previdenziale"
+
+    fattura_id: Mapped[int] = mapped_column(ForeignKey("fatture.id"), nullable=False)
+    fattura: Mapped[Fattura] = relationship(back_populates="cassa_previdenziale")
+
+    # Tipo cassa (TC01-TC22)
+    # TC01 = Cassa nazionale previdenza avvocati
+    # TC02 = Cassa previdenza dottori commercialisti
+    # TC03 = Cassa previdenza e assistenza geometri
+    # etc.
+    tipo_cassa: Mapped[str] = mapped_column(String(4), nullable=False)
+
+    # Aliquota contributo (e.g., 4.00 for 4%)
+    al_cassa: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+
+    # Importo contributo cassa
+    importo_contributo_cassa: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+
+    # Imponibile cassa (optional - base amount for contribution calculation)
+    imponibile_cassa: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+
+    # Aliquota IVA applicata al contributo
+    aliquota_iva: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+
+    # Ritenuta (optional - SI if withholding tax applies)
+    ritenuta: Mapped[str | None] = mapped_column(String(2))
+
+    # Natura (optional - tax nature code if VAT is zero or exempt)
+    natura: Mapped[str | None] = mapped_column(String(10))
+
+    # Riferimento amministrazione (optional)
+    riferimento_amministrazione: Mapped[str | None] = mapped_column(String(20))
+
+    def __repr__(self) -> str:
+        return f"<DatiCassaPrevidenziale(id={self.id}, fattura_id={self.fattura_id}, tipo_cassa='{self.tipo_cassa}')>"
 
 
 class RigaPreventivo(IntPKMixin, Base):
