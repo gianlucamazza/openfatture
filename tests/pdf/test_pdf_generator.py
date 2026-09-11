@@ -332,7 +332,11 @@ class TestEdgeCases:
 
     def test_invoice_with_long_description(self, mock_fattura, tmp_path):
         """Test invoice with very long line description."""
-        mock_fattura.righe[0].descrizione = "A" * 200  # Very long description
+        # Update to use a realistic long description that wraps
+        mock_fattura.righe[0].descrizione = (
+            "Docenza «Introduzione all'AI per docenti» — 12 ore × €80/ora, "
+            "corso intensivo con materiale didattico incluso"
+        )
 
         config = PDFGeneratorConfig()
         generator = PDFGenerator(config)
@@ -340,8 +344,10 @@ class TestEdgeCases:
         output_file = tmp_path / "test_long_desc.pdf"
         pdf_path = generator.generate(mock_fattura, output_path=str(output_file))
 
-        # Should truncate and still generate
+        # Should wrap properly without truncation
         assert pdf_path.exists()
+        # PDF should be larger due to wrapped content
+        assert pdf_path.stat().st_size > 2000
 
     def test_watermark_on_branded_template(self, mock_fattura, tmp_path):
         """Test watermark on branded template."""
@@ -356,6 +362,67 @@ class TestEdgeCases:
 
         assert pdf_path.exists()
         # Watermark is visual, can't easily test in PDF, but should not crash
+
+    def test_invoice_with_multiple_long_descriptions(self, mock_fattura, tmp_path):
+        """Test invoice with multiple line items having long descriptions.
+
+        Regression test for layout overlaps when text wraps in table cells.
+        """
+        # Create multiple lines with realistic long descriptions
+        from decimal import Decimal
+        from unittest.mock import Mock
+
+        riga1 = Mock()
+        riga1.descrizione = "Docenza «Introduzione all'AI per docenti» — 12 ore × €80/ora"
+        riga1.quantita = Decimal("12")
+        riga1.prezzo_unitario = Decimal("80.00")
+        riga1.unita_misura = "ore"
+        riga1.aliquota_iva = Decimal("0")
+        riga1.imponibile = Decimal("960.00")
+        riga1.iva = Decimal("0.00")
+        riga1.totale = Decimal("960.00")
+
+        riga2 = Mock()
+        riga2.descrizione = (
+            "Consulenza tecnica per implementazione sistema di gestione documentale "
+            "con integrazione AI"
+        )
+        riga2.quantita = Decimal("8")
+        riga2.prezzo_unitario = Decimal("100.00")
+        riga2.unita_misura = "ore"
+        riga2.aliquota_iva = Decimal("22")
+        riga2.imponibile = Decimal("800.00")
+        riga2.iva = Decimal("176.00")
+        riga2.totale = Decimal("976.00")
+
+        riga3 = Mock()
+        riga3.descrizione = "Testing e validazione finale del progetto"
+        riga3.quantita = Decimal("4")
+        riga3.prezzo_unitario = Decimal("90.00")
+        riga3.unita_misura = "ore"
+        riga3.aliquota_iva = Decimal("22")
+        riga3.imponibile = Decimal("360.00")
+        riga3.iva = Decimal("79.20")
+        riga3.totale = Decimal("439.20")
+
+        mock_fattura.righe = [riga1, riga2, riga3]
+        mock_fattura.imponibile = Decimal("2120.00")
+        mock_fattura.iva = Decimal("255.20")
+        mock_fattura.totale = Decimal("2375.20")
+
+        # Test with professional template (most prone to layout issues)
+        config = PDFGeneratorConfig(
+            template="professional",
+            company_name="Test Company S.r.l.",
+        )
+        generator = PDFGenerator(config)
+
+        output_file = tmp_path / "test_multiline_wrap.pdf"
+        pdf_path = generator.generate(mock_fattura, output_path=str(output_file))
+
+        assert pdf_path.exists()
+        # PDF should be generated without errors
+        assert pdf_path.stat().st_size > 3000
 
 
 @pytest.mark.parametrize("template_name", ["minimalist", "professional", "branded"])

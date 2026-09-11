@@ -135,7 +135,8 @@ class BaseTemplate(ABC):
             canvas.drawString(2 * cm, y, line)
             y -= 0.4 * cm
 
-        return y - 0.5 * cm
+        # Add extra spacing after client info before table
+        return y - 0.8 * cm
 
     def draw_summary(
         self, canvas: Canvas, fattura_data: dict[str, Any], y_position: float
@@ -152,18 +153,34 @@ class BaseTemplate(ABC):
         """
         primary_color = HexColor(self.get_primary_color())
 
+        # Add spacing before summary to prevent overlap with table
+        y_position -= 1.0 * cm
+
         # Summary box (right-aligned)
         box_width = 7 * cm
         box_x = 19 * cm - box_width
 
+        # Calculate box height based on content
+        line_height = 0.6 * cm
+        num_lines = 3  # Imponibile, IVA, Total
+
+        # Add lines for optional fields
+        if fattura_data.get("ritenuta_acconto", Decimal(0)) > 0:
+            num_lines += 1
+        if fattura_data.get("importo_bollo", Decimal(0)) > 0:
+            num_lines += 1
+
+        box_height = (num_lines * line_height) + 1.4 * cm
+        box_y = y_position - box_height
+
         # Background
         canvas.setFillColor(HexColor("#F5F5F5"))
-        canvas.rect(box_x, y_position - 3 * cm, box_width, 3 * cm, fill=True, stroke=False)
+        canvas.rect(box_x, box_y, box_width, box_height, fill=True, stroke=False)
 
         # Border
         canvas.setStrokeColor(primary_color)
         canvas.setLineWidth(1)
-        canvas.rect(box_x, y_position - 3 * cm, box_width, 3 * cm, fill=False, stroke=True)
+        canvas.rect(box_x, box_y, box_width, box_height, fill=False, stroke=True)
 
         # Summary items
         canvas.setFont("Helvetica", 10)
@@ -176,12 +193,12 @@ class BaseTemplate(ABC):
         canvas.drawRightString(
             box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['imponibile']:.2f}"
         )
-        y -= 0.6 * cm
+        y -= line_height
 
         # IVA
         canvas.drawString(box_x + 0.3 * cm, y, "IVA:")
         canvas.drawRightString(box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['iva']:.2f}")
-        y -= 0.6 * cm
+        y -= line_height
 
         # Ritenuta (if present)
         if fattura_data.get("ritenuta_acconto", Decimal(0)) > 0:
@@ -189,7 +206,7 @@ class BaseTemplate(ABC):
             canvas.drawRightString(
                 box_x + box_width - 0.3 * cm, y, f"- € {fattura_data['ritenuta_acconto']:.2f}"
             )
-            y -= 0.6 * cm
+            y -= line_height
 
         # Bollo (if present)
         if fattura_data.get("importo_bollo", Decimal(0)) > 0:
@@ -197,7 +214,7 @@ class BaseTemplate(ABC):
             canvas.drawRightString(
                 box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['importo_bollo']:.2f}"
             )
-            y -= 0.6 * cm
+            y -= line_height
 
         # Total (bold)
         canvas.setFont("Helvetica-Bold", 12)
@@ -206,7 +223,7 @@ class BaseTemplate(ABC):
         canvas.drawString(box_x + 0.3 * cm, y, "TOTAL:")
         canvas.drawRightString(box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['totale']:.2f}")
 
-        return y_position - 3.5 * cm
+        return box_y - 0.5 * cm
 
     def draw_payment_info(
         self, canvas: Canvas, pagamento_data: dict[str, Any] | None, y_position: float
@@ -223,6 +240,9 @@ class BaseTemplate(ABC):
         """
         if not pagamento_data:
             return y_position
+
+        # Add spacing before payment info
+        y_position -= 0.8 * cm
 
         canvas.setFont("Helvetica-Bold", 11)
         canvas.setFillColor(HexColor("#333333"))
@@ -266,6 +286,9 @@ class BaseTemplate(ABC):
         """
         if not note:
             return y_position
+
+        # Add spacing before notes
+        y_position -= 0.8 * cm
 
         canvas.setFont("Helvetica-Bold", 10)
         canvas.setFillColor(HexColor("#333333"))
