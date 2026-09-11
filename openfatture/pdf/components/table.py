@@ -58,20 +58,6 @@ def draw_invoice_table(
         spaceBefore=0,
     )
 
-    # Style for natura label (smaller, gray)
-    natura_style = ParagraphStyle(
-        "Natura",
-        fontName="Helvetica",
-        fontSize=7,
-        leading=9,
-        alignment=TA_LEFT,
-        leftIndent=0,
-        rightIndent=0,
-        spaceAfter=0,
-        spaceBefore=0,
-        textColor=HexColor("#666666"),
-    )
-
     # Table data - using list[Any] to accommodate both strings and Paragraph objects
     data: list[list[Any]] = [headers]
 
