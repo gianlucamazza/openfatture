@@ -303,35 +303,25 @@ class PDFGenerator:
         # Client info
         y = self.template.draw_client_info(canvas, fattura_data["cliente"], y)
 
-        # Invoice lines table
-        y, needs_pagination = draw_invoice_table(
-            canvas,
-            y,
-            fattura_data["righe"],
-            primary_color=self.template.get_primary_color(),
-        )
+        # Calculate space needed for summary, payment, notes (post-table content)
+        # Reserve space to prevent negative box_y in summary
+        summary_height = self._calculate_summary_height(fattura_data)
+        payment_height = self._calculate_payment_height(fattura_data["pagamento"])
+        notes_height = self._calculate_notes_height(fattura_data.get("note"))
+        footer_height = 2 * cm  # Footer space at bottom
 
-        # Draw footer for first page
-        draw_footer(
-            canvas,
-            page_number=1,
-            total_pages=2 if needs_pagination else 1,
-            show_digital_signature_note=True,
-            footer_text=self.config.footer_text,
-        )
+        # Total space needed after table
+        post_table_space = (
+            summary_height + payment_height + notes_height + footer_height + 1 * cm
+        )  # +1cm safety
 
-        # Handle pagination if table doesn't fit on current page
-        if needs_pagination:
-            logger.info(
-                "invoice_table_pagination",
-                fattura_id=fattura_data["id"],
-                message="Starting new page for invoice table",
-            )
+        # Available height for table (ensure summary won't get negative y)
+        available_for_table = y - post_table_space
 
-            # Start new page
+        # If not enough space for table + summary, start table on new page
+        if available_for_table < 5 * cm:  # Minimum space for at least header + 1 row
+            # Start new page for table
             canvas.showPage()
-
-            # Reset Y position for new page
             page_width, page_height = A4
             y = page_height - 2 * cm
 
@@ -347,36 +337,71 @@ class PDFGenerator:
                 primary_color=self.template.get_primary_color(),
             )
 
-            # Redraw invoice info on new page
-            y = self.template.draw_invoice_info(canvas, fattura_data, y)
+            # Recalculate available space on fresh page
+            available_for_table = y - post_table_space
 
-            # Redraw client info on new page
-            y = self.template.draw_client_info(canvas, fattura_data["cliente"], y)
+        # Draw invoice table with available space
+        y, remaining_tables = draw_invoice_table(
+            canvas,
+            y,
+            fattura_data["righe"],
+            primary_color=self.template.get_primary_color(),
+            available_height=available_for_table,
+        )
 
-            # Draw table on new page (should fit now)
-            y, still_needs_pagination = draw_invoice_table(
-                canvas,
-                y,
-                fattura_data["righe"],
-                primary_color=self.template.get_primary_color(),
-            )
+        # Handle remaining table portions on new pages
+        page_num = 1
+        while remaining_tables:
+            page_num += 1
+            canvas.showPage()
 
-            # If still doesn't fit, warn (very large tables)
-            if still_needs_pagination:
-                logger.warning(
-                    "invoice_table_still_too_large",
-                    fattura_id=fattura_data["id"],
-                    message="Table still too large for single page after pagination",
-                )
-
-            # Draw footer for second page
+            # Draw footer for previous page
             draw_footer(
                 canvas,
-                page_number=2,
-                total_pages=2,
+                page_number=page_num - 1,
+                total_pages=page_num + len(remaining_tables),  # Estimate
                 show_digital_signature_note=True,
                 footer_text=self.config.footer_text,
             )
+
+            # Reset Y for new page
+            page_width, page_height = A4
+            y = page_height - 2 * cm
+
+            # Draw continued table
+            next_table = remaining_tables[0]
+            available_height = y - post_table_space
+            table_width, table_height = next_table.wrap(17 * cm, available_height)
+
+            if table_height <= available_height:
+                # Table fits
+                next_table.drawOn(canvas, 2 * cm, y - table_height)
+                y = y - table_height - 0.5 * cm
+                remaining_tables = remaining_tables[1:]
+            else:
+                # Still doesn't fit, split further
+                split_tables = next_table.split(17 * cm, available_height)
+                if split_tables:
+                    first = split_tables[0]
+                    first_width, first_height = first.wrap(17 * cm, available_height)
+                    first.drawOn(canvas, 2 * cm, y - first_height)
+                    y = y - first_height - 0.5 * cm
+                    # Replace with remaining parts
+                    remaining_tables = split_tables[1:] + remaining_tables[1:]  # type: ignore[operator]
+                else:
+                    # Can't split further, draw what we have
+                    next_table.drawOn(canvas, 2 * cm, y - table_height)
+                    y = y - table_height - 0.5 * cm
+                    remaining_tables = remaining_tables[1:]
+
+        # Draw footer for last table page
+        draw_footer(
+            canvas,
+            page_number=page_num,
+            total_pages=page_num,
+            show_digital_signature_note=True,
+            footer_text=self.config.footer_text,
+        )
 
         # Summary (totals)
         y = self.template.draw_summary(canvas, fattura_data, y)
@@ -390,6 +415,96 @@ class PDFGenerator:
 
         # Notes
         y = self.template.draw_notes(canvas, fattura_data.get("note"), y)
+
+    def _calculate_summary_height(self, fattura_data: dict[str, Any]) -> float:
+        """Calculate height needed for summary box.
+
+        Args:
+            fattura_data: Invoice data
+
+        Returns:
+            Height in cm
+        """
+        from decimal import Decimal
+
+        line_height = 0.6 * cm
+        num_lines = 3  # Imponibile, IVA, Total
+
+        # Add lines for optional fields
+        if fattura_data.get("ritenuta_acconto", Decimal(0)) > 0:
+            num_lines += 1
+        if fattura_data.get("importo_bollo", Decimal(0)) > 0:
+            num_lines += 1
+
+        box_height = (num_lines * line_height) + 1.4 * cm
+        # Add spacing before summary
+        return box_height + 1.0 * cm + 0.5 * cm  # box + spacing before + spacing after
+
+    def _calculate_payment_height(self, pagamento_data: dict[str, Any] | None) -> float:
+        """Calculate height needed for payment info section.
+
+        Args:
+            pagamento_data: Payment data
+
+        Returns:
+            Height in cm
+        """
+        if not pagamento_data:
+            return 0
+
+        # Title + spacing
+        height = 0.8 * cm + 0.6 * cm
+
+        # Method line
+        height += 0.5 * cm
+
+        # Optional lines
+        if pagamento_data.get("data_scadenza"):
+            height += 0.5 * cm
+        if pagamento_data.get("iban"):
+            height += 0.5 * cm
+        if pagamento_data.get("bic_swift"):
+            height += 0.5 * cm
+
+        # Spacing after
+        height += 0.5 * cm
+
+        return height
+
+    def _calculate_notes_height(self, note: str | None) -> float:
+        """Calculate height needed for notes section.
+
+        Args:
+            note: Notes text
+
+        Returns:
+            Height in cm
+        """
+        if not note:
+            return 0
+
+        # Title + spacing
+        height = 0.8 * cm + 0.5 * cm
+
+        # Estimate lines (max 80 chars per line)
+        words = note.split()
+        lines_count = 1
+        current_line_len = 0
+
+        for word in words:
+            if current_line_len + len(word) + 1 <= 80:
+                current_line_len += len(word) + 1
+            else:
+                lines_count += 1
+                current_line_len = len(word) + 1
+
+        # Line height
+        height += lines_count * 0.4 * cm
+
+        # Spacing after
+        height += 0.3 * cm
+
+        return height
 
     def _draw_payment_qr(self, canvas: Canvas, fattura_data: dict[str, Any]) -> None:
         """Draw payment QR code.

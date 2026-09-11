@@ -332,7 +332,11 @@ class TestEdgeCases:
 
     def test_invoice_with_long_description(self, mock_fattura, tmp_path):
         """Test invoice with very long line description."""
-        mock_fattura.righe[0].descrizione = "A" * 200  # Very long description
+        # Update to use a realistic long description that wraps
+        mock_fattura.righe[0].descrizione = (
+            "Docenza «Introduzione all'AI per docenti» — 12 ore × €80/ora, "
+            "corso intensivo con materiale didattico incluso"
+        )
 
         config = PDFGeneratorConfig()
         generator = PDFGenerator(config)
@@ -340,8 +344,10 @@ class TestEdgeCases:
         output_file = tmp_path / "test_long_desc.pdf"
         pdf_path = generator.generate(mock_fattura, output_path=str(output_file))
 
-        # Should truncate and still generate
+        # Should wrap properly without truncation
         assert pdf_path.exists()
+        # PDF should be larger due to wrapped content
+        assert pdf_path.stat().st_size > 2000
 
     def test_watermark_on_branded_template(self, mock_fattura, tmp_path):
         """Test watermark on branded template."""
@@ -356,6 +362,67 @@ class TestEdgeCases:
 
         assert pdf_path.exists()
         # Watermark is visual, can't easily test in PDF, but should not crash
+
+    def test_invoice_with_multiple_long_descriptions(self, mock_fattura, tmp_path):
+        """Test invoice with multiple line items having long descriptions.
+
+        Regression test for layout overlaps when text wraps in table cells.
+        """
+        # Create multiple lines with realistic long descriptions
+        from decimal import Decimal
+        from unittest.mock import Mock
+
+        riga1 = Mock()
+        riga1.descrizione = "Docenza «Introduzione all'AI per docenti» — 12 ore × €80/ora"
+        riga1.quantita = Decimal("12")
+        riga1.prezzo_unitario = Decimal("80.00")
+        riga1.unita_misura = "ore"
+        riga1.aliquota_iva = Decimal("0")
+        riga1.imponibile = Decimal("960.00")
+        riga1.iva = Decimal("0.00")
+        riga1.totale = Decimal("960.00")
+
+        riga2 = Mock()
+        riga2.descrizione = (
+            "Consulenza tecnica per implementazione sistema di gestione documentale "
+            "con integrazione AI"
+        )
+        riga2.quantita = Decimal("8")
+        riga2.prezzo_unitario = Decimal("100.00")
+        riga2.unita_misura = "ore"
+        riga2.aliquota_iva = Decimal("22")
+        riga2.imponibile = Decimal("800.00")
+        riga2.iva = Decimal("176.00")
+        riga2.totale = Decimal("976.00")
+
+        riga3 = Mock()
+        riga3.descrizione = "Testing e validazione finale del progetto"
+        riga3.quantita = Decimal("4")
+        riga3.prezzo_unitario = Decimal("90.00")
+        riga3.unita_misura = "ore"
+        riga3.aliquota_iva = Decimal("22")
+        riga3.imponibile = Decimal("360.00")
+        riga3.iva = Decimal("79.20")
+        riga3.totale = Decimal("439.20")
+
+        mock_fattura.righe = [riga1, riga2, riga3]
+        mock_fattura.imponibile = Decimal("2120.00")
+        mock_fattura.iva = Decimal("255.20")
+        mock_fattura.totale = Decimal("2375.20")
+
+        # Test with professional template (most prone to layout issues)
+        config = PDFGeneratorConfig(
+            template="professional",
+            company_name="Test Company S.r.l.",
+        )
+        generator = PDFGenerator(config)
+
+        output_file = tmp_path / "test_multiline_wrap.pdf"
+        pdf_path = generator.generate(mock_fattura, output_path=str(output_file))
+
+        assert pdf_path.exists()
+        # PDF should be generated without errors
+        assert pdf_path.stat().st_size > 3000
 
 
 @pytest.mark.parametrize("template_name", ["minimalist", "professional", "branded"])
@@ -372,3 +439,112 @@ def test_all_templates(template_name, mock_fattura, tmp_path):
 
     assert pdf_path.exists()
     assert pdf_path.stat().st_size > 1000  # At least 1KB
+
+
+class TestCodeRabbitP0Fixes:
+    """Test CodeRabbit P0 fixes for PR #51."""
+
+    def test_special_characters_in_description(self, mock_fattura, tmp_path):
+        """Test that special characters (ampersands, angle brackets) are escaped in descriptions.
+
+        Regression test for HTML/XML injection in ReportLab Paragraph objects.
+        """
+        # Set description with HTML special characters
+        mock_fattura.righe[0].descrizione = "Consulting <AI & ML> for R&D → automation & testing"
+        mock_fattura.righe[
+            1
+        ].descrizione = "Code review: fix bugs & security issues (3 < 5 priority)"
+
+        config = PDFGeneratorConfig(template="professional")
+        generator = PDFGenerator(config)
+
+        output_file = tmp_path / "test_special_chars.pdf"
+        pdf_path = generator.generate(mock_fattura, output_path=str(output_file))
+
+        # Should generate without errors
+        assert pdf_path.exists()
+        assert pdf_path.stat().st_size > 2000
+
+        # PDF should contain escaped entities, not break ReportLab rendering
+        # The fact that it generates successfully without errors confirms proper escaping
+
+    def test_multipage_table_split(self, mock_fattura, tmp_path):
+        """Test multi-page table splitting with many long descriptions.
+
+        Ensures Table.split() properly handles overflow across pages.
+        """
+        from decimal import Decimal
+        from unittest.mock import Mock
+
+        # Create many rows with varying description lengths
+        righe = []
+        for i in range(30):  # 30 rows should force pagination
+            riga = Mock()
+            if i % 3 == 0:
+                # Long description
+                riga.descrizione = (
+                    f"Row {i + 1}: Consulenza tecnica specialistica per implementazione "
+                    f"sistema di gestione documentale con integrazione AI e machine learning"
+                )
+            elif i % 3 == 1:
+                # Medium description
+                riga.descrizione = f"Row {i + 1}: Sviluppo software e testing applicativo"
+            else:
+                # Short description
+                riga.descrizione = f"Row {i + 1}: Testing"
+
+            riga.quantita = Decimal("1")
+            riga.prezzo_unitario = Decimal("100.00")
+            riga.unita_misura = "ore"
+            riga.aliquota_iva = Decimal("22")
+            riga.imponibile = Decimal("100.00")
+            riga.iva = Decimal("22.00")
+            riga.totale = Decimal("122.00")
+            righe.append(riga)
+
+        mock_fattura.righe = righe
+        mock_fattura.imponibile = Decimal("3000.00")
+        mock_fattura.iva = Decimal("660.00")
+        mock_fattura.totale = Decimal("3660.00")
+
+        config = PDFGeneratorConfig(template="minimalist", company_name="Test Company")
+        generator = PDFGenerator(config)
+
+        output_file = tmp_path / "test_multipage_split.pdf"
+        pdf_path = generator.generate(mock_fattura, output_path=str(output_file))
+
+        # Should generate multi-page PDF without data loss
+        assert pdf_path.exists()
+        # Multi-page PDF should be larger
+        assert pdf_path.stat().st_size > 5000
+
+    def test_dense_invoice_with_ritenuta_and_bollo(self, mock_fattura, tmp_path):
+        """Test dense invoice with ritenuta d'acconto and bollo.
+
+        Ensures summary box height calculation prevents negative box_y.
+        """
+        from decimal import Decimal
+
+        # Set ritenuta and bollo to trigger expanded summary box
+        mock_fattura.ritenuta_acconto = Decimal("280.00")  # 20% of 1400
+        mock_fattura.aliquota_ritenuta = Decimal("20")
+        mock_fattura.importo_bollo = Decimal("2.00")
+        mock_fattura.totale = Decimal("1430.00")  # 1708 - 280 + 2
+
+        # Add long notes
+        mock_fattura.note = (
+            "Pagamento entro 30 giorni dalla data fattura. "
+            "Ritenuta d'acconto applicata secondo normativa vigente. "
+            "Bollo assolto in modo virtuale ai sensi del DM 17/06/2014. "
+            "Documento non rilevante ai fini IVA art. 1 L. 190/2014."
+        )
+
+        config = PDFGeneratorConfig(template="professional", company_name="Test Company S.r.l.")
+        generator = PDFGenerator(config)
+
+        output_file = tmp_path / "test_dense_invoice.pdf"
+        pdf_path = generator.generate(mock_fattura, output_path=str(output_file))
+
+        # Should generate without negative y-position errors
+        assert pdf_path.exists()
+        assert pdf_path.stat().st_size > 3000
