@@ -17,28 +17,28 @@ from openfatture.pdf import PDFGenerator, PDFGeneratorConfig
 
 def count_pdf_pages(pdf_path: Path) -> int:
     """Count the number of pages in a PDF file.
-    
+
     Uses pypdf which is a standard library for PDF manipulation.
     """
     try:
         from pypdf import PdfReader
-        
-        with open(pdf_path, 'rb') as f:
+
+        with open(pdf_path, "rb") as f:
             pdf = PdfReader(f)
             return len(pdf.pages)
     except ImportError:
         # Fallback: count showPage calls in PDF source
         # This is a simple heuristic but works for basic PDFs
-        with open(pdf_path, 'rb') as f:
+        with open(pdf_path, "rb") as f:
             content = f.read()
             # Count number of page objects in PDF
-            return content.count(b'/Type /Page')
+            return content.count(b"/Type /Page")
 
 
 @pytest.fixture
 def mock_single_row_invoice_with_payment():
     """Create a minimal mock invoice: 1 row + payment info (IBAN, BIC, scadenza).
-    
+
     Uses realistic long company/client names that previously triggered the bug
     where available_for_table dropped below the 5cm threshold.
     """
@@ -98,11 +98,11 @@ def test_single_row_invoice_with_payment_fits_on_one_page(
     mock_single_row_invoice_with_payment, tmp_path
 ):
     """Test that a 1-row invoice with IBAN payment block stays on 1 page.
-    
+
     Regression test for premature page break bug where the PDF generator
     was too conservative about reserved space, causing simple invoices
     to unnecessarily span 2 pages.
-    
+
     A typical freelance invoice (1 line item + totals + IBAN/BIC/due date)
     MUST fit on a single A4 page, even with long company names and addresses.
     """
@@ -122,7 +122,7 @@ def test_single_row_invoice_with_payment_fits_on_one_page(
     )
 
     assert pdf_path.exists()
-    
+
     # The critical assertion: must be exactly 1 page
     page_count = count_pdf_pages(pdf_path)
     assert page_count == 1, (
@@ -138,7 +138,7 @@ def test_single_row_invoice_with_short_notes_fits_on_one_page(
     """Test that a 1-row invoice with payment + short notes stays on 1 page."""
     # Add a short note (typical case)
     mock_single_row_invoice_with_payment.note = "Pagamento entro 30 giorni dalla data fattura."
-    
+
     config = PDFGeneratorConfig(
         template="professional",
         company_name="Test Freelancer SRL",
@@ -152,7 +152,7 @@ def test_single_row_invoice_with_short_notes_fits_on_one_page(
     )
 
     assert pdf_path.exists()
-    
+
     page_count = count_pdf_pages(pdf_path)
     assert page_count == 1, (
         f"Single-row invoice with payment and short notes should fit on 1 page, "
