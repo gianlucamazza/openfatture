@@ -87,7 +87,7 @@ jobs:
           uv run --extra dev pytest --cov=openfatture --cov-report=xml --cov-report=term-missing --cov-fail-under=49
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           file: ./coverage.xml
           flags: unittests
