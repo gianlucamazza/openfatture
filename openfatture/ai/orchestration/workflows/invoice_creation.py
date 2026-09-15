@@ -579,7 +579,7 @@ class InvoiceCreationWorkflow:
 
                 # Update or create payment schedule
                 due_date = state.payment_due_date
-                
+
                 # Calculate giorni_scadenza based on invoice date
                 if due_date == fattura.data_emissione:
                     giorni_scadenza = 0  # Immediate payment
@@ -587,7 +587,7 @@ class InvoiceCreationWorkflow:
                     giorni_scadenza = (due_date - fattura.data_emissione).days
                     if giorni_scadenza < 0:
                         giorni_scadenza = 30  # Default for edge case
-                
+
                 if fattura.pagamenti:
                     pagamento = fattura.pagamenti[0]
                     pagamento.importo = totale

@@ -344,7 +344,7 @@ class TestPaymentTermsImmediate:
 
         # Create immediate payment directly (simulates create_manual_payment logic)
         due_date = date(2026, 9, 14)  # Same as invoice date
-        
+
         # Calculate giorni_scadenza as create_manual_payment does
         if due_date == fattura.data_emissione:
             giorni_scadenza = 0
@@ -352,7 +352,7 @@ class TestPaymentTermsImmediate:
             giorni_scadenza = (due_date - fattura.data_emissione).days
             if giorni_scadenza < 0:
                 giorni_scadenza = 30
-        
+
         pagamento = Pagamento(
             fattura_id=fattura.id,
             importo=Decimal("1000.00"),
@@ -397,17 +397,17 @@ class TestPaymentTermsImmediate:
         # Simulate update_payment logic: change data_scadenza to immediate
         new_data_scadenza = date(2026, 9, 14)  # Same as invoice date
         pagamento.data_scadenza = new_data_scadenza
-        
+
         # Recalculate giorni_scadenza (as update_payment does)
         if new_data_scadenza == fattura.data_emissione:
             pagamento.giorni_scadenza = 0
         else:
             giorni = (new_data_scadenza - fattura.data_emissione).days
             pagamento.giorni_scadenza = giorni if giorni >= 0 else 30
-        
+
         db_session.commit()
         db_session.refresh(pagamento)
-        
+
         assert pagamento.giorni_scadenza == 0  # Should be resynced to 0
 
     def test_invoice_creation_workflow_sets_giorni(self, test_settings, db_session, sample_cliente):
@@ -432,7 +432,7 @@ class TestPaymentTermsImmediate:
         # Simulate AI workflow creating payment (immediate)
         # This logic mirrors invoice_creation.py lines 580-594
         due_date = date(2026, 9, 14)  # Same as invoice date
-        
+
         # Calculate giorni_scadenza (as the workflow should)
         if due_date == fattura.data_emissione:
             giorni_scadenza = 0
@@ -449,7 +449,7 @@ class TestPaymentTermsImmediate:
             stato="DA_PAGARE",
         )
         db_session.add(pagamento)
-        
+
         # Add line item for XML generation
         riga = RigaFattura(
             fattura_id=fattura.id,

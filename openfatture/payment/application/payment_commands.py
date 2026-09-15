@@ -321,7 +321,7 @@ def update_payment(
                 new_data_scadenza = datetime.fromisoformat(data_scadenza).date()
                 pagamento.data_scadenza = new_data_scadenza
                 changes.append("data_scadenza")
-                
+
                 # Recalculate giorni_scadenza when due date changes
                 fattura = pagamento.fattura
                 if fattura:
