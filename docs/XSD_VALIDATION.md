@@ -54,7 +54,7 @@ See `openfatture/sdi/schemas/README.md` for complete schema documentation.
 The official FatturaPA XSD imports the W3C xmldsig schema via HTTP:
 
 ```xml
-<xs:import namespace="http://www.w3.org/2000/09/xmldsig#" 
+<xs:import namespace="http://www.w3.org/2000/09/xmldsig#"
            schemaLocation="http://www.w3.org/TR/2002/REC-xmldsig-core-20020212/xmldsig-core-schema.xsd" />
 ```
 
@@ -73,7 +73,7 @@ OpenFatture bundles both schemas and uses a custom `LocalSchemaResolver` that:
 The bundled FatturaPA schema has been modified to use a local schemaLocation:
 
 ```xml
-<xs:import namespace="http://www.w3.org/2000/09/xmldsig#" 
+<xs:import namespace="http://www.w3.org/2000/09/xmldsig#"
            schemaLocation="xmldsig-core-schema.xsd" />
 ```
 
@@ -86,24 +86,24 @@ class FatturaPAValidator:
     def __init__(self, xsd_path: Path | None = None):
         """
         Initialize validator.
-        
+
         Args:
-            xsd_path: Optional custom XSD path. If None (default), 
+            xsd_path: Optional custom XSD path. If None (default),
                      uses bundled schemas.
         """
-    
+
     def validate(self, xml_content: str) -> tuple[bool, str | None]:
         """
         Validate XML string.
-        
+
         Returns:
             (is_valid, error_message) tuple
         """
-    
+
     def validate_file(self, xml_path: Path) -> tuple[bool, str | None]:
         """
         Validate XML file.
-        
+
         Returns:
             (is_valid, error_message) tuple
         """

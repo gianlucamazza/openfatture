@@ -2,6 +2,7 @@
 
 from importlib.resources import files
 from pathlib import Path
+from typing import Any
 
 from lxml import etree
 
@@ -24,7 +25,7 @@ class LocalSchemaResolver(etree.Resolver):
         super().__init__()
         self.schema_dir = schema_dir
 
-    def resolve(self, url: str, id: str, context: etree._ResolverContext) -> etree.Resolver:
+    def resolve(self, url: str, id: str, context: Any) -> Any:
         """
         Resolve schema URL to local file.
 
@@ -34,7 +35,7 @@ class LocalSchemaResolver(etree.Resolver):
             context: Resolution context
 
         Returns:
-            Resolver for the local file
+            Resolver for the local file or None
         """
         # Extract filename from URL if it's a full URL
         if "/" in url:
