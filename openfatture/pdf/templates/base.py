@@ -138,6 +138,165 @@ class BaseTemplate(ABC):
         # Add extra spacing after client info before table
         return y - 0.8 * cm
 
+    def draw_dati_riepilogo(
+        self, canvas: Canvas, fattura_data: dict[str, Any], y_position: float
+    ) -> float:
+        """Draw Dati di riepilogo table (tax rate / natura breakdown).
+
+        Args:
+            canvas: ReportLab canvas
+            fattura_data: Invoice data
+            y_position: Current Y position
+
+        Returns:
+            New Y position after drawing
+        """
+        primary_color = HexColor(self.get_primary_color())
+
+        # Aggregate lines by (aliquota_iva, natura)
+        from collections import defaultdict
+
+        riepilogo: dict[tuple[Decimal, str | None], dict[str, Decimal]] = defaultdict(
+            lambda: {"imponibile": Decimal(0), "iva": Decimal(0)}
+        )
+
+        for riga in fattura_data.get("righe", []):
+            key = (riga["aliquota_iva"], riga.get("natura"))
+            riepilogo[key]["imponibile"] += riga["imponibile"]
+            riepilogo[key]["iva"] += riga["iva"]
+
+        # Include cassa previdenziale if present
+        for cassa in fattura_data.get("cassa_previdenziale", []):
+            key = (cassa["aliquota_iva"], cassa.get("natura"))
+            # Cassa is already included in totals via imponibile_cassa
+            riepilogo[key]["imponibile"] += cassa["imponibile_cassa"]
+            riepilogo[key]["iva"] += cassa["imponibile_cassa"] * cassa["aliquota_iva"] / 100
+
+        if not riepilogo:
+            return y_position
+
+        # Add spacing before riepilogo
+        y_position -= 1.0 * cm
+
+        # Table dimensions
+        table_width = 17 * cm
+        table_x = 2 * cm
+        row_height = 0.6 * cm
+        header_height = 0.7 * cm
+
+        # Title
+        canvas.setFont("Helvetica-Bold", 10)
+        canvas.setFillColor(primary_color)
+        canvas.drawString(table_x, y_position - 0.5 * cm, "DATI DI RIEPILOGO")
+
+        y_position -= 0.8 * cm
+
+        # Header background
+        canvas.setFillColor(HexColor("#F5F5F5"))
+        canvas.rect(
+            table_x, y_position - header_height, table_width, header_height, fill=True, stroke=False
+        )
+
+        # Header border
+        canvas.setStrokeColor(primary_color)
+        canvas.setLineWidth(1)
+        canvas.rect(
+            table_x, y_position - header_height, table_width, header_height, fill=False, stroke=True
+        )
+
+        # Header text
+        canvas.setFont("Helvetica-Bold", 9)
+        canvas.setFillColor(HexColor("#333333"))
+        y_header = y_position - 0.5 * cm
+
+        col_widths = [3 * cm, 7 * cm, 3.5 * cm, 3.5 * cm]
+        col_positions = [
+            table_x + 0.2 * cm,
+            table_x + col_widths[0] + 0.2 * cm,
+            table_x + col_widths[0] + col_widths[1] + 0.2 * cm,
+            table_x + col_widths[0] + col_widths[1] + col_widths[2] + 0.2 * cm,
+        ]
+
+        canvas.drawString(col_positions[0], y_header, "Aliquota IVA")
+        canvas.drawString(col_positions[1], y_header, "Natura")
+        canvas.drawRightString(col_positions[2] + col_widths[2] - 0.4 * cm, y_header, "Imponibile")
+        canvas.drawRightString(col_positions[3] + col_widths[3] - 0.4 * cm, y_header, "Imposta")
+
+        # Data rows
+        canvas.setFont("Helvetica", 9)
+        y_data = y_position - header_height
+
+        # Natura labels mapping
+        natura_labels = {
+            "N1": "Escluse ex art. 15",
+            "N2.1": "Non soggette - art. 7-bis",
+            "N2.2": "Non soggette - altri casi",
+            "N3.1": "Non imponibili - esportazioni",
+            "N3.2": "Non imponibili - cessioni intracomunitarie",
+            "N3.3": "Non imponibili - cessioni verso San Marino",
+            "N3.4": "Non imponibili - operazioni assimilate",
+            "N3.5": "Non imponibili - dichiarazioni d'intento",
+            "N3.6": "Non imponibili - altre operazioni",
+            "N4": "Esenti",
+            "N5": "Regime del margine",
+            "N6.1": "Inversione contabile - cessione rottami",
+            "N6.2": "Inversione contabile - cessione oro",
+            "N6.3": "Inversione contabile - subappalto",
+            "N6.4": "Inversione contabile - cessione fabbricati",
+            "N6.5": "Inversione contabile - cessione telefoni cellulari",
+            "N6.6": "Inversione contabile - cessione prodotti elettronici",
+            "N6.7": "Inversione contabile - prestazioni settore edile",
+            "N6.8": "Inversione contabile - operazioni settore energetico",
+            "N6.9": "Inversione contabile - altri casi",
+            "N7": "IVA assolta in altro stato UE",
+        }
+
+        for (aliquota, natura), values in sorted(
+            riepilogo.items(), key=lambda x: (x[0][0], x[0][1] or "")
+        ):
+            # Row background (alternating)
+            row_index = list(riepilogo.keys()).index((aliquota, natura))
+            if row_index % 2 == 1:
+                canvas.setFillColor(HexColor("#FAFAFA"))
+                canvas.rect(
+                    table_x, y_data - row_height, table_width, row_height, fill=True, stroke=False
+                )
+
+            # Row border
+            canvas.setStrokeColor(HexColor("#E0E0E0"))
+            canvas.setLineWidth(0.5)
+            canvas.rect(
+                table_x, y_data - row_height, table_width, row_height, fill=False, stroke=True
+            )
+
+            # Data
+            canvas.setFillColor(HexColor("#333333"))
+            y_text = y_data - 0.45 * cm
+
+            # Aliquota
+            if aliquota > 0:
+                canvas.drawString(col_positions[0], y_text, f"{aliquota:.0f}%")
+            else:
+                canvas.drawString(col_positions[0], y_text, "-")
+
+            # Natura label
+            natura_label = natura_labels.get(natura or "", natura or "-")
+            canvas.drawString(col_positions[1], y_text, natura_label)
+
+            # Imponibile
+            canvas.drawRightString(
+                col_positions[2] + col_widths[2] - 0.4 * cm, y_text, f"€ {values['imponibile']:.2f}"
+            )
+
+            # Imposta
+            canvas.drawRightString(
+                col_positions[3] + col_widths[3] - 0.4 * cm, y_text, f"€ {values['iva']:.2f}"
+            )
+
+            y_data -= row_height
+
+        return y_data - 0.5 * cm
+
     def draw_summary(
         self, canvas: Canvas, fattura_data: dict[str, Any], y_position: float
     ) -> float:
