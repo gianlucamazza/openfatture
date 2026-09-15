@@ -9,19 +9,27 @@ NOTE: This test file imports directly from the line_helpers module to avoid
 triggering the AI tools import chain (which includes pandas, an optional dependency).
 """
 
-import inspect
 import importlib.util
+import inspect
 import sys
 from pathlib import Path
 
 # Import line_helpers module directly without going through ai.tools.__init__
 # This avoids triggering the import of pandas (optional dependency)
-module_path = Path(__file__).parent.parent.parent / "openfatture" / "ai" / "tools" / "invoice_tools" / "line_helpers.py"
+module_path = (
+    Path(__file__).parent.parent.parent
+    / "openfatture"
+    / "ai"
+    / "tools"
+    / "invoice_tools"
+    / "line_helpers.py"
+)
 spec = importlib.util.spec_from_file_location("line_helpers", module_path)
 line_helpers = importlib.util.module_from_spec(spec)
 
 # Mock the invoice_commands dependency before loading
 from unittest.mock import MagicMock
+
 sys.modules["openfatture.billing.application.invoice_commands"] = MagicMock()
 
 # Now load the module
