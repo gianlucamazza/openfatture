@@ -251,9 +251,11 @@ class BaseTemplate(ABC):
         primary_color = HexColor(self.get_primary_color())
 
         # Calculate block height based on content
-        line_count = 1  # Method
-        if pagamento_data.get("data_scadenza"):
-            line_count += 1
+        giorni_scadenza = pagamento_data.get("giorni_scadenza", 30)
+
+        line_count = 1  # Payment description ("Pagamento completo" or method)
+        if pagamento_data.get("data_scadenza") or giorni_scadenza == 0:
+            line_count += 1  # Rif. termini or Scadenza
         if pagamento_data.get("iban"):
             line_count += 1
         if pagamento_data.get("bic_swift"):
@@ -273,28 +275,48 @@ class BaseTemplate(ABC):
         # Title
         canvas.setFont("Helvetica-Bold", 10)
         canvas.setFillColor(primary_color)
-        canvas.drawString(2.3 * cm, y_position - 0.6 * cm, "MODALITÀ DI PAGAMENTO")
+        canvas.drawString(2.3 * cm, y_position - 0.6 * cm, "DATI PAGAMENTO")
 
         canvas.setFont("Helvetica", 9)
         canvas.setFillColor(HexColor("#333333"))
         y = y_position - 1.1 * cm
 
-        # Payment method
+        # Payment description
+        # Always show payment method (Bonifico, etc.)
         modalita_map = {
             "MP05": "Bonifico bancario",
             "MP08": "Carta di credito",
             "MP01": "Contanti",
+            "Bonifico": "Bonifico bancario",
+            "Carta di credito": "Carta di credito",
+            "Contanti": "Contanti",
         }
         modalita_label = modalita_map.get(
-            pagamento_data.get("modalita", ""), pagamento_data.get("modalita", "Bonifico bancario")
+            pagamento_data.get("modalita", ""),
+            pagamento_data.get("modalita", "Bonifico bancario"),
         )
-        canvas.drawString(2.3 * cm, y, f"Modalità: {modalita_label}")
+
+        if giorni_scadenza == 0:
+            # Immediate payment: show both "Pagamento completo" and modality
+            canvas.drawString(2.3 * cm, y, f"Pagamento completo - {modalita_label}")
+        else:
+            # N-day terms: show payment method
+            canvas.drawString(2.3 * cm, y, f"Modalità: {modalita_label}")
         y -= 0.5 * cm
 
-        # Due date
+        # Rif. termini pagamento or Scadenza
         if pagamento_data.get("data_scadenza"):
             scadenza = pagamento_data["data_scadenza"].strftime("%d/%m/%Y")
-            canvas.drawString(2.3 * cm, y, f"Scadenza: {scadenza}")
+            if giorni_scadenza == 0:
+                # Immediate: show as "Rif. termini pagamento"
+                canvas.drawString(
+                    2.3 * cm,
+                    y,
+                    f"Rif. termini pagamento: {scadenza} (giorni di termine di pagamento)",
+                )
+            else:
+                # N-day: show as "Scadenza"
+                canvas.drawString(2.3 * cm, y, f"Scadenza: {scadenza}")
             y -= 0.5 * cm
 
         # IBAN (prominent for bank transfers)
@@ -304,7 +326,7 @@ class BaseTemplate(ABC):
             canvas.setFont("Helvetica", 9)
             y -= 0.5 * cm
 
-        # BIC
+        # BIC (optional - only show if present)
         if pagamento_data.get("bic_swift"):
             canvas.drawString(2.3 * cm, y, f"BIC: {pagamento_data['bic_swift']}")
             y -= 0.5 * cm

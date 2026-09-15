@@ -387,13 +387,35 @@ class FatturaPABuilder:
         # DettaglioPagamento
         dettaglio_pag = etree.SubElement(dati_pag, self._qname("DettaglioPagamento"))
 
-        # Modalità pagamento (MP05 = Bonifico)
-        etree.SubElement(dettaglio_pag, self._qname("ModalitaPagamento")).text = "MP05"
+        # Get payment info from first Pagamento record if exists
+        pagamento = fattura.pagamenti[0] if fattura.pagamenti else None
 
-        # Data scadenza (default: 30 giorni)
+        # Modalità pagamento (MP05 = Bonifico, default if no pagamento record)
+        modalita_code = "MP05"  # Default to Bonifico
+        if pagamento and hasattr(pagamento, "modalita"):
+            # Map common payment methods to FatturaPA codes
+            modalita_map = {
+                "Bonifico": "MP05",
+                "Contanti": "MP01",
+                "Assegno": "MP02",
+                "RiBa": "MP12",
+                "Carta di credito": "MP08",
+            }
+            modalita_code = modalita_map.get(pagamento.modalita, "MP05")
+
+        etree.SubElement(dettaglio_pag, self._qname("ModalitaPagamento")).text = modalita_code
+
+        # Data scadenza
         from datetime import timedelta
 
-        data_scadenza = fattura.data_emissione + timedelta(days=30)
+        if pagamento and hasattr(pagamento, "giorni_scadenza"):
+            # Use giorni_scadenza from Pagamento record
+            giorni = pagamento.giorni_scadenza
+            data_scadenza = fattura.data_emissione + timedelta(days=giorni)
+        else:
+            # Fallback: 30 giorni for backward compatibility
+            data_scadenza = fattura.data_emissione + timedelta(days=30)
+
         etree.SubElement(
             dettaglio_pag, self._qname("DataScadenzaPagamento")
         ).text = data_scadenza.isoformat()

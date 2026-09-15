@@ -465,6 +465,9 @@ class Pagamento(IntPKMixin, Base):
     data_scadenza: Mapped[date] = mapped_column(Date, nullable=False)
     data_pagamento: Mapped[date | None] = mapped_column(Date)
 
+    # Payment terms (0 = immediate, N = N days from invoice date)
+    giorni_scadenza: Mapped[int] = mapped_column(Integer, default=30)
+
     # Stato
     stato: Mapped[StatoPagamento] = mapped_column(
         Enum(StatoPagamento), nullable=False, default=StatoPagamento.DA_PAGARE

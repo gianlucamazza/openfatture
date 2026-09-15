@@ -195,6 +195,17 @@ def create_manual_payment(
         importo_dec = Decimal(str(importo))
         importo_pagato_dec = Decimal(str(importo_pagato))
 
+        # Calculate giorni_scadenza based on invoice date
+        if data_scad == fattura.data_emissione:
+            # Immediate payment: rif. termini = data emissione
+            giorni_scadenza = 0
+        else:
+            # N-day terms: calculate days between invoice and due date
+            giorni_scadenza = (data_scad - fattura.data_emissione).days
+            # Ensure positive, default to 30 if negative (edge case)
+            if giorni_scadenza < 0:
+                giorni_scadenza = 30
+
         # Determine stato
         if importo_pagato_dec >= importo_dec:
             stato = StatoPagamento.PAGATO
@@ -217,6 +228,7 @@ def create_manual_payment(
             data_pagamento=data_pag,
             modalita=modalita,
             stato=stato,
+            giorni_scadenza=giorni_scadenza,
         )
 
         db.add(pagamento)
@@ -306,8 +318,19 @@ def update_payment(
         # Update dates
         if data_scadenza is not None:
             try:
-                pagamento.data_scadenza = datetime.fromisoformat(data_scadenza).date()
+                new_data_scadenza = datetime.fromisoformat(data_scadenza).date()
+                pagamento.data_scadenza = new_data_scadenza
                 changes.append("data_scadenza")
+
+                # Recalculate giorni_scadenza when due date changes
+                fattura = pagamento.fattura
+                if fattura:
+                    if new_data_scadenza == fattura.data_emissione:
+                        pagamento.giorni_scadenza = 0  # Immediate payment
+                    else:
+                        giorni = (new_data_scadenza - fattura.data_emissione).days
+                        pagamento.giorni_scadenza = giorni if giorni >= 0 else 30
+                    changes.append("giorni_scadenza")
             except ValueError:
                 return {"error": f"Invalid data_scadenza format: {data_scadenza}. Use YYYY-MM-DD"}
 
