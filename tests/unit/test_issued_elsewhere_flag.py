@@ -9,8 +9,6 @@ Tests that when issued_elsewhere=True:
 
 from decimal import Decimal
 
-import pytest
-
 from openfatture.billing.fatture.service import InvoiceService
 from openfatture.sdi.application.invoice_sdi_ops import send_invoice_to_sdi, validate_invoice_xml
 from openfatture.storage.database.models import Fattura, RigaFattura, StatoFattura, TipoDocumento
@@ -34,7 +32,7 @@ class TestIssuedElsewhereFlag:
         )
         db_session.add(fattura)
         db_session.commit()
-        
+
         assert fattura.issued_elsewhere is False, "Should default to False"
 
     def test_issued_elsewhere_flag_can_be_set(self, db_session, sample_cliente):
@@ -53,15 +51,17 @@ class TestIssuedElsewhereFlag:
         )
         db_session.add(fattura)
         db_session.commit()
-        
+
         assert fattura.issued_elsewhere is True
-        
+
         # Verify it can be queried
         fetched = db_session.query(Fattura).filter_by(issued_elsewhere=True).first()
         assert fetched is not None
         assert fetched.numero == "STORICO_1"
 
-    def test_xml_generation_blocked_when_issued_elsewhere(self, test_settings, db_session, sample_cliente):
+    def test_xml_generation_blocked_when_issued_elsewhere(
+        self, test_settings, db_session, sample_cliente
+    ):
         """Test that XML generation is blocked for invoices issued elsewhere."""
         # Create invoice marked as issued elsewhere
         fattura = Fattura(
@@ -78,7 +78,7 @@ class TestIssuedElsewhereFlag:
         )
         db_session.add(fattura)
         db_session.flush()
-        
+
         # Add a line item
         riga = RigaFattura(
             fattura_id=fattura.id,
@@ -95,18 +95,22 @@ class TestIssuedElsewhereFlag:
         )
         db_session.add(riga)
         db_session.commit()
-        
+
         # Try to generate XML
         service = InvoiceService(test_settings)
         xml_content, error = service.generate_xml(fattura, validate=False)
-        
+
         # Should return empty content and error message
         assert xml_content == "", "XML content should be empty"
         assert error is not None, "Should return an error"
-        assert "issued elsewhere" in error.lower(), f"Error should mention 'issued elsewhere': {error}"
+        assert "issued elsewhere" in error.lower(), (
+            f"Error should mention 'issued elsewhere': {error}"
+        )
         assert "CFAIB_2_2026" in error, f"Error should mention invoice number: {error}"
 
-    def test_xml_generation_works_when_not_issued_elsewhere(self, test_settings, db_session, sample_cliente):
+    def test_xml_generation_works_when_not_issued_elsewhere(
+        self, test_settings, db_session, sample_cliente
+    ):
         """Test that XML generation works normally when issued_elsewhere=False."""
         # Create normal invoice
         fattura = Fattura(
@@ -123,7 +127,7 @@ class TestIssuedElsewhereFlag:
         )
         db_session.add(fattura)
         db_session.flush()
-        
+
         # Add a line item
         riga = RigaFattura(
             fattura_id=fattura.id,
@@ -139,11 +143,11 @@ class TestIssuedElsewhereFlag:
         )
         db_session.add(riga)
         db_session.commit()
-        
+
         # Generate XML
         service = InvoiceService(test_settings)
         xml_content, error = service.generate_xml(fattura, validate=False)
-        
+
         # Should succeed
         assert error is None, f"Should not return error: {error}"
         assert xml_content != "", "XML content should not be empty"
@@ -153,7 +157,7 @@ class TestIssuedElsewhereFlag:
         """Test that validate_invoice_xml tool blocks invoices issued elsewhere."""
         # Create session from runtime_db
         session = runtime_db()
-        
+
         # Create invoice marked as issued elsewhere
         fattura = Fattura(
             numero="STORICO_CALIB",
@@ -169,7 +173,7 @@ class TestIssuedElsewhereFlag:
         )
         session.add(fattura)
         session.flush()
-        
+
         # Add a line item
         riga = RigaFattura(
             fattura_id=fattura.id,
@@ -186,23 +190,25 @@ class TestIssuedElsewhereFlag:
         )
         session.add(riga)
         session.commit()
-        
+
         # Save ID before closing session
         fattura_id = fattura.id
         session.close()
-        
+
         # Try to validate via tool
         result = validate_invoice_xml(fattura_id)
-        
+
         # Should block with error
         assert "error" in result, f"Should return error: {result}"
-        assert "issued elsewhere" in result["error"].lower(), f"Error should mention 'issued elsewhere': {result}"
+        assert "issued elsewhere" in result["error"].lower(), (
+            f"Error should mention 'issued elsewhere': {result}"
+        )
 
     def test_send_to_sdi_blocked_when_issued_elsewhere(self, runtime_db, sample_cliente):
         """Test that send_invoice_to_sdi blocks invoices issued elsewhere."""
         # Create session from runtime_db
         session = runtime_db()
-        
+
         # Create invoice marked as issued elsewhere
         fattura = Fattura(
             numero="MUM_ISSUED",
@@ -218,7 +224,7 @@ class TestIssuedElsewhereFlag:
         )
         session.add(fattura)
         session.flush()
-        
+
         # Add a line item
         riga = RigaFattura(
             fattura_id=fattura.id,
@@ -235,17 +241,19 @@ class TestIssuedElsewhereFlag:
         )
         session.add(riga)
         session.commit()
-        
+
         # Save ID before closing session
         fattura_id = fattura.id
         session.close()
-        
+
         # Try to send to SDI
         result = send_invoice_to_sdi(fattura_id)
-        
+
         # Should block with error
         assert "error" in result, f"Should return error: {result}"
-        assert "issued elsewhere" in result["error"].lower(), f"Error should mention 'issued elsewhere': {result}"
+        assert "issued elsewhere" in result["error"].lower(), (
+            f"Error should mention 'issued elsewhere': {result}"
+        )
         assert "duplicate" in result["error"].lower(), f"Error should mention 'duplicate': {result}"
 
     def test_query_issued_elsewhere_invoices(self, db_session, sample_cliente):
@@ -265,13 +273,13 @@ class TestIssuedElsewhereFlag:
                 issued_elsewhere=(i % 2 == 0),  # Even numbers issued elsewhere
             )
             db_session.add(fattura)
-        
+
         db_session.commit()
-        
+
         # Query issued elsewhere
         issued_elsewhere = db_session.query(Fattura).filter_by(issued_elsewhere=True).all()
         assert len(issued_elsewhere) == 3, "Should have 3 invoices issued elsewhere"
-        
+
         # Query normal invoices
         normal = db_session.query(Fattura).filter_by(issued_elsewhere=False).all()
         assert len(normal) == 2, "Should have 2 normal invoices"

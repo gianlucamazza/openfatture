@@ -39,7 +39,7 @@ def validate_invoice_xml(fattura_id: int) -> dict[str, Any]:
             return {"error": f"Invoice {fattura_id} not found"}
 
         # Check if invoice was issued elsewhere
-        if getattr(fattura, 'issued_elsewhere', False):
+        if getattr(fattura, "issued_elsewhere", False):
             logger.warning(
                 "xml_validation_blocked_issued_elsewhere",
                 fattura_id=fattura_id,
@@ -123,7 +123,7 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
             return {"error": f"Invoice {fattura_id} not found"}
 
         # Check if invoice was issued elsewhere
-        if getattr(fattura, 'issued_elsewhere', False):
+        if getattr(fattura, "issued_elsewhere", False):
             logger.warning(
                 "sdi_send_blocked_issued_elsewhere",
                 fattura_id=fattura_id,

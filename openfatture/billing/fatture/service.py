@@ -37,7 +37,7 @@ class InvoiceService:
             ValueError: If invoice was issued elsewhere (blocked operation)
         """
         # Check if invoice was issued elsewhere
-        if getattr(fattura, 'issued_elsewhere', False):
+        if getattr(fattura, "issued_elsewhere", False):
             error_msg = (
                 f"Cannot generate XML for invoice {fattura.numero}/{fattura.anno}: "
                 "This invoice was issued elsewhere and is stored for reference only. "
@@ -49,7 +49,7 @@ class InvoiceService:
                 anno=fattura.anno,
             )
             return "", error_msg
-        
+
         try:
             # Generate filename
             filename = generate_filename(fattura, self.settings)

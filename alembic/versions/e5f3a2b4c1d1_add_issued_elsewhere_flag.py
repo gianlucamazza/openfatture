@@ -23,9 +23,9 @@ def upgrade() -> None:
     """Upgrade schema - Add issued_elsewhere flag to fatture table.
 
     This field indicates whether the invoice was issued outside the system
-    (e.g., by another person or service) and is stored here only for 
+    (e.g., by another person or service) and is stored here only for
     reference/calibration purposes.
-    
+
     When True: blocks XML generation, SDI sending, and all emit flows.
     When False (default): normal invoice processing allowed.
     """
