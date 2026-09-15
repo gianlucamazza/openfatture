@@ -272,7 +272,7 @@ class SDIPatternDatabase:
                 description="Totale fattura non corrisponde alla somma delle righe",
                 field_checks=["totale", "imponibile", "iva"],
                 severity="error",
-                fix_suggestion="Ricalcolare: Totale = Somma Imponibili + Somma IVA - Ritenuta + Bollo",
+                fix_suggestion="Ricalcolare: Totale = Somma Imponibili + Somma IVA - Ritenuta + Bollo (se non assolto virtuale)",
                 reference="FatturaPA v1.2.2 - Campo 2.4.2.6",
             ),
             SDIRejectionPattern(

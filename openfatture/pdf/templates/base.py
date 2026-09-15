@@ -167,7 +167,9 @@ class BaseTemplate(ABC):
         # Add lines for optional fields
         if fattura_data.get("ritenuta_acconto", Decimal(0)) > 0:
             num_lines += 1
-        if fattura_data.get("importo_bollo", Decimal(0)) > 0:
+        if fattura_data.get("importo_bollo", Decimal(0)) > 0 and not fattura_data.get(
+            "bollo_assolto_virtuale", False
+        ):
             num_lines += 1
 
         box_height = (num_lines * line_height) + 1.4 * cm
@@ -208,8 +210,10 @@ class BaseTemplate(ABC):
             )
             y -= line_height
 
-        # Bollo (if present)
-        if fattura_data.get("importo_bollo", Decimal(0)) > 0:
+        # Bollo (if present and charged to client - not assolto virtuale)
+        if fattura_data.get("importo_bollo", Decimal(0)) > 0 and not fattura_data.get(
+            "bollo_assolto_virtuale", False
+        ):
             canvas.drawString(box_x + 0.3 * cm, y, "Bollo:")
             canvas.drawRightString(
                 box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['importo_bollo']:.2f}"
@@ -461,12 +465,19 @@ class BaseTemplate(ABC):
 
         return y_position - block_height - 0.5 * cm
 
-    def draw_bollo_footer(self, canvas: Canvas, importo_bollo: Decimal, y_position: float) -> float:
+    def draw_bollo_footer(
+        self,
+        canvas: Canvas,
+        importo_bollo: Decimal,
+        bollo_assolto_virtuale: bool,
+        y_position: float,
+    ) -> float:
         """Draw bollo (stamp duty) MEF footer text.
 
         Args:
             canvas: ReportLab canvas
             importo_bollo: Stamp duty amount
+            bollo_assolto_virtuale: Whether bollo is paid by provider (not charged to client)
             y_position: Current Y position
 
         Returns:
@@ -478,13 +489,36 @@ class BaseTemplate(ABC):
         # Add spacing before footer
         y_position -= 0.8 * cm
 
-        # Draw bollo footer text
-        canvas.setFont("Helvetica", 9)
+        # Draw bollo section with border box
+        primary_color = HexColor(self.get_primary_color())
+        box_width = 8 * cm
+        box_height = 1.2 * cm
+
+        canvas.setFillColor(HexColor("#F8F9FA"))
+        canvas.setStrokeColor(primary_color)
+        canvas.setLineWidth(1)
+        canvas.rect(2 * cm, y_position - box_height, box_width, box_height, fill=True, stroke=True)
+
+        # Title
+        canvas.setFont("Helvetica-Bold", 9)
+        canvas.setFillColor(primary_color)
+        canvas.drawString(2.3 * cm, y_position - 0.5 * cm, "Bollo")
+
+        canvas.setFont("Helvetica", 8)
         canvas.setFillColor(HexColor("#333333"))
+
+        # Show bollo type and MEF reference
+        y = y_position - 0.9 * cm
         canvas.drawString(
-            2 * cm,
-            y_position,
-            "Bollo assolto ai sensi del decreto MEF 17 GIUGNO 2014 (ART. 6)",
+            2.3 * cm,
+            y,
+            "Tipo: Bollo assolto ai sensi del decreto MEF 17 GIUGNO 2014 (ART. 6)",
         )
 
-        return y_position - 0.5 * cm
+        # Show amount
+        canvas.setFont("Helvetica", 9)
+        canvas.drawString(
+            11 * cm - 2 * cm, y_position - 0.5 * cm, f"Importo: € {importo_bollo:.2f}"
+        )
+
+        return y_position - box_height - 0.5 * cm

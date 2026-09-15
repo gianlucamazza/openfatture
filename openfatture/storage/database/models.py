@@ -282,6 +282,7 @@ class Fattura(IntPKMixin, Base):
 
     # Bollo
     importo_bollo: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+    bollo_assolto_virtuale: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Linkage for nota di credito (TD04) - DatiFattureCollegate
     # Reference to source invoice when this is a credit note

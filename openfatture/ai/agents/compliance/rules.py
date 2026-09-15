@@ -546,9 +546,13 @@ class ComplianceRulesEngine:
             )
 
         # FPA042: Total validation
-        # Account for ritenuta and bollo
+        # Account for ritenuta and bollo (only if not assolto virtuale)
+        bollo_charged = Decimal("0")
+        if fattura.importo_bollo > 0 and not getattr(fattura, "bollo_assolto_virtuale", False):
+            bollo_charged = fattura.importo_bollo
+
         expected_total_final = (
-            expected_totale - (fattura.ritenuta_acconto or Decimal("0")) + fattura.importo_bollo
+            expected_totale - (fattura.ritenuta_acconto or Decimal("0")) + bollo_charged
         )
 
         if abs(fattura.totale - expected_total_final) > Decimal("0.01"):
@@ -559,7 +563,7 @@ class ComplianceRulesEngine:
                     field="totale",
                     message=f"Totale fattura errato (atteso: €{expected_total_final:.2f}, "
                     f"trovato: €{fattura.totale:.2f})",
-                    suggestion="Ricalcolare: Imponibile + IVA - Ritenuta + Bollo",
+                    suggestion="Ricalcolare: Imponibile + IVA - Ritenuta + Bollo (se non assolto virtuale)",
                     reference="FatturaPA v1.2.2 - Campo 2.4.2 (ImportoPagamento)",
                 )
             )
