@@ -38,6 +38,21 @@ def validate_invoice_xml(fattura_id: int) -> dict[str, Any]:
         if not fattura:
             return {"error": f"Invoice {fattura_id} not found"}
 
+        # Check if invoice was issued elsewhere
+        if getattr(fattura, "issued_elsewhere", False):
+            logger.warning(
+                "xml_validation_blocked_issued_elsewhere",
+                fattura_id=fattura_id,
+                numero=fattura.numero,
+                anno=fattura.anno,
+            )
+            return {
+                "error": (
+                    f"Cannot validate XML for invoice {fattura.numero}/{fattura.anno}: "
+                    "This invoice was issued elsewhere and is stored for reference only."
+                )
+            }
+
         # Check has righe
         if not fattura.righe:
             return {"error": "Invoice has no line items. Add at least one riga first."}
@@ -106,6 +121,22 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
         fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
         if not fattura:
             return {"error": f"Invoice {fattura_id} not found"}
+
+        # Check if invoice was issued elsewhere
+        if getattr(fattura, "issued_elsewhere", False):
+            logger.warning(
+                "sdi_send_blocked_issued_elsewhere",
+                fattura_id=fattura_id,
+                numero=fattura.numero,
+                anno=fattura.anno,
+            )
+            return {
+                "error": (
+                    f"Cannot send invoice {fattura.numero}/{fattura.anno} to SDI: "
+                    "This invoice was issued elsewhere and is stored for reference only. "
+                    "SDI submission is blocked to prevent duplicate submissions."
+                )
+            }
 
         # Check invoice is ready to send
         if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:

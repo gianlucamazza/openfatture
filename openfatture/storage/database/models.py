@@ -284,6 +284,11 @@ class Fattura(IntPKMixin, Base):
     importo_bollo: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     bollo_assolto_virtuale: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # STORICO / issued elsewhere flag
+    # True = invoice was issued by another system/person (stored here for reference only)
+    # Blocks: XML generation, SDI sending, emit flows
+    issued_elsewhere: Mapped[bool] = mapped_column(Boolean, default=False)
+
     # Linkage for nota di credito (TD04) - DatiFattureCollegate
     # Reference to source invoice when this is a credit note
     fattura_collegata_id: Mapped[int | None] = mapped_column(ForeignKey("fatture.id"), index=True)
