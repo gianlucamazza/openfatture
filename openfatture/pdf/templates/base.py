@@ -181,7 +181,9 @@ class BaseTemplate(ABC):
                     iva = getattr(riga, "iva", Decimal(0))
 
                 # Ensure aliquota is Decimal for type safety
-                aliquota: Decimal = Decimal(str(aliquota_raw)) if aliquota_raw is not None else Decimal(0)
+                aliquota: Decimal = (
+                    Decimal(str(aliquota_raw)) if aliquota_raw is not None else Decimal(0)
+                )
                 key: tuple[Decimal, str | None] = (aliquota, natura)
                 riepilogo[key]["imponibile"] += imponibile
                 riepilogo[key]["iva"] += iva
@@ -200,11 +202,19 @@ class BaseTemplate(ABC):
                     aliquota_cassa_raw = getattr(cassa, "aliquota_iva", None)
                     natura_cassa_raw = getattr(cassa, "natura", None)
                     # Ensure natura is a string or None (not a Mock)
-                    natura_cassa = natura_cassa_raw if isinstance(natura_cassa_raw, (str, type(None))) else None
+                    natura_cassa = (
+                        natura_cassa_raw
+                        if isinstance(natura_cassa_raw, (str, type(None)))
+                        else None
+                    )
                     imponibile_cassa = getattr(cassa, "imponibile_cassa", Decimal(0))
 
                 # Ensure aliquota is Decimal for type safety
-                aliquota_cassa_decimal = Decimal(str(aliquota_cassa_raw)) if aliquota_cassa_raw is not None else Decimal(0)
+                aliquota_cassa_decimal = (
+                    Decimal(str(aliquota_cassa_raw))
+                    if aliquota_cassa_raw is not None
+                    else Decimal(0)
+                )
                 cassa_key: tuple[Decimal, str | None] = (aliquota_cassa_decimal, natura_cassa)
                 # Cassa is already included in totals via imponibile_cassa
                 riepilogo[cassa_key]["imponibile"] += imponibile_cassa
@@ -293,7 +303,7 @@ class BaseTemplate(ABC):
         # Sort entries by aliquota and natura
         # Use float() to handle both Decimal and Mock objects in tests
         def sort_key(
-            item: tuple[tuple[Decimal, str | None], dict[str, Decimal]]
+            item: tuple[tuple[Decimal, str | None], dict[str, Decimal]],
         ) -> tuple[float, str]:
             (aliquota, natura), _ = item
             try:
