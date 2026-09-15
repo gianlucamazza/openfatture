@@ -251,9 +251,18 @@ class BaseTemplate(ABC):
             "N7": "IVA assolta in altro stato UE",
         }
 
-        for (aliquota, natura), values in sorted(
-            riepilogo.items(), key=lambda x: (x[0][0], x[0][1] or "")
-        ):
+        # Sort entries by aliquota and natura
+        # Use float() to handle both Decimal and Mock objects in tests
+        def sort_key(item):
+            (aliquota, natura), _ = item
+            try:
+                aliquota_val = float(aliquota) if aliquota is not None else 0.0
+            except (TypeError, ValueError):
+                aliquota_val = 0.0
+            natura_val = str(natura) if natura else ""
+            return (aliquota_val, natura_val)
+
+        for (aliquota, natura), values in sorted(riepilogo.items(), key=sort_key):
             # Row background (alternating)
             row_index = list(riepilogo.keys()).index((aliquota, natura))
             if row_index % 2 == 1:
