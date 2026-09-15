@@ -179,7 +179,7 @@ class BaseTemplate(ABC):
                     natura = natura_raw if isinstance(natura_raw, (str, type(None))) else None
                     imponibile = getattr(riga, "imponibile", Decimal(0))
                     iva = getattr(riga, "iva", Decimal(0))
-                
+
                 key = (aliquota, natura)
                 riepilogo[key]["imponibile"] += imponibile
                 riepilogo[key]["iva"] += iva
@@ -200,7 +200,7 @@ class BaseTemplate(ABC):
                     # Ensure natura is a string or None (not a Mock)
                     natura = natura_raw if isinstance(natura_raw, (str, type(None))) else None
                     imponibile_cassa = getattr(cassa, "imponibile_cassa", Decimal(0))
-                
+
                 key = (aliquota, natura)
                 # Cassa is already included in totals via imponibile_cassa
                 riepilogo[key]["imponibile"] += imponibile_cassa
