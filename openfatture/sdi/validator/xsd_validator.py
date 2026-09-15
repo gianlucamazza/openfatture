@@ -1,61 +1,9 @@
 """XSD validator for FatturaPA XML."""
 
-from importlib.resources import files
+from importlib.resources import as_file, files
 from pathlib import Path
-from typing import Any
 
 from lxml import etree
-
-
-class LocalSchemaResolver(etree.Resolver):
-    """
-    Custom resolver for loading local XSD schemas.
-
-    Resolves schema imports from the bundled schemas directory,
-    enabling offline validation without network access.
-    """
-
-    def __init__(self, schema_dir: Path):
-        """
-        Initialize resolver.
-
-        Args:
-            schema_dir: Directory containing the schema files
-        """
-        super().__init__()
-        self.schema_dir = schema_dir
-
-    def resolve(self, url: str, id: str, context: Any) -> Any:
-        """
-        Resolve schema URL to local file.
-
-        Args:
-            url: Schema URL or filename
-            id: Schema identifier
-            context: Resolution context
-
-        Returns:
-            Resolver for the local file or None
-        """
-        # Extract filename from URL if it's a full URL
-        if "/" in url:
-            filename = url.split("/")[-1]
-        else:
-            filename = url
-
-        # Try to read from bundled schemas using importlib.resources
-        try:
-            schema_files = files("openfatture.sdi.schemas")
-            schema_bytes = (schema_files / filename).read_bytes()
-            return self.resolve_string(schema_bytes, context)
-        except (FileNotFoundError, AttributeError):
-            # Fall back to filesystem if not in package resources
-            local_path = self.schema_dir / filename
-            if local_path.exists():
-                return self.resolve_filename(str(local_path), context)
-
-        # If not found locally, let lxml handle it (may fail for HTTP URLs)
-        return None
 
 
 class FatturaPAValidator:
@@ -78,17 +26,6 @@ class FatturaPAValidator:
         self._schema: etree.XMLSchema | None = None
         self._use_bundled = xsd_path is None
 
-    @staticmethod
-    def _get_bundled_schema_path() -> Path:
-        """Get path to bundled FatturaPA XSD schema."""
-        schema_files = files("openfatture.sdi.schemas")
-        schema_file = schema_files / "FatturaPA_v1.2.2.xsd"
-        # Convert to Path - for Python 3.9+ this is a Traversable, need to get actual path
-        if hasattr(schema_file, "__fspath__"):
-            return Path(schema_file)
-        # For older versions or zip imports, we need to extract
-        return Path(str(schema_file))
-
     def load_schema(self) -> None:
         """
         Load XSD schema from file.
@@ -103,16 +40,12 @@ class FatturaPAValidator:
         """
         if self._use_bundled:
             # Use bundled schemas from package resources
+            # as_file() extracts to a real filesystem path where lxml can resolve local imports
             schema_files = files("openfatture.sdi.schemas")
-            schema_bytes = (schema_files / "FatturaPA_v1.2.2.xsd").read_bytes()
-
-            # Parse with a custom resolver to handle the local xmldsig import
-            schema_dir = Path(str(schema_files))
-            parser = etree.XMLParser()
-            parser.resolvers.add(LocalSchemaResolver(schema_dir))
-
-            schema_doc = etree.fromstring(schema_bytes, parser)
-            self._schema = etree.XMLSchema(schema_doc)
+            with as_file(schema_files / "FatturaPA_v1.2.2.xsd") as schema_path:
+                with open(schema_path, "rb") as f:
+                    schema_doc = etree.parse(f)
+                    self._schema = etree.XMLSchema(schema_doc)
         else:
             # Use custom path (backward compatibility)
             if self.xsd_path is None or not self.xsd_path.exists():
