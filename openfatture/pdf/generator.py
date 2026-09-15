@@ -251,6 +251,7 @@ class PDFGenerator:
             pagamento_data = {
                 "modalita": pag.modalita,
                 "data_scadenza": pag.data_scadenza,
+                "giorni_scadenza": getattr(pag, "giorni_scadenza", 30),
                 "iban": pag.iban,
                 "bic_swift": pag.bic_swift,
                 "importo": pag.importo,
