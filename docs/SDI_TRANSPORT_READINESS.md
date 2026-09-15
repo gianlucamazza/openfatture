@@ -235,7 +235,7 @@ def handle_sdi_response(notification_xml: str):
 - **Official SDI Validator**: https://sdi.fatturapa.gov.it/SdI2FatturaPAWeb/
 - **Test Environment**: Available through Agenzia delle Entrate registration
 - **Sample Invoices**: https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.2.2/
-- **XSD Schema**: Included in `data/schemas/FatturaPA_v1.2.2.xsd`
+- **XSD Schema**: Bundled in package at `openfatture/sdi/schemas/` (FatturaPA v1.2.2 + W3C xmldsig) - no download required
 
 ## Support & Resources
 
