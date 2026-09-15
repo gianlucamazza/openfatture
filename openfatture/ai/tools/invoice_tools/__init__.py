@@ -17,6 +17,12 @@ from .invoices import (
     update_invoice,
     update_invoice_status,
 )
+from .line_helpers import (
+    create_course_line,
+    create_lump_line,
+    create_rate_line,
+    format_course_description,
+)
 from .nota_credito import (
     create_nota_credito_from_fattura,
 )
@@ -42,6 +48,10 @@ __all__ = [
     "create_invoice",
     "create_nota_credito_from_fattura",
     "create_riga",
+    "create_lump_line",
+    "create_rate_line",
+    "create_course_line",
+    "format_course_description",
     "update_riga",
     "delete_riga",
     "validate_invoice_xml",
