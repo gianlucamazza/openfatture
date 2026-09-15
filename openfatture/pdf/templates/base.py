@@ -167,20 +167,22 @@ class BaseTemplate(ABC):
             for riga in righe:
                 # Handle both dict and object attribute access
                 if isinstance(riga, dict):
-                    aliquota = riga.get("aliquota_iva")
+                    aliquota_raw = riga.get("aliquota_iva")
                     natura = riga.get("natura")
                     imponibile = riga.get("imponibile", Decimal(0))
                     iva = riga.get("iva", Decimal(0))
                 else:
                     # Object (ORM model or Mock)
-                    aliquota = getattr(riga, "aliquota_iva", None)
+                    aliquota_raw = getattr(riga, "aliquota_iva", None)
                     natura_raw = getattr(riga, "natura", None)
                     # Ensure natura is a string or None (not a Mock)
                     natura = natura_raw if isinstance(natura_raw, (str, type(None))) else None
                     imponibile = getattr(riga, "imponibile", Decimal(0))
                     iva = getattr(riga, "iva", Decimal(0))
 
-                key = (aliquota, natura)
+                # Ensure aliquota is Decimal for type safety
+                aliquota: Decimal = Decimal(str(aliquota_raw)) if aliquota_raw is not None else Decimal(0)
+                key: tuple[Decimal, str | None] = (aliquota, natura)
                 riepilogo[key]["imponibile"] += imponibile
                 riepilogo[key]["iva"] += iva
 
@@ -190,22 +192,24 @@ class BaseTemplate(ABC):
             for cassa in cassa_list:
                 # Handle both dict and object attribute access
                 if isinstance(cassa, dict):
-                    aliquota = cassa.get("aliquota_iva")
-                    natura = cassa.get("natura")
+                    aliquota_cassa_raw = cassa.get("aliquota_iva")
+                    natura_cassa = cassa.get("natura")
                     imponibile_cassa = cassa.get("imponibile_cassa", Decimal(0))
                 else:
                     # Object (ORM model or Mock)
-                    aliquota = getattr(cassa, "aliquota_iva", None)
-                    natura_raw = getattr(cassa, "natura", None)
+                    aliquota_cassa_raw = getattr(cassa, "aliquota_iva", None)
+                    natura_cassa_raw = getattr(cassa, "natura", None)
                     # Ensure natura is a string or None (not a Mock)
-                    natura = natura_raw if isinstance(natura_raw, (str, type(None))) else None
+                    natura_cassa = natura_cassa_raw if isinstance(natura_cassa_raw, (str, type(None))) else None
                     imponibile_cassa = getattr(cassa, "imponibile_cassa", Decimal(0))
 
-                key = (aliquota, natura)
+                # Ensure aliquota is Decimal for type safety
+                aliquota_cassa_decimal = Decimal(str(aliquota_cassa_raw)) if aliquota_cassa_raw is not None else Decimal(0)
+                cassa_key: tuple[Decimal, str | None] = (aliquota_cassa_decimal, natura_cassa)
                 # Cassa is already included in totals via imponibile_cassa
-                riepilogo[key]["imponibile"] += imponibile_cassa
-                if aliquota:
-                    riepilogo[key]["iva"] += imponibile_cassa * aliquota / 100
+                riepilogo[cassa_key]["imponibile"] += imponibile_cassa
+                if aliquota_cassa_decimal != Decimal(0):
+                    riepilogo[cassa_key]["iva"] += imponibile_cassa * aliquota_cassa_decimal / 100
 
         if not riepilogo:
             return y_position
@@ -288,7 +292,9 @@ class BaseTemplate(ABC):
 
         # Sort entries by aliquota and natura
         # Use float() to handle both Decimal and Mock objects in tests
-        def sort_key(item):
+        def sort_key(
+            item: tuple[tuple[Decimal, str | None], dict[str, Decimal]]
+        ) -> tuple[float, str]:
             (aliquota, natura), _ = item
             try:
                 aliquota_val = float(aliquota) if aliquota is not None else 0.0
