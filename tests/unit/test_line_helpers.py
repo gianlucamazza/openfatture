@@ -4,16 +4,34 @@ Tests that line items can be created in different styles:
 - "lump" style: 1 × imponibile
 - "rate" style: qty × unit_price
 - "course" style: formatted descriptions for training courses
+
+NOTE: This test file imports directly from the line_helpers module to avoid
+triggering the AI tools import chain (which includes pandas, an optional dependency).
 """
 
 import inspect
+import importlib.util
+import sys
+from pathlib import Path
 
-from openfatture.ai.tools.invoice_tools.line_helpers import (
-    create_course_line,
-    create_lump_line,
-    create_rate_line,
-    format_course_description,
-)
+# Import line_helpers module directly without going through ai.tools.__init__
+# This avoids triggering the import of pandas (optional dependency)
+module_path = Path(__file__).parent.parent.parent / "openfatture" / "ai" / "tools" / "invoice_tools" / "line_helpers.py"
+spec = importlib.util.spec_from_file_location("line_helpers", module_path)
+line_helpers = importlib.util.module_from_spec(spec)
+
+# Mock the invoice_commands dependency before loading
+from unittest.mock import MagicMock
+sys.modules["openfatture.billing.application.invoice_commands"] = MagicMock()
+
+# Now load the module
+spec.loader.exec_module(line_helpers)
+
+# Extract the functions we want to test
+create_lump_line = line_helpers.create_lump_line
+create_rate_line = line_helpers.create_rate_line
+create_course_line = line_helpers.create_course_line
+format_course_description = line_helpers.format_course_description
 
 
 class TestLineHelpers:
