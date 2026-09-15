@@ -50,7 +50,7 @@ class TestBundledSchemas:
 
         # Now validate a minimal XML to ensure schema is fully functional
         minimal_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<p:FatturaElettronica versione="FPR12" 
+<p:FatturaElettronica versione="FPR12"
     xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"
     xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
   <FatturaElettronicaHeader>
