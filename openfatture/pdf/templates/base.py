@@ -282,23 +282,25 @@ class BaseTemplate(ABC):
         y = y_position - 1.1 * cm
 
         # Payment description
+        # Always show payment method (Bonifico, etc.)
+        modalita_map = {
+            "MP05": "Bonifico bancario",
+            "MP08": "Carta di credito",
+            "MP01": "Contanti",
+            "Bonifico": "Bonifico bancario",
+            "Carta di credito": "Carta di credito",
+            "Contanti": "Contanti",
+        }
+        modalita_label = modalita_map.get(
+            pagamento_data.get("modalita", ""),
+            pagamento_data.get("modalita", "Bonifico bancario"),
+        )
+        
         if giorni_scadenza == 0:
-            # Immediate payment
-            canvas.drawString(2.3 * cm, y, "Pagamento completo")
+            # Immediate payment: show both "Pagamento completo" and modality
+            canvas.drawString(2.3 * cm, y, f"Pagamento completo - {modalita_label}")
         else:
-            # N-day terms - show payment method
-            modalita_map = {
-                "MP05": "Bonifico bancario",
-                "MP08": "Carta di credito",
-                "MP01": "Contanti",
-                "Bonifico": "Bonifico bancario",
-                "Carta di credito": "Carta di credito",
-                "Contanti": "Contanti",
-            }
-            modalita_label = modalita_map.get(
-                pagamento_data.get("modalita", ""),
-                pagamento_data.get("modalita", "Bonifico bancario"),
-            )
+            # N-day terms: show payment method
             canvas.drawString(2.3 * cm, y, f"Modalità: {modalita_label}")
         y -= 0.5 * cm
 

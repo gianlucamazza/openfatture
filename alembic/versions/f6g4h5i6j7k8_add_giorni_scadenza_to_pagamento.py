@@ -1,7 +1,7 @@
 """add_giorni_scadenza_to_pagamento
 
 Revision ID: f6g4h5i6j7k8
-Revises: 21807fbe7cd6
+Revises: e5f3a2b4c1d1
 Create Date: 2026-09-15 07:10:00.000000
 
 """
