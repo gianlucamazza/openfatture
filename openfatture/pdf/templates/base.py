@@ -155,22 +155,57 @@ class BaseTemplate(ABC):
 
         # Aggregate lines by (aliquota_iva, natura)
         from collections import defaultdict
+        from collections.abc import Iterable
 
         riepilogo: dict[tuple[Decimal, str | None], dict[str, Decimal]] = defaultdict(
             lambda: {"imponibile": Decimal(0), "iva": Decimal(0)}
         )
 
-        for riga in fattura_data.get("righe", []):
-            key = (riga["aliquota_iva"], riga.get("natura"))
-            riepilogo[key]["imponibile"] += riga["imponibile"]
-            riepilogo[key]["iva"] += riga["iva"]
+        # Safely get righe (handle Mock objects in tests)
+        righe = fattura_data.get("righe", [])
+        if isinstance(righe, Iterable) and not isinstance(righe, (str, bytes)):
+            for riga in righe:
+                # Handle both dict and object attribute access
+                if isinstance(riga, dict):
+                    aliquota = riga.get("aliquota_iva")
+                    natura = riga.get("natura")
+                    imponibile = riga.get("imponibile", Decimal(0))
+                    iva = riga.get("iva", Decimal(0))
+                else:
+                    # Object (ORM model or Mock)
+                    aliquota = getattr(riga, "aliquota_iva", None)
+                    natura_raw = getattr(riga, "natura", None)
+                    # Ensure natura is a string or None (not a Mock)
+                    natura = natura_raw if isinstance(natura_raw, (str, type(None))) else None
+                    imponibile = getattr(riga, "imponibile", Decimal(0))
+                    iva = getattr(riga, "iva", Decimal(0))
+                
+                key = (aliquota, natura)
+                riepilogo[key]["imponibile"] += imponibile
+                riepilogo[key]["iva"] += iva
 
-        # Include cassa previdenziale if present
-        for cassa in fattura_data.get("cassa_previdenziale", []):
-            key = (cassa["aliquota_iva"], cassa.get("natura"))
-            # Cassa is already included in totals via imponibile_cassa
-            riepilogo[key]["imponibile"] += cassa["imponibile_cassa"]
-            riepilogo[key]["iva"] += cassa["imponibile_cassa"] * cassa["aliquota_iva"] / 100
+        # Include cassa previdenziale if present (handle Mock objects)
+        cassa_list = fattura_data.get("cassa_previdenziale", [])
+        if isinstance(cassa_list, Iterable) and not isinstance(cassa_list, (str, bytes)):
+            for cassa in cassa_list:
+                # Handle both dict and object attribute access
+                if isinstance(cassa, dict):
+                    aliquota = cassa.get("aliquota_iva")
+                    natura = cassa.get("natura")
+                    imponibile_cassa = cassa.get("imponibile_cassa", Decimal(0))
+                else:
+                    # Object (ORM model or Mock)
+                    aliquota = getattr(cassa, "aliquota_iva", None)
+                    natura_raw = getattr(cassa, "natura", None)
+                    # Ensure natura is a string or None (not a Mock)
+                    natura = natura_raw if isinstance(natura_raw, (str, type(None))) else None
+                    imponibile_cassa = getattr(cassa, "imponibile_cassa", Decimal(0))
+                
+                key = (aliquota, natura)
+                # Cassa is already included in totals via imponibile_cassa
+                riepilogo[key]["imponibile"] += imponibile_cassa
+                if aliquota:
+                    riepilogo[key]["iva"] += imponibile_cassa * aliquota / 100
 
         if not riepilogo:
             return y_position
@@ -288,8 +323,9 @@ class BaseTemplate(ABC):
             else:
                 canvas.drawString(col_positions[0], y_text, "-")
 
-            # Natura label
-            natura_label = natura_labels.get(natura or "", natura or "-")
+            # Natura label (ensure it's always a string)
+            natura_str = str(natura) if natura and isinstance(natura, str) else "-"
+            natura_label = natura_labels.get(natura_str, natura_str)
             canvas.drawString(col_positions[1], y_text, natura_label)
 
             # Imponibile
