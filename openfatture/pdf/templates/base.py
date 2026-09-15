@@ -295,7 +295,7 @@ class BaseTemplate(ABC):
             pagamento_data.get("modalita", ""),
             pagamento_data.get("modalita", "Bonifico bancario"),
         )
-        
+
         if giorni_scadenza == 0:
             # Immediate payment: show both "Pagamento completo" and modality
             canvas.drawString(2.3 * cm, y, f"Pagamento completo - {modalita_label}")
