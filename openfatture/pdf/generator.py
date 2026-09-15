@@ -446,6 +446,9 @@ class PDFGenerator:
             footer_text=self.config.footer_text,
         )
 
+        # Dati di riepilogo (tax breakdown table)
+        y = self.template.draw_dati_riepilogo(canvas, fattura_data, y)
+
         # Summary (totals)
         y = self.template.draw_summary(canvas, fattura_data, y)
 

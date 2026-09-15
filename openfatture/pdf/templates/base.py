@@ -138,6 +138,226 @@ class BaseTemplate(ABC):
         # Add extra spacing after client info before table
         return y - 0.8 * cm
 
+    def draw_dati_riepilogo(
+        self, canvas: Canvas, fattura_data: dict[str, Any], y_position: float
+    ) -> float:
+        """Draw Dati di riepilogo table (tax rate / natura breakdown).
+
+        Args:
+            canvas: ReportLab canvas
+            fattura_data: Invoice data
+            y_position: Current Y position
+
+        Returns:
+            New Y position after drawing
+        """
+        primary_color = HexColor(self.get_primary_color())
+
+        # Aggregate lines by (aliquota_iva, natura)
+        from collections import defaultdict
+        from collections.abc import Iterable
+
+        riepilogo: dict[tuple[Decimal, str | None], dict[str, Decimal]] = defaultdict(
+            lambda: {"imponibile": Decimal(0), "iva": Decimal(0)}
+        )
+
+        # Safely get righe (handle Mock objects in tests)
+        righe = fattura_data.get("righe", [])
+        if isinstance(righe, Iterable) and not isinstance(righe, (str, bytes)):
+            for riga in righe:
+                # Handle both dict and object attribute access
+                if isinstance(riga, dict):
+                    aliquota_raw = riga.get("aliquota_iva")
+                    natura = riga.get("natura")
+                    imponibile = riga.get("imponibile", Decimal(0))
+                    iva = riga.get("iva", Decimal(0))
+                else:
+                    # Object (ORM model or Mock)
+                    aliquota_raw = getattr(riga, "aliquota_iva", None)
+                    natura_raw = getattr(riga, "natura", None)
+                    # Ensure natura is a string or None (not a Mock)
+                    natura = natura_raw if isinstance(natura_raw, (str, type(None))) else None
+                    imponibile = getattr(riga, "imponibile", Decimal(0))
+                    iva = getattr(riga, "iva", Decimal(0))
+
+                # Ensure aliquota is Decimal for type safety
+                aliquota: Decimal = (
+                    Decimal(str(aliquota_raw)) if aliquota_raw is not None else Decimal(0)
+                )
+                key: tuple[Decimal, str | None] = (aliquota, natura)
+                riepilogo[key]["imponibile"] += imponibile
+                riepilogo[key]["iva"] += iva
+
+        # Include cassa previdenziale if present (handle Mock objects)
+        cassa_list = fattura_data.get("cassa_previdenziale", [])
+        if isinstance(cassa_list, Iterable) and not isinstance(cassa_list, (str, bytes)):
+            for cassa in cassa_list:
+                # Handle both dict and object attribute access
+                if isinstance(cassa, dict):
+                    aliquota_cassa_raw = cassa.get("aliquota_iva")
+                    natura_cassa = cassa.get("natura")
+                    imponibile_cassa = cassa.get("imponibile_cassa", Decimal(0))
+                else:
+                    # Object (ORM model or Mock)
+                    aliquota_cassa_raw = getattr(cassa, "aliquota_iva", None)
+                    natura_cassa_raw = getattr(cassa, "natura", None)
+                    # Ensure natura is a string or None (not a Mock)
+                    natura_cassa = (
+                        natura_cassa_raw
+                        if isinstance(natura_cassa_raw, (str, type(None)))
+                        else None
+                    )
+                    imponibile_cassa = getattr(cassa, "imponibile_cassa", Decimal(0))
+
+                # Ensure aliquota is Decimal for type safety
+                aliquota_cassa_decimal = (
+                    Decimal(str(aliquota_cassa_raw))
+                    if aliquota_cassa_raw is not None
+                    else Decimal(0)
+                )
+                cassa_key: tuple[Decimal, str | None] = (aliquota_cassa_decimal, natura_cassa)
+                # Cassa is already included in totals via imponibile_cassa
+                riepilogo[cassa_key]["imponibile"] += imponibile_cassa
+                if aliquota_cassa_decimal != Decimal(0):
+                    riepilogo[cassa_key]["iva"] += imponibile_cassa * aliquota_cassa_decimal / 100
+
+        if not riepilogo:
+            return y_position
+
+        # Add spacing before riepilogo
+        y_position -= 1.0 * cm
+
+        # Table dimensions
+        table_width = 17 * cm
+        table_x = 2 * cm
+        row_height = 0.6 * cm
+        header_height = 0.7 * cm
+
+        # Title
+        canvas.setFont("Helvetica-Bold", 10)
+        canvas.setFillColor(primary_color)
+        canvas.drawString(table_x, y_position - 0.5 * cm, "DATI DI RIEPILOGO")
+
+        y_position -= 0.8 * cm
+
+        # Header background
+        canvas.setFillColor(HexColor("#F5F5F5"))
+        canvas.rect(
+            table_x, y_position - header_height, table_width, header_height, fill=True, stroke=False
+        )
+
+        # Header border
+        canvas.setStrokeColor(primary_color)
+        canvas.setLineWidth(1)
+        canvas.rect(
+            table_x, y_position - header_height, table_width, header_height, fill=False, stroke=True
+        )
+
+        # Header text
+        canvas.setFont("Helvetica-Bold", 9)
+        canvas.setFillColor(HexColor("#333333"))
+        y_header = y_position - 0.5 * cm
+
+        col_widths = [3 * cm, 7 * cm, 3.5 * cm, 3.5 * cm]
+        col_positions = [
+            table_x + 0.2 * cm,
+            table_x + col_widths[0] + 0.2 * cm,
+            table_x + col_widths[0] + col_widths[1] + 0.2 * cm,
+            table_x + col_widths[0] + col_widths[1] + col_widths[2] + 0.2 * cm,
+        ]
+
+        canvas.drawString(col_positions[0], y_header, "Aliquota IVA")
+        canvas.drawString(col_positions[1], y_header, "Natura")
+        canvas.drawRightString(col_positions[2] + col_widths[2] - 0.4 * cm, y_header, "Imponibile")
+        canvas.drawRightString(col_positions[3] + col_widths[3] - 0.4 * cm, y_header, "Imposta")
+
+        # Data rows
+        canvas.setFont("Helvetica", 9)
+        y_data = y_position - header_height
+
+        # Natura labels mapping
+        natura_labels = {
+            "N1": "Escluse ex art. 15",
+            "N2.1": "Non soggette - art. 7-bis",
+            "N2.2": "Non soggette - altri casi",
+            "N3.1": "Non imponibili - esportazioni",
+            "N3.2": "Non imponibili - cessioni intracomunitarie",
+            "N3.3": "Non imponibili - cessioni verso San Marino",
+            "N3.4": "Non imponibili - operazioni assimilate",
+            "N3.5": "Non imponibili - dichiarazioni d'intento",
+            "N3.6": "Non imponibili - altre operazioni",
+            "N4": "Esenti",
+            "N5": "Regime del margine",
+            "N6.1": "Inversione contabile - cessione rottami",
+            "N6.2": "Inversione contabile - cessione oro",
+            "N6.3": "Inversione contabile - subappalto",
+            "N6.4": "Inversione contabile - cessione fabbricati",
+            "N6.5": "Inversione contabile - cessione telefoni cellulari",
+            "N6.6": "Inversione contabile - cessione prodotti elettronici",
+            "N6.7": "Inversione contabile - prestazioni settore edile",
+            "N6.8": "Inversione contabile - operazioni settore energetico",
+            "N6.9": "Inversione contabile - altri casi",
+            "N7": "IVA assolta in altro stato UE",
+        }
+
+        # Sort entries by aliquota and natura
+        # Use float() to handle both Decimal and Mock objects in tests
+        def sort_key(
+            item: tuple[tuple[Decimal, str | None], dict[str, Decimal]],
+        ) -> tuple[float, str]:
+            (aliquota, natura), _ = item
+            try:
+                aliquota_val = float(aliquota) if aliquota is not None else 0.0
+            except (TypeError, ValueError):
+                aliquota_val = 0.0
+            natura_val = str(natura) if natura else ""
+            return (aliquota_val, natura_val)
+
+        for (aliquota, natura), values in sorted(riepilogo.items(), key=sort_key):
+            # Row background (alternating)
+            row_index = list(riepilogo.keys()).index((aliquota, natura))
+            if row_index % 2 == 1:
+                canvas.setFillColor(HexColor("#FAFAFA"))
+                canvas.rect(
+                    table_x, y_data - row_height, table_width, row_height, fill=True, stroke=False
+                )
+
+            # Row border
+            canvas.setStrokeColor(HexColor("#E0E0E0"))
+            canvas.setLineWidth(0.5)
+            canvas.rect(
+                table_x, y_data - row_height, table_width, row_height, fill=False, stroke=True
+            )
+
+            # Data
+            canvas.setFillColor(HexColor("#333333"))
+            y_text = y_data - 0.45 * cm
+
+            # Aliquota
+            if aliquota > 0:
+                canvas.drawString(col_positions[0], y_text, f"{aliquota:.0f}%")
+            else:
+                canvas.drawString(col_positions[0], y_text, "-")
+
+            # Natura label (ensure it's always a string)
+            natura_str = str(natura) if natura and isinstance(natura, str) else "-"
+            natura_label = natura_labels.get(natura_str, natura_str)
+            canvas.drawString(col_positions[1], y_text, natura_label)
+
+            # Imponibile
+            canvas.drawRightString(
+                col_positions[2] + col_widths[2] - 0.4 * cm, y_text, f"€ {values['imponibile']:.2f}"
+            )
+
+            # Imposta
+            canvas.drawRightString(
+                col_positions[3] + col_widths[3] - 0.4 * cm, y_text, f"€ {values['iva']:.2f}"
+            )
+
+            y_data -= row_height
+
+        return y_data - 0.5 * cm
+
     def draw_summary(
         self, canvas: Canvas, fattura_data: dict[str, Any], y_position: float
     ) -> float:
