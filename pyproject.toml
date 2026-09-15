@@ -256,3 +256,22 @@ exclude_lines = [
 # Hatchling configuration for dynamic versioning
 [tool.hatch.version]
 path = "openfatture/__init__.py"
+
+# Include XSD schemas and other data files in the package
+[tool.hatch.build.targets.wheel]
+packages = ["openfatture"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/openfatture",
+  "/tests",
+  "/README.md",
+  "/LICENSE",
+]
+
+# Ensure XSD schemas are included in the wheel
+[tool.hatch.build]
+artifacts = [
+  "openfatture/sdi/schemas/*.xsd",
+  "openfatture/sdi/schemas/*.md",
+]

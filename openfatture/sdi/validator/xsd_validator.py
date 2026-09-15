@@ -1,5 +1,6 @@
 """XSD validator for FatturaPA XML."""
 
+from importlib.resources import as_file, files
 from pathlib import Path
 
 from lxml import etree
@@ -9,8 +10,8 @@ class FatturaPAValidator:
     """
     Validator for FatturaPA XML against official XSD schema.
 
-    The XSD schema should be downloaded from:
-    https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.2.2/Schema_del_file_xml_FatturaPA_v1.2.2.xsd
+    The validator uses bundled XSD schemas (FatturaPA v1.2.2 and W3C xmldsig)
+    for offline validation. Schemas are included as package resources.
     """
 
     def __init__(self, xsd_path: Path | None = None):
@@ -19,38 +20,43 @@ class FatturaPAValidator:
 
         Args:
             xsd_path: Path to FatturaPA XSD schema file.
-                     If not provided, looks in data directory.
+                     If not provided, uses bundled schema from package resources.
         """
-        self.xsd_path = xsd_path or self._get_default_xsd_path()
+        self.xsd_path = xsd_path
         self._schema: etree.XMLSchema | None = None
-
-    @staticmethod
-    def _get_default_xsd_path() -> Path:
-        """Get default XSD path in data directory."""
-        from openfatture.platform.config import get_settings
-
-        settings = get_settings()
-        return settings.data_dir / "schemas" / "FatturaPA_v1.2.2.xsd"
+        self._use_bundled = xsd_path is None
 
     def load_schema(self) -> None:
         """
         Load XSD schema from file.
 
+        Uses bundled schemas by default. The bundled FatturaPA schema references
+        the xmldsig-core-schema.xsd with a local schemaLocation, enabling offline
+        validation without network access.
+
         Raises:
-            FileNotFoundError: If XSD file doesn't exist
+            FileNotFoundError: If XSD file doesn't exist (custom path only)
             etree.XMLSchemaParseError: If XSD is invalid
         """
-        if not self.xsd_path.exists():
-            raise FileNotFoundError(
-                f"XSD schema not found at: {self.xsd_path}\n"
-                "Download from: "
-                "https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.2.2/"
-                "Schema_del_file_xml_FatturaPA_v1.2.2.xsd"
-            )
+        if self._use_bundled:
+            # Use bundled schemas from package resources
+            # as_file() extracts to a real filesystem path where lxml can resolve local imports
+            schema_files = files("openfatture.sdi.schemas")
+            with as_file(schema_files / "FatturaPA_v1.2.2.xsd") as schema_path:
+                with open(schema_path, "rb") as f:
+                    schema_doc = etree.parse(f)
+                    self._schema = etree.XMLSchema(schema_doc)
+        else:
+            # Use custom path (backward compatibility)
+            if self.xsd_path is None or not self.xsd_path.exists():
+                raise FileNotFoundError(
+                    f"XSD schema not found at: {self.xsd_path}\n"
+                    "Either use the bundled schema (default) or provide a valid path."
+                )
 
-        with open(self.xsd_path, "rb") as f:
-            schema_doc = etree.parse(f)
-            self._schema = etree.XMLSchema(schema_doc)
+            with open(self.xsd_path, "rb") as f:
+                schema_doc = etree.parse(f)
+                self._schema = etree.XMLSchema(schema_doc)
 
     def validate(self, xml_content: str) -> tuple[bool, str | None]:
         """
@@ -103,7 +109,11 @@ class FatturaPAValidator:
 
 def download_xsd_schema(auto_download: bool = False) -> Path:
     """
-    Download official FatturaPA XSD schema.
+    Download official FatturaPA XSD schema to data directory.
+
+    Note: FatturaPAValidator now uses bundled schemas by default (no download needed).
+    This function is retained for backward compatibility and custom workflows that
+    need schemas in the data directory.
 
     Args:
         auto_download: If True, automatically downloads the schema if missing.
@@ -116,10 +126,6 @@ def download_xsd_schema(auto_download: bool = False) -> Path:
         FileNotFoundError: If schema not found and auto_download is False
         urllib.error.URLError: If download fails (network error, timeout)
         IOError: If file write fails
-
-    Note:
-        Downloads from official FatturaPA government source.
-        For production, consider bundling the XSD with the package instead.
     """
     import urllib.request
 
