@@ -249,8 +249,8 @@ class TestInvoiceWorkflowE2E:
             assert xml_content is not None
             assert fattura.numero in xml_content
 
-        # Verify all XMLs are unique
-        xml_files = list((test_settings.archivio_dir / "xml").glob("*.xml"))
+        # Verify all XMLs for this test are created (filter by year 2025)
+        xml_files = list((test_settings.archivio_dir / "xml").glob("IT12345678903_0000*.xml"))
         assert len(xml_files) == 3
 
 

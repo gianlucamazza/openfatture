@@ -548,9 +548,9 @@ class ComplianceRulesEngine:
         # FPA042: Total validation
         # Account for ritenuta and bollo (only if not assolto virtuale)
         bollo_charged = Decimal("0")
-        if fattura.importo_bollo > 0 and not getattr(fattura, 'bollo_assolto_virtuale', False):
+        if fattura.importo_bollo > 0 and not getattr(fattura, "bollo_assolto_virtuale", False):
             bollo_charged = fattura.importo_bollo
-        
+
         expected_total_final = (
             expected_totale - (fattura.ritenuta_acconto or Decimal("0")) + bollo_charged
         )

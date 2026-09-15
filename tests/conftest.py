@@ -551,7 +551,7 @@ def sample_fattura_with_bollo_assolto(db_session: Session, sample_cliente: Clien
     imponibile = Decimal("960.00")
 
     fattura = Fattura(
-        numero="3A",
+        numero="ASSOLTO_1",
         anno=2026,
         data_emissione=date(2026, 9, 14),
         cliente_id=sample_cliente.id,

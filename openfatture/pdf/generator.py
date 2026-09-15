@@ -299,7 +299,9 @@ class PDFGenerator:
             "ritenuta_acconto": fattura.ritenuta_acconto or Decimal(0),
             "aliquota_ritenuta": fattura.aliquota_ritenuta or Decimal(0),
             "importo_bollo": fattura.importo_bollo or Decimal(0),
-            "bollo_assolto_virtuale": fattura.bollo_assolto_virtuale if hasattr(fattura, 'bollo_assolto_virtuale') else False,
+            "bollo_assolto_virtuale": fattura.bollo_assolto_virtuale
+            if hasattr(fattura, "bollo_assolto_virtuale")
+            else False,
             "stato": fattura.stato.value,
             "note": fattura.note,
             "cedente": cedente_data,
@@ -465,10 +467,10 @@ class PDFGenerator:
         # Bollo footer (if present)
         if fattura_data.get("importo_bollo", Decimal(0)) > 0:
             y = self.template.draw_bollo_footer(
-                canvas, 
-                fattura_data["importo_bollo"], 
+                canvas,
+                fattura_data["importo_bollo"],
                 fattura_data.get("bollo_assolto_virtuale", False),
-                y
+                y,
             )
 
     def _calculate_summary_height(self, fattura_data: dict[str, Any]) -> float:
@@ -488,7 +490,9 @@ class PDFGenerator:
         # Add lines for optional fields
         if fattura_data.get("ritenuta_acconto", Decimal(0)) > 0:
             num_lines += 1
-        if fattura_data.get("importo_bollo", Decimal(0)) > 0 and not fattura_data.get("bollo_assolto_virtuale", False):
+        if fattura_data.get("importo_bollo", Decimal(0)) > 0 and not fattura_data.get(
+            "bollo_assolto_virtuale", False
+        ):
             num_lines += 1
 
         box_height = (num_lines * line_height) + 1.4 * cm

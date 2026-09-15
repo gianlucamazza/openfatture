@@ -24,7 +24,7 @@ def upgrade() -> None:
 
     This field indicates whether the stamp duty (bollo) is "assolto virtuale"
     (paid separately by the provider and not charged to the client).
-    
+
     When True: bollo amount is not added to the client's payable total.
     When False (default): bollo is charged to the client (added to total).
     """
