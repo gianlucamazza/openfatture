@@ -503,7 +503,7 @@ def sample_fattura_with_ritenuta(db_session: Session, sample_cliente: Cliente) -
 
 @pytest.fixture
 def sample_fattura_with_bollo(db_session: Session, sample_cliente: Cliente) -> Fattura:
-    """Create a sample invoice with stamp duty (bollo)."""
+    """Create a sample invoice with stamp duty (bollo) charged to client."""
     # Invoice with no VAT (exempt) and amount >77.47 requires bollo
     imponibile = Decimal("100.00")
 
@@ -517,7 +517,8 @@ def sample_fattura_with_bollo(db_session: Session, sample_cliente: Cliente) -> F
         imponibile=imponibile,
         iva=Decimal("0.00"),  # No VAT
         importo_bollo=Decimal("2.00"),
-        totale=imponibile,
+        bollo_assolto_virtuale=False,  # Bollo charged to client
+        totale=imponibile + Decimal("2.00"),  # Include bollo in total
     )
 
     db_session.add(fattura)
@@ -531,6 +532,50 @@ def sample_fattura_with_bollo(db_session: Session, sample_cliente: Cliente) -> F
         prezzo_unitario=imponibile,
         unita_misura="servizio",
         aliquota_iva=Decimal("0.00"),
+        imponibile=imponibile,
+        iva=Decimal("0.00"),
+        totale=imponibile,
+    )
+
+    db_session.add(riga)
+    db_session.commit()
+    db_session.refresh(fattura)
+
+    return fattura
+
+
+@pytest.fixture
+def sample_fattura_with_bollo_assolto(db_session: Session, sample_cliente: Cliente) -> Fattura:
+    """Create a sample invoice with stamp duty (bollo) assolto virtuale - not charged to client."""
+    # Invoice with forfettario regime and bollo assolto
+    imponibile = Decimal("960.00")
+
+    fattura = Fattura(
+        numero="3A",
+        anno=2026,
+        data_emissione=date(2026, 9, 14),
+        cliente_id=sample_cliente.id,
+        tipo_documento=TipoDocumento.TD01,
+        stato=StatoFattura.BOZZA,
+        imponibile=imponibile,
+        iva=Decimal("0.00"),  # Forfettario - no VAT
+        importo_bollo=Decimal("2.00"),
+        bollo_assolto_virtuale=True,  # Bollo paid by provider, not charged to client
+        totale=imponibile,  # Total = lines sum, bollo NOT added
+    )
+
+    db_session.add(fattura)
+    db_session.flush()
+
+    riga = RigaFattura(
+        fattura_id=fattura.id,
+        numero_riga=1,
+        descrizione='Corso di formazione: "Introduzione e strumenti di Intelligenza Artificiale" eseguito dal 7 al 10 settembre 2026',
+        quantita=Decimal("1"),
+        prezzo_unitario=imponibile,
+        unita_misura="servizio",
+        aliquota_iva=Decimal("0.00"),
+        natura="N2.2",  # Non soggette - altri casi (forfettario)
         imponibile=imponibile,
         iva=Decimal("0.00"),
         totale=imponibile,
