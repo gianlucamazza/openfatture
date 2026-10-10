@@ -6,5 +6,5 @@ compliance with FatturaPA and SDI requirements.
 """
 
 __version__ = "2.3.0"
-__author__ = "Venere Labs"
+__author__ = "Gianluca Mazza"
 __license__ = "MIT"

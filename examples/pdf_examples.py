@@ -164,7 +164,7 @@ def example_1_minimalist_template():
         # Configure generator with minimalist template
         config = PDFGeneratorConfig(
             template="minimalist",
-            company_name="VenereLabs S.r.l.",
+            company_name="Example S.r.l.",
             company_vat="IT12345678901",
             company_address="Via Giuseppe Verdi 42",
             company_city="20121 Milano (MI)",
@@ -209,7 +209,7 @@ def example_2_professional_template():
         # Configure generator with professional template
         config = PDFGeneratorConfig(
             template="professional",
-            company_name="VenereLabs S.r.l.",
+            company_name="Example S.r.l.",
             company_vat="IT12345678901",
             company_address="Via Giuseppe Verdi 42",
             company_city="20121 Milano (MI)",
@@ -261,7 +261,7 @@ def example_3_branded_template():
         # Configure generator with branded template and custom colors
         config = PDFGeneratorConfig(
             template="branded",
-            company_name="VenereLabs S.r.l.",
+            company_name="Example S.r.l.",
             company_vat="IT12345678901",
             company_address="Via Giuseppe Verdi 42",
             company_city="20121 Milano (MI)",
@@ -317,7 +317,7 @@ def example_4_qr_code_integration():
         # Configure generator with QR code enabled
         config = PDFGeneratorConfig(
             template="professional",
-            company_name="VenereLabs S.r.l.",
+            company_name="Example S.r.l.",
             company_vat="IT12345678901",
             company_address="Via Giuseppe Verdi 42",
             company_city="20121 Milano (MI)",
@@ -373,7 +373,7 @@ def example_5_pdfa_compliance():
         # Configure generator with PDF/A enabled (default)
         config = PDFGeneratorConfig(
             template="professional",
-            company_name="VenereLabs S.r.l.",
+            company_name="Example S.r.l.",
             company_vat="IT12345678901",
             enable_pdfa=True,  # Enable PDF/A-3 compliance (default)
         )
@@ -430,7 +430,7 @@ def example_6_batch_generation():
         # Configure generator
         config = PDFGeneratorConfig(
             template="professional",
-            company_name="VenereLabs S.r.l.",
+            company_name="Example S.r.l.",
             company_vat="IT12345678901",
             enable_qr_code=True,
         )
@@ -496,7 +496,7 @@ def example_7_custom_configuration():
             # Template
             template="branded",
             # Company info
-            company_name="VenereLabs S.r.l.",
+            company_name="Example S.r.l.",
             company_vat="IT12345678901",
             company_address="Via Giuseppe Verdi 42",
             company_city="20121 Milano (MI)",
@@ -510,7 +510,7 @@ def example_7_custom_configuration():
             enable_pdfa=True,  # PDF/A-3 compliance
             # Customization
             watermark_text="COPIA CLIENTE",  # Watermark
-            footer_text="VenereLabs S.r.l. - P.IVA IT12345678901 - REA MI-1234567 - Capitale Sociale €10.000",
+            footer_text="Example S.r.l. - P.IVA IT12345678901 - REA MI-1234567 - Capitale Sociale €10.000",
         )
 
         print("Configuration summary:")
@@ -587,7 +587,7 @@ def example_8_template_comparison():
         for tmpl in templates_config:
             config = PDFGeneratorConfig(
                 template=tmpl["template"],
-                company_name="VenereLabs S.r.l.",
+                company_name="Example S.r.l.",
                 company_vat="IT12345678901",
                 enable_qr_code=True,
             )

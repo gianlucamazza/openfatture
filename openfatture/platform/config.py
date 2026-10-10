@@ -14,7 +14,9 @@ from pydantic_settings import (
 
 from openfatture.platform.assistant_backends import DEFAULT_ASSISTANT_BACKEND
 
-# Initialize platform directories
+# Keep the historical appauthor so Windows defaults stay under
+# %LOCALAPPDATA%\venerelabs\openfatture. This is a local folder name, not a
+# domain — changing it would silently orphan existing config/data/keys.
 dirs = PlatformDirs("openfatture", "venerelabs")
 
 
