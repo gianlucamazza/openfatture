@@ -33,7 +33,7 @@ class TestEmailNotifier:
             port=587,
             username="test@example.com",
             password="testpassword",
-            from_email="noreply@openfatture.com",
+            from_email="info@gianlucamazza.it",
             from_name="OpenFatture Test",
             use_tls=True,
         )

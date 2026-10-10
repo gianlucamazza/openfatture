@@ -71,7 +71,7 @@ class EmailNotifier(INotifier):
         ...     port=587,
         ...     username="your@email.com",
         ...     password="yourpassword",
-        ...     from_email="noreply@openfatture.com",
+        ...     from_email="info@gianlucamazza.it",
         ... )
         >>> notifier = EmailNotifier(config, template_dir=Path("templates"))
         >>> await notifier.send_reminder(reminder)

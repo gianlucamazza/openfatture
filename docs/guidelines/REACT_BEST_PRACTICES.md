@@ -896,5 +896,5 @@ uv run pytest tests/ai/test_react_e2e_ollama.py::TestReActOllamaSuccessRate -v
 
 **Questions or Issues?**
 - GitHub Issues: https://github.com/gianlucamazza/openfatture/issues
-- Documentation: https://docs.openfatture.dev
-- Community: https://discord.gg/openfatture
+- Documentation: https://github.com/gianlucamazza/openfatture/tree/main/docs
+- Community: https://github.com/gianlucamazza/openfatture/discussions
