@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Drop remaining user-facing Venere Labs / `venerelabs` branding after
   `venerelabs.com` expired (not renewed). Example company data uses
-  `Example S.r.l.`; package author and landing-page copyright use Gianluca
-  Mazza (`info@gianlucamazza.it`). `PlatformDirs` still uses the historical
-  `venerelabs` appauthor so Windows data/config paths stay put.
+  `Example S.r.l.`; package `__author__` is Gianluca Mazza; landing-page
+  copyright is `© 2024–2026 Gianluca Mazza` (`info@gianlucamazza.it`).
+  `PlatformDirs` still uses the historical `venerelabs` appauthor so
+  Windows data/config paths stay put.
 
 ## [2.3.0] - 2026-09-11
 
