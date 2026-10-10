@@ -113,7 +113,7 @@ class TestPromptManager:
         manager = PromptManager(templates_dir)
 
         assert manager.templates_dir == templates_dir
-        assert manager.env is not None
+        assert not hasattr(manager, "env")
         assert manager._cache == {}
 
     def test_load_template_success(self, prompt_manager, sample_template_file):
@@ -144,6 +144,14 @@ class TestPromptManager:
 
         assert "not found" in str(exc_info.value)
         assert "nonexistent" in str(exc_info.value)
+
+    def test_load_template_rejects_path_traversal(self, prompt_manager, tmp_path):
+        """Template names must stay inside the templates directory."""
+        with pytest.raises(ValueError, match="Invalid template name"):
+            prompt_manager.load_template("../secrets")
+
+        with pytest.raises(ValueError, match="Invalid template name"):
+            prompt_manager.load_template("nested/template")
 
     def test_load_template_missing_system_prompt(self, templates_dir):
         """Test loading template without system_prompt raises ValueError."""

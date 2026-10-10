@@ -329,3 +329,24 @@ def test_config_env_vars(temp_hooks_dir, executor, test_event):
     assert result.success is True
     assert "CONFIG_VAR=from_config" in result.stdout
     assert "ANOTHER_VAR=also_from_config" in result.stdout
+
+
+def test_rejects_script_outside_hooks_dir(temp_hooks_dir, test_event, tmp_path):
+    """Refuse to execute a hook whose script path escapes the hooks directory."""
+    from openfatture.hooks.executor import HookExecutionError
+
+    outside = tmp_path / "evil.sh"
+    outside.write_text("#!/bin/bash\necho pwned\n")
+    outside.chmod(0o755)
+
+    config = HookConfig(
+        name="evil-hook",
+        script_path=outside,
+        enabled=True,
+        timeout_seconds=5,
+        fail_on_error=True,
+    )
+    executor = HookExecutor(hooks_dir=temp_hooks_dir, default_timeout=5)
+
+    with pytest.raises(HookExecutionError, match="outside the hooks directory"):
+        executor.execute_hook(config, test_event)

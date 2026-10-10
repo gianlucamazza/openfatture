@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Template
 from pydantic import BaseModel, ConfigDict, Field
 
 from openfatture.platform.logging import get_logger
@@ -107,17 +107,25 @@ class PromptManager:
             self.templates_dir.mkdir(parents=True, exist_ok=True)
             logger.info("created_prompts_directory", path=str(self.templates_dir))
 
-        # Initialize Jinja2 environment
-        self.env = Environment(
-            loader=FileSystemLoader(str(templates_dir)),
-            trim_blocks=True,
-            lstrip_blocks=True,
-        )
-
         # Cache for loaded templates
         self._cache: dict[str, PromptTemplate] = {}
 
         logger.info("prompt_manager_initialized", templates_dir=str(templates_dir))
+
+    def _template_yaml_path(self, name: str) -> Path:
+        """Resolve a template name to a YAML path inside ``templates_dir``.
+
+        Rejects path separators and ``..`` so a caller-controlled name cannot
+        read files outside the templates directory.
+        """
+        if Path(name).name != name or name in {".", ".."} or not name:
+            raise ValueError(f"Invalid template name: {name}")
+
+        yaml_path = (self.templates_dir / f"{name}.yaml").resolve()
+        templates_root = self.templates_dir.resolve()
+        if not yaml_path.is_relative_to(templates_root):
+            raise ValueError(f"Invalid template name: {name}")
+        return yaml_path
 
     def load_template(self, name: str) -> PromptTemplate:
         """
@@ -138,8 +146,8 @@ class PromptManager:
             logger.debug("prompt_template_cache_hit", name=name)
             return self._cache[name]
 
-        # Load from file
-        yaml_path = self.templates_dir / f"{name}.yaml"
+        # Load from file (reject path separators / traversal in the template name)
+        yaml_path = self._template_yaml_path(name)
 
         if not yaml_path.exists():
             raise FileNotFoundError(

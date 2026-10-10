@@ -282,7 +282,10 @@ class HookExecutor:
         Returns:
             CompletedProcess with stdout, stderr, returncode
         """
-        script_path = config.script_path
+        script_path = config.script_path.resolve()
+        hooks_root = self.hooks_dir.resolve()
+        if not script_path.is_relative_to(hooks_root):
+            raise ValueError(f"Hook script is outside the hooks directory: {script_path}")
 
         # Determine interpreter based on file extension
         suffix = script_path.suffix.lower()
