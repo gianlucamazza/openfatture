@@ -199,7 +199,7 @@ class TestEmailNotifier:
         """Ensure notifier injects company name from application settings."""
         from openfatture.platform.config import Settings
 
-        custom_settings = Settings(cedente_denominazione="Venere Labs S.r.l.")
+        custom_settings = Settings(cedente_denominazione="Example S.r.l.")
         template_dir = tmp_path / "templates"
         template_dir.mkdir()
         notifier = EmailNotifier(
@@ -220,7 +220,7 @@ class TestEmailNotifier:
 
         assert result is True
         first_call_context = notifier._render_template.call_args_list[0].args[1]
-        assert first_call_context["company_name"] == "Venere Labs S.r.l."
+        assert first_call_context["company_name"] == "Example S.r.l."
 
     @pytest.mark.asyncio
     async def test_fallback_text_uses_settings_company_name(

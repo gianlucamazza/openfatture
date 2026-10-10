@@ -53,6 +53,8 @@ def test_platformdirs_usage():
         # Reload the module so the class definitions are re-evaluated with the mock
         importlib.reload(openfatture.platform.config)
 
+        MockPlatformDirs.assert_called_once_with("openfatture")
+
         settings = openfatture.platform.config.Settings()
 
         assert str(settings.data_dir) == "/tmp/mock/data"

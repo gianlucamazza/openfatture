@@ -14,8 +14,8 @@ from pydantic_settings import (
 
 from openfatture.platform.assistant_backends import DEFAULT_ASSISTANT_BACKEND
 
-# Initialize platform directories
-dirs = PlatformDirs("openfatture", "venerelabs")
+# Config/data/log dirs. No vendor author (Windows: %LOCALAPPDATA%\openfatture\openfatture).
+dirs = PlatformDirs("openfatture")
 
 
 def _default_app_version() -> str:

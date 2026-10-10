@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Drop remaining Venere Labs / `venerelabs` branding after `venerelabs.com`
+  expired (not renewed). Example company data uses `Example S.r.l.`; package
+  author and landing-page copyright use Gianluca Mazza
+  (`info@gianlucamazza.it`). `PlatformDirs` no longer uses a `venerelabs`
+  vendor segment (Windows default data/config paths move from
+  `%LOCALAPPDATA%\venerelabs\openfatture` to `%LOCALAPPDATA%\openfatture\openfatture`;
+  Linux/macOS XDG paths were already `*/openfatture`). Existing Windows
+  installs should set `DATA_DIR` or migrate files if they relied on the old
+  default.
+
 ## [2.3.0] - 2026-09-11
 
 ### Added
