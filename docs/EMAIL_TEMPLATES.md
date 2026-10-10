@@ -358,4 +358,4 @@ print(f"Translations: {renderer.translations.keys()}")
 
 For issues or questions:
 - GitHub: https://github.com/gianlucamazza/openfatture/issues
-- Documentation: https://docs.openfatture.com
+- Documentation: https://github.com/gianlucamazza/openfatture/tree/main/docs

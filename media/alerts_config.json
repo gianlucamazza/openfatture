@@ -27,7 +27,7 @@
       "recipients": ["admin@example.com"],
       "smtp_server": "smtp.example.com",
       "smtp_port": 587,
-      "sender": "alerts@openfatture.com"
+      "sender": "info@gianlucamazza.it"
     },
     "slack": {
       "enabled": false,
