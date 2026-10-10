@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import structlog
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from openfatture.platform.config import Settings, get_settings
 
@@ -93,14 +93,25 @@ class EmailNotifier(INotifier):
         self.settings = settings or get_settings()
         self.env: Environment | None = None
 
-        # Setup Jinja2 environment
+        # Setup Jinja2 environment. HTML/XML autoescape mitigates XSS when
+        # invoice or client fields are interpolated into reminder emails.
+        jinja_autoescape = select_autoescape(
+            enabled_extensions=("html", "htm", "xml"),
+            default_for_string=False,
+        )
         if template_dir and template_dir.exists():
-            self.env = Environment(loader=FileSystemLoader(template_dir))
+            self.env = Environment(
+                loader=FileSystemLoader(template_dir),
+                autoescape=jinja_autoescape,
+            )
         else:
             # Use default template directory
             default_template_dir = Path(__file__).parent.parent.parent / "templates"
             if default_template_dir.exists():
-                self.env = Environment(loader=FileSystemLoader(default_template_dir))
+                self.env = Environment(
+                    loader=FileSystemLoader(default_template_dir),
+                    autoescape=jinja_autoescape,
+                )
             else:
                 logger.warning("email_template_dir_not_found", template_dir=template_dir)
 
