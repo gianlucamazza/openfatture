@@ -250,7 +250,7 @@ Or modify hook config programmatically.
 
 - See full documentation: `docs/HOOKS.md`
 - View hook system architecture: `CLAUDE.md`
-- File issues: https://github.com/venerelabs/openfatture/issues
+- File issues: https://github.com/gianlucamazza/openfatture/issues
 
 ## Contributing
 

@@ -56,10 +56,10 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 
 ## Status
 
-Version **2.2.0**, Python 3.12+ and `uv`. Professional PDF templates, first-class
-CLI commands, FatturaPA XML validation, and natura/DatiCassaPrevidenziale support
-shipped in 2.2 — see [docs/STATUS.md](docs/STATUS.md),
-[docs/releases/v2.2.0.md](docs/releases/v2.2.0.md), and
+Version **2.3.0**, Python 3.12+ and `uv`. Credit notes (TD04), real XML
+generation, professional PDF templates, and natura/DatiCassaPrevidenziale
+support — see [docs/STATUS.md](docs/STATUS.md),
+[docs/releases/v2.3.0.md](docs/releases/v2.3.0.md), and
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Explicit non-goal: there is no browser frontend or web application surface,

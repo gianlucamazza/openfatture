@@ -572,15 +572,15 @@ enriched_context = enrich_chat_context(context)
 - Try the [Invoice Assistant](AI_INVOICE_ASSISTANT.md)
 - Try the [Tax Advisor](AI_TAX_ADVISOR.md)
 - Explore [Configuration Options](../docs/CONFIGURATION.md)
-- Contribute: [GitHub Repository](https://github.com/venerelabs/openfatture)
+- Contribute: [GitHub Repository](https://github.com/gianlucamazza/openfatture)
 
 ---
 
 ## Support
 
 - Documentation: [docs/](../docs/)
-- Community: [GitHub Discussions](https://github.com/venerelabs/openfatture/discussions)
-- Bug Reports: [GitHub Issues](https://github.com/venerelabs/openfatture/issues)
+- Community: [GitHub Discussions](https://github.com/gianlucamazza/openfatture/discussions)
+- Bug Reports: [GitHub Issues](https://github.com/gianlucamazza/openfatture/issues)
 - Email: info@gianlucamazza.it
 
 ---

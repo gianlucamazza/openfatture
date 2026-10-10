@@ -203,7 +203,7 @@ all = ["openfatture[ai,rag,ml]"]
 
 ### 4.3 Done (2.2 forfettario PDF — shipped)
 
-**Release:** 2.2.0 (2026-08/09, latest on `main`)  
+**Release:** 2.2.0 (2026-08/09)  
 **Scope:** Real Italian forfettario invoice PDF with RF19, natura, cassa, bollo MEF-compliant rendering.
 
 ✅ Professional PDF template upgraded to production quality  
@@ -284,7 +284,7 @@ All debt has explicit **trigger** conditions (when to act) and GitHub issues. Do
 
 ## 5. First-class PDF + XML concerns
 
-**Current product supports (as of 2.2.0):**
+**Current product supports (as of 2.3.0):**
 
 ### 5.1 Regime fiscale
 
@@ -400,7 +400,7 @@ fail_under = 49  # Package-wide floor (prevents large regressions)
 
 ## 8. Versioning and release cadence
 
-**Current version:** 2.2.0 (2026-09-11)
+**Current version:** 2.3.0 (2026-09-11)
 
 **Version scheme:** `MAJOR.MINOR.PATCH`
 
@@ -408,7 +408,7 @@ fail_under = 49  # Package-wide floor (prevents large regressions)
 - **MINOR** — New features, non-breaking API additions, dependency updates
 - **PATCH** — Bug fixes, documentation updates, performance improvements
 
-**Release tags:** `v2.0.0`, `v2.1.0`, `v2.2.0`, ...
+**Release tags:** `v2.0.0`, `v2.1.0`, `v2.2.0`, `v2.3.0`, ...
 
 **Changelog:** [CHANGELOG.md](../CHANGELOG.md) with user-facing release notes
 
@@ -423,7 +423,7 @@ fail_under = 49  # Package-wide floor (prevents large regressions)
 
 ---
 
-## 9. Summary: what you get in 2.2.0
+## 9. Summary: what you get in 2.3.0
 
 ✅ **Core invoicing:** CRUD for clients/invoices, line items, batch operations  
 ✅ **FatturaPA XML:** v1.9 compliant, all regimes, natura codes, cassa, ritenuta, bollo  
@@ -433,12 +433,11 @@ fail_under = 49  # Package-wide floor (prevents large regressions)
 ✅ **AI assistant** (`[ai]` extra): Natural language tools, LangGraph orchestration, RAG optional  
 ✅ **Hooks:** User automation scripts via event bus  
 ✅ **CLI + interactive mode:** Deterministic commands + guided TUI  
+✅ **Nota di credito (TD04):** Credit notes with FatturaPA `DatiFattureCollegate` linkage  
 
 ⚠️ **Experimental:** Multi-agent workflows (off public path)  
 ⚠️ **On-demand:** Oversized module splits, pagoPA QR, accuracy-drift monitoring  
-❌ **Explicit non-goals:** Web app, in-process plugins, duplicate CLI command trees  
-
-**Next likely feature (this branch):** Real nota di credito with FatturaPA linkage.
+❌ **Explicit non-goals:** Web app, in-process plugins, duplicate CLI command trees
 
 ---
 

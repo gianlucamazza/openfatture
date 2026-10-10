@@ -6,7 +6,7 @@ freelancers.
 ## Install
 
 ```bash
-git clone https://github.com/venerelabs/openfatture.git
+git clone https://github.com/gianlucamazza/openfatture.git
 cd openfatture
 # Full stack (recommended for development and AI). Core-only: uv sync
 uv sync --all-extras

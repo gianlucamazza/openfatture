@@ -547,4 +547,4 @@ Per consulenza fiscale personalizzata:
 
 **Fatto con per freelance e PMI italiane**
 
-Per domande o segnalazioni: https://github.com/venerelabs/openfatture/issues
+Per domande o segnalazioni: https://github.com/gianlucamazza/openfatture/issues
