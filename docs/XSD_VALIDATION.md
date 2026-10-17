@@ -131,15 +131,9 @@ Run validation tests:
 uv run python -m pytest tests/unit/test_xsd_validator.py::TestBundledSchemas -v
 ```
 
-## Integration with OpenFatture Cloud
+## OpenFatture Cloud (archived)
 
-OpenFatture Cloud can now assert real XSD validation success instead of softening failures as "namespace quirks":
-
-1. Pin to openfatture >= 2.3.1 in Cloud dependencies
-2. Use `FatturaPAValidator` directly (no schema downloads)
-3. Assert `is_valid is True` for happy-path validation
-
-No need to vendor schemas into openfatture-cloud; the fix is in the OSS package.
+The `openfatture-cloud` repository is archived and the hosted service is no longer offered. XSD validation lives in this package (`openfatture >= 2.3.1`); there is no hosted service to pin or vendor schemas into.
 
 ## Schema Updates
 
