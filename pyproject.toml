@@ -110,7 +110,7 @@ dev = [
   "pypdf>=6.19.0",
 
   # Code Quality (keep ranges aligned with pre-commit hooks)
-  "ruff>=0.14.0,<0.17",
+  "ruff>=0.14.0,<0.18",
   "mypy>=1.8.0",
 
   # Pre-commit hooks
