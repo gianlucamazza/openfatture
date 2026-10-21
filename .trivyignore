@@ -1,0 +1,21 @@
+# Unfixed chromadb 1.5.9 findings (patched: none through 1.5.9).
+# OpenFatture only constructs chromadb.PersistentClient locally
+# (openfatture/ai/rag/vector_store.py). No HttpClient, no chroma server.
+# chromadb_host/chromadb_port in AISettings are unused dead fields.
+# Expiry: revisit when chroma-core/chroma lists a first_patched_version.
+#
+# FastAPI POST /api/v2/tenants/{tenant}/databases/{db}/collections (pre-auth RCE) — https://github.com/advisories/GHSA-f4j7-r4q5-qw2c
+CVE-2026-45829 exp:2027-01-21
+GHSA-f4j7-r4q5-qw2c exp:2027-01-21
+#
+# FastAPI PUT /api/v2/tenants/.../collections/{id} (post-auth RCE, chromadb/server/fastapi) — https://github.com/advisories/GHSA-36p7-vc44-83pf
+CVE-2026-45833 exp:2027-01-21
+GHSA-36p7-vc44-83pf exp:2027-01-21
+#
+# Python FastAPI server IDOR: authenticated users, any tenant collection UUID — https://github.com/advisories/GHSA-2wm9-hf6c-p5cr
+CVE-2026-45830 exp:2027-01-21
+GHSA-2wm9-hf6c-p5cr exp:2027-01-21
+#
+# ServerAuthorizationProvider SimpleRBAC (HTTP 403 path); not used by PersistentClient — https://github.com/advisories/GHSA-xph7-9rjv-w5fr
+CVE-2026-45831 exp:2027-01-21
+GHSA-xph7-9rjv-w5fr exp:2027-01-21
