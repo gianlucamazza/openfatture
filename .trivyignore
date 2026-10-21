@@ -1,0 +1,41 @@
+# Narrow ignores for ChromaDB CVEs with no upstream patched release.
+# Locked version is chromadb 1.5.9 (pyproject floor is >=1.1.1; Trivy may
+# report the floor). Advisories list affected <=1.5.9 and patched: none.
+# Latest stable is still 1.5.9 (2026-05-05); 1.5.10 exists only as a
+# development build. OpenFatture uses chromadb.PersistentClient locally
+# (openfatture/ai/rag/vector_store.py) and never starts or connects to a
+# ChromaDB HTTP server, so the server-API attack surface does not apply.
+# Revisit when chroma-core/chroma ships a release that lists a
+# first_patched_version for these IDs.
+#
+# Pre-existing on main (same chromadb 1.5.9). Flagged on the aiohttp
+# 3.14.4 lockfile bump because the uv.lock diff was large enough for
+# GitHub code scanning to treat lockfile alerts as new.
+#
+# CVE-2026-45829 / GHSA-f4j7-r4q5-qw2c (CRITICAL)
+# Pre-auth code injection via trust_remote_code on /api/v2 collections.
+# Reason: unfixable upstream (patched: none through 1.5.9); not exposed
+# (local PersistentClient only; remote model-code execution is not enabled).
+CVE-2026-45829 exp:2027-01-21
+GHSA-f4j7-r4q5-qw2c exp:2027-01-21
+#
+# CVE-2026-45833 / GHSA-36p7-vc44-83pf (CRITICAL)
+# Authenticated code injection via trust_remote_code on collection update.
+# Reason: unfixable upstream (patched: none through 1.5.9); not exposed
+# (local PersistentClient only).
+CVE-2026-45833 exp:2027-01-21
+GHSA-36p7-vc44-83pf exp:2027-01-21
+#
+# CVE-2026-45830 / GHSA-2wm9-hf6c-p5cr (HIGH)
+# Missing authorization lets any authenticated user mutate any tenant.
+# Reason: unfixable upstream (patched: none through 1.5.9); not exposed
+# (no multi-tenant ChromaDB server).
+CVE-2026-45830 exp:2027-01-21
+GHSA-2wm9-hf6c-p5cr exp:2027-01-21
+#
+# CVE-2026-45831 / GHSA-xph7-9rjv-w5fr (HIGH)
+# SimpleRBACAuthorizationProvider skips tenant/database/collection scope.
+# Reason: unfixable upstream (patched: none through 1.5.9); not exposed
+# (no multi-tenant ChromaDB server).
+CVE-2026-45831 exp:2027-01-21
+GHSA-xph7-9rjv-w5fr exp:2027-01-21
