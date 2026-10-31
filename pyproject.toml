@@ -107,7 +107,7 @@ dev = [
   "pytest-mock>=3.12.0",
   "pytest-benchmark>=4.0.0",
   "hypothesis>=6.98.0",
-  "pypdf>=6.19.0",
+  "pypdf>=6.21.4",
 
   # Code Quality (keep ranges aligned with pre-commit hooks)
   "ruff>=0.14.0,<0.18",
