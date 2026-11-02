@@ -59,6 +59,8 @@ uv sync --all-extras
 | `AI_API_KEY` | **Product SSOT** provider credential |
 | `AI_BASE_URL` | **Product SSOT** local provider endpoint (Ollama) |
 | `ASSISTANT_BACKEND` | Product assistant orchestration: `langgraph` (default) or `chat` (rollback) |
+| `AI_ENABLED_TOOLS` | Comma-separated allowlist of tools the chat/AI agent may use. Default is read-only invoice/client lookups. Transmit tools such as `send_invoice_to_sdi` stay off unless you name them here. The value `all` enables every non-transmit tool; it does **not** enable SDI/PEC send. |
+| `AI_TOOLS_REQUIRE_CONFIRMATION` | Default `true`. When true, tools that require confirmation (including every SDI/PEC send) refuse unless a human says yes in an interactive CLI/TUI prompt, or a human-facing path sets `confirmed=True`. The model cannot self-confirm. Non-interactive sessions refuse and do not transmit. Setting this to `false` skips the prompt but still requires an `AI_ENABLED_TOOLS` opt-in for transmit tools. |
 
 Product credentials written by `openfatture init` use the `AI_*` names above.
 The provider factory hydrates `AISettings` from those values (see

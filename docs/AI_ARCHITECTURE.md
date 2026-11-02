@@ -64,7 +64,10 @@ Rollback: `ASSISTANT_BACKEND=chat`. Inspect with `openfatture status --json`
 
 - Provider selection and credentials come from configuration.
 - Domain validation stays deterministic outside the model.
-- Mutating tools keep confirmation boundaries.
+- Mutating tools keep confirmation boundaries. Transmit tools
+  (`send_invoice_to_sdi`) are off unless named in `ai_enabled_tools`, and
+  the registry refuses to send without an explicit human yes when
+  `ai_tools_require_confirmation` is true (the default).
 - AI tools call **application services** (billing/payment/sdi/pdf), not raw
   SQLAlchemy sessions.
 - Multi-agent workflows under `ai/orchestration/workflows/` are **internal /

@@ -21,7 +21,7 @@ def get_tool_registry() -> ToolRegistry:
     global _global_registry
 
     if _global_registry is None:
-        _global_registry = ToolRegistry()
+        _global_registry = ToolRegistry(apply_ai_settings=True)
 
         # Register default tools
         _register_default_tools(_global_registry)

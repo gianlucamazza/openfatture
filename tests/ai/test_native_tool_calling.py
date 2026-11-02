@@ -57,7 +57,7 @@ def mock_tool_registry():
     )
     registry.get_anthropic_tools = MagicMock(return_value=[sample_tools[0].to_anthropic_tool()])
 
-    async def mock_execute_tool(tool_name, parameters, confirm=False):
+    async def mock_execute_tool(tool_name, parameters, **_kwargs):
         if tool_name == "get_invoice_count":
             return ToolResult(success=True, data={"count": 42}, tool_name=tool_name)
         return ToolResult(success=False, error="unknown", tool_name=tool_name)
@@ -233,7 +233,7 @@ async def test_native_orchestrator_executes_tools(mock_tool_registry):
     assert "42 fatture" in response.content
     assert mock_tool_registry.execute_tool.call_count == 1
     mock_tool_registry.execute_tool.assert_called_with(
-        tool_name="get_invoice_count", parameters={"year": 2025}, confirm=False
+        tool_name="get_invoice_count", parameters={"year": 2025}
     )
 
     metrics = orchestrator.get_metrics()

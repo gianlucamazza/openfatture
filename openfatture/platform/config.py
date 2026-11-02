@@ -307,11 +307,19 @@ class Settings(BaseSettings):
     )
     ai_enabled_tools: str = Field(
         default="search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats",
-        description="Comma-separated list of enabled tools",
+        description=(
+            "Comma-separated allowlist of AI tools. Transmit tools such as "
+            "send_invoice_to_sdi stay off unless named here; the value 'all' "
+            "does not enable transmit tools."
+        ),
     )
     ai_tools_require_confirmation: bool = Field(
         default=True,
-        description="Require user confirmation before executing tools",
+        description=(
+            "Require an explicit human yes before executing tools marked as "
+            "requiring confirmation, including every SDI/PEC send. The AI "
+            "layer cannot self-confirm. Non-interactive sessions refuse."
+        ),
     )
 
     # Vector Store (for AI)

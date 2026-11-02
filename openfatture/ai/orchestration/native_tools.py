@@ -221,7 +221,6 @@ class NativeToolOrchestrator:
             result = await self.tool_registry.execute_tool(
                 tool_name=tool_call.name,
                 parameters=tool_call.arguments,
-                confirm=False,
             )
 
             if result.success:

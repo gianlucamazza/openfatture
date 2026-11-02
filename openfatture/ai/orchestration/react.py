@@ -175,7 +175,6 @@ class ReActOrchestrator:
                     result = await self.tool_registry.execute_tool(
                         tool_name=tool_call.tool_name,
                         parameters=tool_call.parameters,
-                        confirm=False,
                     )
 
                     if result.success:
@@ -350,7 +349,6 @@ class ReActOrchestrator:
                     result = await self.tool_registry.execute_tool(
                         tool_name=tool_call.tool_name,
                         parameters=tool_call.parameters,
-                        confirm=False,
                     )
 
                     if result.success:

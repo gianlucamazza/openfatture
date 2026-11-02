@@ -366,11 +366,12 @@ def get_invoice_tools() -> list[Tool]:
             ],
             func=send_invoice_to_sdi,
             requires_confirmation=True,
+            enabled=False,
             examples=[
                 "send_invoice_to_sdi(fattura_id=123)",
                 "send_invoice_to_sdi(fattura_id=123, signed=True)",
             ],
-            tags=["write", "send", "critical"],
+            tags=["write", "send", "critical", "transmit"],
         ),
         Tool(
             name="update_invoice",
