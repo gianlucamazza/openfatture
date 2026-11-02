@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Fail-closed AI tool policy for SDI/PEC send: `send_invoice_to_sdi` is
+  disabled for the chat/AI agent unless named in `ai_enabled_tools` (the
+  value `all` does not enable it). The tool registry now requires an
+  explicit human yes before transmit — interactive CLI/TUI prompt, or
+  `confirmed=True` from a human-facing path. The model cannot self-confirm.
+  Non-interactive sessions refuse. `ai_enabled_tools` and
+  `ai_tools_require_confirmation` (default true) are actually read.
+
 ### Changed
 
 - Drop remaining user-facing Venere Labs / `venerelabs` branding after

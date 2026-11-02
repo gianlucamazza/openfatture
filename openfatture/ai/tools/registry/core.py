@@ -11,6 +11,15 @@ from openfatture.ai.orchestration.resilience import (
     CircuitBreakerConfig,
 )
 from openfatture.ai.tools.models import Tool, ToolResult
+from openfatture.ai.tools.registry.policy import (
+    ToolSource,
+    confirmation_required,
+    has_human_confirmation,
+    is_tool_enabled_for_agent,
+    is_transmit_tool,
+    strip_reserved_parameters,
+)
+from openfatture.platform.config import get_settings
 from openfatture.platform.logging import get_logger
 from openfatture.platform.rate_limiter import RateLimiter
 
@@ -32,10 +41,17 @@ class ToolRegistry:
     - Category-based filtering
     """
 
-    def __init__(self) -> None:
-        """Initialize empty tool registry."""
+    def __init__(self, *, apply_ai_settings: bool = False) -> None:
+        """Initialize empty tool registry.
+
+        Args:
+            apply_ai_settings: When True (the chat/AI registry), honour
+                ``ai_enabled_tools`` as an allowlist. Transmit tools are
+                gated regardless of this flag.
+        """
         self._tools: dict[str, Tool] = {}
         self._categories: dict[str, list[str]] = {}
+        self._apply_ai_settings = apply_ai_settings
         # Rate limiters: 10 calls per minute per tool
         self._rate_limiters: dict[str, RateLimiter] = {}
 
@@ -158,7 +174,17 @@ class ToolRegistry:
             tools = [t for t in tools if t.category == category]
 
         if enabled_only:
-            tools = [t for t in tools if t.enabled]
+            settings = get_settings()
+            tools = [
+                tool
+                for tool in tools
+                if is_tool_enabled_for_agent(
+                    tool.name,
+                    settings.ai_enabled_tools,
+                    apply_allowlist=self._apply_ai_settings,
+                    tool_enabled=tool.enabled,
+                )
+            ]
 
         return tools
 
@@ -500,21 +526,26 @@ class ToolRegistry:
         self,
         tool_name: str,
         parameters: dict[str, Any],
-        confirm: bool = True,
+        *,
+        confirmed: bool = False,
+        source: ToolSource = "ai",
     ) -> ToolResult:
         """
         Execute a tool by name with caching and metrics.
 
         Args:
             tool_name: Name of tool to execute
-            parameters: Tool parameters
-            confirm: Skip confirmation if False
+            parameters: Tool parameters. Confirm/source keys are ignored.
+            confirmed: Set True only after a human-facing path received yes.
+                Ignored unless ``source="human"``.
+            source: ``"ai"`` (default, cannot self-confirm) or ``"human"``.
 
         Returns:
             ToolResult with execution outcome
         """
         # Get tool
         tool = self.get_tool(tool_name)
+        parameters = strip_reserved_parameters(parameters)
 
         if not tool:
             logger.error("tool_not_found", name=tool_name)
@@ -529,11 +560,55 @@ class ToolRegistry:
                 metrics.record_execution(result)
             return result
 
-        if not tool.enabled:
+        settings = get_settings()
+        if not is_tool_enabled_for_agent(
+            tool.name,
+            settings.ai_enabled_tools,
+            apply_allowlist=self._apply_ai_settings,
+            tool_enabled=tool.enabled,
+        ):
             logger.error("tool_disabled", name=tool_name)
+            if is_transmit_tool(tool_name):
+                error = (
+                    f"Tool '{tool_name}' is disabled. Transmit tools (SDI/PEC send) "
+                    "stay off unless explicitly listed in ai_enabled_tools."
+                )
+            else:
+                error = f"Tool '{tool_name}' is disabled"
             result = ToolResult(
                 success=False,
-                error=f"Tool '{tool_name}' is disabled",
+                error=error,
+                error_type="tool_disabled",
+                tool_name=tool_name,
+            )
+            metrics = self._get_metrics()
+            if metrics:
+                metrics.record_execution(result)
+            return result
+
+        if confirmation_required(
+            tool_name,
+            tool_requires_confirmation=tool.requires_confirmation,
+            require_confirmation=settings.ai_tools_require_confirmation,
+        ) and not has_human_confirmation(
+            source=source,
+            confirmed=confirmed,
+            tool_name=tool_name,
+        ):
+            logger.warning(
+                "tool_confirmation_refused",
+                name=tool_name,
+                source=source,
+            )
+            result = ToolResult(
+                success=False,
+                error=(
+                    f"Tool '{tool_name}' requires an explicit human confirmation "
+                    "before it can run. No confirmation was provided "
+                    "(non-interactive session, declined prompt, or AI self-confirm). "
+                    "Refusing to execute."
+                ),
+                error_type="confirmation_required",
                 tool_name=tool_name,
             )
             metrics = self._get_metrics()
@@ -602,14 +677,6 @@ class ToolRegistry:
             if metrics:
                 metrics.record_execution(result)
             return result
-
-        # Check confirmation requirement
-        if tool.requires_confirmation and confirm:
-            logger.info(
-                "tool_requires_confirmation",
-                name=tool_name,
-                parameters=parameters,
-            )
 
         # Try cache first for read operations
         cache = self._get_cache()

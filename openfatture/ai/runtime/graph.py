@@ -172,7 +172,6 @@ def build_tool_loop_graph(
                 result = await tool_registry.execute_tool(
                     tool_name=name,
                     parameters=arguments,
-                    confirm=False,
                 )
                 content = (
                     json.dumps(result.data, default=str, ensure_ascii=False)

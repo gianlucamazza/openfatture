@@ -119,7 +119,7 @@ def mock_tool_registry():
     registry.list_tools = MagicMock(return_value=sample_tools)
 
     # Mock tool execution
-    async def mock_execute_tool(tool_name, parameters, confirm=False):
+    async def mock_execute_tool(tool_name, parameters, **_kwargs):
         """Mock tool execution with predefined results."""
         if tool_name == "get_invoice_count":
             return ToolResult(
@@ -191,7 +191,6 @@ class TestReActExecute:
         mock_tool_registry.execute_tool.assert_called_with(
             tool_name="get_invoice_count",
             parameters={},
-            confirm=False,
         )
 
     async def test_execute_multiple_tool_calls(
@@ -546,7 +545,7 @@ class TestReActIntegration:
         """Test metrics tracking when tool calls fail."""
 
         # Setup tool to fail
-        async def mock_execute_fail(tool_name, parameters, confirm=False):
+        async def mock_execute_fail(tool_name, parameters, **_kwargs):
             return ToolResult(
                 success=False,
                 error="Tool execution failed",
@@ -612,7 +611,7 @@ class TestReActErrorHandling:
         """Test that ReAct handles tool execution exceptions gracefully."""
 
         # Make tool raise exception
-        async def mock_execute_with_error(tool_name, parameters, confirm=False):
+        async def mock_execute_with_error(tool_name, parameters, **_kwargs):
             raise RuntimeError("Tool execution failed!")
 
         mock_tool_registry.execute_tool = AsyncMock(side_effect=mock_execute_with_error)
