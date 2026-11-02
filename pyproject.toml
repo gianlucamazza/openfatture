@@ -74,7 +74,8 @@ dependencies = [
 [project.optional-dependencies]
 # LLM providers, agents, tools, LangGraph workflows
 ai = [
-  "langgraph>=0.6",
+  "langgraph>=1.2.14",
+  "langgraph-sdk>=0.4.6",
   "openai>=2.4.0",
   "anthropic>=0.71.0",
   "tiktoken>=0.8.0",
