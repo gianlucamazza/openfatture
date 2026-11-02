@@ -67,7 +67,9 @@ Rollback: `ASSISTANT_BACKEND=chat`. Inspect with `openfatture status --json`
 - Mutating tools keep confirmation boundaries. Transmit tools
   (`send_invoice_to_sdi`) are off unless named in `ai_enabled_tools`, and
   the registry refuses to send without an explicit human yes when
-  `ai_tools_require_confirmation` is true (the default).
+  `ai_tools_require_confirmation` is true (the default). An interactive TTY
+  may prompt; `source="human"` with `confirmed=True` is an API for
+  human-facing callers. No built-in UI uses that path yet (there is no TUI).
 - AI tools call **application services** (billing/payment/sdi/pdf), not raw
   SQLAlchemy sessions.
 - Multi-agent workflows under `ai/orchestration/workflows/` are **internal /

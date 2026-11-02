@@ -535,9 +535,12 @@ class ToolRegistry:
 
         Args:
             tool_name: Name of tool to execute
-            parameters: Tool parameters. Confirm/source keys are ignored.
+            parameters: Tool parameters. Confirm-like keys are ignored
+                (case-insensitive). Shown on the interactive confirmation
+                prompt when a human yes is required.
             confirmed: Set True only after a human-facing path received yes.
-                Ignored unless ``source="human"``.
+                Ignored unless ``source="human"``. No built-in UI uses this
+                path yet.
             source: ``"ai"`` (default, cannot self-confirm) or ``"human"``.
 
         Returns:
@@ -590,10 +593,11 @@ class ToolRegistry:
             tool_name,
             tool_requires_confirmation=tool.requires_confirmation,
             require_confirmation=settings.ai_tools_require_confirmation,
-        ) and not has_human_confirmation(
+        ) and not await has_human_confirmation(
             source=source,
             confirmed=confirmed,
             tool_name=tool_name,
+            parameters=parameters,
         ):
             logger.warning(
                 "tool_confirmation_refused",
@@ -745,14 +749,22 @@ class ToolRegistry:
         """
         Get registry statistics.
 
+        ``enabled_tools`` follows the same allowlist / transmit policy as
+        ``list_tools(enabled_only=True)``. ``enabled_by_tool_flag`` is the
+        older count of tools whose own ``enabled`` flag is True.
+
         Returns:
             Dictionary with stats
         """
         circuit_breaker_stats = self.get_circuit_breaker_stats()
+        policy_enabled = self.list_tools(enabled_only=True)
+        flag_enabled = [tool for tool in self._tools.values() if tool.enabled]
 
         return {
             "total_tools": len(self._tools),
-            "enabled_tools": len([t for t in self._tools.values() if t.enabled]),
+            "enabled_tools": len(policy_enabled),
+            "enabled_by_tool_flag": len(flag_enabled),
+            "enabled_tool_names": [tool.name for tool in policy_enabled],
             "categories": len(self._categories),
             "tools_by_category": {cat: len(tools) for cat, tools in self._categories.items()},
             "circuit_breakers": {
