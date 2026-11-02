@@ -31,7 +31,9 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 AI tools default to a read-only allowlist (`AI_ENABLED_TOOLS`). SDI/PEC send
 stays off unless you add `send_invoice_to_sdi` there, and
 `AI_TOOLS_REQUIRE_CONFIRMATION` (default true) requires an explicit human yes
-before any transmit. The model cannot confirm itself.
+before any transmit. The model cannot confirm itself. Interactive TTY
+sessions may prompt; `source="human"` with `confirmed=True` is an API for
+human-facing callers. No built-in UI uses that path yet (there is no TUI).
 
 For a terminal conversation:
 
