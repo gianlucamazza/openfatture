@@ -133,7 +133,7 @@ async def test_tool_loop_stops_at_max_iterations() -> None:
 async def test_build_assistant_graph_uses_tool_loop_when_tools_supported() -> None:
     with (
         patch("openfatture.platform.extras.require_extra"),
-        patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
+        patch("openfatture.ai.runtime.service.create_provider") as mock_prov,
         patch("openfatture.ai.agents.chat_agent.ChatAgent") as mock_agent_cls,
     ):
         provider = MagicMock(provider_name="openai", model="gpt", supports_tools=True)

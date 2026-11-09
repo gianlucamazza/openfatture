@@ -24,18 +24,24 @@ Example:
     >>> print(f"Invoice created: {result.invoice_id}")
 """
 
-from openfatture.ai.orchestration.workflows.cash_flow_analysis import (
-    CashFlowAnalysisWorkflow,
-    create_cash_flow_workflow,
-)
-from openfatture.ai.orchestration.workflows.compliance_check import (
-    ComplianceCheckWorkflow,
-    create_compliance_workflow,
-)
-from openfatture.ai.orchestration.workflows.invoice_creation import (
-    InvoiceCreationWorkflow,
-    create_invoice_workflow,
-)
+from typing import Any
+
+
+def __getattr__(name: str) -> Any:
+    modules = {
+        "CashFlowAnalysisWorkflow": "cash_flow_analysis",
+        "create_cash_flow_workflow": "cash_flow_analysis",
+        "ComplianceCheckWorkflow": "compliance_check",
+        "create_compliance_workflow": "compliance_check",
+        "InvoiceCreationWorkflow": "invoice_creation",
+        "create_invoice_workflow": "invoice_creation",
+    }
+    if name in modules:
+        from importlib import import_module
+
+        return getattr(import_module(f"{__name__}.{modules[name]}"), name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Invoice Creation

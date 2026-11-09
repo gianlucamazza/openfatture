@@ -12,11 +12,11 @@ Backends (settings ``assistant_backend``):
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
-from openfatture.ai.domain.response import AgentResponse
+from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.providers.factory import create_provider
 from openfatture.ai.runtime.constants import (
@@ -25,8 +25,14 @@ from openfatture.ai.runtime.constants import (
     AssistantBackendName,
     resolve_backend_id,
 )
+from openfatture.ai.runtime.contracts import (
+    AccountedProvider,
+    AssistantInteraction,
+    TurnAccounting,
+    current_accounting,
+)
 from openfatture.ai.streaming.events import StreamEvent
-from openfatture.ai.tools.registry import ToolRegistry, get_tool_registry
+from openfatture.ai.tools.registry import get_tool_registry
 from openfatture.platform.config import DebugConfig, Settings, get_settings
 from openfatture.platform.extras import require_extra
 from openfatture.platform.logging import get_logger
@@ -80,15 +86,24 @@ class AssistantRuntime:
         session_id: str | None = None,
         persist_session: bool = False,
         backend: AssistantBackendName | None = None,
+        interaction: AssistantInteraction | None = None,
     ) -> None:
         require_extra("ai", feature="the business assistant")
 
         self.settings = settings or get_settings()
-        self._provider: BaseLLMProvider = provider or create_provider()
+        self._provider = cast(BaseLLMProvider, AccountedProvider(provider or create_provider()))
         self.enable_tools = enable_tools
         self.enable_streaming = enable_streaming
         self.debug_config = debug_config or self.settings.debug_config
-        self._tool_registry: ToolRegistry = get_tool_registry()
+        from copy import copy
+
+        self._tool_registry = copy(get_tool_registry())
+        self._tool_registry.confirmation_callback = interaction.confirm if interaction else None
+        self._tool_registry.activity_callback = interaction.activity if interaction else None
+        self._tool_registry.outcome_callback = interaction.finished if interaction else None
+        self.last_response: AgentResponse | None = None
+        self.total_usage = UsageMetrics()
+        self.turn_count = 0
 
         self._backend_name = _resolve_backend_name(backend, self.settings)
         self._backend_id = resolve_backend_id(self._backend_name)
@@ -190,47 +205,145 @@ class AssistantRuntime:
             model=self._provider.model,
             tokens=tokens,
             cost=cost,
+            prompt_tokens=response.usage.prompt_tokens if response else 0,
+            completion_tokens=response.usage.completion_tokens if response else 0,
+            metadata={
+                "status": response.status.value,
+                "error": response.error,
+                "usage": response.usage.model_dump(),
+                **response.metadata,
+            }
+            if response
+            else {},
         )
         self._session_store.save(self._session)
         logger.debug("assistant_session_saved", session_id=self._session.id)
 
-    async def run(
-        self,
-        user_input: str,
-        *,
-        history: list[dict[str, str]] | ConversationHistory | None = None,
-    ) -> AgentResponse:
-        """Run one assistant turn and return a full response."""
-        context = self._context(user_input, history)
-        if self._graph_backend is not None:
-            response = await self._graph_backend.run(context)
-        elif self._agent is not None:
-            response = await self._agent.execute(context)
+    def clear_session(self) -> bool:
+        if self._session is None:
+            return False
+        self._session.clear_messages()
+        if self._session_store:
+            self._session_store.save(self._session)
+        return True
+
+    def _finish_turn(
+        self, user_input: str, response: AgentResponse, accounting: TurnAccounting
+    ) -> None:
+        response.provider = response.provider or self._provider.provider_name
+        response.model = response.model or self._provider.model
+        if accounting.calls:
+            response.usage = accounting.usage.model_copy(deep=True)
+        if accounting.incomplete or not accounting.calls:
+            response.metadata["usage_complete"] = False
         else:
-            raise RuntimeError("AssistantRuntime has no configured backend")
-        self._persist_turn(user_input, response.content or "", response)
-        return response
+            response.metadata["usage_complete"] = True
+        for name in ("prompt_tokens", "completion_tokens", "total_tokens", "estimated_cost_usd"):
+            setattr(
+                self.total_usage,
+                name,
+                getattr(self.total_usage, name) + getattr(response.usage, name),
+            )
+        self.total_usage.cost_known &= response.usage.cost_known
+        response.metadata["tool_outcomes"] = accounting.tool_outcomes
+        self.last_response = response
+        self.turn_count += 1
+        from openfatture.events import get_global_event_bus
+        from openfatture.events.ai_events import AITurnCompletedEvent
+        from openfatture.storage.database import base as database
+
+        if database.SessionLocal is not None:
+            get_global_event_bus().publish(
+                AITurnCompletedEvent(
+                    status=response.status.value,
+                    tokens_used=response.usage.total_tokens,
+                    cost_usd=response.usage.estimated_cost_usd,
+                    cost_known=response.usage.cost_known,
+                    usage_complete=response.metadata["usage_complete"],
+                    tool_outcomes=accounting.tool_outcomes,
+                    error=response.error,
+                )
+            )
+        self._persist_turn(user_input, response.content, response)
+
+    async def run(
+        self, user_input: str, *, history: list[dict[str, str]] | ConversationHistory | None = None
+    ) -> AgentResponse:
+        import asyncio
+
+        accounting = TurnAccounting()
+        token = current_accounting.set(accounting)
+        response = AgentResponse(
+            content="", status=ResponseStatus.PARTIAL, usage=UsageMetrics(cost_known=False)
+        )
+        try:
+            context = self._context(user_input, history)
+            if self._graph_backend is not None:
+                response = await self._graph_backend.run(context)
+            elif self._agent is not None:
+                response = await self._agent.execute(context)
+            else:
+                raise RuntimeError("AssistantRuntime has no configured backend")
+            return response
+        except BaseException as exc:
+            response.status = (
+                ResponseStatus.PARTIAL
+                if isinstance(exc, (asyncio.CancelledError, KeyboardInterrupt))
+                else ResponseStatus.ERROR
+            )
+            response.error = type(exc).__name__
+            accounting.incomplete = True
+            raise
+        finally:
+            self._finish_turn(user_input, response, accounting)
+            current_accounting.reset(token)
 
     async def stream(
-        self,
-        user_input: str,
-        *,
-        history: list[dict[str, str]] | ConversationHistory | None = None,
+        self, user_input: str, *, history: list[dict[str, str]] | ConversationHistory | None = None
     ) -> AsyncIterator[StreamEvent]:
-        """Stream one assistant turn as typed stream events."""
-        context = self._context(user_input, history)
-        answer_parts: list[str] = []
-        if self._graph_backend is not None:
-            stream_iter: AsyncIterator[StreamEvent] = self._graph_backend.stream(context)
-        elif self._agent is not None:
-            stream_iter = self._agent.execute_stream(context)
-        else:
-            raise RuntimeError("AssistantRuntime has no configured backend")
-        async for item in stream_iter:
-            if item.is_content():
-                answer_parts.append(item.get_text())
-            yield item
-        self._persist_turn(user_input, "".join(answer_parts), None)
+        import asyncio
+
+        accounting = TurnAccounting()
+        token = current_accounting.set(accounting)
+        response = AgentResponse(
+            content="", status=ResponseStatus.PARTIAL, usage=UsageMetrics(cost_known=False)
+        )
+        parts: list[str] = []
+        try:
+            context = self._context(user_input, history)
+            if self._graph_backend is not None:
+                iterator = self._graph_backend.stream(context)
+            elif self._agent is not None:
+                iterator = self._agent.execute_stream(context)
+            else:
+                raise RuntimeError("AssistantRuntime has no configured backend")
+            async for item in iterator:
+                if item.type.value == "done":
+                    response.status = ResponseStatus(item.metadata.get("status", "partial"))
+                    response.error = item.metadata.get("error")
+                elif item.type.value == "error":
+                    response.status = ResponseStatus.ERROR
+                    response.error = str(item.data)
+                elif item.type.value == "metrics" and isinstance(item.data, dict):
+                    response.usage = UsageMetrics(**item.data)
+                elif item.is_content():
+                    parts.append(item.get_text())
+                yield item
+        except BaseException as exc:
+            response.status = (
+                ResponseStatus.PARTIAL
+                if isinstance(exc, (asyncio.CancelledError, KeyboardInterrupt, GeneratorExit))
+                else ResponseStatus.ERROR
+            )
+            response.error = type(exc).__name__
+            accounting.incomplete = True
+            raise
+        finally:
+            response.content = "".join(parts)
+            try:
+                self._finish_turn(user_input, response, accounting)
+            finally:
+                current_accounting.reset(token)
 
 
 def create_assistant_runtime(**kwargs: Any) -> AssistantRuntime:

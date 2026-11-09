@@ -43,3 +43,35 @@ def test_status_supports_machine_readable_output() -> None:
     assert "checks" in readiness
     assert "next_steps" in readiness
     assert isinstance(readiness["next_steps"], list)
+
+
+def test_init_runs_directly_without_nested_subcommand(tmp_path, monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from openfatture.cli.commands import init
+
+    settings = SimpleNamespace(
+        data_dir=tmp_path / "data",
+        archivio_dir=tmp_path / "archive",
+        certificates_dir=tmp_path / "certificates",
+        database_url=f"sqlite:///{tmp_path / 'test.db'}",
+    )
+    monkeypatch.setattr(init, "get_settings", lambda: settings)
+    databases = []
+    monkeypatch.setattr(init, "init_db", databases.append)
+
+    result = runner.invoke(app, ["init", "--no-interactive"])
+
+    assert result.exit_code == 0, result.output
+    assert "Setup Complete" in result.stdout
+    assert databases == [settings.database_url]
+    assert settings.data_dir.is_dir()
+    assert settings.archivio_dir.is_dir()
+    assert settings.certificates_dir.is_dir()
+
+
+def test_no_command_shows_help_without_error():
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0
+    assert "Usage:" in result.stdout
+    assert "assistant" in result.stdout

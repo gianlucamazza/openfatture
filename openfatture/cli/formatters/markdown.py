@@ -70,7 +70,7 @@ class MarkdownFormatter(BaseFormatter):
                 lines.append(f"- **Tokens Used:** {response.usage.total_tokens}")
                 lines.append(f"  - Prompt: {response.usage.prompt_tokens}")
                 lines.append(f"  - Completion: {response.usage.completion_tokens}")
-                lines.append(f"- **Cost:** ${response.usage.estimated_cost_usd:.4f}")
+                lines.append(f"- **Cost:** {response.usage.cost_display}")
 
             # Latency
             if response.latency_ms:

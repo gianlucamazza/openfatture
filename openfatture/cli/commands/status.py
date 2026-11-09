@@ -36,11 +36,44 @@ def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
     # Ollama needs no cloud key; cloud providers need a key for real calls.
     ai_credentials_ok = provider == "ollama" or bool(settings.ai_api_key)
     assistant_ready = ai_extra and ai_credentials_ok
-    core_ready = company_ok and data_dir_ok
+    required_fields = (
+        "cedente_codice_fiscale",
+        "cedente_regime_fiscale",
+        "cedente_indirizzo",
+        "cedente_cap",
+        "cedente_comune",
+        "cedente_provincia",
+        "cedente_nazione",
+    )
+    missing_fields = [
+        field for field in required_fields if not str(getattr(settings, field, "") or "").strip()
+    ]
+    from openfatture.platform.validators import (
+        validate_codice_fiscale,
+        validate_partita_iva,
+        validate_regime_fiscale,
+    )
+
+    invalid_fields = []
+    if settings.cedente_partita_iva and not validate_partita_iva(settings.cedente_partita_iva):
+        invalid_fields.append("cedente_partita_iva")
+    fiscal_code = getattr(settings, "cedente_codice_fiscale", "")
+    if fiscal_code and not (
+        validate_codice_fiscale(fiscal_code) or validate_partita_iva(fiscal_code)
+    ):
+        invalid_fields.append("cedente_codice_fiscale")
+    regime = getattr(settings, "cedente_regime_fiscale", "")
+    if regime and not validate_regime_fiscale(regime):
+        invalid_fields.append("cedente_regime_fiscale")
+    core_ready = (
+        company_ok and data_dir_ok and archive_ok and not missing_fields and not invalid_fields
+    )
 
     next_steps: list[str] = []
-    if not data_dir_ok or not company_ok:
+    if not core_ready:
         next_steps.append("Run: openfatture init")
+        for field in missing_fields + invalid_fields:
+            next_steps.append(f"openfatture config set {field} '<value>'")
     if not ai_extra:
         next_steps.append("For the assistant: uv sync --extra ai")
     elif not ai_credentials_ok:
@@ -55,9 +88,15 @@ def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
 
     return {
         "core_ready": core_ready,
+        "missing_fields": missing_fields,
+        "invalid_fields": invalid_fields,
+        "invoice_ready": core_ready,
+        "delivery_configured": core_ready and bool(settings.pec_address and settings.pec_password),
         "assistant_ready": assistant_ready,
+        "assistant_authenticated": None,
         "checks": {
             "company_profile": company_ok,
+            "fiscal_profile": not missing_fields and not invalid_fields,
             "data_dir": data_dir_ok,
             "archive_dir": archive_ok,
             "ai_extra": ai_extra,
@@ -136,7 +175,7 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
 
     ready = data["readiness"]
     core_label = "ready" if ready["core_ready"] else "not ready"
-    asst_label = "ready" if ready["assistant_ready"] else "not ready"
+    asst_label = "configured" if ready["assistant_ready"] else "not configured"
     console.print(
         f"[bold]Readiness[/bold]  core: [cyan]{core_label}[/cyan]  "
         f"assistant: [cyan]{asst_label}[/cyan]\n"
@@ -165,6 +204,20 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
     for name, ok in ready["checks"].items():
         checks.add_row(name.replace("_", " "), "yes" if ok else "no")
     console.print(checks)
+
+    from openfatture.i18n import _
+
+    locale = get_settings().locale
+    if ready["missing_fields"] or ready["invalid_fields"]:
+        fields = Table(title=_("status-blocking-fields", locale=locale))
+        fields.add_column(_("status-field", locale=locale))
+        fields.add_column(_("status-problem", locale=locale))
+        for field in ready["missing_fields"]:
+            fields.add_row(field, _("status-missing", locale=locale))
+        for field in ready["invalid_fields"]:
+            fields.add_row(field, _("status-invalid", locale=locale))
+        console.print(fields)
+    console.print(_("status-local-only", locale=locale), markup=False)
 
     if ready["next_steps"]:
         console.print("\n[bold]Next steps[/bold]")

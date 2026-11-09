@@ -42,13 +42,15 @@ class ToolRegistry:
     """
 
     def __init__(self, *, apply_ai_settings: bool = False) -> None:
-        """Initialize empty tool registry.
+        """Initialize registry, optionally honoring the configured AI allowlist."""
+        from collections.abc import Awaitable, Callable
 
-        Args:
-            apply_ai_settings: When True (the chat/AI registry), honour
-                ``ai_enabled_tools`` as an allowlist. Transmit tools are
-                gated regardless of this flag.
-        """
+        from openfatture.ai.runtime.contracts import ActivityCallback, ConfirmCallback
+
+        self.confirmation_callback: ConfirmCallback | None = None
+        self.activity_callback: ActivityCallback | None = None
+        self.outcome_callback: Callable[[str, bool], Awaitable[None]] | None = None
+
         self._tools: dict[str, Tool] = {}
         self._categories: dict[str, list[str]] = {}
         self._apply_ai_settings = apply_ai_settings
@@ -526,6 +528,42 @@ class ToolRegistry:
         self,
         tool_name: str,
         parameters: dict[str, Any],
+        confirm: bool | None = None,
+        *,
+        confirmed: bool = False,
+        source: ToolSource = "ai",
+    ) -> ToolResult:
+        from copy import deepcopy
+
+        from openfatture.ai.runtime.contracts import current_accounting
+        from openfatture.platform.logging import redact_sensitive
+
+        snapshot = deepcopy(strip_reserved_parameters(parameters))
+        outcome = {
+            "tool": tool_name,
+            "parameters": redact_sensitive(snapshot),
+            "success": False,
+            "result": "interrupted_outcome_unknown",
+        }
+        try:
+            result = await self._execute_tool(
+                tool_name, snapshot, confirmed=confirmed, source=source
+            )
+            outcome.update(
+                success=result.success, result=result.error_type or result.error or "completed"
+            )
+            return result
+        finally:
+            accounting = current_accounting.get()
+            if accounting is not None:
+                accounting.tool_outcomes.append(outcome)
+            if self.outcome_callback:
+                await self.outcome_callback(tool_name, bool(outcome["success"]))
+
+    async def _execute_tool(
+        self,
+        tool_name: str,
+        parameters: dict[str, Any],
         *,
         confirmed: bool = False,
         source: ToolSource = "ai",
@@ -593,32 +631,40 @@ class ToolRegistry:
             tool_name,
             tool_requires_confirmation=tool.requires_confirmation,
             require_confirmation=settings.ai_tools_require_confirmation,
-        ) and not await has_human_confirmation(
-            source=source,
-            confirmed=confirmed,
-            tool_name=tool_name,
-            parameters=parameters,
         ):
-            logger.warning(
-                "tool_confirmation_refused",
-                name=tool_name,
-                source=source,
-            )
-            result = ToolResult(
-                success=False,
-                error=(
-                    f"Tool '{tool_name}' requires an explicit human confirmation "
-                    "before it can run. No confirmation was provided "
-                    "(non-interactive session, declined prompt, or AI self-confirm). "
-                    "Refusing to execute."
-                ),
-                error_type="confirmation_required",
-                tool_name=tool_name,
-            )
-            metrics = self._get_metrics()
-            if metrics:
-                metrics.record_execution(result)
-            return result
+            from copy import deepcopy
+
+            if self.confirmation_callback is not None:
+                approved = await self.confirmation_callback(tool_name, deepcopy(parameters))
+                error_type = "confirmation_denied"
+            else:
+                approved = await has_human_confirmation(
+                    source=source, confirmed=confirmed, tool_name=tool_name, parameters=parameters
+                )
+                error_type = "confirmation_required"
+            if not approved:
+                result = ToolResult(
+                    success=False,
+                    error=f"Tool '{tool_name}' requires an explicit human confirmation before execution.",
+                    error_type=error_type,
+                    tool_name=tool_name,
+                )
+                metrics = self._get_metrics()
+                if metrics:
+                    metrics.record_execution(result)
+                return result
+
+        # Try cache first for read operations
+        cache = self._get_cache()
+        if cache and cache.is_cacheable(tool_name):
+            cached_result = await cache.get_cached_result(tool_name, parameters)
+            if cached_result:
+                logger.info("tool_cache_hit", name=tool_name)
+                # Record metrics for cache hit
+                metrics = self._get_metrics()
+                if metrics:
+                    metrics.record_execution(cached_result)
+                return cached_result
 
         # Check rate limiting (per tool)
         if tool_name not in self._rate_limiters:
@@ -682,18 +728,6 @@ class ToolRegistry:
                 metrics.record_execution(result)
             return result
 
-        # Try cache first for read operations
-        cache = self._get_cache()
-        if cache and cache.is_cacheable(tool_name):
-            cached_result = await cache.get_cached_result(tool_name, parameters)
-            if cached_result:
-                logger.info("tool_cache_hit", name=tool_name)
-                # Record metrics for cache hit
-                metrics = self._get_metrics()
-                if metrics:
-                    metrics.record_execution(cached_result)
-                return cached_result
-
         try:
             # Execute tool
             logger.info(
@@ -702,6 +736,9 @@ class ToolRegistry:
                 parameters=parameters,
             )
 
+            activity = getattr(self, "activity_callback", None)
+            if activity:
+                await activity(tool_name)
             result = await tool.execute(**parameters)
 
             # Record circuit breaker success/failure (Phase 3)

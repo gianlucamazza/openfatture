@@ -48,7 +48,9 @@ class EventPersistenceListener:
 
         try:
             # Serialize event to dict
-            event_dict = asdict(event)
+            from openfatture.platform.logging import redact_sensitive
+
+            event_dict = redact_sensitive(asdict(event))
 
             # Extract entity information from event
             entity_type, entity_id = self._extract_entity_info(event, event_dict)

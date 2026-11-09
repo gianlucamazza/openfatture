@@ -95,3 +95,61 @@ After changing environment variables, run:
 openfatture config reload
 openfatture status
 ```
+
+## User profile and assistant confirmations
+
+The setup wizard and `config set` save the user profile to the platform
+configuration directory (`~/.config/openfatture/config.toml` on Linux).
+Explicit settings, environment variables and the working-directory `.env`
+override this profile, in that order. New databases default to the user data
+directory; existing configured database URLs are preserved.
+
+With `ai_tools_require_confirmation=true` (the default), tools marked as
+requiring confirmation cannot execute without approval from a human-facing path. Noninteractive callers receive `confirmation_required`.
+The legacy `confirm=False` argument does not bypass this requirement.
+
+`status --json` reports missing invoice fields separately from delivery
+configuration. Readiness describes local configuration, not successful
+provider authentication or SDI delivery.
+
+Unknown model prices are marked with `cost_known=false`; their numeric cost
+placeholder is not a billing estimate. Use `openfatture --debug assistant`
+for diagnostic logs.
+
+## Terminal assistant behavior
+
+`assistant` and `interactive start` share a terminal presentation layer.
+Live previews are temporary; the complete Markdown response is printed once
+into scrollback. Slash commands support help, session ID, clearing messages
+and exit. Input history stays in memory. `NO_COLOR` is respected.
+
+Confirmations pause the live display. Denied operations are recorded as denied,
+not executed. Ctrl+C cancels an active asynchronous turn and waits for cleanup;
+an operation already started may have taken effect, so inspect its outcome
+before retrying. EOF exits at the input prompt.
+
+Runtime interactions use the `AssistantInteraction` protocol, passed at
+construction, rather than callbacks attached by the UI after construction.
+`last_response` holds the final or partial turn outcome; `total_usage` aggregates
+all completed provider requests, including requests before a later interruption.
+Session metadata and `AITurnCompletedEvent` preserve status, tool outcomes and
+`usage_complete`. Unknown usage is never estimated from text.
+
+Tools default to one attempt. `retry_safe=True` is an explicit declaration
+for operations safe to repeat, limited to ConnectionError and TimeoutError.
+Do not enable it for writes without an independently verified idempotency
+guarantee. Permission and validation errors are not retried.
+
+Credentials are masked recursively in diagnostic dictionaries, and configured
+credentials are also removed from textual diagnostics. `config set` confirms
+saving a credential without echoing its value. Debug traceback output omits
+local variables.
+
+`status` checks the configured company fields using bundled domain validators;
+it does not authenticate providers or certify fiscal correctness. Missing or
+invalid fiscal fields must be corrected before issuing documents. The setup
+wizard no longer assumes RF19.
+
+Direct `fattura` and `cliente` commands initialize database access on each new
+CLI process. No prior assistant or setup process is needed for an existing
+database. Running `openfatture` alone displays help and exits successfully.

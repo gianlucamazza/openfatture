@@ -110,9 +110,8 @@ class DebugConfig(BaseSettings):
     @field_validator("log_file_path")
     @classmethod
     def create_log_dir_if_not_exists(cls, v: Path) -> Path:
-        """Create log directory if it doesn't exist."""
-        v.parent.mkdir(parents=True, exist_ok=True)
-        return v
+        """Normalize a path without creating files while inspecting settings."""
+        return v.expanduser()
 
     def get_module_log_level(self, module_name: str) -> str | None:
         """Get log level for specific module."""
@@ -151,9 +150,9 @@ class Settings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         return (
             init_settings,
-            TomlConfigSettingsSource(settings_cls),
             env_settings,
             dotenv_settings,
+            TomlConfigSettingsSource(settings_cls),
             file_secret_settings,
         )
 
@@ -168,7 +167,7 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = Field(
-        default="sqlite:///./openfatture.db",
+        default=f"sqlite:///{Path(dirs.user_data_dir) / 'openfatture.db'}",
         description="Database connection URL",
     )
 
@@ -181,7 +180,7 @@ class Settings(BaseSettings):
     cedente_denominazione: str = Field(default="", description="Your company name")
     cedente_partita_iva: str = Field(default="", description="Your VAT number")
     cedente_codice_fiscale: str = Field(default="", description="Your tax code")
-    cedente_regime_fiscale: str = Field(default="RF19", description="Tax regime code")
+    cedente_regime_fiscale: str = Field(default="", description="Tax regime code")
     cedente_indirizzo: str = Field(default="", description="Your address")
     cedente_cap: str = Field(default="", description="Your postal code")
     cedente_comune: str = Field(default="", description="Your city")
@@ -345,9 +344,8 @@ class Settings(BaseSettings):
     )
     @classmethod
     def create_dir_if_not_exists(cls, v: Path) -> Path:
-        """Create directory if it doesn't exist."""
-        v.mkdir(parents=True, exist_ok=True)
-        return v
+        """Normalize a path; setup commands create directories explicitly."""
+        return v.expanduser()
 
 
 # Global settings instance
@@ -359,6 +357,11 @@ def get_settings() -> Settings:
     global _settings
     if _settings is None:
         _settings = Settings()
+    from openfatture.platform.logging import register_sensitive_values
+
+    register_sensitive_values(
+        _settings.ai_api_key, _settings.pec_password, _settings.signature_certificate_password
+    )
     return _settings
 
 
@@ -366,4 +369,9 @@ def reload_settings() -> Settings:
     """Reload settings from environment/file."""
     global _settings
     _settings = Settings()
+    from openfatture.platform.logging import register_sensitive_values
+
+    register_sensitive_values(
+        _settings.ai_api_key, _settings.pec_password, _settings.signature_certificate_password
+    )
     return _settings

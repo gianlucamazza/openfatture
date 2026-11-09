@@ -12,7 +12,7 @@ from openfatture.platform.config import Settings
 
 def _settings(
     *,
-    partita_iva: str = "12345678901",
+    partita_iva: str = "12345678903",
     denominazione: str = "Acme SRL",
     data_dir: Path,
     ai_provider: str = "openai",
@@ -26,6 +26,15 @@ def _settings(
             cedente_denominazione=denominazione,
             data_dir=data_dir,
             archivio_dir=data_dir / "archivio",
+            cedente_codice_fiscale="RSSMRA80A01H501U",
+            cedente_regime_fiscale="RF19",
+            cedente_indirizzo="Via Roma 1",
+            cedente_cap="00100",
+            cedente_comune="Roma",
+            cedente_provincia="RM",
+            cedente_nazione="IT",
+            pec_address="",
+            pec_password="",
             ai_provider=ai_provider,
             ai_api_key=ai_api_key,
         ),
@@ -79,3 +88,55 @@ def test_readiness_full_ready_suggests_assistant(tmp_path: Path) -> None:
     assert result["core_ready"] is True
     assert result["assistant_ready"] is True
     assert any("openfatture assistant" in s for s in result["next_steps"])
+
+
+def test_partial_fiscal_profile_explains_not_ready(tmp_path):
+    settings = _settings(data_dir=tmp_path, ai_api_key="synthetic")
+    settings.cedente_codice_fiscale = ""
+    settings.cedente_regime_fiscale = ""
+    result = _readiness(settings, {"ai": True})
+    assert not result["core_ready"]
+    assert not result["checks"]["fiscal_profile"]
+    assert result["missing_fields"] == ["cedente_codice_fiscale", "cedente_regime_fiscale"]
+    assert any("cedente_codice_fiscale" in step for step in result["next_steps"])
+    assert result["assistant_authenticated"] is None
+
+
+def test_status_text_exposes_blocking_fields(tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    from openfatture.cli.commands import status
+
+    settings = _settings(data_dir=tmp_path, ai_api_key="synthetic")
+    settings.cedente_codice_fiscale = ""
+    settings.cedente_regime_fiscale = ""
+    settings.locale = "it"
+    data = {
+        "readiness": _readiness(settings, {"ai": True}),
+        "extras": {"ai": True},
+        "extensions": {
+            "hooks_dir": str(tmp_path),
+            "hooks_scripts": [],
+            "in_process_plugins": "unsupported",
+        },
+    }
+    for key in (
+        "version",
+        "database",
+        "data_dir",
+        "archive_dir",
+        "ai_provider",
+        "ai_model",
+        "ai_api_key_configured",
+        "assistant_backend",
+        "assistant_backend_id",
+    ):
+        data[key] = "test"
+    monkeypatch.setattr(status, "_build_status", lambda: data)
+    monkeypatch.setattr(status, "get_settings", lambda: settings)
+    result = CliRunner().invoke(status.app, [], terminal_width=120)
+    assert result.exit_code == 0
+    assert "cedente_codice_fiscale" in result.stdout
+    assert "cedente_regime_fiscale" in result.stdout
+    assert "Da completare" in result.stdout
+    assert "openfatture --help" not in result.stdout

@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from openfatture.ai.runtime.service import AssistantRuntime
 
 import typer
 from rich.console import Console
+from rich.text import Text
 
 from openfatture.cli.lifespan import get_event_bus, run_sync_with_lifespan
 from openfatture.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
@@ -16,45 +21,42 @@ app = typer.Typer(no_args_is_help=True)
 console = Console()
 logger = get_logger(__name__)
 
-_SLASH_HELP = """[bold]Slash commands[/bold]
-  /help     Show this help
-  /exit     End the session (also: exit, quit, q)
-  /session  Show current session id
-  /clear    Clear persisted session messages (keeps the same id)
-"""
+
+def _text(key: str, **values: Any) -> str:
+    from openfatture.cli.assistant_ui import translate
+
+    return translate(key, get_settings().locale, **values)
 
 
-def _handle_slash_command(user_input: str, *, runtime: object) -> str | None:
-    """Handle in-chat slash commands.
+async def _render_stream(runtime: AssistantRuntime, message: str) -> str:
+    from openfatture.cli.assistant_ui import ChatPresentation
 
-    Returns:
-        ``\"exit\"`` to end the loop, ``\"handled\"`` if consumed,
-        or ``None`` if the input is a normal user message.
-    """
+    return await ChatPresentation(console, get_settings().locale).render(runtime.stream(message))
+
+
+def _handle_slash_command(user_input: str, *, runtime: AssistantRuntime) -> str | None:
     if not user_input.startswith("/"):
         return None
-    cmd = user_input.strip().split(maxsplit=1)[0].lower()
-    if cmd in {"/help", "/?"}:
-        console.print(_SLASH_HELP)
-        return "handled"
+    cmd = user_input.split(maxsplit=1)[0].lower()
     if cmd in {"/exit", "/quit", "/q"}:
         return "exit"
-    if cmd == "/session":
-        sid = getattr(runtime, "session_id", None)
-        console.print(f"[dim]Session: {sid or '(not persisted)'}[/dim]")
-        return "handled"
-    if cmd == "/clear":
-        session = getattr(runtime, "_session", None)
-        store = getattr(runtime, "_session_store", None)
-        if session is not None and hasattr(session, "clear_messages"):
-            session.clear_messages()
-            if store is not None and hasattr(store, "save"):
-                store.save(session)
-            console.print("[dim]Session messages cleared.[/dim]")
-        else:
-            console.print("[dim]No persisted session to clear.[/dim]")
-        return "handled"
-    console.print(f"[yellow]Unknown command {cmd}. Try /help[/yellow]")
+    if cmd in {"/help", "/?"}:
+        console.print(Text(_text("assistant-help")))
+    elif cmd == "/session":
+        console.print(
+            Text(
+                _text(
+                    "assistant-session",
+                    session=runtime.session_id or _text("assistant-not-persisted"),
+                )
+            )
+        )
+    elif cmd == "/clear":
+        console.print(
+            Text(_text("assistant-cleared" if runtime.clear_session() else "assistant-no-session"))
+        )
+    else:
+        console.print(Text(_text("assistant-unknown-command", command=cmd)))
     return "handled"
 
 
@@ -86,79 +88,85 @@ async def _run_assistant(
     json_output: bool,
     session_id: str | None,
 ) -> None:
+    import asyncio
+    import sys
+    import traceback
+
+    from openfatture.cli.assistant_ui import ChatPresentation, interruptible_turn
     from openfatture.cli.formatters.utils import get_format_from_context, render_response
     from openfatture.platform.extras import MissingExtraError, require_extra
+    from openfatture.platform.logging import redact_sensitive
+    from openfatture.storage.database.base import init_db
 
+    format_type = get_format_from_context(ctx, json_output)
+    settings = get_settings()
+    machine = format_type != "rich"
+    ui = ChatPresentation(
+        console,
+        settings.locale,
+        interactive=console.is_terminal and sys.stdin.isatty() and not machine,
+    )
+    runtime = None
+    started_at = time.monotonic()
+    event_bus = get_event_bus()
+    success = False
+    failure = None
     try:
         require_extra("ai", feature="the business assistant")
         from openfatture.ai.runtime import create_assistant_runtime
-    except MissingExtraError as exc:
-        console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(code=1) from exc
-    except ImportError as exc:
-        console.print("[red]AI dependencies are incomplete. Install with: uv sync --extra ai[/red]")
-        raise typer.Exit(code=1) from exc
 
-    format_type = get_format_from_context(ctx, json_output)
-    started_at = time.time()
-    event_bus = get_event_bus()
-    settings = get_settings()
-    success = False
-    tokens_used = 0
-    cost_usd = 0.0
-
-    if event_bus:
-        event_bus.publish(
-            AICommandStartedEvent(
-                command="assistant",
-                user_input=message or "Interactive assistant session",
-                provider=settings.ai_provider,
-                model=settings.ai_model,
-                parameters={
-                    "stream": stream,
-                    "interactive": message is None,
-                    "session_id": session_id,
-                },
-            )
-        )
-
-    try:
-        # Persist for interactive mode or when resuming/continuing a named session.
-        persist = message is None or session_id is not None
+        init_db(str(settings.database_url))
         runtime = create_assistant_runtime(
             enable_streaming=stream,
             debug_config=settings.debug_config,
-            persist_session=persist,
+            persist_session=message is None or session_id is not None,
             session_id=session_id,
+            interaction=ui if ui.interactive else None,
         )
-        if persist and runtime.session_id:
-            console.print(f"[dim]Session: {runtime.session_id}[/dim]\n")
-        if message:
-            if stream and format_type == "rich":
-                console.print("Assistant: ", end="")
-                async for chunk in runtime.stream(message):
-                    if isinstance(chunk, str):
-                        console.print(chunk, end="")
-                    elif hasattr(chunk, "is_content") and chunk.is_content():
-                        console.print(chunk.get_text(), end="")
-                console.print()
-            else:
-                response = await runtime.run(message)
-                render_response(response, format_type, console, show_metrics=False)
-                tokens_used = response.usage.total_tokens
-                cost_usd = response.usage.estimated_cost_usd
+        if event_bus:
+            event_bus.publish(
+                AICommandStartedEvent(
+                    command="assistant",
+                    user_input=message or "Interactive assistant session",
+                    provider=settings.ai_provider,
+                    model=settings.ai_model,
+                    parameters={
+                        "stream": stream,
+                        "interactive": message is None,
+                        "session_id": session_id,
+                    },
+                )
+            )
+
+        async def execute(text: str) -> bool:
+            async with interruptible_turn():
+                if stream and not machine:
+                    await ui.render(runtime.stream(text))
+                    response = runtime.last_response
+                else:
+                    response = await runtime.run(text)
+                    render_response(response, format_type, console, show_metrics=False)
+                if not response.success and not machine:
+                    console.print(Text(ui.text("assistant-turn-failed")))
+                return bool(response.success)
+
+        if message is not None:
+            success = await execute(message)
+            if not success:
+                raise typer.Exit(1)
+            return
+        if machine:
+            # One JSON/other formatted response per input line; no interactive banners.
+            for line in sys.stdin:
+                if line.strip():
+                    await execute(line.strip())
             success = True
             return
-
-        console.print("[bold]OpenFatture assistant[/bold]")
-        console.print(
-            "Describe what you need. Slash commands: [dim]/help /exit /session /clear[/dim]\n"
-        )
-        # When persistence is on, the session store is the history source of truth.
-        # Do not pass a parallel in-memory history that would duplicate turns.
+        console.print(Text(f"OpenFatture · {settings.ai_model}"))
+        console.print(Text(ui.text("assistant-describe-what-you-need")))
         while True:
             try:
-                user_input = console.input("You: ").strip()
+                user_input = (await ui.read()).strip()
             except (EOFError, KeyboardInterrupt):
                 console.print()
                 break
@@ -169,29 +177,43 @@ async def _run_assistant(
             slash = _handle_slash_command(user_input, runtime=runtime)
             if slash == "exit":
                 break
-            if slash == "handled":
+            if slash:
                 continue
-            if stream:
-                console.print("Assistant: ", end="")
-                answer = ""
-                async for event in runtime.stream(user_input):
-                    if isinstance(event, str):
-                        console.print(event, end="")
-                        answer += event
-                    elif hasattr(event, "is_content") and event.is_content():
-                        text = event.get_text()
-                        console.print(text, end="")
-                        answer += text
-                console.print()
-            else:
-                response = await runtime.run(user_input)
-                answer = response.content
-                console.print(f"Assistant: {answer}")
+            try:
+                await execute(user_input)
+            except (asyncio.CancelledError, KeyboardInterrupt):
+                console.print(Text(ui.text("assistant-interrupted")))
+            except Exception:
+                console.print(Text(ui.text("assistant-request-error")))
+                if settings.debug_config.enable_debug_logging:
+                    console.print(Text(redact_sensitive(traceback.format_exc())))
             console.print()
         success = True
-    except Exception as exc:
-        logger.error("Assistant execution failed", error=str(exc))
-        console.print(f"[red]Assistant error: {exc}[/red]")
+    except typer.Exit:
+        raise
+    except (Exception, asyncio.CancelledError) as exc:
+        failure = type(exc).__name__
+        if machine:
+            from openfatture.ai.domain.response import AgentResponse, ResponseStatus
+
+            render_response(
+                AgentResponse(content="", status=ResponseStatus.ERROR, error=failure),
+                format_type,
+                console,
+                show_metrics=False,
+            )
+        else:
+            console.print(
+                Text(
+                    ui.text(
+                        "assistant-missing-extra"
+                        if isinstance(exc, (MissingExtraError, ImportError))
+                        else "assistant-request-error"
+                    )
+                )
+            )
+            if settings.debug_config.enable_debug_logging:
+                console.print(Text(redact_sensitive(traceback.format_exc())))
         raise typer.Exit(1) from exc
     finally:
         if event_bus:
@@ -199,8 +221,9 @@ async def _run_assistant(
                 AICommandCompletedEvent(
                     command="assistant",
                     success=success,
-                    tokens_used=tokens_used,
-                    cost_usd=cost_usd,
-                    latency_ms=(time.time() - started_at) * 1000,
+                    tokens_used=runtime.total_usage.total_tokens if runtime else 0,
+                    cost_usd=runtime.total_usage.estimated_cost_usd if runtime else 0,
+                    latency_ms=(time.monotonic() - started_at) * 1000,
+                    error=failure,
                 )
             )

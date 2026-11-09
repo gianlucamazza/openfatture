@@ -20,7 +20,7 @@ async def test_runtime_run_uses_langgraph_by_default() -> None:
     empty_registry.get_openai_functions.return_value = []
     with (
         patch("openfatture.platform.extras.require_extra"),
-        patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
+        patch("openfatture.ai.runtime.service.create_provider") as mock_prov,
         patch("openfatture.ai.tools.registry.get_tool_registry", return_value=empty_registry),
         patch("openfatture.ai.runtime.service.get_tool_registry", return_value=empty_registry),
         patch("openfatture.ai.runtime.graph_backend.GraphAssistantBackend") as mock_graph_cls,
@@ -54,7 +54,7 @@ async def test_runtime_chat_backend_uses_chat_agent() -> None:
     empty_registry = MagicMock(list_tools=MagicMock(return_value=[]))
     with (
         patch("openfatture.platform.extras.require_extra"),
-        patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
+        patch("openfatture.ai.runtime.service.create_provider") as mock_prov,
         patch("openfatture.ai.tools.registry.get_tool_registry", return_value=empty_registry),
         patch("openfatture.ai.runtime.service.get_tool_registry", return_value=empty_registry),
         patch("openfatture.ai.agents.chat_agent.ChatAgent") as mock_agent_cls,
@@ -78,7 +78,7 @@ def test_build_assistant_graph_compiles() -> None:
     empty_registry.get_openai_functions.return_value = []
     with (
         patch("openfatture.platform.extras.require_extra"),
-        patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
+        patch("openfatture.ai.runtime.service.create_provider") as mock_prov,
         patch("openfatture.ai.tools.registry.get_tool_registry", return_value=empty_registry),
         patch("openfatture.ai.runtime.service.get_tool_registry", return_value=empty_registry),
     ):
@@ -107,7 +107,7 @@ async def test_runtime_persist_session_saves_and_reloads(tmp_path: Path) -> None
     empty_registry.get_openai_functions.return_value = []
     with (
         patch("openfatture.platform.extras.require_extra"),
-        patch("openfatture.ai.providers.factory.create_provider") as mock_prov,
+        patch("openfatture.ai.runtime.service.create_provider") as mock_prov,
         patch("openfatture.ai.tools.registry.get_tool_registry", return_value=empty_registry),
         patch("openfatture.ai.runtime.service.get_tool_registry", return_value=empty_registry),
         patch("openfatture.ai.runtime.graph_backend.GraphAssistantBackend") as mock_graph_cls,

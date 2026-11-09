@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-11-09
+
+### Added
+
+- Localized terminal chat with Markdown previews, slash completion, session history,
+  explicit human approval and `--debug` diagnostics.
+- Session-scoped interaction contracts, complete turn outcomes and provider usage
+  accounting, including interrupted turns and unknown model prices.
+- Fresh-process CLI, pseudo-terminal, confirmation, credential-redaction and
+  configuration-precedence regression tests.
+
+### Fixed
+
+- `openfatture init` invokes setup directly; invoice and client commands initialize
+  their database connection independently; help without arguments exits successfully.
+- Setup and configuration use the user profile, respect environment overrides and
+  preserve existing credentials. Missing fiscal data is reported explicitly instead
+  of assuming RF19; configuration inspection does not create directories.
+- Custom OpenAI-compatible endpoints such as DeepSeek are honored.
+- AI-only installs no longer import optional ML workflows eagerly.
+- Denied confirmations and cache hits no longer consume concurrency slots.
+
+### Security
+
+- Tools default to a single execution attempt; transient read retries require an
+  explicit safe-to-repeat declaration.
+- Credentials are redacted recursively from diagnostics, configuration output and
+  approval summaries; debug tracebacks omit local variables.
+
 ### Security
 
 - Fail-closed AI tool policy for SDI/PEC send: `send_invoice_to_sdi` is

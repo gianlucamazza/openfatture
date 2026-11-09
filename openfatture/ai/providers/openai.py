@@ -163,6 +163,7 @@ class OpenAIProvider(BaseLLMProvider):
             total_tokens=total_tokens,
         )
         metrics.estimated_cost_usd = self.estimate_cost(metrics)
+        metrics.cost_known = self.model in self.PRICING
         return metrics
 
     def _build_message_input(self, role: str, content: str) -> dict[str, Any]:
@@ -726,7 +727,7 @@ class OpenAIProvider(BaseLLMProvider):
         # Get pricing for model (use default if not found)
         pricing = self.PRICING.get(
             self.model,
-            {"input": 5.00, "output": 15.00},  # Default to GPT-5 pricing
+            {"input": 0.0, "output": 0.0},  # Unknown price: cost_known is false
         )
 
         # Calculate cost per million tokens

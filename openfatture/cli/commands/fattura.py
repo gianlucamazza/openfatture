@@ -22,6 +22,13 @@ app = typer.Typer(name="fattura", help="Manage invoices")
 console = Console()
 
 
+@app.callback()
+def prepare_database() -> None:
+    from openfatture.cli.database import ensure_database
+
+    ensure_database()
+
+
 @app.command("list")
 def list_invoices(
     query: str = typer.Option(None, "--query", "-q", help="Search by number or notes"),

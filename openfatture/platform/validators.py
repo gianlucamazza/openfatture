@@ -94,3 +94,32 @@ def format_importo(importo: float, decimals: int = 2) -> str:
         str: Formatted amount
     """
     return f"{importo:.{decimals}f}"
+
+
+# Supported by the bundled FatturaPA XSD; this is not a regime recommendation.
+REGIMI_FISCALI = frozenset(
+    [
+        "RF01",
+        "RF02",
+        "RF04",
+        "RF05",
+        "RF06",
+        "RF07",
+        "RF08",
+        "RF09",
+        "RF10",
+        "RF11",
+        "RF12",
+        "RF13",
+        "RF14",
+        "RF15",
+        "RF16",
+        "RF17",
+        "RF18",
+        "RF19",
+    ]
+)
+
+
+def validate_regime_fiscale(value: str) -> bool:
+    return value in REGIMI_FISCALI

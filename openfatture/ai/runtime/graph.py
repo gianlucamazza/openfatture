@@ -43,6 +43,7 @@ class ToolLoopState(TypedDict, total=False):
     status: str
     error: str | None
     tokens: int
+    usage: dict[str, Any]
     tool_results: list[dict[str, Any]]
 
 
@@ -138,11 +139,23 @@ def build_tool_loop_graph(
         new_messages.append(assistant_msg)
         usage_tokens = response.usage.total_tokens if response.usage is not None else 0
         tokens = int(usage_tokens or 0) + int(state.get("tokens") or 0)
+        usage = dict(state.get("usage") or {})
+        current = response.usage
+        for key in ("prompt_tokens", "completion_tokens", "total_tokens", "estimated_cost_usd"):
+            usage[key] = usage.get(key, 0) + getattr(current, key, 0)
+        usage["cost_known"] = usage.get("cost_known", True) and getattr(
+            current, "cost_known", False
+        )
         return {
             **state,
+            "usage": usage,
             "messages": new_messages,
             "content": response.content or "",
-            "status": "tool_calls" if response.has_tool_calls else "final",
+            "status": "error"
+            if not response.success
+            else "tool_calls"
+            if response.has_tool_calls
+            else "final",
             "error": response.error,
             "tokens": tokens,
             "iteration": int(state.get("iteration") or 0) + 1,
@@ -183,7 +196,9 @@ def build_tool_loop_graph(
                         "tool": name,
                         "parameters": arguments,
                         "success": result.success,
-                        "result": result.data if result.success else result.error,
+                        "result": result.data
+                        if result.success
+                        else result.error_type or result.error,
                     }
                 )
             except Exception as exc:

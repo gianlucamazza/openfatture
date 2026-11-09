@@ -63,10 +63,10 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md).
 
 ## Status
 
-Version **2.3.0**, Python 3.12+ and `uv`. Credit notes (TD04), real XML
+Version **2.4.0**, Python 3.12+ and `uv`. Credit notes (TD04), real XML
 generation, professional PDF templates, and natura/DatiCassaPrevidenziale
 support — see [docs/STATUS.md](docs/STATUS.md),
-[docs/releases/v2.3.0.md](docs/releases/v2.3.0.md), and
+[docs/releases/v2.4.0.md](docs/releases/v2.4.0.md), and
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Explicit non-goal: there is no browser frontend or web application surface,

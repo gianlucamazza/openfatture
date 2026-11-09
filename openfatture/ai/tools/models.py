@@ -74,6 +74,9 @@ class Tool(BaseModel):
         description="Ask user confirmation before executing",
     )
     enabled: bool = Field(default=True, description="Tool is enabled")
+    retry_safe: bool = Field(
+        default=False, description="Explicitly safe to retry transient read failures"
+    )
 
     # Metadata
     examples: list[str] = Field(default_factory=list, description="Usage examples")
@@ -164,7 +167,7 @@ class Tool(BaseModel):
 
             # Execute function with retry logic
             backoff = ExponentialBackoff(base=0.5, max_delay=5.0)
-            max_retries = 3
+            max_retries = 3 if self.retry_safe else 1
 
             for attempt in range(max_retries):
                 try:
@@ -192,9 +195,6 @@ class Tool(BaseModel):
                     retryable_errors = (
                         ConnectionError,
                         TimeoutError,
-                        OSError,
-                        # Add database-specific errors
-                        Exception,  # For now, retry all exceptions
                     )
 
                     if attempt < max_retries - 1 and isinstance(e, retryable_errors):
