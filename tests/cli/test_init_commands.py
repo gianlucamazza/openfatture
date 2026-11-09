@@ -18,6 +18,17 @@ TEST_CODICE_DESTINATARIO = "TESTCODE"
 TEST_BIC_SWIFT = "TESTBIC123"
 
 
+@pytest.fixture(autouse=True)
+def isolated_setup_profile(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    import openfatture.platform.config as configuration
+
+    monkeypatch.setattr(
+        configuration, "dirs", SimpleNamespace(user_config_dir=str(tmp_path / "profile"))
+    )
+
+
 class TestInitCommand:
     """Test 'init' command."""
 
@@ -107,10 +118,10 @@ class TestInitCommand:
     @patch("openfatture.cli.commands.init.Confirm")
     @patch("openfatture.cli.commands.init.init_db")
     @patch("openfatture.cli.commands.init.get_settings")
-    def test_init_interactive_existing_env_no_overwrite(
+    def test_init_interactive_existing_profile_no_overwrite(
         self, mock_settings, mock_init_db, mock_confirm, tmp_path
     ):
-        """Test interactive initialization with existing .env - user declines overwrite."""
+        """Test interactive initialization with existing user profile - user declines overwrite."""
         # Setup settings mock
         mock_settings_instance = Mock()
         mock_settings_instance.data_dir = tmp_path / "data"
@@ -122,19 +133,20 @@ class TestInitCommand:
         # User declines to overwrite
         mock_confirm.ask.return_value = False
 
-        # Create existing .env file
+        # Create existing user profile file
         import os
 
         original_cwd = os.getcwd()
         try:
             os.chdir(tmp_path)
-            env_file = tmp_path / ".env"
+            env_file = tmp_path / "profile" / "config.toml"
+            env_file.parent.mkdir(parents=True, exist_ok=True)
             env_file.write_text("# Existing content")
 
             result = runner.invoke(app, ["--interactive"])
 
             assert result.exit_code == 0
-            assert "Existing .env preserved" in result.stdout
+            assert "Existing configuration preserved" in result.stdout
             # Verify original content preserved
             assert "# Existing content" in env_file.read_text()
         finally:

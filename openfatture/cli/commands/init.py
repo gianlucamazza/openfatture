@@ -67,11 +67,11 @@ def init(
 
         if env_file.exists():
             if not Confirm.ask(
-                "[yellow]A .env file already exists. Overwrite company/AI settings?[/yellow]",
+                "[yellow]An OpenFatture profile already exists. Overwrite company/AI settings?[/yellow]",
                 default=False,
             ):
                 console.print(
-                    "\n[green]Existing .env preserved.[/green] "
+                    "\n[green]Existing configuration preserved.[/green] "
                     "Dirs and database were still ensured above.\n"
                 )
                 _print_setup_complete()
