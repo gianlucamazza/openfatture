@@ -4,7 +4,6 @@ Implements the Saga pattern to orchestrate complex, multi-step reconciliation pr
 with proper state transitions and event handling.
 """
 
-import asyncio
 import inspect
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -16,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from ...domain.enums import MatchType, TransactionStatus
 from ...domain.models import BankTransaction
-from ...domain.payment_allocation import PaymentAllocation
 from ...domain.value_objects import MatchResult, ReconciliationResult
 from ..events import EventBus, TransactionMatchedEvent, TransactionUnmatchedEvent
 
@@ -75,7 +73,7 @@ class ReconciliationService:
         self.tx_repo = tx_repo
         self.payment_repo = payment_repo
         self.matching_service = matching_service
-        self.session = session
+        self.session = session if session is not None else tx_repo.session
         self.event_bus = event_bus
 
     async def reconcile(
@@ -128,98 +126,27 @@ class ReconciliationService:
         if not transaction:
             raise ValueError(f"Transaction {transaction_id} not found")
 
-        if transaction.status != TransactionStatus.UNMATCHED:
-            raise ValueError(
-                f"Transaction {transaction_id} cannot be reconciled. "
-                f"Current status: {transaction.status.value}. "
-                "Only UNMATCHED transactions can be reconciled."
-            )
+        from openfatture.payment.application.bank_collections import reconcile_bank
 
-        # 2. Validate payment
         payment = self.payment_repo.get_by_id(payment_id)
         if not payment:
             raise ValueError(f"Payment {payment_id} not found")
-
-        # Determine outstanding amount
-        outstanding = payment.saldo_residuo
-        if outstanding <= Decimal("0.00"):
-            raise ValueError(f"Payment {payment_id} is already fully paid.")
-
-        transaction_amount = abs(transaction.amount)
-        if transaction_amount <= Decimal("0.00"):
-            raise ValueError(
-                f"Transaction {transaction_id} has non-positive amount {transaction.amount}."
-            )
-
-        applied_amount = transaction_amount if transaction_amount <= outstanding else outstanding
-
-        if transaction_amount > outstanding + Decimal("0.01"):
-            logger.warning(
-                "transaction_exceeds_outstanding",
-                transaction_amount=float(transaction_amount),
-                outstanding_amount=float(outstanding),
-                applied_amount=float(applied_amount),
-            )
-
+        if self.session is None:
+            raise ValueError("A database session is required for durable reconciliation")
         try:
-            # 3. Update transaction
-            transaction.status = TransactionStatus.MATCHED
-            transaction.matched_payment_id = payment_id
-            transaction.match_type = match_type
-            transaction.match_confidence = confidence
-            transaction.matched_at = datetime.now(UTC)
-
-            # Persist partial payment state on payment entity
-            payment.apply_payment(applied_amount, pagamento_effective_date=transaction.date)
-            self.payment_repo.update(payment)
-
-            # Track allocation for reversals/audit
-            allocation = PaymentAllocation(
-                payment_id=payment_id,
-                transaction_id=transaction.id,
-                amount=applied_amount,
-                match_type=match_type,
-                match_confidence=confidence,
-            )
-            self.payment_repo.add_allocation(allocation)
-
-            # Update transaction metadata with allocation info
-            if transaction.raw_data is None:
-                transaction.raw_data = {}
-            transaction.raw_data.setdefault("reconciliation", {})
-            transaction.raw_data["reconciliation"].update(
-                {
-                    "applied_amount": float(applied_amount),
-                    "payment_id": payment_id,
-                    "outstanding_before": float(outstanding),
-                }
-            )
-
-            self.tx_repo.update(transaction)
-
-            # 5. Emit domain event (placeholder - implement event bus)
-            self._emit_transaction_matched_event(transaction, payment, applied_amount)
-
-            logger.info(
-                "reconciliation_completed",
-                transaction_id=transaction_id,
-                payment_id=payment_id,
-                amount=float(transaction.amount),
-                applied_amount=float(applied_amount),
-                payment_status=payment.stato.value,
-                outstanding_after=float(payment.saldo_residuo),
-            )
-
-            return transaction
-
-        except Exception as e:
-            logger.error(
-                "reconciliation_failed",
-                transaction_id=transaction_id,
-                payment_id=payment_id,
-                error=str(e),
-            )
-            raise RuntimeError(f"Reconciliation failed: {e}") from e
+            with self.session.begin_nested():
+                entry = reconcile_bank(self.session, transaction, payment)
+                transaction.match_type = match_type
+                transaction.match_confidence = confidence
+                transaction.matched_at = datetime.now(UTC)
+                self.payment_repo.update(payment)
+                self.tx_repo.update(transaction)
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise RuntimeError(f"Reconciliation failed: {exc}") from exc
+        self._emit_transaction_matched_event(transaction, payment, entry.amount)
+        return transaction
 
     async def ignore_transaction(
         self,
@@ -309,67 +236,16 @@ class ReconciliationService:
         if not transaction:
             raise ValueError(f"Transaction {transaction_id} not found")
 
-        if transaction.status != TransactionStatus.MATCHED:
-            raise ValueError(
-                f"Transaction {transaction_id} is not matched. "
-                f"Current status: {transaction.status.value}"
-            )
+        from openfatture.payment.application.bank_collections import reset_bank
 
-        try:
-            # Get payment to revert status
-            allocation: PaymentAllocation | None = None
-            payment: Pagamento | None = None
-            original_payment_id = transaction.matched_payment_id
-
-            if original_payment_id:
-                payment = self.payment_repo.get_by_id(original_payment_id)
-                if payment:
-                    allocation = self.payment_repo.get_allocation(payment.id, transaction.id)
-                    if allocation:
-                        payment.revert_payment(allocation.amount)
-                        self.payment_repo.update(payment)
-                        self.payment_repo.delete_allocation(allocation)
-                        logger.debug(
-                            "payment_status_reverted",
-                            payment_id=payment.id,
-                            reverted_amount=float(allocation.amount),
-                            new_status=payment.stato.value,
-                        )
-                    else:
-                        logger.warning(
-                            "allocation_missing_on_reset",
-                            transaction_id=transaction_id,
-                            payment_id=payment.id,
-                        )
-
-            # Reset transaction
-            transaction.status = TransactionStatus.UNMATCHED
-            transaction.matched_payment_id = None
-            transaction.match_type = None
-            transaction.match_confidence = None
-            transaction.matched_at = None
-
+        if self.session is None:
+            raise ValueError("A database session is required for durable reconciliation")
+        original_payment_id = transaction.matched_payment_id
+        with self.session.begin_nested():
+            reverted = reset_bank(self.session, transaction)
             self.tx_repo.update(transaction)
-
-            # Emit event
-            reverted_amount = allocation.amount if allocation else None
-            self._emit_transaction_unmatched_event(
-                transaction,
-                reverted_amount,
-                original_payment_id,
-            )
-
-            logger.info("transaction_reset", transaction_id=transaction_id)
-
-            return transaction
-
-        except Exception as e:
-            logger.error(
-                "reset_failed",
-                transaction_id=transaction_id,
-                error=str(e),
-            )
-            raise RuntimeError(f"Reset failed: {e}") from e
+            self._emit_transaction_unmatched_event(transaction, reverted, original_payment_id)
+        return transaction
 
     async def get_review_queue(
         self,
@@ -559,6 +435,14 @@ class ReconciliationService:
         self._publish_event(event)
 
     def _publish_event(self, event: TransactionMatchedEvent | TransactionUnmatchedEvent) -> None:
+        from openfatture.payment.application.deferred_events import after_commit
+
+        if self.session is not None and self.session.in_transaction():
+            after_commit(self.session, lambda: self._deliver_event(event))
+        else:
+            self._deliver_event(event)
+
+    def _deliver_event(self, event: TransactionMatchedEvent | TransactionUnmatchedEvent) -> None:
         """Publish event via configured event bus."""
         if not self.event_bus:
             return
@@ -566,7 +450,12 @@ class ReconciliationService:
         try:
             result = cast(Any, self.event_bus.publish(event))
             if inspect.isawaitable(result):
-                asyncio.ensure_future(result)
+                from openfatture.platform.async_bridge import run_async
+
+                async def deliver() -> None:
+                    await result
+
+                run_async(deliver())
         except Exception as exc:
             logger.error(
                 "event_publish_failed",

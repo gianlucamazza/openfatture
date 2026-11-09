@@ -128,7 +128,7 @@ class IBANMatcher(IMatcherStrategy):
                 continue
 
             # Check date tolerance
-            if not (date_min <= payment.data_scadenza <= date_max):
+            if payment.data_scadenza is None or not (date_min <= payment.data_scadenza <= date_max):
                 continue
 
             # Calculate confidence based on amount and date match
@@ -309,7 +309,11 @@ class IBANMatcher(IMatcherStrategy):
             confidence = min(Decimal("1.0"), confidence + Decimal("0.02"))  # Close amount
 
         # Check date match
-        date_diff_days = abs((payment.data_scadenza - transaction.date).days)
+        date_diff_days = (
+            abs((payment.data_scadenza - transaction.date).days)
+            if payment.data_scadenza
+            else 999999
+        )
         if date_diff_days == 0:
             confidence = min(Decimal("1.0"), confidence + Decimal("0.05"))  # Same date
         elif date_diff_days <= 3:
@@ -341,7 +345,11 @@ class IBANMatcher(IMatcherStrategy):
         """
         transaction_amount = abs(transaction.amount)
         amount_diff = abs(transaction_amount - payment_amount_for_matching(payment))
-        date_diff_days = abs((payment.data_scadenza - transaction.date).days)
+        date_diff_days = (
+            abs((payment.data_scadenza - transaction.date).days)
+            if payment.data_scadenza
+            else 999999
+        )
 
         # Detect country from IBAN
         country_name = SEPAIBANFormats.get_country_name(matched_iban) or "Unknown"

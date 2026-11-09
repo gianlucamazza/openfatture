@@ -73,6 +73,23 @@ def assistant(
     ),
 ) -> None:
     """Ask the assistant to explain, inspect, or perform an invoicing task."""
+    if message is None and (json_output or (ctx.obj or {}).get("format", "rich") != "rich"):
+        from openfatture.cli.formatters.utils import get_format_from_context
+        from openfatture.cli.output import emit
+
+        emit(
+            {
+                "success": False,
+                "data": None,
+                "warnings": [],
+                "error": {
+                    "code": "interactive_format",
+                    "message": "Provide a single request when using a structured output format",
+                },
+            },
+            get_format_from_context(ctx, json_output),
+        )
+        raise typer.Exit(2)
     run_sync_with_lifespan(_run_assistant(ctx, message, stream, json_output, session))
 
 

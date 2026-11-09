@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -18,6 +19,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -305,6 +307,9 @@ class Fattura(IntPKMixin, Base):
     pdf_path: Mapped[str | None] = mapped_column(String(500))
     xml_firmato_path: Mapped[str | None] = mapped_column(String(500))
 
+    collection_entries: Mapped[list[CollectionEntry]] = relationship()
+    collection_statements: Mapped[list[CollectionStatement]] = relationship()
+
     sdi_receipts: Mapped[list[SDINotificationRecord]] = relationship()
     sdi_submissions: Mapped[list[SDISubmissionAttempt]] = relationship(
         foreign_keys="SDISubmissionAttempt.invoice_id"
@@ -467,7 +472,7 @@ class Pagamento(IntPKMixin, Base):
     )
 
     # Date
-    data_scadenza: Mapped[date] = mapped_column(Date, nullable=False)
+    data_scadenza: Mapped[date | None] = mapped_column(Date, nullable=True)
     data_pagamento: Mapped[date | None] = mapped_column(Date)
 
     # Payment terms (0 = immediate, N = N days from invoice date)
@@ -776,3 +781,58 @@ class SDIInvoiceIdentity(IntPKMixin, Base):
     __tablename__ = "sdi_invoice_identities"
     identifier: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
     invoice_id: Mapped[int] = mapped_column(ForeignKey("fatture.id"), nullable=False, index=True)
+
+
+class CollectionReceipt(IntPKMixin, Base):
+    """One incoming amount, independent of invoices and due dates."""
+
+    __tablename__ = "collection_receipts"
+    __table_args__ = (
+        CheckConstraint(
+            "amount > 0 AND allocated >= 0 AND allocated <= amount", name="receipt_budget"
+        ),
+    )
+    request_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    bank_transaction_id: Mapped[str | None] = mapped_column(
+        Uuid(as_uuid=False), ForeignKey("bank_transactions.id", ondelete="RESTRICT"), unique=True
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    effective_date: Mapped[date | None] = mapped_column(Date)
+    origin: Mapped[str] = mapped_column(String(20), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    allocated: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
+
+
+class CollectionEntry(IntPKMixin, Base):
+    """Append-only allocation or reversal against an invoice."""
+
+    __tablename__ = "collection_entries"
+    __table_args__ = (CheckConstraint("amount != 0", name="nonzero_collection_entry"),)
+    request_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    receipt_id: Mapped[int] = mapped_column(ForeignKey("collection_receipts.id"), nullable=False)
+    invoice_id: Mapped[int] = mapped_column(ForeignKey("fatture.id"), nullable=False)
+    payment_id: Mapped[int | None] = mapped_column(ForeignKey("pagamenti.id"))
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    reverses_id: Mapped[int | None] = mapped_column(ForeignKey("collection_entries.id"))
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class CollectionStatement(IntPKMixin, Base):
+    """Owner declaration, kept separate from actual money movements."""
+
+    __tablename__ = "collection_statements"
+    request_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    invoice_id: Mapped[int] = mapped_column(ForeignKey("fatture.id"), nullable=False)
+    value: Mapped[str] = mapped_column(String(20), nullable=False)
+    declared_on: Mapped[date | None] = mapped_column(Date)
+    source: Mapped[str] = mapped_column(String(100), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class CollectionOperation(IntPKMixin, Base):
+    """Durable idempotency key and result for multi-step cash operations."""
+
+    __tablename__ = "collection_operations"
+    request_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    result: Mapped[str] = mapped_column(Text, nullable=False)

@@ -248,6 +248,7 @@ class TestCompletePaymentWorkflow:
                         confidence=matches[0].confidence,
                     )
                     reconciled_count += 1
+            db_session.commit()
         captured_logs = list(logs)
 
         assert reconciled_count >= 2
@@ -535,6 +536,7 @@ class TestCompletePaymentWorkflow:
                 auto_apply=True,
                 auto_apply_threshold=0.85,
             )
+            db_session.commit()
         captured_logs = list(logs)
 
         assert result.total_count >= 2

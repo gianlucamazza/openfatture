@@ -140,7 +140,10 @@ class BankTransaction(UUIDPKMixin, Base):
 
     # Matching status
     status: Mapped[TransactionStatus] = mapped_column(
-        Enum(TransactionStatus), nullable=False, default=TransactionStatus.UNMATCHED, index=True
+        Enum(TransactionStatus, native_enum=False, length=32),
+        nullable=False,
+        default=TransactionStatus.UNMATCHED,
+        index=True,
     )
 
     # Matched payment (nullable until matched)
@@ -283,7 +286,7 @@ class PaymentReminder(IntPKMixin, Base):
     @property
     def is_overdue_reminder(self) -> bool:
         """Whether this is a reminder for an overdue payment (sent after due date)."""
-        if not self.payment:
+        if not self.payment or self.payment.data_scadenza is None:
             return False
         return self.reminder_date > self.payment.data_scadenza
 

@@ -43,6 +43,18 @@ def init(
     """
     console.print("\n[bold blue]OpenFatture Setup[/bold blue]\n")
 
+    ctx = typer.get_current_context(silent=True) if hasattr(typer, "get_current_context") else None
+    if ctx is None:
+        import click
+
+        ctx = click.get_current_context(silent=True)
+    if (
+        interactive
+        and ctx is not None
+        and ctx.find_root().obj
+        and ctx.find_root().obj.get("format", "rich") != "rich"
+    ):
+        raise typer.BadParameter("Use --no-interactive with a structured output format")
     settings = get_settings()
 
     # Create directories

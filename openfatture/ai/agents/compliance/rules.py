@@ -599,7 +599,10 @@ class ComplianceRulesEngine:
 
         # Validate payment due date
         for i, pagamento in enumerate(fattura.pagamenti, 1):
-            if pagamento.data_scadenza < fattura.data_emissione:
+            if (
+                pagamento.data_scadenza is not None
+                and pagamento.data_scadenza < fattura.data_emissione
+            ):
                 result.add_issue(
                     ValidationIssue(
                         code="FPA051",

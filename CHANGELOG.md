@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-11-09
+
+### Added
+
+- Append-only collection receipts and allocations, partial reversals, request replay
+  protection, atomic splits and unallocated incoming funds.
+- `pagamento` CLI commands and assistant tools share the same transaction services.
+- Provenance-backed owner declarations, separate from recorded cash movements.
+- Structured output for public business CLI commands in JSON, Markdown, HTML and JSONL.
+- Packaged migration of historical cumulative balances without changing invoice totals.
+
+### Fixed
+
+- Bank reconciliation accepts incoming EUR funds, preserves partial availability and
+  reverses allocations without deleting financial history.
+- Unknown deadlines stay unknown in reports, reminders and generated invoice XML.
+- Reminder delivery pauses when invoice collections require installment allocation.
+- Reconciliation events publish only after commit, including nested rollback handling.
+- Historical invoices issued elsewhere participate in revenue reports.
+
+
 ## [2.4.0] - 2026-11-09
 
 ### Added

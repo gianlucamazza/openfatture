@@ -305,7 +305,7 @@ class Settings(BaseSettings):
         description="Enable AI tool/function calling",
     )
     ai_enabled_tools: str = Field(
-        default="search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats",
+        default="search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats,get_collections",
         description=(
             "Comma-separated allowlist of AI tools. Transmit tools such as "
             "send_invoice_to_sdi stay off unless named here; the value 'all' "

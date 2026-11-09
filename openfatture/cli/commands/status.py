@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from openfatture import __version__
+from openfatture.cli.output import remember_result
 from openfatture.platform.config import Settings, get_settings
 from openfatture.platform.extras import available_extras
 
@@ -168,6 +169,7 @@ def _build_status() -> dict[str, Any]:
 def status(json_output: bool = typer.Option(False, "--json", help="Emit status as JSON.")) -> None:
     """Show local configuration and storage readiness without changing state."""
     data = _build_status()
+    remember_result(data)
     if json_output:
         # Pure stdout for machine consumers; diagnostics use stderr via logging.
         print(json.dumps(data, indent=2, default=str))

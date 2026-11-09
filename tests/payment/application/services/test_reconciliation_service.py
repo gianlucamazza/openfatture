@@ -19,13 +19,19 @@ from openfatture.payment.domain.enums import MatchType, TransactionStatus
 from openfatture.payment.domain.models import BankTransaction
 from openfatture.payment.domain.payment_allocation import PaymentAllocation
 from openfatture.payment.domain.value_objects import MatchResult, ReconciliationResult
-from openfatture.storage.database.models import Pagamento, StatoPagamento
+from openfatture.storage.database.models import CollectionEntry, Fattura, Pagamento, StatoPagamento
 
 pytestmark = pytest.mark.asyncio
 
 
 class TestReconciliationService:
     """Tests for ReconciliationService Saga pattern workflows."""
+
+    @pytest.fixture(autouse=True)
+    def persistent_invoice_context(self, db_session, sample_fattura):
+        self._session = db_session
+        self._client_id = sample_fattura.cliente_id
+        self._invoice_number = 100
 
     def _make_payment(
         self,
@@ -36,13 +42,21 @@ class TestReconciliationService:
     ) -> Pagamento:
         """Utility helper to create Pagamento instances for tests."""
 
-        return Pagamento(
-            fattura_id=1,
+        self._invoice_number += 1
+        invoice = Fattura(
+            numero=str(self._invoice_number), anno=2026, cliente_id=self._client_id, totale=importo
+        )
+        self._session.add(invoice)
+        self._session.flush()
+        payment = Pagamento(
+            fattura_id=invoice.id,
             importo=importo,
             importo_pagato=importo_pagato,
-            data_scadenza=data_scadenza or date.today(),
             stato=stato,
+            data_scadenza=data_scadenza or date.today(),
         )
+        self._session.add(payment)
+        return payment
 
     @pytest.fixture
     def reconciliation_service(
@@ -134,7 +148,7 @@ class TestReconciliationService:
 
         # Setup mocks
         bank_transaction.status = TransactionStatus.UNMATCHED
-        bank_transaction.amount = Decimal("-1000.00")
+        bank_transaction.amount = Decimal("1000.00")
         mock_tx_repo.get_by_id.return_value = bank_transaction
         mock_payment_repo.get_by_id.return_value = payment
 
@@ -159,7 +173,12 @@ class TestReconciliationService:
         # Verify repository update called
         mock_tx_repo.update.assert_called_once_with(bank_transaction)
         mock_payment_repo.update.assert_called_once_with(payment)
-        allocation_arg = mock_payment_repo.add_allocation.call_args[0][0]
+        allocation_arg = (
+            self._session.query(CollectionEntry)
+            .filter(CollectionEntry.amount > 0)
+            .order_by(CollectionEntry.id.desc())
+            .first()
+        )
         assert allocation_arg.amount == Decimal("1000.00")
         assert allocation_arg.payment_id == payment.id
 
@@ -176,7 +195,7 @@ class TestReconciliationService:
         payment.id = 1
 
         bank_transaction.status = TransactionStatus.UNMATCHED
-        bank_transaction.amount = Decimal("-1000.00")
+        bank_transaction.amount = Decimal("1000.00")
         mock_tx_repo.get_by_id.return_value = bank_transaction
         mock_payment_repo.get_by_id.return_value = payment
 
@@ -187,6 +206,7 @@ class TestReconciliationService:
             confidence=0.85,
         )
 
+        self._session.commit()
         mock_event_bus.publish.assert_called_once()
         event = mock_event_bus.publish.call_args[0][0]
         assert isinstance(event, TransactionMatchedEvent)
@@ -267,7 +287,7 @@ class TestReconciliationService:
 
         # Transaction exceeds remaining
         bank_transaction.status = TransactionStatus.UNMATCHED
-        bank_transaction.amount = Decimal("-500.00")  # Exceeds €400 remaining
+        bank_transaction.amount = Decimal("500.00")  # Exceeds €400 remaining
         mock_tx_repo.get_by_id.return_value = bank_transaction
         mock_payment_repo.get_by_id.return_value = payment
 
@@ -284,12 +304,12 @@ class TestReconciliationService:
         )
 
         # Verify reconciliation succeeded
-        assert result.status == TransactionStatus.MATCHED
+        assert result.status == TransactionStatus.PARTIALLY_MATCHED
 
         # Verify warning was logged
-        mock_logger.warning.assert_called_once()
-        warning_call = mock_logger.warning.call_args
-        assert "transaction_exceeds_outstanding" in warning_call[0]
+        mock_logger.warning.assert_not_called()
+        assert result.status == TransactionStatus.PARTIALLY_MATCHED
+        assert result.raw_data["reconciliation"]["unallocated_amount"] == "100.00"
 
     async def test_reconcile_emits_internal_event(
         self, reconciliation_service, mock_tx_repo, mock_payment_repo, bank_transaction, mocker
@@ -299,7 +319,7 @@ class TestReconciliationService:
         payment.id = 1
 
         bank_transaction.status = TransactionStatus.UNMATCHED
-        bank_transaction.amount = Decimal("-1000.00")
+        bank_transaction.amount = Decimal("1000.00")
         mock_tx_repo.get_by_id.return_value = bank_transaction
         mock_payment_repo.get_by_id.return_value = payment
 
@@ -402,7 +422,7 @@ class TestReconciliationService:
 
         bank_transaction.status = TransactionStatus.MATCHED
         bank_transaction.matched_payment_id = payment.id
-        bank_transaction.amount = Decimal("-500.00")
+        bank_transaction.amount = Decimal("500.00")
         mock_tx_repo.get_by_id.return_value = bank_transaction
         mock_payment_repo.get_by_id.return_value = payment
         allocation = PaymentAllocation(
@@ -410,6 +430,8 @@ class TestReconciliationService:
             transaction_id=bank_transaction.id,
             amount=Decimal("500.00"),
         )
+        self._session.add(allocation)
+        self._session.flush()
         mock_payment_repo.get_allocation.return_value = allocation
 
         await reconciliation_service.reset_transaction(
@@ -419,8 +441,8 @@ class TestReconciliationService:
         # Verify payment amount reverted
         assert payment.importo_pagato == Decimal("0.00")
         assert payment.stato == StatoPagamento.DA_PAGARE
-        mock_payment_repo.get_allocation.assert_called_once_with(payment.id, bank_transaction.id)
-        mock_payment_repo.delete_allocation.assert_called_once_with(allocation)
+        mock_payment_repo.get_allocation.assert_not_called()
+        mock_payment_repo.delete_allocation.assert_not_called()
 
     async def test_reset_transaction_clears_match_metadata(
         self, reconciliation_service, mock_tx_repo, mock_payment_repo, bank_transaction, mocker
@@ -440,12 +462,15 @@ class TestReconciliationService:
         bank_transaction.matched_at = datetime.now(UTC)
         mock_tx_repo.get_by_id.return_value = bank_transaction
         mock_payment_repo.get_by_id.return_value = payment
-        mock_payment_repo.get_allocation.return_value = PaymentAllocation(
+        allocation = PaymentAllocation(
             payment_id=payment.id,
             transaction_id=bank_transaction.id,
             amount=Decimal("1000.00"),
         )
 
+        bank_transaction.amount = allocation.amount
+        self._session.add(allocation)
+        self._session.flush()
         result = await reconciliation_service.reset_transaction(
             transaction_id=bank_transaction.id,
         )
@@ -456,7 +481,7 @@ class TestReconciliationService:
         assert result.match_type is None
         assert result.match_confidence is None
         assert result.matched_at is None
-        mock_payment_repo.get_allocation.assert_called_once_with(payment.id, bank_transaction.id)
+        mock_payment_repo.get_allocation.assert_not_called()
 
     async def test_reset_transaction_emits_domain_event(
         self,
@@ -480,16 +505,20 @@ class TestReconciliationService:
             amount=Decimal("250.00"),
         )
 
+        bank_transaction.amount = allocation.amount
         bank_transaction.status = TransactionStatus.MATCHED
         bank_transaction.matched_payment_id = payment.id
         bank_transaction.match_type = MatchType.EXACT
         bank_transaction.match_confidence = 0.75
         mock_tx_repo.get_by_id.return_value = bank_transaction
         mock_payment_repo.get_by_id.return_value = payment
+        self._session.add(allocation)
+        self._session.flush()
         mock_payment_repo.get_allocation.return_value = allocation
 
         await reconciliation_service_with_bus.reset_transaction(bank_transaction.id)
 
+        self._session.commit()
         mock_event_bus.publish.assert_called_once()
         event = mock_event_bus.publish.call_args[0][0]
         assert isinstance(event, TransactionUnmatchedEvent)
@@ -505,9 +534,7 @@ class TestReconciliationService:
         mock_tx_repo.get_by_id.return_value = bank_transaction
 
         with pytest.raises(ValueError, match="is not matched"):
-            await reconciliation_service.reset_transaction(
-                transaction_id=bank_transaction.id,
-            )
+            await reconciliation_service.reset_transaction(transaction_id=bank_transaction.id)
 
     # ==========================================================================
     # Review Queue Tests (2 tests)
@@ -618,7 +645,7 @@ class TestReconciliationService:
         payment.id = 1
 
         bank_transaction.status = TransactionStatus.UNMATCHED
-        bank_transaction.amount = Decimal("-1000.00")
+        bank_transaction.amount = Decimal("1000.00")
 
         # Mock batch matching result
         match_result = MatchResult(
@@ -651,7 +678,7 @@ class TestReconciliationService:
         # Verify reconciliation was applied
         assert result.total_count == 1
         mock_tx_repo.update.assert_called_once()
-        mock_payment_repo.add_allocation.assert_called()
+        assert self._session.query(CollectionEntry).count() > 0
 
     async def test_reconcile_batch_handles_errors_gracefully(
         self,

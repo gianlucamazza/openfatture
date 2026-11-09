@@ -7,9 +7,11 @@ from openfatture import __version__
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import configure_dynamic_logging
 
-from .commands import assistant, cliente, config, fattura, init, interactive, status
+from .commands import assistant, cliente, config, fattura, init, interactive, pagamento, status
+from .output import OutputGroup
 
 app = typer.Typer(
+    cls=OutputGroup,
     name="openfatture",
     help="Agentic electronic invoicing for Italian freelancers.",
     add_completion=True,
@@ -68,6 +70,8 @@ app.add_typer(
     fattura.app, name="fattura", help="Manage invoices (list, show, create, generate-pdf)"
 )
 
+
+app.add_typer(pagamento.app, name="pagamento", help="Record, allocate and reverse collections")
 
 if __name__ == "__main__":
     app()

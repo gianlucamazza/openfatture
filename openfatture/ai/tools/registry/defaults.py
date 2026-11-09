@@ -64,6 +64,11 @@ def _register_default_tools(registry: ToolRegistry) -> None:
         for tool in knowledge_tools.get_knowledge_tools():
             registry.register(tool)
 
+        from openfatture.ai.tools.collection_tools import get_collection_tools
+
+        for tool in get_collection_tools():
+            registry.register(tool)
+
         # Register payment tools
         for tool in payment_tools.get_payment_tools():
             registry.register(tool)

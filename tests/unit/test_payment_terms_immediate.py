@@ -114,11 +114,10 @@ class TestPaymentTermsImmediate:
         db_session.add(riga)
 
         # Add 30-day payment
-        expected_scadenza = date(2026, 9, 14) + timedelta(days=30)
         pagamento = Pagamento(
             fattura_id=fattura.id,
             importo=Decimal("1220.00"),
-            data_scadenza=expected_scadenza,
+            data_scadenza=date(2026, 9, 14) + timedelta(days=30),
             giorni_scadenza=30,  # 30-day terms
             modalita="Bonifico",
         )
@@ -135,7 +134,7 @@ class TestPaymentTermsImmediate:
         # Check DataScadenzaPagamento = data_emissione + 30 days
         data_scadenza_elem = root.find(".//{*}DataScadenzaPagamento")
         assert data_scadenza_elem is not None
-        assert data_scadenza_elem.text == expected_scadenza.isoformat()
+        assert data_scadenza_elem.text == (date(2026, 9, 14) + timedelta(days=30)).isoformat()
 
     def test_backward_compatibility_no_pagamento(self, test_settings, db_session, sample_cliente):
         """Test that invoices without Pagamento records still work (30-day default)."""
@@ -178,10 +177,8 @@ class TestPaymentTermsImmediate:
         root = etree.fromstring(xml_content.encode("utf-8"))
 
         # Check DataScadenzaPagamento = data_emissione + 30 days (default)
-        expected_scadenza = date(2026, 9, 14) + timedelta(days=30)
         data_scadenza_elem = root.find(".//{*}DataScadenzaPagamento")
-        assert data_scadenza_elem is not None
-        assert data_scadenza_elem.text == expected_scadenza.isoformat()
+        assert data_scadenza_elem is None
 
     def test_immediate_payment_pdf(self, test_settings, db_session, sample_cliente, tmp_path):
         """Test that immediate payment shows correct labels in PDF."""

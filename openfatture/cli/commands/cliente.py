@@ -11,6 +11,7 @@ from openfatture.billing.application.client_queries import (
     get_client_details,
     search_clients,
 )
+from openfatture.cli.output import remember_result
 
 app = typer.Typer(name="cliente", help="Manage clients (customers)")
 console = Console()
@@ -30,6 +31,7 @@ def list_clients(
 ) -> None:
     """List and search clients."""
     result = search_clients(query=query, limit=limit)
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -70,6 +72,7 @@ def show_client(
 ) -> None:
     """Show detailed client information."""
     result = get_client_details(cliente_id=cliente_id)
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -154,6 +157,7 @@ def create_new_client(
         telefono=telefono,
         note=note,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")

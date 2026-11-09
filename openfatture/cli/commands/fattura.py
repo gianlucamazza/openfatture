@@ -14,6 +14,7 @@ from openfatture.billing.application.invoice_queries import (
     get_invoice_details,
     search_invoices,
 )
+from openfatture.cli.output import remember_result
 from openfatture.i18n import _, get_locale
 from openfatture.pdf.generator import PDFGenerator, PDFGeneratorConfig
 from openfatture.platform.config import get_settings
@@ -47,6 +48,7 @@ def list_invoices(
         cliente_id=cliente_id,
         limit=limit,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -84,6 +86,11 @@ def list_invoices(
                 f"  {invoice['data']} · {document} · {_('cli-invoice-' + invoice['payment_status'])}",
                 markup=False,
             )
+            if invoice.get("collection_statement"):
+                console.print(
+                    f"  Dichiarazione: {invoice['collection_statement']['value']} · fonte: {invoice['collection_statement']['source']}",
+                    markup=False,
+                )
             console.print()
         if result.get("has_more"):
             console.print("… --limit")
@@ -126,6 +133,13 @@ def list_invoices(
         )
 
     console.print(table)
+    for invoice in result["fatture"]:
+        if invoice.get("collection_statement"):
+            statement = invoice["collection_statement"]
+            console.print(
+                f"{invoice['numero']}/{invoice['anno']} · dichiarazione: {statement['value']} · fonte: {statement['source']}",
+                markup=False,
+            )
 
     if result.get("has_more"):
         console.print("[dim]... and more. Use --limit to see more results.[/dim]")
@@ -137,6 +151,7 @@ def show_invoice(
 ) -> None:
     """Show detailed invoice information."""
     result = get_invoice_details(fattura_id=fattura_id)
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -171,6 +186,12 @@ def show_invoice(
             else format_currency(result[field], "EUR", locale=get_locale())
         )
         console.print(_("cli-invoice-" + label) + ": " + value)
+
+    if result.get("collection_statement"):
+        console.print(
+            f"Dichiarazione: {result['collection_statement']['value']} · fonte: {result['collection_statement']['source']}",
+            markup=False,
+        )
 
     # Client
     cliente = result.get("cliente", {})
@@ -233,6 +254,7 @@ def create_new_invoice(
         numero=numero,
         note=note,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -263,6 +285,7 @@ def add_line_item(
         aliquota_iva=iva,
         unita_misura=unita,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -383,6 +406,7 @@ def set_status(
 ) -> None:
     """Update invoice status."""
     result = update_invoice_status(fattura_id=fattura_id, new_status=status)
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -408,6 +432,7 @@ def create_credit_note(
         note=note,
         full_refund=full_refund,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
