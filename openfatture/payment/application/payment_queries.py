@@ -1,5 +1,6 @@
 """Tools for payment tracking and reconciliation operations."""
 
+from decimal import Decimal
 from typing import Any
 
 from pydantic import validate_call
@@ -57,9 +58,10 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
             }
 
         # Aggregate payment info
-        total_paid = sum(float(p.importo_pagato) for p in pagamenti)
-        total_due = sum(float(p.importo) for p in pagamenti)
-        outstanding = total_due - total_paid
+        total_paid = sum((p.importo_pagato for p in pagamenti), Decimal("0.00"))
+        scheduled = sum((p.importo for p in pagamenti), Decimal("0.00"))
+        total_due = fattura.totale
+        outstanding = max(total_due - total_paid, Decimal("0.00"))
 
         payments_info = []
         for p in pagamenti:
@@ -89,9 +91,10 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
             "invoice_number": f"{fattura.numero}/{fattura.anno}",
             "total_amount": float(fattura.totale),
             "payment_status": overall_status,
-            "amount_paid": total_paid,
-            "amount_due": total_due,
-            "outstanding": outstanding,
+            "amount_paid": float(total_paid),
+            "amount_due": float(total_due),
+            "outstanding": float(outstanding),
+            "unscheduled_amount": float(max(total_due - scheduled, Decimal("0.00"))),
             "payments_count": len(pagamenti),
             "payments": payments_info,
         }

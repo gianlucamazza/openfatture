@@ -195,6 +195,19 @@ def create_manual_payment(
         importo_dec = Decimal(str(importo))
         importo_pagato_dec = Decimal(str(importo_pagato))
 
+        if (
+            not importo_dec.is_finite()
+            or not importo_pagato_dec.is_finite()
+            or importo_dec <= 0
+            or importo_pagato_dec < 0
+            or importo_pagato_dec > importo_dec
+            or importo_dec != importo_dec.quantize(Decimal("0.01"))
+            or importo_pagato_dec != importo_pagato_dec.quantize(Decimal("0.01"))
+        ):
+            return {
+                "error": "Invalid payment amounts: require positive due, paid within due, and at most two decimals"
+            }
+
         # Calculate giorni_scadenza based on invoice date
         if data_scad == fattura.data_emissione:
             # Immediate payment: rif. termini = data emissione
@@ -301,6 +314,23 @@ def update_payment(
         pagamento = db.query(Pagamento).filter(Pagamento.id == payment_id).first()
         if not pagamento:
             return {"error": f"Payment {payment_id} not found"}
+
+        proposed_due = Decimal(str(importo)) if importo is not None else pagamento.importo
+        proposed_paid = (
+            Decimal(str(importo_pagato)) if importo_pagato is not None else pagamento.importo_pagato
+        )
+        if (
+            not proposed_due.is_finite()
+            or not proposed_paid.is_finite()
+            or proposed_due <= 0
+            or proposed_paid < 0
+            or proposed_paid > proposed_due
+            or proposed_due != proposed_due.quantize(Decimal("0.01"))
+            or proposed_paid != proposed_paid.quantize(Decimal("0.01"))
+        ):
+            return {
+                "error": "Invalid payment amounts: require positive due, paid within due, and at most two decimals"
+            }
 
         # Track changes
         changes = []
