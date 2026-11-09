@@ -76,6 +76,8 @@ def list_invoices(
             document = (
                 _("cli-invoice-historical") if invoice["issued_elsewhere"] else invoice["stato"]
             )
+            if invoice.get("submission_state") in {"pending", "uncertain"}:
+                document += " · PEC: da verificare"
             if invoice.get("status_origin") == "sdi_receipt":
                 document += f" · SDI: {invoice['stato']}"
             console.print(
@@ -153,6 +155,10 @@ def show_invoice(
     )
     if result["issued_elsewhere"] and result.get("status_origin") != "sdi_receipt":
         console.print(_("cli-invoice-historical-note"))
+    for attempt in result.get("submission_evidence", []):
+        console.print(f"PEC #{attempt['id']} · {attempt['outcome']}", markup=False)
+    if result.get("submission_state") in {"pending", "uncertain"}:
+        console.print("Esito invio da verificare; non ripetere automaticamente la trasmissione.")
     for receipt in result.get("sdi_evidence", []):
         console.print(
             f"SDI #{receipt['id']} · {receipt['source']} · {receipt['outcome']}", markup=False

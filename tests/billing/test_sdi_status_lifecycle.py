@@ -272,3 +272,27 @@ def test_historical_sender_refuses_before_network(db_session, historical, test_s
         assert not sender.send_invoice(historical, tmp_path / "absent.xml")[0]
         transport.assert_not_called()
     assert db_session.query(SDISubmissionAttempt).count() == 0
+
+
+def test_uncertain_submission_is_exposed_to_assistant(db_session, sample_fattura):
+    from openfatture.billing.application.invoice_queries import (
+        get_invoice_details,
+        get_invoice_stats,
+    )
+
+    db_session.add(
+        SDISubmissionAttempt(
+            invoice_id=sample_fattura.id,
+            active_invoice_id=sample_fattura.id,
+            filename="uncertain.xml",
+            xml_sha256="a" * 64,
+            outcome="uncertain",
+        )
+    )
+    db_session.commit()
+    details = get_invoice_details(sample_fattura.id, session=db_session)
+    assert details["status_origin"] == "submission_uncertain"
+    assert details["submission_state"] == "uncertain"
+    stats = get_invoice_stats(sample_fattura.anno, session=db_session)
+    assert stats["invii_da_verificare"][0]["invoice_id"] == sample_fattura.id
+    assert sample_fattura.stato == S.BOZZA

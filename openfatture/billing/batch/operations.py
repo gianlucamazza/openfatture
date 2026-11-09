@@ -325,8 +325,14 @@ def bulk_update_status(
     )
 
     try:
+        issues = []
         for fattura in invoices:
-            validate_manual_transition(fattura, new_status)
+            try:
+                validate_manual_transition(fattura, new_status)
+            except ValueError as exc:
+                issues.append(f"Invoice {getattr(fattura, 'id', '?')}: {exc}")
+        if issues:
+            raise ValueError("; ".join(issues))
         for fattura in invoices:
             if fattura.stato != new_status:
                 change_status(db_session, fattura, new_status)

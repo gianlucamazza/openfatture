@@ -42,14 +42,25 @@ def payment_summary(invoice: Fattura, payments: Any = None) -> dict[str, Any]:
 
 def status_evidence(invoice: Fattura) -> dict[str, Any]:
     receipts = [r for r in invoice.sdi_receipts if r.outcome == "applied"]
-    return {
-        "status_origin": "sdi_receipt"
+    attempts = sorted(invoice.sdi_submissions, key=lambda a: a.id)
+    latest = attempts[-1].outcome if attempts else None
+    origin = (
+        "sdi_receipt"
         if receipts
+        else "submission_uncertain"
+        if latest in {"pending", "uncertain"}
+        else "transport_submission"
+        if latest in {"sent", "confirmed_sent"}
         else "unverified"
         if invoice.issued_elsewhere
-        else "local",
+        else "local"
+    )
+    return {
+        "status_origin": origin,
         "sdi_identifier": invoice.numero_sdi,
         "sdi_evidence": [{"id": r.id, "source": r.source, "outcome": r.outcome} for r in receipts],
+        "submission_state": latest,
+        "submission_evidence": [{"id": a.id, "outcome": a.outcome} for a in attempts],
     }
 
 
@@ -85,6 +96,7 @@ def search_invoices(
             selectinload(Fattura.cliente),
             selectinload(Fattura.pagamenti),
             selectinload(Fattura.sdi_receipts),
+            selectinload(Fattura.sdi_submissions),
         )
 
         if query:
@@ -152,6 +164,7 @@ def get_invoice_details(
                 selectinload(Fattura.cliente),
                 selectinload(Fattura.righe),
                 selectinload(Fattura.sdi_receipts),
+                selectinload(Fattura.sdi_submissions),
                 selectinload(Fattura.pagamenti),
             )
             .filter(Fattura.id == fattura_id)
@@ -240,7 +253,7 @@ def get_invoice_stats(
             stats["totale_fatture"] += count
         fatture = (
             db.query(Fattura)
-            .options(selectinload(Fattura.pagamenti))
+            .options(selectinload(Fattura.pagamenti), selectinload(Fattura.sdi_submissions))
             .filter(Fattura.anno == year)
             .all()
         )
@@ -248,6 +261,13 @@ def get_invoice_stats(
         result: dict[str, Any] = dict(stats)
         historical = [f for f in fatture if f.issued_elsewhere]
         result["fatture_storiche"] = len(historical)
+        result["invii_da_verificare"] = [
+            {"invoice_id": f.id, "attempt_id": a.id, "outcome": a.outcome}
+            for f in fatture
+            for a in f.sdi_submissions
+            if a.outcome in {"pending", "uncertain"}
+        ]
+
         result["per_documento"] = {
             "storica": len(historical),
             **{
