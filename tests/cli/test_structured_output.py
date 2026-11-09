@@ -64,3 +64,15 @@ def test_secret_redaction_preserves_usage_counts():
         "tokens_used": 123,
         "api_key_configured": True,
     }
+
+
+def test_denied_reversal_returns_cancelled_json_without_traceback(runtime_db):
+    result = runner.invoke(
+        app,
+        ["--format", "json", "pagamento", "reverse", "1", "1", "--reason", "cancelled operation"],
+        input="n\n",
+    )
+    assert result.exit_code == 1
+    assert json.loads(result.stdout)["error"]["code"] == "cancelled"
+    assert "Stornare" in result.stderr
+    assert "Traceback" not in result.stderr

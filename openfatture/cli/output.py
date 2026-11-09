@@ -8,11 +8,10 @@ from html import escape
 from typing import Any
 from unittest.mock import patch
 
-import click
 import typer
 from rich.console import Console
 from rich.table import Table
-from typer.core import TyperGroup
+from typer.core import TyperGroup, click
 
 from openfatture.platform.logging import redact_sensitive
 
