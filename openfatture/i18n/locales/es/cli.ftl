@@ -1021,3 +1021,16 @@ cli-ai-chat-assistant-title = [bold cyan]Asistente IA[/bold cyan]
 cli-ai-chat-exit-message = [yellow]Hasta luego![/yellow]
 cli-cliente-add-error = [red]Error al guardar el cliente: { $error }[/red]
 cli-fattura-create-error = [red]Error al crear la factura: { $error }[/red]
+
+cli-invoice-collected = Collected
+cli-invoice-residual = Outstanding
+cli-invoice-collection = Collection
+cli-invoice-document = Document
+cli-invoice-historical = Historical
+cli-invoice-no_payment_record = Not recorded
+cli-invoice-fully_paid = Paid
+cli-invoice-partially_paid = Partial
+cli-invoice-unpaid = Unpaid
+cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
+
+cli-invoice-total = Total

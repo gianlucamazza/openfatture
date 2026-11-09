@@ -1108,3 +1108,16 @@ status-invalid = Invalid
 status-local-only = Checks describe local configuration. AI authentication and SDI delivery are not verified by this command.
 
 cli-database-unavailable = Database unavailable. Check DATABASE_URL and permissions; use --debug for details.
+
+cli-invoice-collected = Collected
+cli-invoice-residual = Outstanding
+cli-invoice-collection = Collection
+cli-invoice-document = Document
+cli-invoice-historical = Historical
+cli-invoice-no_payment_record = Not recorded
+cli-invoice-fully_paid = Paid
+cli-invoice-partially_paid = Partial
+cli-invoice-unpaid = Unpaid
+cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
+
+cli-invoice-total = Total
