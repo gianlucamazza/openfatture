@@ -118,5 +118,7 @@ class InvoiceService:
 
     def get_xml_path(self, fattura: Fattura) -> Path:
         """Get path where XML would be saved."""
+        if fattura.xml_path:
+            return Path(fattura.xml_path)
         filename = generate_filename(fattura, self.settings)
         return self.settings.archivio_dir / "xml" / filename

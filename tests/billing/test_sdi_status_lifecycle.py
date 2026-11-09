@@ -296,3 +296,11 @@ def test_uncertain_submission_is_exposed_to_assistant(db_session, sample_fattura
     stats = get_invoice_stats(sample_fattura.anno, session=db_session)
     assert stats["invii_da_verificare"][0]["invoice_id"] == sample_fattura.id
     assert sample_fattura.stato == S.BOZZA
+
+
+def test_submission_path_uses_recorded_archive_identity(historical, test_settings):
+    from pathlib import Path
+
+    from openfatture.billing.fatture.service import InvoiceService
+
+    assert InvoiceService(test_settings).get_xml_path(historical) == Path("/archive/exact.xml")
