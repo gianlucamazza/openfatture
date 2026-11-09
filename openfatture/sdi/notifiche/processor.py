@@ -5,15 +5,26 @@ Processes parsed notifications and updates invoice status in database.
 Optionally sends email notifications to configured recipients.
 """
 
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from openfatture.billing.application.invoice_status import change_status, receipt_transition
 from openfatture.events import SDINotificationReceivedEvent, get_global_event_bus
 from openfatture.platform.logging import get_logger
 from openfatture.sdi.notifiche.parser import NotificaSDI, SDINotificationParser, TipoNotifica
-from openfatture.storage.database.models import Fattura, LogSDI, StatoFattura
+from openfatture.storage.database.models import (
+    Fattura,
+    LogSDI,
+    SDIInvoiceIdentity,
+    SDINotificationRecord,
+    SDISubmissionAttempt,
+    StatoFattura,
+)
 
 logger = get_logger(__name__)
 
@@ -31,7 +42,7 @@ class NotificationProcessor:
 
     # Mapping notification types to invoice status
     STATUS_MAPPING = {
-        TipoNotifica.ATTESTAZIONE_TRASMISSIONE: StatoFattura.INVIATA,  # Sent to SDI
+        TipoNotifica.ATTESTAZIONE_TRASMISSIONE: StatoFattura.ERRORE,  # Transmission attested but delivery impossible
         TipoNotifica.RICEVUTA_CONSEGNA: StatoFattura.CONSEGNATA,  # Delivered to recipient
         TipoNotifica.NOTIFICA_SCARTO: StatoFattura.SCARTATA,  # Rejected by SDI
         TipoNotifica.MANCATA_CONSEGNA: StatoFattura.ERRORE,  # Delivery failed
@@ -60,123 +71,185 @@ class NotificationProcessor:
         Returns:
             Tuple[bool, Optional[str], Optional[NotificaSDI]]: (success, error, notification)
         """
-        # Parse notification
+        raw = xml_path.read_text(encoding="utf-8") if xml_path.exists() else None
         success, error, notification = self.parser.parse_file(xml_path)
-
-        if not success:
+        if not success or notification is None:
+            if raw is not None:
+                digest = hashlib.sha256(raw.encode()).hexdigest()
+                if not self.db.query(SDINotificationRecord).filter_by(raw_sha256=digest).first():
+                    self.db.add(
+                        SDINotificationRecord(
+                            fingerprint=digest,
+                            raw_sha256=digest,
+                            payload="{}",
+                            raw_xml=raw,
+                            outcome="unsupported",
+                            reason=error,
+                        )
+                    )
+                    self.db.commit()
             return False, f"Parsing failed: {error}", None
-
-        if notification is None:
-            return False, "Notification parsing returned None", None
-
-        # Process notification
-        return self.process_notification(notification)
+        return self.process_notification(notification, raw_xml=raw)
 
     def process_notification(
-        self, notification: NotificaSDI
+        self,
+        notification: NotificaSDI,
+        *,
+        raw_xml: str | None = None,
+        associated_invoice_id: int | None = None,
+        association_note: str | None = None,
     ) -> tuple[bool, str | None, NotificaSDI | None]:
-        """
-        Process parsed notification and update database.
-
-        Args:
-            notification: Parsed notification
-
-        Returns:
-            Tuple[bool, Optional[str], Optional[NotificaSDI]]: (success, error, notification)
-        """
+        """Persist evidence, associate exactly, and apply a conditional transition."""
+        record = None
         try:
-            # Find invoice by SDI identifier or filename
-            fattura = self._find_invoice(notification)
-
-            if not fattura:
+            payload = notification.model_dump(mode="json")
+            semantic = {k: v for k, v in payload.items() if k != "data_ricezione"}
+            fingerprint = hashlib.sha256(json.dumps(semantic, sort_keys=True).encode()).hexdigest()
+            record = self.db.query(SDINotificationRecord).filter_by(fingerprint=fingerprint).first()
+            if record and (
+                associated_invoice_id is None
+                or record.outcome not in {"unassociated", "association_conflict"}
+            ):
+                return (
+                    record.outcome == "applied",
+                    None if record.outcome == "applied" else record.outcome,
+                    notification,
+                )
+            if record is None:
+                record = SDINotificationRecord(
+                    fingerprint=fingerprint,
+                    payload=json.dumps(payload),
+                    raw_xml=raw_xml,
+                    raw_sha256=hashlib.sha256(raw_xml.encode()).hexdigest() if raw_xml else None,
+                    outcome="unassociated",
+                )
+                self.db.add(record)
+            try:
+                invoice = self._find_invoice(notification)
+            except ValueError as exc:
+                record.outcome, record.reason = "association_conflict", str(exc)
+                self.db.commit()
+                return False, str(exc), notification
+            if associated_invoice_id is not None:
+                if not association_note or not association_note.strip():
+                    raise ValueError("Manual association requires evidence/reference notes")
+                if invoice is not None and invoice.id != associated_invoice_id:
+                    raise ValueError("Explicit association contradicts recorded identity")
+                invoice = self.db.get(Fattura, associated_invoice_id)
+                record.reason = association_note
+                record.source = "manual_association"
+            if invoice is None:
+                self.db.commit()
                 return (
                     False,
                     f"Invoice not found for notification: {notification.identificativo_sdi}",
                     notification,
                 )
-
-            # Update invoice status based on notification type
-            new_status = self._determine_new_status(notification)
-
-            if new_status:
-                fattura.stato = new_status
-
-            # Store notification details in notes/metadata
-            self._add_notification_note(fattura, notification)
-
-            # Save notification to database log
-            log_sdi = LogSDI(
-                fattura_id=fattura.id,
-                tipo_notifica=notification.tipo,
-                descrizione=notification.messaggio or "",
-                data_ricezione=notification.data_ricezione,
+            if invoice.numero_sdi and invoice.numero_sdi != notification.identificativo_sdi:
+                raise ValueError("SDI identifier conflicts with recorded invoice")
+            record.invoice_id = invoice.id
+            target = self._determine_new_status(notification)
+            record.outcome = receipt_transition(invoice.stato, target)
+            if record.outcome != "applied":
+                self.db.commit()
+                return False, record.outcome, notification
+            identity = (
+                self.db.query(SDIInvoiceIdentity)
+                .filter_by(identifier=notification.identificativo_sdi)
+                .first()
             )
-            self.db.add(log_sdi)
-
-            # Commit changes
-            self.db.commit()
-
-            # Publish SDINotificationReceivedEvent
-            event_bus = get_global_event_bus()
-            if event_bus:
-                # Convert SDI identifier to int (it's a string from XML)
-                notification_id: int | None = None
-                if notification.identificativo_sdi:
-                    try:
-                        notification_id = int(notification.identificativo_sdi)
-                    except (ValueError, TypeError):
-                        # If conversion fails, log warning but continue
-                        pass
-
-                event_bus.publish(
-                    SDINotificationReceivedEvent(
-                        notification_type=notification.tipo,
-                        invoice_id=fattura.id,
-                        invoice_number=f"{fattura.numero}/{fattura.anno}",
-                        message=notification.messaggio or "",
-                        notification_id=notification_id,
+            if identity and identity.invoice_id != invoice.id:
+                raise ValueError("SDI identifier already belongs to another invoice")
+            if notification.identificativo_sdi and identity is None:
+                self.db.add(
+                    SDIInvoiceIdentity(
+                        identifier=notification.identificativo_sdi, invoice_id=invoice.id
                     )
                 )
-
-            # Send email notification if email sender is configured
-            if self.email_sender:
-                self._send_email_notification(fattura, notification)
-
-            return True, None, notification
-
-        except Exception as e:
+            values: dict[str, Any] = {
+                "numero_sdi": notification.identificativo_sdi or invoice.numero_sdi
+            }
+            # Do not invent delivery/transmission event dates from import timestamps.
+            if notification.tipo == TipoNotifica.RICEVUTA_CONSEGNA and notification.data_evento:
+                values["data_consegna_sdi"] = notification.data_evento
+            assert target is not None
+            change_status(self.db, invoice, target, **values)
+            self._add_notification_note(invoice, notification)
+            self.db.add(
+                LogSDI(
+                    fattura_id=invoice.id,
+                    tipo_notifica=notification.tipo,
+                    descrizione=notification.messaggio or "",
+                    data_ricezione=notification.data_ricezione,
+                )
+            )
+            self.db.commit()
+        except IntegrityError:
             self.db.rollback()
-            return False, f"Failed to process notification: {e}", notification
+            return (
+                False,
+                "Duplicate or conflicting concurrent SDI receipt; reload before retrying",
+                notification,
+            )
+        except Exception as exc:
+            self.db.rollback()
+            return False, f"Failed to process notification: {exc}", notification
+        # Failures after commit must never be reported as a rolled-back receipt.
+        try:
+            bus = get_global_event_bus()
+            if bus:
+                bus.publish(
+                    SDINotificationReceivedEvent(
+                        notification_type=notification.tipo,
+                        invoice_id=invoice.id,
+                        invoice_number=f"{invoice.numero}/{invoice.anno}",
+                        message=notification.messaggio or "",
+                        notification_id=int(notification.identificativo_sdi)
+                        if notification.identificativo_sdi.isdigit()
+                        else None,
+                    )
+                )
+            if self.email_sender:
+                self._send_email_notification(invoice, notification)
+        except Exception as exc:
+            logger.warning("sdi_post_commit_notification_failed", error=str(exc))
+        return True, None, notification
 
     def _find_invoice(self, notification: NotificaSDI) -> Fattura | None:
-        """
-        Find invoice by SDI identifier or filename.
-
-        Args:
-            notification: Notification data
-
-        Returns:
-            Invoice if found, None otherwise
-        """
-        # Try to find by SDI identifier (stored in progressivo_invio or similar)
-        # For now, we'll search by filename pattern
-        # In production, you'd store the SDI ID when sending the invoice
-
-        # Extract invoice number from filename (e.g., IT01234567890_00001.xml)
-        # This is a simplified approach - adjust based on your filename format
-        filename = notification.nome_file
-
-        # Try to match invoices - this is a basic implementation
-        # In production, store SDI identifier when sending invoice
-        fatture = self.db.query(Fattura).all()
-
-        for fattura in fatture:
-            # Match based on invoice number pattern in filename
-            # This is simplified - implement proper matching logic
-            if f"{fattura.numero}" in filename or f"{fattura.anno}" in filename:
-                return fattura
-
-        return None
+        matches = (
+            self.db.query(Fattura)
+            .filter(Fattura.numero_sdi == notification.identificativo_sdi)
+            .all()
+            if notification.identificativo_sdi
+            else []
+        )
+        filename = Path(notification.nome_file).name
+        file_ids = {
+            a.invoice_id
+            for a in self.db.query(SDISubmissionAttempt)
+            .filter(SDISubmissionAttempt.filename.in_([filename, filename + ".p7m"]))
+            .all()
+        }
+        file_matches = [
+            f
+            for f in self.db.query(Fattura).all()
+            if f.id in file_ids
+            or any(
+                path and Path(path).name == filename for path in (f.xml_path, f.xml_firmato_path)
+            )
+        ]
+        if len(matches) > 1 or len(file_matches) > 1:
+            raise ValueError("Ambiguous SDI notification association")
+        if matches and file_matches and matches[0].id != file_matches[0].id:
+            raise ValueError("SDI identifier conflicts with invoice filename")
+        candidates = matches or file_matches
+        if (
+            candidates
+            and candidates[0].numero_sdi
+            and candidates[0].numero_sdi != notification.identificativo_sdi
+        ):
+            raise ValueError("SDI identifier conflicts with recorded transmission")
+        return candidates[0] if candidates else None
 
     def _determine_new_status(self, notification: NotificaSDI) -> StatoFattura | None:
         """
@@ -189,7 +262,7 @@ class NotificationProcessor:
             New status or None if no change needed
         """
         if notification.tipo in self.STATUS_MAPPING:
-            status = self.STATUS_MAPPING[notification.tipo]
+            status = self.STATUS_MAPPING[TipoNotifica(notification.tipo)]
 
             # Special handling for NotificaEsito
             if notification.tipo == TipoNotifica.NOTIFICA_ESITO:

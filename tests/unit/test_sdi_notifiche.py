@@ -283,6 +283,14 @@ class TestSDINotificationParser:
         assert TipoNotifica.ATTESTAZIONE_TRASMISSIONE == "AT"
 
 
+@pytest.fixture(autouse=True)
+def recorded_invoice_filename(request):
+    if "sample_fattura" in request.fixturenames:
+        invoice = request.getfixturevalue("sample_fattura")
+        invoice.xml_path = f"/archive/IT01234567890_{invoice.numero}.xml"
+        request.getfixturevalue("db_session").commit()
+
+
 class TestNotificationProcessor:
     """Tests for SDI notification processor."""
 
@@ -569,7 +577,7 @@ class TestNotificationProcessor:
 
         # Test each notification type
         test_cases = [
-            (TipoNotifica.ATTESTAZIONE_TRASMISSIONE, StatoFattura.INVIATA),
+            (TipoNotifica.ATTESTAZIONE_TRASMISSIONE, StatoFattura.ERRORE),
             (TipoNotifica.RICEVUTA_CONSEGNA, StatoFattura.CONSEGNATA),
             (TipoNotifica.NOTIFICA_SCARTO, StatoFattura.SCARTATA),
             (TipoNotifica.MANCATA_CONSEGNA, StatoFattura.ERRORE),

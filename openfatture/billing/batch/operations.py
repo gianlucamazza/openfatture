@@ -319,19 +319,30 @@ def bulk_update_status(
     """
     result = BatchResult(total=len(invoices), start_time=datetime.now())
 
+    from openfatture.billing.application.invoice_status import (
+        change_status,
+        validate_manual_transition,
+    )
+
     try:
+        issues = []
         for fattura in invoices:
             try:
-                fattura.stato = new_status
-                result.add_success()
-            except Exception as e:
-                result.add_failure(f"Invoice {fattura.numero}/{fattura.anno}: {e}")
-
+                validate_manual_transition(fattura, new_status)
+            except ValueError as exc:
+                issues.append(f"Invoice {getattr(fattura, 'id', '?')}: {exc}")
+        if issues:
+            raise ValueError("; ".join(issues))
+        for fattura in invoices:
+            if fattura.stato != new_status:
+                change_status(db_session, fattura, new_status)
         db_session.commit()
-
+        for _ in invoices:
+            result.add_success()
     except Exception as e:
         db_session.rollback()
-        result.add_failure(f"Bulk update failed: {e}")
+        for _fattura in invoices:
+            result.add_failure(f"Batch not applied: {e}")
 
     result.end_time = datetime.now()
     return result

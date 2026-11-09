@@ -21,7 +21,7 @@ from openfatture.platform.email.renderer import TemplateRenderer
 from openfatture.platform.email.sender import TemplatePECSender
 from openfatture.platform.email.styles import EmailBranding, EmailStyles
 from openfatture.sdi.notifiche.parser import NotificaSDI, TipoNotifica
-from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
+from openfatture.storage.database.models import Cliente, StatoFattura
 
 pytestmark = pytest.mark.unit
 
@@ -55,15 +55,15 @@ def mock_settings():
 
 
 @pytest.fixture
-def mock_fattura(mock_cliente):
+def mock_fattura(mock_cliente, sample_fattura):
     """Create mock invoice."""
-    fattura = Mock(spec=Fattura)
+    fattura = sample_fattura
     fattura.id = 1
     fattura.numero = "001"
     fattura.anno = 2025
     fattura.data_emissione = date(2025, 10, 9)
     fattura.cliente_id = 1
-    fattura.cliente = mock_cliente
+    # Real persisted client is required by the submission journal.
     fattura.imponibile = Decimal("100.00")
     fattura.iva = Decimal("22.00")
     fattura.totale = Decimal("122.00")
@@ -468,7 +468,9 @@ class TestTemplatePECSender:
             success, error = sender.send_invoice_to_sdi(mock_fattura, xml_path)
 
         # Should succeed after retry
-        assert mock_server.send_message.call_count == 2
+        assert mock_server.send_message.call_count == 1
+        assert success is False
+        assert "verification" in error
 
 
 class TestEmailIntegration:
@@ -476,7 +478,7 @@ class TestEmailIntegration:
 
     @patch("smtplib.SMTP_SSL")
     def test_full_notification_flow(
-        self, mock_smtp, mock_settings, mock_fattura, mock_notification
+        self, mock_smtp, mock_settings, mock_fattura, mock_notification, db_session
     ):
         """Test complete notification flow with email."""
         from openfatture.sdi.notifiche.processor import NotificationProcessor
@@ -485,8 +487,15 @@ class TestEmailIntegration:
         mock_server = MagicMock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
-        mock_db = Mock()
-        mock_db.query.return_value.all.return_value = [mock_fattura]
+        mock_db = db_session
+        mock_fattura.xml_path = "/archive/invoice.xml"
+        mock_db.commit()
+        mock_notification = NotificaSDI(
+            tipo="RC",
+            identificativo_sdi="12345",
+            nome_file="invoice.xml",
+            data_ricezione=datetime(2025, 10, 9),
+        )
 
         # Create sender and processor
         sender = TemplatePECSender(settings=mock_settings)

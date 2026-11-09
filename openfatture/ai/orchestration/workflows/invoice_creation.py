@@ -522,10 +522,20 @@ class InvoiceCreationWorkflow:
                     state.invoice_id = fattura.id
                     state.invoice_number = fattura.numero
 
+                from openfatture.billing.application.invoice_status import (
+                    change_status,
+                    validate_manual_transition,
+                )
+
+                if fattura.issued_elsewhere:
+                    raise ValueError("Historical invoices cannot be regenerated")
+                if fattura.stato != StatoFattura.BOZZA:
+                    validate_manual_transition(fattura, StatoFattura.BOZZA)
+                    change_status(db, fattura, StatoFattura.BOZZA)
+
                 # Update invoice metadata
                 fattura.data_emissione = issue_date
                 fattura.anno = issue_date.year
-                fattura.stato = StatoFattura.BOZZA
 
                 # Financial calculations
                 imponibile = state.imponibile_target.quantize(
@@ -699,11 +709,6 @@ class InvoiceCreationWorkflow:
 
                 state.invoice_number = fattura.numero
 
-                if state.is_compliant:
-                    fattura.stato = StatoFattura.DA_INVIARE
-                else:
-                    fattura.stato = StatoFattura.BOZZA
-
                 xml_content, error = self.invoice_service.generate_xml(
                     fattura, validate=self.validate_xml
                 )
@@ -719,6 +724,19 @@ class InvoiceCreationWorkflow:
                 else:
                     state.metadata["xml_preview"] = xml_content[:500]
 
+                from openfatture.billing.application.invoice_status import (
+                    change_status,
+                    validate_manual_transition,
+                )
+
+                target = (
+                    StatoFattura.DA_INVIARE
+                    if state.is_compliant and not error
+                    else StatoFattura.BOZZA
+                )
+                validate_manual_transition(fattura, target)
+                if target != fattura.stato:
+                    change_status(db, fattura, target)
                 db.commit()
 
                 state.invoice_xml_path = fattura.xml_path

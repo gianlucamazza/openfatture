@@ -55,6 +55,24 @@ class InvoiceService:
             filename = generate_filename(fattura, self.settings)
             output_path = self.settings.archivio_dir / "xml" / filename
 
+            from sqlalchemy import inspect
+            from sqlalchemy.orm import object_session
+
+            session = (
+                object_session(fattura) if inspect(fattura, raiseerr=False) is not None else None
+            )
+            if session is not None:
+                collision = (
+                    session.query(Fattura)
+                    .filter(Fattura.xml_path == str(output_path), Fattura.id != fattura.id)
+                    .first()
+                )
+                if collision:
+                    return (
+                        "",
+                        "XML filename already belongs to another invoice; preserve the archived file",
+                    )
+
             # Build XML
             xml_content = self.xml_builder.build(fattura, output_path)
 
@@ -100,5 +118,7 @@ class InvoiceService:
 
     def get_xml_path(self, fattura: Fattura) -> Path:
         """Get path where XML would be saved."""
+        if fattura.xml_path:
+            return Path(fattura.xml_path)
         filename = generate_filename(fattura, self.settings)
         return self.settings.archivio_dir / "xml" / filename

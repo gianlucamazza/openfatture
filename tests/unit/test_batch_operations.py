@@ -45,6 +45,7 @@ def mock_fattura(mock_cliente):
     fattura.note = "Test note"
     fattura.stato = StatoFattura.BOZZA
     fattura.righe = []
+    fattura.issued_elsewhere = False
     return fattura
 
 
@@ -325,11 +326,11 @@ class TestBulkUpdateStatus:
         invoices = [mock_fattura]
         db_session = Mock()
 
-        result = bulk_update_status(invoices, StatoFattura.INVIATA, db_session)
+        result = bulk_update_status(invoices, StatoFattura.BOZZA, db_session)
 
         assert result.succeeded == 1
         assert result.failed == 0
-        assert mock_fattura.stato == StatoFattura.INVIATA
+        assert mock_fattura.stato == StatoFattura.BOZZA
         assert db_session.commit.called
 
     def test_bulk_update_with_errors(self):
@@ -343,10 +344,11 @@ class TestBulkUpdateStatus:
         invoices = [mock_invoice]
         db_session = Mock()
 
-        result = bulk_update_status(invoices, StatoFattura.INVIATA, db_session)
+        result = bulk_update_status(invoices, StatoFattura.BOZZA, db_session)
 
         assert result.failed == 1
-        assert db_session.commit.called
+        db_session.commit.assert_not_called()
+        db_session.rollback.assert_called_once()
 
     def test_bulk_update_rollback_on_commit_error(self, mock_fattura):
         """Test rollback on commit error."""
@@ -354,7 +356,7 @@ class TestBulkUpdateStatus:
         db_session = Mock()
         db_session.commit.side_effect = Exception("Commit failed")
 
-        result = bulk_update_status(invoices, StatoFattura.INVIATA, db_session)
+        result = bulk_update_status(invoices, StatoFattura.BOZZA, db_session)
 
         assert result.failed > 0
         assert db_session.rollback.called

@@ -40,6 +40,30 @@ def payment_summary(invoice: Fattura, payments: Any = None) -> dict[str, Any]:
     }
 
 
+def status_evidence(invoice: Fattura) -> dict[str, Any]:
+    receipts = [r for r in invoice.sdi_receipts if r.outcome == "applied"]
+    attempts = sorted(invoice.sdi_submissions, key=lambda a: a.id)
+    latest = attempts[-1].outcome if attempts else None
+    origin = (
+        "sdi_receipt"
+        if receipts
+        else "submission_uncertain"
+        if latest in {"pending", "uncertain"}
+        else "transport_submission"
+        if latest in {"sent", "confirmed_sent"}
+        else "unverified"
+        if invoice.issued_elsewhere
+        else "local"
+    )
+    return {
+        "status_origin": origin,
+        "sdi_identifier": invoice.numero_sdi,
+        "sdi_evidence": [{"id": r.id, "source": r.source, "outcome": r.outcome} for r in receipts],
+        "submission_state": latest,
+        "submission_evidence": [{"id": a.id, "outcome": a.outcome} for a in attempts],
+    }
+
+
 class InvoiceStats(TypedDict):
     anno: int
     totale_fatture: int
@@ -69,7 +93,10 @@ def search_invoices(
     db = session or get_session()
     try:
         db_query = db.query(Fattura).options(
-            selectinload(Fattura.cliente), selectinload(Fattura.pagamenti)
+            selectinload(Fattura.cliente),
+            selectinload(Fattura.pagamenti),
+            selectinload(Fattura.sdi_receipts),
+            selectinload(Fattura.sdi_submissions),
         )
 
         if query:
@@ -104,6 +131,7 @@ def search_invoices(
                     "stato": f.stato.value,
                     "issued_elsewhere": f.issued_elsewhere,
                     **payment_summary(f),
+                    **status_evidence(f),
                 }
             )
 
@@ -135,6 +163,8 @@ def get_invoice_details(
             .options(
                 selectinload(Fattura.cliente),
                 selectinload(Fattura.righe),
+                selectinload(Fattura.sdi_receipts),
+                selectinload(Fattura.sdi_submissions),
                 selectinload(Fattura.pagamenti),
             )
             .filter(Fattura.id == fattura_id)
@@ -163,6 +193,7 @@ def get_invoice_details(
             "stato": fattura.stato.value,
             "issued_elsewhere": fattura.issued_elsewhere,
             **payment_summary(fattura),
+            **status_evidence(fattura),
             "pagamenti": [
                 {
                     "id": p.id,
@@ -222,7 +253,7 @@ def get_invoice_stats(
             stats["totale_fatture"] += count
         fatture = (
             db.query(Fattura)
-            .options(selectinload(Fattura.pagamenti))
+            .options(selectinload(Fattura.pagamenti), selectinload(Fattura.sdi_submissions))
             .filter(Fattura.anno == year)
             .all()
         )
@@ -230,6 +261,13 @@ def get_invoice_stats(
         result: dict[str, Any] = dict(stats)
         historical = [f for f in fatture if f.issued_elsewhere]
         result["fatture_storiche"] = len(historical)
+        result["invii_da_verificare"] = [
+            {"invoice_id": f.id, "attempt_id": a.id, "outcome": a.outcome}
+            for f in fatture
+            for a in f.sdi_submissions
+            if a.outcome in {"pending", "uncertain"}
+        ]
+
         result["per_documento"] = {
             "storica": len(historical),
             **{
@@ -252,7 +290,7 @@ def get_invoice_stats(
         result["incassato_totale"] = float(collected)
         result["residuo_totale"] = float(outstanding)
         result["avvertenza_stato"] = (
-            "per_stato descrive soltanto lo stato tecnico locale. Usare per_documento per distinguere le storiche dalle bozze. Per documenti issued_elsewhere lo stato SDI non è verificato: non dedurre mancata trasmissione o emissione da bozza. Incassi e stato SDI sono indipendenti."
+            "per_stato descrive soltanto lo stato tecnico locale. Usare per_documento per distinguere le storiche dalle bozze. Per documenti issued_elsewhere senza ricevute associate lo stato SDI non è verificato: non dedurre mancata trasmissione o emissione da bozza. Incassi e stato SDI sono indipendenti."
         )
         return result
     except Exception as e:

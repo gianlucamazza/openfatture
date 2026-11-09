@@ -36,8 +36,8 @@ class FatturaPABuilder:
         self.settings = settings
 
     def _qname(self, name: str) -> str:
-        """Return qualified name with namespace."""
-        return f"{{{self.NS}}}{name}"
+        """Local FatturaPA elements are unqualified; only the root is namespaced."""
+        return name
 
     def build(self, fattura: Fattura, output_path: Path | None = None) -> str:
         """
@@ -55,11 +55,8 @@ class FatturaPABuilder:
         """
         self._validate_invoice(fattura)
 
-        # Create root element.
-        # A None prefix declares the default namespace; lxml supports it (its own
-        # `_Element.nsmap` is typed `dict[str | None, str]`) but lxml-stubs 0.5.1
-        # narrows the *argument* to `Mapping[str, str]`, so the mapping is cast.
-        nsmap: Mapping[str | None, str] = {None: self.NS}
+        # Prefix the root namespace so local children remain unqualified.
+        nsmap: Mapping[str | None, str] = {"p": self.NS}
         root = etree.Element(
             f"{{{self.NS}}}FatturaElettronica",
             versione="FPR12",
@@ -120,7 +117,11 @@ class FatturaPABuilder:
 
         # ProgressivoInvio (unique transmission ID)
         # Format: PIVA_NUMERO_ANNO (e.g., 12345678901_00001_2025)
-        progressivo = f"{self.settings.cedente_partita_iva}_{fattura.numero}_{fattura.anno}"
+        import hashlib
+
+        progressivo = (
+            hashlib.sha256(f"{fattura.anno}/{fattura.numero}".encode()).hexdigest()[:10].upper()
+        )
         etree.SubElement(dati_tr, self._qname("ProgressivoInvio")).text = progressivo
 
         # FormatoTrasmissione
@@ -432,7 +433,7 @@ class FatturaPABuilder:
     @staticmethod
     def _format_decimal(value: Decimal) -> str:
         """
-        Format Decimal for XML (remove trailing zeros).
+        Format Decimal with the two fractional digits required by FatturaPA.
 
         Args:
             value: Decimal value
@@ -440,9 +441,7 @@ class FatturaPABuilder:
         Returns:
             str: Formatted string
         """
-        # Format with 2 decimals, then remove trailing zeros
-        formatted = f"{value:.2f}".rstrip("0").rstrip(".")
-        return formatted if formatted else "0"
+        return f"{value:.2f}"
 
 
 def generate_filename(fattura: Fattura, settings: Settings) -> str:

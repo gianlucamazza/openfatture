@@ -8,7 +8,7 @@ for SDI notifications, batch operations, and testing.
 import smtplib
 import ssl
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import datetime
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -29,8 +29,9 @@ from openfatture.platform.email.models import (
 from openfatture.platform.email.renderer import TemplateRenderer
 from openfatture.platform.rate_limiter import RateLimiter
 from openfatture.platform.retry import RetryConfig, retry_sync
+from openfatture.sdi.application.submissions import journaled_submission, single_submission_active
 from openfatture.sdi.notifiche.parser import NotificaSDI, TipoNotifica
-from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.storage.database.models import Fattura
 
 
 class TemplatePECSender:
@@ -77,6 +78,7 @@ class TemplatePECSender:
         # Initialize template renderer
         self.renderer = TemplateRenderer(settings=settings, locale=locale)
 
+    @journaled_submission
     def send_invoice_to_sdi(
         self, fattura: Fattura, xml_path: Path, signed: bool = False
     ) -> tuple[bool, str | None]:
@@ -143,11 +145,6 @@ class TemplatePECSender:
 
         # Send with rate limiting and retry
         success, error = self._send_email(email)
-
-        if success:
-            # Update invoice status
-            fattura.stato = StatoFattura.INVIATA
-            fattura.data_invio_sdi = datetime.now(UTC)
 
         return success, error
 
@@ -406,7 +403,7 @@ class TemplatePECSender:
         """
         # Configure retry for network/server errors only
         retry_config = RetryConfig(
-            max_retries=self.max_retries,
+            max_retries=0 if single_submission_active() else self.max_retries,
             base_delay=1.0,
             max_delay=30.0,
             backoff_factor=2.0,

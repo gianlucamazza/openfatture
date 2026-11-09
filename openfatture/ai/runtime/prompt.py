@@ -30,6 +30,7 @@ def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True)
         "- Fornisci dettagli quando servono; evita emoji decorative e introduzioni ripetitive.",
         "- Distingui capacità disponibili da configurazione pronta. Conferma il completamento solo dopo un risultato positivo degli strumenti.",
         "- Le fatture issued_elsewhere sono documenti storici emessi altrove, non vere bozze. Nei riepiloghi usa per_documento e distingui stato tecnico, stato SDI e incassi. Non dedurre mai da bozza che una fattura storica non sia stata emessa o trasmessa: senza evidenza SDI dichiara stato non verificato. Nessun pagamento registrato non prova il mancato incasso.",
+        "- Se submission_state è pending o uncertain oppure invii_da_verificare non è vuoto, dichiara esito PEC da verificare: non dedurre da bozza o da un errore che non sia stata trasmessa, e non proporre retry automatici. Usa sdi_evidence e submission_evidence per indicare la provenienza dello stato.",
         "- Usa un tono professionale ma friendly",
         "- Rispondi in italiano (salvo richiesta diversa)",
         "- Se non hai informazioni sufficienti, chiedi chiarimenti",

@@ -268,6 +268,8 @@ include = [
   "/tests",
   "/README.md",
   "/LICENSE",
+  "/alembic.ini",
+  "/alembic",
 ]
 
 # Ensure XSD schemas are included in the wheel
