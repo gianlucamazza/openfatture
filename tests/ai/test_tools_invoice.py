@@ -4,6 +4,7 @@ Tests focus on individual tool functions in isolation using mocks
 to avoid external database and network dependencies.
 """
 
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -33,7 +34,9 @@ class TestSearchInvoices:
         mock_fattura.numero = "001"
         mock_fattura.anno = 2025
         mock_fattura.data_emissione.isoformat.return_value = "2025-01-15"
-        mock_fattura.totale = 1000.0
+        mock_fattura.totale = Decimal("1000.00")
+        mock_fattura.pagamenti = []
+        mock_fattura.issued_elsewhere = False
         mock_fattura.stato = StatoFattura.DA_INVIARE
         mock_fattura.note = "Test invoice"
 
@@ -181,7 +184,9 @@ class TestGetInvoiceDetails:
         mock_fattura.data_emissione.isoformat.return_value = "2025-01-15"
         mock_fattura.imponibile = 800.0
         mock_fattura.iva = 200.0
-        mock_fattura.totale = 1000.0
+        mock_fattura.totale = Decimal("1000.00")
+        mock_fattura.pagamenti = []
+        mock_fattura.issued_elsewhere = False
         mock_fattura.stato = StatoFattura.DA_INVIARE
         mock_fattura.note = "Test invoice"
 
@@ -311,6 +316,7 @@ class TestGetInvoiceStats:
             else:
                 return mock_filter_total
 
+        mock_query.options.return_value = mock_query
         mock_query.filter.side_effect = filter_side_effect
 
         # Mock count calls for each status (8 statuses)
@@ -327,9 +333,13 @@ class TestGetInvoiceStats:
 
         # Mock total calculation query
         mock_fattura1 = MagicMock()
-        mock_fattura1.totale = 1000.0
+        mock_fattura1.totale = Decimal("1000.00")
+        mock_fattura1.pagamenti = []
+        mock_fattura1.issued_elsewhere = False
         mock_fattura2 = MagicMock()
-        mock_fattura2.totale = 2000.0
+        mock_fattura2.totale = Decimal("2000.00")
+        mock_fattura2.pagamenti = []
+        mock_fattura2.issued_elsewhere = False
         mock_filter_total.all.return_value = [
             mock_fattura1,
             mock_fattura2,
@@ -374,6 +384,7 @@ class TestGetInvoiceStats:
             else:
                 return mock_filter_total
 
+        mock_query.options.return_value = mock_query
         mock_query.filter.side_effect = filter_side_effect
 
         # Mock count calls for each status (8 statuses, all zero)
