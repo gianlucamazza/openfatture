@@ -54,7 +54,7 @@ jobs:
         with:
           version: "0.11.12"
       - run: uv python install 3.13
-      - run: uv sync --frozen --extra dev --python 3.13
+      - run: uv sync --frozen --extra dev --extra ai --python 3.13
       - name: Verify current CLI dependency compatibility
         run: |
           uv pip install --upgrade typer click rich
