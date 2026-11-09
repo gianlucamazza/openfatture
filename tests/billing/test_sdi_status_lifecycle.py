@@ -207,3 +207,68 @@ def test_date_is_only_taken_from_attested_delivery_event(db_session, historical)
     assert NotificationProcessor(db_session).process_notification(receipt(data_evento=value))[0]
     assert historical.data_consegna_sdi == value
     assert historical.data_invio_sdi is None
+
+
+def test_concurrent_submission_claims_allow_one_transport(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier, Lock
+    from types import SimpleNamespace
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from openfatture.sdi.application.submissions import journaled_submission
+    from openfatture.storage.database.base import Base
+    from openfatture.storage.database.models import Cliente
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'concurrent.db'}")
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine)
+    with sessions() as session:
+        client = Cliente(denominazione="Synthetic client")
+        session.add(client)
+        session.flush()
+        invoice = Fattura(numero="1", anno=2026, cliente_id=client.id, stato=S.BOZZA)
+        session.add(invoice)
+        session.commit()
+        invoice_id = invoice.id
+    path = tmp_path / "race.xml"
+    path.write_text("<xml/>")
+    barrier, lock = Barrier(2), Lock()
+    calls = []
+
+    class Sender:
+        settings = SimpleNamespace(
+            pec_address="synthetic@example.invalid", pec_password="synthetic"
+        )
+
+        @journaled_submission
+        def send(self, invoice, path, signed=False):
+            with lock:
+                calls.append(invoice.id)
+            return True, None
+
+    def worker():
+        with sessions() as session:
+            invoice = session.get(Fattura, invoice_id)
+            barrier.wait(timeout=10)
+            return Sender().send(invoice, path)[0]
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda _: worker(), range(2)))
+        assert sorted(results) == [False, True]
+        assert calls == [invoice_id]
+        with sessions() as session:
+            assert session.query(SDISubmissionAttempt).count() == 1
+            assert session.get(Fattura, invoice_id).stato == S.INVIATA
+    finally:
+        engine.dispose()
+
+
+def test_historical_sender_refuses_before_network(db_session, historical, test_settings, tmp_path):
+    sender = PECSender(test_settings)
+    with patch.object(sender, "_send_with_retry") as transport:
+        assert not sender.send_invoice(historical, tmp_path / "absent.xml")[0]
+        transport.assert_not_called()
+    assert db_session.query(SDISubmissionAttempt).count() == 0
