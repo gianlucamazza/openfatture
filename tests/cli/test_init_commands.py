@@ -382,3 +382,58 @@ class TestInitCommand:
         mock_data_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_archivio_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_certificates_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+
+
+def test_wizard_saves_user_profile_without_assuming_regime(monkeypatch, tmp_path):
+    import os
+    from types import SimpleNamespace
+
+    import tomlkit
+
+    import openfatture.platform.config as platform_config
+    from openfatture.cli.commands import init
+
+    profile = tmp_path / "config.toml"
+    profile.write_text(
+        'ai_api_key = "synthetic-existing-key"\npec_password = "synthetic-existing-password"\n'
+    )
+    settings = SimpleNamespace(
+        data_dir=tmp_path / "data",
+        archivio_dir=tmp_path / "archive",
+        certificates_dir=tmp_path / "certs",
+        database_url=f"sqlite:///{tmp_path}/test.db",
+        cedente_regime_fiscale="",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(platform_config, "dirs", SimpleNamespace(user_config_dir=str(tmp_path)))
+    monkeypatch.setattr(init, "get_settings", lambda: settings)
+    monkeypatch.setattr(init, "init_db", lambda url: None)
+
+    def prompt(label, **kwargs):
+        answers = {
+            "Company/Your name": "Test",
+            "Partita IVA (11 digits)": "04192460980",
+            "Codice Fiscale (16 characters)": "RSSMRA80A01H501U",
+            "Tax regime (use your actual RF code)": "RF01",
+            "Address (Via/Piazza)": "Via Roma 1",
+            "CAP (Postal code)": "00100",
+            "City (Comune)": "Roma",
+            "Province (2 letters, e.g., RM)": "RM",
+            "Your PEC address": "test@example.it",
+            "PEC password": "",
+            "PEC SMTP server": "smtp.example.it",
+            "Email for notifications (SDI alerts, batch summaries)": "test@example.it",
+            "Locale (it/en)": "it",
+        }
+        return answers[label]
+
+    monkeypatch.setattr(init.Prompt, "ask", prompt)
+    monkeypatch.setattr(init.Confirm, "ask", lambda label, **kwargs: "Overwrite" in label)
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0, result.output
+    saved = tomlkit.parse(profile.read_text())
+    assert saved["cedente_regime_fiscale"] == "RF01"
+    assert saved["ai_api_key"] == "synthetic-existing-key"
+    assert saved["pec_password"] == "synthetic-existing-password"
+    assert not (tmp_path / ".env").exists()
+    assert os.stat(profile).st_mode & 0o777 == 0o600

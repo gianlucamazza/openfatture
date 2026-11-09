@@ -123,6 +123,8 @@ class ReActOrchestrator:
 
             # Get LLM response with temperature=0.0 for deterministic tool calling
             response = await self.provider.generate(messages=messages, temperature=0.0)
+            if not response.success:
+                raise RuntimeError(response.error or "Provider request failed")
             response_text = response.content
 
             # Conditional raw response logging

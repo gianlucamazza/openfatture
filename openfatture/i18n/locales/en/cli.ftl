@@ -1068,3 +1068,43 @@ cli-config-error = [red]Error: { $error }[/red]
 # Added: chat labels / DB-error messages
 cli-ai-chat-assistant-title = [bold cyan]AI Assistant[/bold cyan]
 cli-ai-chat-exit-message = [yellow]Goodbye![/yellow]
+
+# Assistant terminal presentation
+assistant-describe-what-you-need = Describe what you need. /help for commands · /exit to quit
+assistant-thinking = Thinking…
+assistant-request-error = Request failed. Use --debug for details.
+assistant-confirm-operation = Confirm this operation? [y/N]
+assistant-request-interrupted-or-failed = Request interrupted or failed. You can try again.
+assistant-you-input = You ›
+
+assistant-help = Slash commands
+    /help     Show this help
+    /exit     Exit (also: exit, quit, q)
+    /session  Show session ID
+    /clear    Clear session messages
+assistant-running = Running
+
+assistant-input = You ›
+assistant-operation = Operation: { $name }
+assistant-tool-running = Running · { $name }
+assistant-incomplete = Incomplete response.
+assistant-session = Session: { $session }
+assistant-not-persisted = not persisted
+assistant-cleared = Session messages cleared.
+assistant-no-session = No persisted session to clear.
+assistant-unknown-command = Unknown command: { $command }. Try /help.
+assistant-turn-failed = Request not completed. Use --debug for details.
+assistant-interrupted = Request interrupted. Operations already started may have taken effect: check their status before trying again.
+assistant-missing-extra = Missing AI dependencies: reinstall OpenFatture with the ai extra.
+
+assistant-tool-completed = Completed · { $name }
+assistant-tool-failed = Not completed · { $name }
+
+status-blocking-fields = Fields blocking invoicing
+status-field = Field
+status-problem = Problem
+status-missing = Missing
+status-invalid = Invalid
+status-local-only = Checks describe local configuration. AI authentication and SDI delivery are not verified by this command.
+
+cli-database-unavailable = Database unavailable. Check DATABASE_URL and permissions; use --debug for details.

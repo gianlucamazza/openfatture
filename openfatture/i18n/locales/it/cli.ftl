@@ -1100,3 +1100,43 @@ cli-ai-chat-assistant-title = [bold cyan]Assistente AI[/bold cyan]
 cli-ai-chat-exit-message = [yellow]Arrivederci![/yellow]
 cli-cliente-add-error = [red]Errore nel salvataggio del cliente: { $error }[/red]
 cli-fattura-create-error = [red]Errore nella creazione della fattura: { $error }[/red]
+
+# Assistant terminal presentation
+assistant-describe-what-you-need = Descrivi cosa ti serve. /help per i comandi · /exit per uscire
+assistant-thinking = Elaborazione…
+assistant-request-error = Richiesta non riuscita. Usa --debug per i dettagli.
+assistant-confirm-operation = Confermi questa operazione? [s/N]
+assistant-request-interrupted-or-failed = Richiesta interrotta o non riuscita. Puoi riprovare.
+assistant-you-input = Tu ›
+
+assistant-help = Comandi
+    /help     Mostra questo aiuto
+    /exit     Esci (anche: exit, quit, q)
+    /session  Mostra ID sessione
+    /clear    Cancella i messaggi della sessione
+assistant-running = Esecuzione
+
+assistant-input = Tu ›
+assistant-operation = Operazione: { $name }
+assistant-tool-running = Esecuzione · { $name }
+assistant-incomplete = Risposta incompleta.
+assistant-session = Sessione: { $session }
+assistant-not-persisted = non salvata
+assistant-cleared = Messaggi della sessione cancellati.
+assistant-no-session = Nessuna sessione salvata da cancellare.
+assistant-unknown-command = Comando sconosciuto: { $command }. Usa /help.
+assistant-turn-failed = Richiesta non completata. Usa --debug per i dettagli.
+assistant-interrupted = Richiesta interrotta. Le operazioni già avviate potrebbero avere avuto effetto: verificane lo stato prima di riprovare.
+assistant-missing-extra = Dipendenze AI mancanti: reinstalla OpenFatture con l’extra ai.
+
+assistant-tool-completed = Completato · { $name }
+assistant-tool-failed = Non completato · { $name }
+
+status-blocking-fields = Campi che impediscono la fatturazione
+status-field = Campo
+status-problem = Problema
+status-missing = Da completare
+status-invalid = Da correggere
+status-local-only = I controlli descrivono la configurazione locale. Autenticazione AI e invio SDI non vengono verificati da questo comando.
+
+cli-database-unavailable = Database non accessibile. Controlla DATABASE_URL e i permessi; usa --debug per i dettagli.

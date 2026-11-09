@@ -73,14 +73,14 @@ def render_response(
             # Fallback if not RichFormatter
             output = formatter.format_response(response)
             if console:
-                console.print(output)
+                console.print(output, markup=False, highlight=False, soft_wrap=True)
             else:
                 print(output)
     else:
         # For other formats, print formatted output
         output = formatter.format_response(response)
         if console:
-            console.print(output)
+            console.print(output, markup=False, highlight=False, soft_wrap=True)
         else:
             print(output)
 
@@ -101,7 +101,7 @@ def render_error(
     output = formatter.format_error(error)
 
     if console:
-        console.print(output)
+        console.print(output, markup=False, highlight=False, soft_wrap=True)
     else:
         print(output)
 
@@ -143,6 +143,6 @@ def render_data(
         formatter = get_formatter(format_type)
         output = formatter.format_metadata(data)
         if console:
-            console.print(output)
+            console.print(output, markup=False, highlight=False, soft_wrap=True)
         else:
             print(output)

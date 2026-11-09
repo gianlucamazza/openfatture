@@ -100,15 +100,23 @@ from openfatture.ai.orchestration.states import (
     create_invoice_workflow as create_invoice_state,
 )
 
-# Workflows
-from openfatture.ai.orchestration.workflows import (
-    CashFlowAnalysisWorkflow,
-    ComplianceCheckWorkflow,
-    InvoiceCreationWorkflow,
-    create_cash_flow_workflow,
-    create_compliance_workflow,
-    create_invoice_workflow,
-)
+
+# Load optional workflows only when requested.
+def __getattr__(name: str):
+    workflow_names = {
+        "CashFlowAnalysisWorkflow",
+        "ComplianceCheckWorkflow",
+        "InvoiceCreationWorkflow",
+        "create_cash_flow_workflow",
+        "create_compliance_workflow",
+        "create_invoice_workflow",
+    }
+    if name in workflow_names:
+        from importlib import import_module
+
+        return getattr(import_module("openfatture.ai.orchestration.workflows"), name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # ========================================================================

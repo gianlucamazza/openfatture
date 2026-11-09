@@ -111,7 +111,7 @@ class RichFormatter(BaseFormatter):
         if response.usage:
             metrics_table.add_row(
                 f"Tokens: {response.usage.total_tokens}",
-                f"Cost: ${response.usage.estimated_cost_usd:.4f}",
+                f"Cost: {response.usage.cost_display}",
             )
 
         if response.latency_ms:

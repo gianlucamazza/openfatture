@@ -19,6 +19,8 @@ def save_config(settings: Settings, path: Path) -> None:
         "ai_chat_sessions_dir",
         "debug_config",
     }
+    path.touch(mode=0o600, exist_ok=True)
+    path.chmod(0o600)
     path.write_text(
         tomlkit.dumps({key: value for key, value in data.items() if key not in excluded}),
         encoding="utf-8",

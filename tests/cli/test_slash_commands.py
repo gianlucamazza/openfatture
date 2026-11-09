@@ -30,12 +30,10 @@ def test_slash_session() -> None:
 
 
 def test_slash_clear_persisted_session() -> None:
-    session = MagicMock()
-    store = MagicMock()
-    runtime = SimpleNamespace(_session=session, _session_store=store, session_id="s")
+    clear = MagicMock(return_value=True)
+    runtime = SimpleNamespace(clear_session=clear, session_id="s")
     assert _handle_slash_command("/clear", runtime=runtime) == "handled"
-    session.clear_messages.assert_called_once()
-    store.save.assert_called_once_with(session)
+    clear.assert_called_once_with()
 
 
 def test_unknown_slash_is_handled() -> None:

@@ -279,7 +279,10 @@ def set_config(
         config_path = Path(dirs.user_config_dir) / "config.toml"
         save_config(settings, config_path)
 
-        console.print(_("cli-config-set-success", key=key, value=value))
+        from openfatture.platform.logging import redact_sensitive
+
+        display_value = redact_sensitive({key: value})[key]
+        console.print(_("cli-config-set-success", key=key, value=display_value))
         console.print(_("cli-config-saved-to", path=config_path))
 
     except Exception as e:

@@ -107,7 +107,7 @@ class GraphAssistantBackend:
 
     def _state_to_response(self, state: dict[str, Any]) -> AgentResponse:
         status_raw = state.get("status") or "final"
-        if state.get("error"):
+        if state.get("error") or status_raw == "error":
             status = ResponseStatus.ERROR
         elif status_raw == "final":
             status = ResponseStatus.SUCCESS
@@ -116,13 +116,23 @@ class GraphAssistantBackend:
         tokens = int(state.get("tokens") or 0)
         tool_results = list(state.get("tool_results") or [])
         error = state.get("error")
+        blocked = [
+            entry
+            for entry in tool_results
+            if not entry.get("success") and str(entry.get("result", "")).startswith("confirmation_")
+        ]
+        if blocked:
+            status = ResponseStatus.PARTIAL
+            error = str(blocked[-1].get("result"))
         return AgentResponse(
             content=str(state.get("content") or ""),
             status=status,
             agent_name="chat_assistant",
             model=self.provider.model,
             provider=self.provider.provider_name,
-            usage=UsageMetrics(total_tokens=tokens),
+            usage=UsageMetrics(**state["usage"])
+            if state.get("usage")
+            else UsageMetrics(total_tokens=tokens, cost_known=False),
             error=str(error) if error is not None else None,
             metadata={
                 "orchestrator": "langgraph_tool_loop",
@@ -167,6 +177,8 @@ class GraphAssistantBackend:
         )
         response.metadata["orchestrator"] = "langgraph_react"
         response.metadata["orchestrator_metrics"] = orchestrator.get_metrics()
+        if response.metadata["orchestrator_metrics"].get("max_iterations_reached"):
+            response.status = ResponseStatus.PARTIAL
         return response
 
     async def _run_tool_graph(self, context: ChatContext) -> AgentResponse:
@@ -224,28 +236,24 @@ class GraphAssistantBackend:
         """
         context = self.prepare_context(context)
 
+        if not context.user_input.strip() or len(context.user_input) > 5000:
+            response = await self.run(context)
+            yield StreamEvent.done(status=response.status.value, error=response.error)
+            return
         if self._use_react(context):
-            from openfatture.ai.orchestration.react import ReActOrchestrator
-
-            orchestrator = ReActOrchestrator(
-                provider=self.provider,
-                tool_registry=self.tool_registry,
-                max_iterations=self.max_iterations,
-                debug_config=self.debug_config,
-            )
-            async for chunk in orchestrator.stream(context):
-                if isinstance(chunk, str):
-                    yield StreamEvent.content(chunk)
-                elif isinstance(chunk, StreamEvent):
-                    yield chunk
-                else:
-                    yield StreamEvent.content(str(chunk))
+            response = await self._run_react(context)
+            yield StreamEvent.metrics(**response.usage.model_dump())
+            if response.content:
+                yield StreamEvent.content(response.content)
+            yield StreamEvent.done(status=response.status.value, error=response.error)
             return
 
         if not self._use_native_tools(context):
             response = await self._run_plain(context)
+            yield StreamEvent.metrics(**response.usage.model_dump())
             if response.content:
                 yield StreamEvent.content(response.content)
+            yield StreamEvent.done(status=response.status.value, error=response.error)
             return
 
         graph = self._get_tool_graph()
@@ -289,6 +297,11 @@ class GraphAssistantBackend:
                     elif status == "tool_calls":
                         yield StreamEvent.status("Calling tools…")
 
+        from openfatture.ai.streaming.events import StreamEventType
+
+        yield StreamEvent(type=StreamEventType.METRICS, data=dict(merged.get("usage") or {}))
+        final_response = self._state_to_response(merged)
+        yield StreamEvent.done(status=final_response.status.value, error=final_response.error)
         if not emitted_final_content:
             content = str(merged.get("content") or "")
             if content:

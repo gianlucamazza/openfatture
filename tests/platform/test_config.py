@@ -63,3 +63,31 @@ def test_platformdirs_usage():
 
     # Restore original module state to avoid affecting other tests
     importlib.reload(openfatture.platform.config)
+
+
+def test_profile_precedence_and_read_only_paths(tmp_path, monkeypatch):
+    import tomlkit
+
+    import openfatture.platform.config as module
+
+    profile = tmp_path / "profile.toml"
+    profile.write_text(tomlkit.dumps({"cedente_denominazione": "Profile"}))
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("CEDENTE_DENOMINAZIONE=Dotenv\n")
+    monkeypatch.setitem(module.Settings.model_config, "toml_file", profile)
+    monkeypatch.delenv("CEDENTE_DENOMINAZIONE", raising=False)
+    paths = {
+        "data_dir": tmp_path / "data",
+        "archivio_dir": tmp_path / "archive",
+        "certificates_dir": tmp_path / "certificates",
+    }
+    assert module.Settings(_env_file=dotenv, **paths).cedente_denominazione == "Dotenv"
+    monkeypatch.setenv("CEDENTE_DENOMINAZIONE", "Environment")
+    assert module.Settings(_env_file=dotenv, **paths).cedente_denominazione == "Environment"
+    assert (
+        module.Settings(
+            cedente_denominazione="Explicit", _env_file=dotenv, **paths
+        ).cedente_denominazione
+        == "Explicit"
+    )
+    assert all(not path.exists() for path in paths.values())

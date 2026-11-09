@@ -16,6 +16,13 @@ app = typer.Typer(name="cliente", help="Manage clients (customers)")
 console = Console()
 
 
+@app.callback()
+def prepare_database() -> None:
+    from openfatture.cli.database import ensure_database
+
+    ensure_database()
+
+
 @app.command("list")
 def list_clients(
     query: str = typer.Option(None, "--query", "-q", help="Search by name, VAT, or tax code"),

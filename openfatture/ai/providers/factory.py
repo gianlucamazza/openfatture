@@ -270,7 +270,11 @@ def _create_openai_provider(
     temperature = _pop_float_param(params, "temperature", settings.temperature, provider="openai")
     max_tokens = _pop_int_param(params, "max_tokens", settings.max_tokens, provider="openai")
     timeout = _pop_int_param(params, "timeout", settings.request_timeout_seconds, provider="openai")
-    base_url = _pop_optional_str_param(params, "base_url", None, provider="openai")
+    from openfatture.platform.config import get_settings
+
+    base_url = _pop_optional_str_param(
+        params, "base_url", get_settings().ai_base_url, provider="openai"
+    )
 
     return OpenAIProvider(
         api_key=api_key,

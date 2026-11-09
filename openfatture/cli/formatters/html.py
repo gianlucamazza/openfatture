@@ -247,7 +247,7 @@ class HTMLFormatter(BaseFormatter):
             )
 
             # Cost
-            parts.append(self._metadata_item("Cost", f"${response.usage.estimated_cost_usd:.4f}"))
+            parts.append(self._metadata_item("Cost", response.usage.cost_display))
 
         # Latency
         if response.latency_ms:

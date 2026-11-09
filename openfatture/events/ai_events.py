@@ -43,3 +43,16 @@ class AICommandCompletedEvent(BaseEvent):
     latency_ms: float
     error: str | None = None
     response_length: int | None = None
+
+
+@dataclass(frozen=True)
+class AITurnCompletedEvent(BaseEvent):
+    """Final turn outcome, including denied tools and partial provider usage."""
+
+    status: str
+    tokens_used: int
+    cost_usd: float
+    cost_known: bool
+    usage_complete: bool
+    tool_outcomes: list[dict[str, Any]]
+    error: str | None = None

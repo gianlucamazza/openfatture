@@ -74,27 +74,59 @@ def filter_sensitive_data(logger: Any, method_name: str, event_dict: EventDict) 
 
     Critical for GDPR compliance and security.
     """
-    sensitive_keys = {
-        "password",
-        "api_key",
-        "secret",
-        "token",
-        "pec_password",
-        "ai_api_key",
-        "certificate_password",
-    }
+    return redact_sensitive(event_dict)
 
-    for key in sensitive_keys:
-        if key in event_dict:
-            event_dict[key] = "***REDACTED***"
 
-    # Also check nested event dict
-    if "event" in event_dict and isinstance(event_dict["event"], dict):
-        for key in sensitive_keys:
-            if key in event_dict["event"]:
-                event_dict["event"][key] = "***REDACTED***"
+_sensitive_values: set[str] = set()
 
-    return event_dict
+
+def register_sensitive_values(*values: str | None) -> None:
+    _sensitive_values.update(value for value in values if value and len(value) >= 4)
+
+
+def is_sensitive_key(key: object) -> bool:
+    name = str(key).lower()
+    return name in {"token", "key", "authorization"} or any(
+        part in name
+        for part in (
+            "password",
+            "api_key",
+            "apikey",
+            "secret",
+            "credential",
+            "access_token",
+            "refresh_token",
+        )
+    )
+
+
+def redact_sensitive(value: Any) -> Any:
+    """Recursively redact credentials in presentation and diagnostic payloads."""
+    if isinstance(value, dict):
+        return {
+            key: "***REDACTED***" if is_sensitive_key(key) else redact_sensitive(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [redact_sensitive(item) for item in value]
+    if isinstance(value, str):
+        for secret in sorted(_sensitive_values, key=len, reverse=True):
+            value = value.replace(secret, "***REDACTED***")
+    return value
+
+
+class SensitiveLogFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.msg = redact_sensitive(record.msg)
+        record.args = (
+            tuple(redact_sensitive(arg) for arg in record.args)
+            if isinstance(record.args, tuple)
+            else redact_sensitive(record.args)
+        )
+        if record.exc_info:
+            record.exc_text = redact_sensitive(logging.Formatter().formatException(record.exc_info))
+            record.exc_info = None
+        return True
 
 
 def add_app_context(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
@@ -107,7 +139,7 @@ def add_app_context(logger: Any, method_name: str, event_dict: EventDict) -> Eve
 
 
 def configure_logging(
-    log_level: str = "INFO",
+    log_level: str = "WARNING",
     json_logs: bool = False,
     dev_mode: bool = True,
 ) -> None:
@@ -162,6 +194,9 @@ def configure_logging(
         level=getattr(logging, log_level.upper()),
         force=True,
     )
+
+    for handler in logging.getLogger().handlers:
+        handler.addFilter(SensitiveLogFilter())
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
@@ -282,12 +317,15 @@ def configure_dynamic_logging(debug_config: DebugConfig) -> None:
     """
     logger = get_logger(__name__)
     # Determine base log level
-    base_log_level = "DEBUG" if debug_config.enable_debug_logging else "INFO"
+    base_log_level = "DEBUG" if debug_config.enable_debug_logging else "WARNING"
 
     # Configure with file logging if enabled
     handlers = []
 
     if debug_config.log_to_file:
+        debug_config.log_file_path.parent.mkdir(parents=True, exist_ok=True)
+        debug_config.log_file_path.touch(mode=0o600, exist_ok=True)
+        debug_config.log_file_path.chmod(0o600)
         # Create rotating file handler
         file_handler = RotatingFileHandler(
             filename=str(debug_config.log_file_path),
@@ -307,10 +345,16 @@ def configure_dynamic_logging(debug_config: DebugConfig) -> None:
         dev_mode=True,  # Enable colors and development format
     )
 
+    for handler in logging.getLogger().handlers:
+        handler.setLevel(getattr(logging, base_log_level))
+        handler.addFilter(SensitiveLogFilter())
+
     # Add file handler to root logger if file logging enabled
     if handlers:
         root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
         for handler in handlers:
+            handler.addFilter(SensitiveLogFilter())
             root_logger.addHandler(handler)
 
     # Set module-specific log levels

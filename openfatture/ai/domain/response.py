@@ -34,11 +34,12 @@ class UsageMetrics(BaseModel):
     completion_tokens: int = 0
     total_tokens: int = 0
     estimated_cost_usd: float = 0.0
+    cost_known: bool = True
 
     @property
     def cost_display(self) -> str:
         """Format cost for display."""
-        return f"${self.estimated_cost_usd:.4f}"
+        return f"${self.estimated_cost_usd:.4f}" if self.cost_known else "N/A"
 
 
 class AgentResponse(BaseModel):
@@ -99,6 +100,8 @@ class AgentResponse(BaseModel):
             "provider": self.provider,
             "tokens_used": self.usage.total_tokens,
             "cost_usd": self.usage.estimated_cost_usd,
+            "cost_known": self.usage.cost_known,
+            "usage_complete": self.metadata.get("usage_complete", True),
             "latency_ms": self.latency_ms,
             "error": self.error,
             "confidence": self.confidence,

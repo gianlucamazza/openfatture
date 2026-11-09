@@ -9,7 +9,11 @@ from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 
 from openfatture.platform.config import get_settings
-from openfatture.platform.validators import validate_codice_fiscale, validate_partita_iva
+from openfatture.platform.validators import (
+    validate_codice_fiscale,
+    validate_partita_iva,
+    validate_regime_fiscale,
+)
 from openfatture.storage.database.base import init_db
 
 app = typer.Typer()
@@ -57,7 +61,9 @@ def init(
     if interactive:
         console.print("[bold yellow]Let's configure your company data[/bold yellow]\n")
 
-        env_file = Path(".env")
+        from openfatture.platform.config import dirs
+
+        env_file = Path(dirs.user_config_dir) / "config.toml"
 
         if env_file.exists():
             if not Confirm.ask(
@@ -91,6 +97,15 @@ def init(
                 codice_fiscale = cf.upper()
             else:
                 console.print("[red]Invalid Codice Fiscale. Please try again.[/red]")
+
+        regime_fiscale = ""
+        while not validate_regime_fiscale(regime_fiscale):
+            regime_fiscale = Prompt.ask(
+                "Tax regime (use your actual RF code)",
+                default=settings.cedente_regime_fiscale or "",
+            ).upper()
+            if not validate_regime_fiscale(regime_fiscale):
+                console.print("[red]Enter a tax regime supported by FatturaPA.[/red]")
 
         indirizzo = Prompt.ask("Address (Via/Piazza)", default="")
         cap = Prompt.ask("CAP (Postal code)", default="")
@@ -218,7 +233,7 @@ def init(
             f'CEDENTE_DENOMINAZIONE="{denominazione}"',
             f"CEDENTE_PARTITA_IVA={partita_iva}",
             f"CEDENTE_CODICE_FISCALE={codice_fiscale}",
-            "CEDENTE_REGIME_FISCALE=RF19",
+            f"CEDENTE_REGIME_FISCALE={regime_fiscale}",
             f'CEDENTE_INDIRIZZO="{indirizzo}"',
             f"CEDENTE_CAP={cap}",
             f'CEDENTE_COMUNE="{comune}"',
@@ -245,7 +260,28 @@ def init(
         # Add AI lines
         env_lines.extend(ai_lines)
 
-        env_file.write_text("\n".join(env_lines))
+        from io import StringIO
+
+        import tomlkit
+        from dotenv import dotenv_values
+
+        document = tomlkit.parse(env_file.read_text()) if env_file.exists() else tomlkit.document()
+        for key, value in dotenv_values(stream=StringIO("\n".join(env_lines))).items():
+            if value is not None:
+                field = key.lower()
+                if "password" in field and not value and document.get(field):
+                    continue
+                current = getattr(settings, field, None)
+                if isinstance(current, bool):
+                    document[field] = value.lower() == "true"
+                elif isinstance(current, int):
+                    document[field] = int(value)
+                else:
+                    document[field] = value
+        env_file.parent.mkdir(parents=True, exist_ok=True)
+        env_file.touch(mode=0o600, exist_ok=True)
+        env_file.chmod(0o600)
+        env_file.write_text(tomlkit.dumps(document))
         console.print(f"\n Configuration saved to: {env_file.absolute()}\n")
 
     _print_setup_complete()

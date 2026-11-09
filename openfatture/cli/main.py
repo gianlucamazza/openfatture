@@ -14,7 +14,9 @@ app = typer.Typer(
     help="Agentic electronic invoicing for Italian freelancers.",
     add_completion=True,
     rich_markup_mode="rich",
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 console = Console()
 
@@ -37,6 +39,7 @@ def main(
         is_eager=True,
         help="Show the version and exit.",
     ),
+    debug: bool = typer.Option(False, "--debug", help="Show diagnostic logs and tracebacks."),
     format_type: str = typer.Option(
         "rich",
         "--format",
@@ -45,7 +48,11 @@ def main(
     ),
 ) -> None:
     """Configure output and logging for the selected command."""
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        return
     settings = get_settings()
+    settings.debug_config.enable_debug_logging |= debug
     configure_dynamic_logging(settings.debug_config)
     ctx.ensure_object(dict)
     ctx.obj["format"] = format_type
@@ -53,7 +60,7 @@ def main(
 
 app.command("assistant", help="Ask the business assistant")(assistant.assistant)
 app.add_typer(interactive.app, name="interactive", help="Start a conversational session")
-app.add_typer(init.app, name="init", help="Initialize OpenFatture")
+app.command("init", help="Initialize OpenFatture")(init.init)
 app.add_typer(config.app, name="config", help="Manage configuration")
 app.command("status", help="Show local readiness and configuration")(status.status)
 app.add_typer(cliente.app, name="cliente", help="Manage clients (list, show, create)")
