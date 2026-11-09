@@ -34,10 +34,11 @@ class NotificaSDI(BaseModel):
     Represents a notification received from SDI about invoice processing.
     """
 
-    tipo: TipoNotifica = Field(..., description="Notification type")
+    tipo: TipoNotifica | str = Field(..., description="Notification type")
     identificativo_sdi: str = Field(..., description="SDI identifier (unique per invoice)")
     nome_file: str = Field(..., description="Original invoice filename")
     data_ricezione: datetime = Field(..., description="Notification reception date")
+    data_evento: datetime | None = None
     messaggio: str | None = Field(None, description="Notification message/description")
     lista_errori: list[str] = Field(default_factory=list, description="List of errors (for NS)")
     esito_committente: str | None = Field(
@@ -131,6 +132,7 @@ class SDINotificationParser:
 
             notification = NotificaSDI(
                 tipo=TipoNotifica.RICEVUTA_CONSEGNA,
+                data_evento=self._attested_datetime(self._get_text(root, ".//DataOraConsegna")),
                 identificativo_sdi=identificativo_sdi,
                 nome_file=nome_file,
                 data_ricezione=data_ricezione,
@@ -275,6 +277,12 @@ class SDINotificationParser:
         if found is not None and found.text:
             return found.text.strip()
         return ""
+
+    def _attested_datetime(self, value: str) -> datetime | None:
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")) if value else None
+        except ValueError:
+            return None
 
     def _parse_datetime(self, dt_string: str) -> datetime:
         """

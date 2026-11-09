@@ -24,7 +24,7 @@ class TestFatturaPABuilder:
         xml_content = builder.build(sample_fattura)
 
         assert xml_content is not None
-        assert 'xmlns="http://ivaservizi.agenziaentrate.gov.it' in xml_content
+        assert 'xmlns:p="http://ivaservizi.agenziaentrate.gov.it' in xml_content
         assert "FatturaElettronica" in xml_content
 
     def test_xml_structure(self, test_settings, sample_fattura):
@@ -165,10 +165,9 @@ class TestFatturaPABuilder:
         progressivo = root.find(".//{*}ProgressivoInvio")
 
         assert progressivo is not None
-        expected = (
-            f"{test_settings.cedente_partita_iva}_{sample_fattura.numero}_{sample_fattura.anno}"
-        )
-        assert progressivo.text == expected
+        assert len(progressivo.text) <= 10
+        assert progressivo.text.isalnum()
+        assert FatturaPABuilder(test_settings).build(sample_fattura) == xml_content
 
     def test_codice_destinatario(self, test_settings, sample_fattura):
         """Test CodiceDestinatario for SDI."""
@@ -206,8 +205,8 @@ class TestFatturaPABuilder:
         prezzo = root.find(".//{*}PrezzoUnitario")
         assert prezzo is not None
 
-        # Should not have trailing zeros
-        assert not prezzo.text.endswith(".00")
+        # FatturaPA requires at least two fractional digits.
+        assert prezzo.text.endswith(".00")
 
     def test_save_to_file(self, test_settings, sample_fattura, tmp_path):
         """Test saving XML to file."""
@@ -304,7 +303,7 @@ class TestGenerateFilename:
 
         al_cassa = cassa.find("{*}AlCassa")
         assert al_cassa is not None
-        assert al_cassa.text == "4"
+        assert Decimal(al_cassa.text) == Decimal("4.00")
 
         importo = cassa.find("{*}ImportoContributoCassa")
         assert importo is not None
@@ -312,4 +311,12 @@ class TestGenerateFilename:
 
         aliquota_iva = cassa.find("{*}AliquotaIVA")
         assert aliquota_iva is not None
-        assert aliquota_iva.text == "22"
+        assert Decimal(aliquota_iva.text) == Decimal("22.00")
+
+
+def test_generated_document_passes_bundled_xsd(test_settings, sample_fattura):
+    from openfatture.sdi.validator.xsd_validator import FatturaPAValidator
+
+    xml = FatturaPABuilder(test_settings).build(sample_fattura)
+    valid, error = FatturaPAValidator().validate(xml)
+    assert valid, error

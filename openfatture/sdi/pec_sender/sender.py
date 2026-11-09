@@ -13,7 +13,8 @@ from openfatture.platform.config import Settings
 from openfatture.platform.logging import get_logger
 from openfatture.platform.rate_limiter import RateLimiter
 from openfatture.platform.retry import RetryConfig, retry_sync
-from openfatture.storage.database.models import Fattura, LogSDI, StatoFattura
+from openfatture.sdi.application.submissions import journaled_submission, single_submission_active
+from openfatture.storage.database.models import Fattura, LogSDI
 
 logger = get_logger(__name__)
 
@@ -50,6 +51,7 @@ class PECSender:
         self.rate_limiter = rate_limit or RateLimiter(max_calls=10, period=60)
         self.max_retries = max_retries
 
+    @journaled_submission
     def send_invoice(
         self, fattura: Fattura, xml_path: Path, signed: bool = False
     ) -> tuple[bool, str | None]:
@@ -66,6 +68,9 @@ class PECSender:
         Returns:
             Tuple[bool, Optional[str]]: (success, error_message)
         """
+        if fattura.issued_elsewhere:
+            return False, "Cannot send historical invoice issued elsewhere"
+
         # Validate configuration
         if not self.settings.pec_address:
             return False, "PEC address not configured"
@@ -110,7 +115,7 @@ class PECSender:
         """
         # Configure retry for network/server errors only
         retry_config = RetryConfig(
-            max_retries=self.max_retries,
+            max_retries=0 if single_submission_active() else self.max_retries,
             base_delay=1.0,
             max_delay=30.0,
             backoff_factor=2.0,
@@ -159,10 +164,6 @@ class PECSender:
                     server.login(self.settings.pec_address, self.settings.pec_password)
                     server.send_message(msg)
 
-                # Update invoice status
-                fattura.stato = StatoFattura.INVIATA
-                fattura.data_invio_sdi = datetime.now(UTC)
-
                 logger.info(
                     "pec_sent_successfully",
                     fattura_numero=fattura.numero,
@@ -187,7 +188,7 @@ class PECSender:
             logger.warning(
                 "pec_send_retry",
                 attempt=attempt,
-                max_retries=self.max_retries,
+                max_retries=0 if single_submission_active() else self.max_retries,
                 error=str(error),
                 error_type=type(error).__name__,
                 fattura_numero=fattura.numero,
@@ -208,7 +209,7 @@ class PECSender:
                 "pec_send_failed_all_retries",
                 error=str(e),
                 fattura_numero=fattura.numero,
-                max_retries=self.max_retries,
+                max_retries=0 if single_submission_active() else self.max_retries,
             )
             return False, f"Failed after {self.max_retries} attempts: {e}"
 

@@ -40,6 +40,19 @@ def payment_summary(invoice: Fattura, payments: Any = None) -> dict[str, Any]:
     }
 
 
+def status_evidence(invoice: Fattura) -> dict[str, Any]:
+    receipts = [r for r in invoice.sdi_receipts if r.outcome == "applied"]
+    return {
+        "status_origin": "sdi_receipt"
+        if receipts
+        else "unverified"
+        if invoice.issued_elsewhere
+        else "local",
+        "sdi_identifier": invoice.numero_sdi,
+        "sdi_evidence": [{"id": r.id, "source": r.source, "outcome": r.outcome} for r in receipts],
+    }
+
+
 class InvoiceStats(TypedDict):
     anno: int
     totale_fatture: int
@@ -69,7 +82,9 @@ def search_invoices(
     db = session or get_session()
     try:
         db_query = db.query(Fattura).options(
-            selectinload(Fattura.cliente), selectinload(Fattura.pagamenti)
+            selectinload(Fattura.cliente),
+            selectinload(Fattura.pagamenti),
+            selectinload(Fattura.sdi_receipts),
         )
 
         if query:
@@ -104,6 +119,7 @@ def search_invoices(
                     "stato": f.stato.value,
                     "issued_elsewhere": f.issued_elsewhere,
                     **payment_summary(f),
+                    **status_evidence(f),
                 }
             )
 
@@ -135,6 +151,7 @@ def get_invoice_details(
             .options(
                 selectinload(Fattura.cliente),
                 selectinload(Fattura.righe),
+                selectinload(Fattura.sdi_receipts),
                 selectinload(Fattura.pagamenti),
             )
             .filter(Fattura.id == fattura_id)
@@ -163,6 +180,7 @@ def get_invoice_details(
             "stato": fattura.stato.value,
             "issued_elsewhere": fattura.issued_elsewhere,
             **payment_summary(fattura),
+            **status_evidence(fattura),
             "pagamenti": [
                 {
                     "id": p.id,
@@ -252,7 +270,7 @@ def get_invoice_stats(
         result["incassato_totale"] = float(collected)
         result["residuo_totale"] = float(outstanding)
         result["avvertenza_stato"] = (
-            "per_stato descrive soltanto lo stato tecnico locale. Usare per_documento per distinguere le storiche dalle bozze. Per documenti issued_elsewhere lo stato SDI non è verificato: non dedurre mancata trasmissione o emissione da bozza. Incassi e stato SDI sono indipendenti."
+            "per_stato descrive soltanto lo stato tecnico locale. Usare per_documento per distinguere le storiche dalle bozze. Per documenti issued_elsewhere senza ricevute associate lo stato SDI non è verificato: non dedurre mancata trasmissione o emissione da bozza. Incassi e stato SDI sono indipendenti."
         )
         return result
     except Exception as e:

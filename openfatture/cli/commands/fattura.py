@@ -76,6 +76,8 @@ def list_invoices(
             document = (
                 _("cli-invoice-historical") if invoice["issued_elsewhere"] else invoice["stato"]
             )
+            if invoice.get("status_origin") == "sdi_receipt":
+                document += f" · SDI: {invoice['stato']}"
             console.print(
                 f"  {invoice['data']} · {document} · {_('cli-invoice-' + invoice['payment_status'])}",
                 markup=False,
@@ -109,7 +111,16 @@ def list_invoices(
             else format_currency(fattura["amount_paid"], "EUR", locale=get_locale()),
             format_currency(fattura["outstanding"], "EUR", locale=get_locale()),
             _("cli-invoice-" + fattura["payment_status"]),
-            _("cli-invoice-historical") if fattura["issued_elsewhere"] else fattura["stato"],
+            (
+                _("cli-invoice-historical")
+                + (
+                    f" · SDI: {fattura['stato']}"
+                    if fattura.get("status_origin") == "sdi_receipt"
+                    else ""
+                )
+            )
+            if fattura["issued_elsewhere"]
+            else fattura["stato"],
         )
 
     console.print(table)
@@ -140,8 +151,12 @@ def show_invoice(
         + ": "
         + (_("cli-invoice-historical") if result["issued_elsewhere"] else result["stato"])
     )
-    if result["issued_elsewhere"]:
+    if result["issued_elsewhere"] and result.get("status_origin") != "sdi_receipt":
         console.print(_("cli-invoice-historical-note"))
+    for receipt in result.get("sdi_evidence", []):
+        console.print(
+            f"SDI #{receipt['id']} · {receipt['source']} · {receipt['outcome']}", markup=False
+        )
     console.print(_("cli-invoice-collection") + ": " + _("cli-invoice-" + result["payment_status"]))
     for field, label in (("amount_paid", "collected"), ("outstanding", "residual")):
         value = (
@@ -402,3 +417,72 @@ def create_credit_note(
     console.print(f"  ID: {result['source_invoice']['id']}")
     console.print(f"  Number: {result['source_invoice']['numero']}")
     console.print(f"  Date: {result['source_invoice']['data']}")
+
+
+@app.command("sdi-journal")
+def sdi_journal() -> None:
+    """Inspect recorded submissions and imported receipts without sending anything."""
+    from openfatture.storage.database.models import SDINotificationRecord, SDISubmissionAttempt
+
+    with get_session() as session:
+        for attempt in session.query(SDISubmissionAttempt).order_by(SDISubmissionAttempt.id):
+            console.print(
+                f"Invio #{attempt.id} · fattura {attempt.invoice_id} · {attempt.filename} · {attempt.outcome}",
+                markup=False,
+            )
+        for receipt in session.query(SDINotificationRecord).order_by(SDINotificationRecord.id):
+            console.print(
+                f"Ricevuta #{receipt.id} · fattura {receipt.invoice_id} · {receipt.outcome} · origine {receipt.source}",
+                markup=False,
+            )
+
+
+@app.command("associate-receipt")
+def associate_receipt(
+    receipt_id: int, invoice_id: int, evidence: str = typer.Option(..., "--evidence")
+) -> None:
+    """Associate an unresolved receipt after explicit human verification."""
+    import json
+
+    from openfatture.sdi.notifiche.parser import NotificaSDI
+    from openfatture.sdi.notifiche.processor import NotificationProcessor
+    from openfatture.storage.database.models import SDINotificationRecord
+
+    if not typer.confirm(
+        f"Associare ricevuta {receipt_id} alla fattura {invoice_id}?", default=False
+    ):
+        raise typer.Abort()
+    with get_session() as session:
+        receipt = session.get(SDINotificationRecord, receipt_id)
+        if receipt is None or receipt.outcome not in {"unassociated", "association_conflict"}:
+            console.print("Ricevuta non associabile")
+            raise typer.Exit(1)
+        success, error, _notification = NotificationProcessor(session).process_notification(
+            NotificaSDI.model_validate(json.loads(receipt.payload)),
+            associated_invoice_id=invoice_id,
+            association_note=evidence,
+        )
+        console.print(error or "Ricevuta associata")
+        if not success:
+            raise typer.Exit(1)
+
+
+@app.command("resolve-submission")
+def resolve_submission_command(
+    attempt_id: int,
+    sent: bool = typer.Option(..., "--sent/--not-sent"),
+    evidence: str = typer.Option(..., "--evidence"),
+) -> None:
+    """Resolve an uncertain PEC attempt only after checking transport evidence."""
+    from openfatture.sdi.application.submissions import resolve_submission
+
+    if not typer.confirm(f"Confermare verifica invio {attempt_id}: inviato={sent}?", default=False):
+        raise typer.Abort()
+    with get_session() as session:
+        try:
+            resolve_submission(session, attempt_id, sent=sent, note=evidence)
+        except ValueError as exc:
+            session.rollback()
+            console.print(str(exc), markup=False)
+            raise typer.Exit(1) from exc
+    console.print("Verifica registrata")

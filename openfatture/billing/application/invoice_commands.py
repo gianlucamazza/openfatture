@@ -347,40 +347,24 @@ def update_invoice_status(
                 "error": f"Invalid status: {new_status}. Valid values: {', '.join(valid_statuses)}"
             }
 
-        # Check valid state transitions
-        current_status = fattura.stato
+        from openfatture.billing.application.invoice_status import (
+            change_status,
+            validate_manual_transition,
+        )
 
-        # Define allowed transitions
-        allowed_transitions = {
-            StatoFattura.BOZZA: [StatoFattura.DA_INVIARE, StatoFattura.BOZZA],
-            StatoFattura.DA_INVIARE: [StatoFattura.BOZZA, StatoFattura.DA_INVIARE],
-            # Other statuses cannot be changed manually (managed by SDI notifications)
-        }
-
-        if current_status not in allowed_transitions:
+        validate_manual_transition(fattura, new_status_enum)
+        if fattura.stato == new_status_enum:
             return {
-                "error": f"Invoice in status '{current_status.value}' cannot have status changed manually. Status is managed by SDI notifications."
+                "success": True,
+                "invoice_id": fattura.id,
+                "old_status": fattura.stato.value,
+                "new_status": new_status_enum.value,
+                "message": "Status unchanged",
             }
-
-        if new_status_enum not in allowed_transitions[current_status]:
-            return {
-                "error": f"Invalid transition from '{current_status.value}' to '{new_status_enum.value}'. "
-                f"Allowed: {', '.join([s.value for s in allowed_transitions[current_status]])}"
-            }
-
-        # If moving to DA_INVIARE, verify invoice is complete
-        if new_status_enum == StatoFattura.DA_INVIARE:
-            if not fattura.righe:
-                return {
-                    "error": "Cannot mark invoice as DA_INVIARE: no line items. Add at least one riga first."
-                }
-
-            if not fattura.cliente:
-                return {"error": "Cannot mark invoice as DA_INVIARE: no client associated."}
 
         # Update status
-        old_status = current_status.value
-        fattura.stato = new_status_enum
+        old_status = fattura.stato.value
+        change_status(db, fattura, new_status_enum)
         db.commit()
         db.refresh(fattura)
 
@@ -404,7 +388,12 @@ def update_invoice_status(
     except Exception as e:
         db.rollback()
         logger.error("update_invoice_status_failed", fattura_id=fattura_id, error=str(e))
-        return {"error": str(e)}
+        return {
+            "error": str(e),
+            "error_code": "state_conflict"
+            if type(e).__name__ == "InvoiceStateConflict"
+            else "invalid_transition",
+        }
     finally:
         db.close()
 

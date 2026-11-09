@@ -393,7 +393,7 @@ def bulk_update_invoices_status(
 
     Args:
         anno: Year to filter invoices
-        new_status: New status (bozza, da_inviare, inviata, consegnata)
+        new_status: Manual status (bozza, da_inviare)
         cliente_id: Optional client filter
 
     Returns:
@@ -410,7 +410,7 @@ def bulk_update_invoices_status(
     except ValueError:
         return {
             "success": False,
-            "error": f"Invalid status: {new_status}. Valid: bozza, da_inviare, inviata, consegnata",
+            "error": f"Invalid status: {new_status}. Valid manual values: bozza, da_inviare",
             "updated_count": 0,
         }
 

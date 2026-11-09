@@ -165,27 +165,23 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
         if not success:
             return {"error": f"Failed to send invoice: {error}"}
 
-        # Step 3: Update status
-        fattura.stato = StatoFattura.INVIATA
-        from datetime import datetime
-
-        fattura.data_invio_sdi = datetime.now()
-
-        db.commit()
-
         # Publish event
         event_bus = get_event_bus()
         if event_bus:
-            event_bus.publish(
-                InvoiceSentEvent(
-                    invoice_id=fattura.id,
-                    invoice_number=f"{fattura.numero}/{fattura.anno}",
-                    recipient=fattura.cliente.codice_destinatario or settings.sdi_pec_address,
-                    pec_address=settings.sdi_pec_address,
-                    xml_path=str(xml_path),
-                    signed=signed,
+            try:
+                event_bus.publish(
+                    InvoiceSentEvent(
+                        invoice_id=fattura.id,
+                        invoice_number=f"{fattura.numero}/{fattura.anno}",
+                        recipient=fattura.cliente.codice_destinatario or settings.sdi_pec_address,
+                        pec_address=settings.sdi_pec_address,
+                        xml_path=str(xml_path),
+                        signed=signed,
+                    )
                 )
-            )
+
+            except Exception as exc:
+                logger.warning("sdi_post_commit_event_failed", error=str(exc))
 
         logger.info("invoice_sent_to_sdi", fattura_id=fattura_id, signed=signed)
 
