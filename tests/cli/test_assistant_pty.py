@@ -12,7 +12,14 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="Linux PTY integration")
+from openfatture.platform.extras import available_extras
+
+pytestmark = [
+    pytest.mark.skipif(sys.platform != "linux", reason="Linux PTY integration"),
+    pytest.mark.skipif(
+        not available_extras().get("ai"), reason="AI extra required for assistant integration"
+    ),
+]
 
 CHILD = r"""
 import asyncio
