@@ -5,13 +5,22 @@ import json
 from contextlib import redirect_stdout
 from contextvars import ContextVar
 from html import escape
-from typing import Any
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import typer
 from rich.console import Console
 from rich.table import Table
-from typer.core import TyperGroup, click
+from typer.core import TyperGroup
+
+if TYPE_CHECKING:
+    import click
+else:
+    try:
+        click = import_module("typer._click")
+    except ModuleNotFoundError:
+        click = import_module("click")
 
 from openfatture.platform.logging import redact_sensitive
 
@@ -65,7 +74,7 @@ class OutputGroup(TyperGroup):
     def invoke(self, ctx: click.Context) -> Any:
         kind = ctx.params.get("format_type", "rich")
         if kind not in FORMAT_NAMES:
-            raise click.BadParameter(
+            raise click.exceptions.BadParameter(
                 "Supported formats: " + ", ".join(sorted(FORMAT_NAMES)), param_hint="--format"
             )
         args = [*getattr(ctx, "_protected_args", []), *ctx.args]
@@ -82,7 +91,7 @@ class OutputGroup(TyperGroup):
                 },
                 kind,
             )
-            raise click.exceptions.Exit(2)
+            raise typer.Exit(2)
         buffer = io.StringIO()
         tables = []
         token = _result.set(None)
@@ -126,21 +135,21 @@ class OutputGroup(TyperGroup):
             ):
                 try:
                     returned = super().invoke(ctx)
-                except click.exceptions.Exit as exc:
+                except typer.Exit as exc:
                     code = exc.exit_code
                     returned = None
-                except click.Abort:
+                except typer.Abort:
                     code, returned = 1, None
                     error = {"code": "cancelled", "message": "Operation cancelled"}
                 except Exception as exc:
                     code, returned = 1, None
                     error = {
                         "code": "usage_error"
-                        if isinstance(exc, click.UsageError)
+                        if isinstance(exc, click.exceptions.UsageError)
                         else "operation_failed",
                         "message": str(exc),
                     }
-                    if isinstance(exc, click.UsageError):
+                    if isinstance(exc, click.exceptions.UsageError):
                         code = 2
             data = _result.get()
             if data is None and returned is not None:
@@ -163,7 +172,7 @@ class OutputGroup(TyperGroup):
                 }
             emit({"success": code == 0, "data": data, "warnings": [], "error": error}, kind)
             if code:
-                raise click.exceptions.Exit(code)
+                raise typer.Exit(code)
             return returned
         finally:
             _result.reset(token)
