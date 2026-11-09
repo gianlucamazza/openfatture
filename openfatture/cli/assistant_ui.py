@@ -55,7 +55,8 @@ class ChatPresentation:
                                 yield Completion(command, start_position=-len(text))
 
             self.prompt_session = PromptSession(completer=SlashCompleter())
-        return await self.prompt_session.prompt_async(self.text("assistant-input") + " ")
+        value: str = await self.prompt_session.prompt_async(self.text("assistant-input") + " ")
+        return value
 
     async def confirm(self, name: str, parameters: dict[str, Any]) -> bool:
         if not self.interactive:

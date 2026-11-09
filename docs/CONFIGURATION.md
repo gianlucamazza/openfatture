@@ -104,8 +104,8 @@ Explicit settings, environment variables and the working-directory `.env`
 override this profile, in that order. New databases default to the user data
 directory; existing configured database URLs are preserved.
 
-Tools marked as requiring confirmation cannot execute without approval from
-the calling interface. Noninteractive callers receive `confirmation_required`.
+With `ai_tools_require_confirmation=true` (the default), tools marked as
+requiring confirmation cannot execute without approval from a human-facing path. Noninteractive callers receive `confirmation_required`.
 The legacy `confirm=False` argument does not bypass this requirement.
 
 `status --json` reports missing invoice fields separately from delivery

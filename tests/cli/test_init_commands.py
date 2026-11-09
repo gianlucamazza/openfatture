@@ -412,7 +412,7 @@ def test_wizard_saves_user_profile_without_assuming_regime(monkeypatch, tmp_path
     def prompt(label, **kwargs):
         answers = {
             "Company/Your name": "Test",
-            "Partita IVA (11 digits)": "04192460980",
+            "Partita IVA (11 digits)": "12345678903",
             "Codice Fiscale (16 characters)": "RSSMRA80A01H501U",
             "Tax regime (use your actual RF code)": "RF01",
             "Address (Via/Piazza)": "Via Roma 1",

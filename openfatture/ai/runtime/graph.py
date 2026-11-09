@@ -196,7 +196,9 @@ def build_tool_loop_graph(
                         "tool": name,
                         "parameters": arguments,
                         "success": result.success,
-                        "result": result.data if result.success else result.error_type or result.error,
+                        "result": result.data
+                        if result.success
+                        else result.error_type or result.error,
                     }
                 )
             except Exception as exc:

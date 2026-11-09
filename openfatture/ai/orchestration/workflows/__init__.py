@@ -24,8 +24,10 @@ Example:
     >>> print(f"Invoice created: {result.invoice_id}")
 """
 
+from typing import Any
 
-def __getattr__(name: str):
+
+def __getattr__(name: str) -> Any:
     modules = {
         "CashFlowAnalysisWorkflow": "cash_flow_analysis",
         "create_cash_flow_workflow": "cash_flow_analysis",

@@ -12,7 +12,7 @@ from openfatture.platform.config import Settings
 
 def _settings(
     *,
-    partita_iva: str = "04192460980",
+    partita_iva: str = "12345678903",
     denominazione: str = "Acme SRL",
     data_dir: Path,
     ai_provider: str = "openai",

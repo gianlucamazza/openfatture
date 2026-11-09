@@ -74,7 +74,7 @@ def filter_sensitive_data(logger: Any, method_name: str, event_dict: EventDict) 
 
     Critical for GDPR compliance and security.
     """
-    return redact_sensitive(event_dict)
+    return cast(EventDict, redact_sensitive(event_dict))
 
 
 _sensitive_values: set[str] = set()

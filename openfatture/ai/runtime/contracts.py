@@ -56,7 +56,7 @@ class AccountedProvider:
     async def generate(self, *args: Any, **kwargs: Any) -> AgentResponse:
         accounting = current_accounting.get()
         try:
-            response = await self.provider.generate(*args, **kwargs)
+            response: AgentResponse = await self.provider.generate(*args, **kwargs)
         except BaseException:
             if accounting is not None:
                 accounting.incomplete = True

@@ -148,7 +148,7 @@ async def _run_assistant(
                     render_response(response, format_type, console, show_metrics=False)
                 if not response.success and not machine:
                     console.print(Text(ui.text("assistant-turn-failed")))
-                return response.success
+                return bool(response.success)
 
         if message is not None:
             success = await execute(message)

@@ -43,8 +43,10 @@ class ToolRegistry:
 
     def __init__(self, *, apply_ai_settings: bool = False) -> None:
         """Initialize registry, optionally honoring the configured AI allowlist."""
-        from openfatture.ai.runtime.contracts import ActivityCallback, ConfirmCallback
         from collections.abc import Awaitable, Callable
+
+        from openfatture.ai.runtime.contracts import ActivityCallback, ConfirmCallback
+
         self.confirmation_callback: ConfirmCallback | None = None
         self.activity_callback: ActivityCallback | None = None
         self.outcome_callback: Callable[[str, bool], Awaitable[None]] | None = None
@@ -523,7 +525,13 @@ class ToolRegistry:
         return [tool.to_anthropic_tool() for tool in tools]
 
     async def execute_tool(
-        self, tool_name: str, parameters: dict[str, Any], confirm: bool | None = None, *, confirmed: bool = False, source: ToolSource = "ai"
+        self,
+        tool_name: str,
+        parameters: dict[str, Any],
+        confirm: bool | None = None,
+        *,
+        confirmed: bool = False,
+        source: ToolSource = "ai",
     ) -> ToolResult:
         from copy import deepcopy
 
@@ -538,8 +546,12 @@ class ToolRegistry:
             "result": "interrupted_outcome_unknown",
         }
         try:
-            result = await self._execute_tool(tool_name, snapshot, confirmed=confirmed, source=source)
-            outcome.update(success=result.success, result=result.error_type or result.error or "completed")
+            result = await self._execute_tool(
+                tool_name, snapshot, confirmed=confirmed, source=source
+            )
+            outcome.update(
+                success=result.success, result=result.error_type or result.error or "completed"
+            )
             return result
         finally:
             accounting = current_accounting.get()
@@ -616,20 +628,27 @@ class ToolRegistry:
             return result
 
         if confirmation_required(
-            tool_name, tool_requires_confirmation=tool.requires_confirmation,
+            tool_name,
+            tool_requires_confirmation=tool.requires_confirmation,
             require_confirmation=settings.ai_tools_require_confirmation,
         ):
             from copy import deepcopy
+
             if self.confirmation_callback is not None:
                 approved = await self.confirmation_callback(tool_name, deepcopy(parameters))
                 error_type = "confirmation_denied"
             else:
-                approved = await has_human_confirmation(source=source, confirmed=confirmed,
-                    tool_name=tool_name, parameters=parameters)
+                approved = await has_human_confirmation(
+                    source=source, confirmed=confirmed, tool_name=tool_name, parameters=parameters
+                )
                 error_type = "confirmation_required"
             if not approved:
-                result = ToolResult(success=False, error=f"Tool '{tool_name}' requires an explicit human confirmation before execution.",
-                    error_type=error_type, tool_name=tool_name)
+                result = ToolResult(
+                    success=False,
+                    error=f"Tool '{tool_name}' requires an explicit human confirmation before execution.",
+                    error_type=error_type,
+                    tool_name=tool_name,
+                )
                 metrics = self._get_metrics()
                 if metrics:
                     metrics.record_execution(result)
@@ -708,7 +727,6 @@ class ToolRegistry:
             if metrics:
                 metrics.record_execution(result)
             return result
-
 
         try:
             # Execute tool

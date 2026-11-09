@@ -42,6 +42,8 @@ Key Features:
 - **Observability**: Structured logging, metrics, audit trails
 """
 
+from typing import Any
+
 from openfatture import __version__
 
 # State Management
@@ -102,7 +104,7 @@ from openfatture.ai.orchestration.states import (
 
 
 # Load optional workflows only when requested.
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     workflow_names = {
         "CashFlowAnalysisWorkflow",
         "ComplianceCheckWorkflow",
