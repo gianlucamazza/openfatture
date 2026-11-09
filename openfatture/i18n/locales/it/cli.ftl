@@ -1140,3 +1140,16 @@ status-invalid = Da correggere
 status-local-only = I controlli descrivono la configurazione locale. Autenticazione AI e invio SDI non vengono verificati da questo comando.
 
 cli-database-unavailable = Database non accessibile. Controlla DATABASE_URL e i permessi; usa --debug per i dettagli.
+
+cli-invoice-collected = Incassato
+cli-invoice-residual = Residuo
+cli-invoice-collection = Incasso
+cli-invoice-document = Documento
+cli-invoice-historical = Storica
+cli-invoice-no_payment_record = Non registrato
+cli-invoice-fully_paid = Saldato
+cli-invoice-partially_paid = Parziale
+cli-invoice-unpaid = Non pagato
+cli-invoice-historical-note = Documento emesso altrove; invio bloccato. Stato SDI non verificato.
+
+cli-invoice-total = Totale

@@ -78,19 +78,14 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
                 }
             )
 
-        # Determine overall status
-        if total_paid >= total_due:
-            overall_status = "fully_paid"
-        elif total_paid > 0:
-            overall_status = "partially_paid"
-        else:
-            overall_status = "unpaid"
+        from openfatture.billing.application.invoice_queries import payment_summary
 
+        # Determine overall status
         return {
             "invoice_id": fattura_id,
             "invoice_number": f"{fattura.numero}/{fattura.anno}",
             "total_amount": float(fattura.totale),
-            "payment_status": overall_status,
+            "payment_status": payment_summary(fattura, pagamenti)["payment_status"],
             "amount_paid": float(total_paid),
             "amount_due": float(total_due),
             "outstanding": float(outstanding),

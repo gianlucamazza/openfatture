@@ -229,14 +229,18 @@ class OpenAIProvider(BaseLLMProvider):
                         elif isinstance(tool_call, dict):
                             # Handle dict format tool calls
                             function = tool_call.get("function", {})
+                            arguments = function.get("arguments")
+                            if arguments is None:
+                                arguments = tool_call.get("arguments", {})
+                            if not isinstance(arguments, str):
+                                arguments = json.dumps(arguments, ensure_ascii=False)
                             tool_calls.append(
                                 {
                                     "id": tool_call.get("id") or tool_call.get("call_id"),
                                     "type": "function",
                                     "function": {
                                         "name": function.get("name") or tool_call.get("name"),
-                                        "arguments": function.get("arguments")
-                                        or tool_call.get("arguments", "{}"),
+                                        "arguments": arguments,
                                     },
                                 }
                             )

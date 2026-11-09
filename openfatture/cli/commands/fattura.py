@@ -1,6 +1,7 @@
 """Fattura (invoice) management CLI commands."""
 
 import typer
+from babel.numbers import format_currency
 from rich.console import Console
 from rich.table import Table
 
@@ -13,6 +14,7 @@ from openfatture.billing.application.invoice_queries import (
     get_invoice_details,
     search_invoices,
 )
+from openfatture.i18n import _, get_locale
 from openfatture.pdf.generator import PDFGenerator, PDFGeneratorConfig
 from openfatture.platform.config import get_settings
 from openfatture.storage.database.base import get_session
@@ -54,6 +56,35 @@ def list_invoices(
         console.print("[yellow]No invoices found.[/yellow]")
         return
 
+    if console.width < 120:
+        console.print(f"Invoices ({result['count']})")
+        for invoice in result["fatture"]:
+            console.print(
+                f"{invoice['numero']}/{invoice['anno']} · {invoice['cliente']}", markup=False
+            )
+            for field, key in (
+                ("importo", "total"),
+                ("amount_paid", "collected"),
+                ("outstanding", "residual"),
+            ):
+                value = (
+                    "—"
+                    if field == "amount_paid" and invoice["payment_status"] == "no_payment_record"
+                    else format_currency(invoice[field], "EUR", locale=get_locale())
+                )
+                console.print(f"  {_('cli-invoice-' + key)}: {value}", markup=False)
+            document = (
+                _("cli-invoice-historical") if invoice["issued_elsewhere"] else invoice["stato"]
+            )
+            console.print(
+                f"  {invoice['data']} · {document} · {_('cli-invoice-' + invoice['payment_status'])}",
+                markup=False,
+            )
+            console.print()
+        if result.get("has_more"):
+            console.print("… --limit")
+        return
+
     # Display as table
     table = Table(title=f"Invoices ({result['count']})")
     table.add_column("ID", style="cyan")
@@ -61,7 +92,10 @@ def list_invoices(
     table.add_column("Date")
     table.add_column("Client", style="green")
     table.add_column("Amount", justify="right")
-    table.add_column("Status")
+    for key in ("collected", "residual", "collection", "document"):
+        table.add_column(
+            _("cli-invoice-" + key), justify="right" if key in ("collected", "residual") else "left"
+        )
 
     for fattura in result["fatture"]:
         table.add_row(
@@ -69,8 +103,13 @@ def list_invoices(
             f"{fattura['numero']}/{fattura['anno']}",
             fattura["data"],
             fattura["cliente"],
-            f"€ {fattura['importo']:.2f}",
-            fattura["stato"],
+            format_currency(fattura["importo"], "EUR", locale=get_locale()),
+            "—"
+            if fattura["payment_status"] == "no_payment_record"
+            else format_currency(fattura["amount_paid"], "EUR", locale=get_locale()),
+            format_currency(fattura["outstanding"], "EUR", locale=get_locale()),
+            _("cli-invoice-" + fattura["payment_status"]),
+            _("cli-invoice-historical") if fattura["issued_elsewhere"] else fattura["stato"],
         )
 
     console.print(table)
@@ -96,6 +135,22 @@ def show_invoice(
     console.print(f"[bold]Date:[/bold] {result['data_emissione']}")
     console.print(f"[bold]Status:[/bold] {result['stato']}")
 
+    console.print(
+        _("cli-invoice-document")
+        + ": "
+        + (_("cli-invoice-historical") if result["issued_elsewhere"] else result["stato"])
+    )
+    if result["issued_elsewhere"]:
+        console.print(_("cli-invoice-historical-note"))
+    console.print(_("cli-invoice-collection") + ": " + _("cli-invoice-" + result["payment_status"]))
+    for field, label in (("amount_paid", "collected"), ("outstanding", "residual")):
+        value = (
+            "—"
+            if field == "amount_paid" and result["payment_status"] == "no_payment_record"
+            else format_currency(result[field], "EUR", locale=get_locale())
+        )
+        console.print(_("cli-invoice-" + label) + ": " + value)
+
     # Client
     cliente = result.get("cliente", {})
     console.print("\n[bold]Client:[/bold]")
@@ -109,6 +164,12 @@ def show_invoice(
     console.print(f"  Imponibile: € {importi.get('imponibile', 0):.2f}")
     console.print(f"  IVA:        € {importi.get('iva', 0):.2f}")
     console.print(f"  [bold]Total:      € {importi.get('totale', 0):.2f}[/bold]")
+
+    for payment in result.get("pagamenti", []):
+        console.print(
+            f"  #{payment['id']} · {_('cli-invoice-collected')}: {format_currency(payment['incassato'], 'EUR', locale=get_locale())} · {_('cli-invoice-residual')}: {format_currency(payment['residuo'], 'EUR', locale=get_locale())}",
+            markup=False,
+        )
 
     # Line items
     console.print(f"\n[bold]Line Items:[/bold] {result['righe_count']} total")
