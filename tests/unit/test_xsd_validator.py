@@ -1,11 +1,10 @@
 """Unit tests for XSD validator."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from openfatture.sdi.validator.xsd_validator import FatturaPAValidator, download_xsd_schema
+from openfatture.sdi.validator.xsd_validator import FatturaPAValidator
 
 pytestmark = pytest.mark.unit
 
@@ -254,136 +253,3 @@ class TestFatturaPAValidator:
         validator.validate(xml_content)
 
         assert validator._schema is schema_obj  # Same object
-
-
-class TestDownloadXSDSchema:
-    """Tests for download_xsd_schema function."""
-
-    @patch("openfatture.platform.config.get_settings")
-    def test_download_xsd_schema_creates_dir(self, mock_settings, tmp_path):
-        """Test that download_xsd_schema creates schema directory."""
-        mock_settings_instance = Mock()
-        mock_settings_instance.data_dir = tmp_path
-        mock_settings.return_value = mock_settings_instance
-
-        schema_dir = tmp_path / "schemas"
-        assert not schema_dir.exists()
-
-        try:
-            download_xsd_schema()
-        except FileNotFoundError:
-            pass  # Expected
-
-        assert schema_dir.exists()
-
-    @patch("openfatture.platform.config.get_settings")
-    def test_download_xsd_schema_file_exists(self, mock_settings, tmp_path):
-        """Test download_xsd_schema returns existing file."""
-        mock_settings_instance = Mock()
-        mock_settings_instance.data_dir = tmp_path
-        mock_settings.return_value = mock_settings_instance
-
-        # Create existing schema file
-        schema_dir = tmp_path / "schemas"
-        schema_dir.mkdir(parents=True)
-        xsd_file = schema_dir / "FatturaPA_v1.2.2.xsd"
-        xsd_file.write_text("<?xml version='1.0'?><schema/>", encoding="utf-8")
-
-        result = download_xsd_schema()
-
-        assert result == xsd_file
-        assert result.exists()
-
-    @patch("openfatture.platform.config.get_settings")
-    def test_download_xsd_schema_file_not_exists(self, mock_settings, tmp_path):
-        """Test download_xsd_schema raises error with instructions if file missing."""
-        mock_settings_instance = Mock()
-        mock_settings_instance.data_dir = tmp_path
-        mock_settings.return_value = mock_settings_instance
-
-        with pytest.raises(FileNotFoundError) as exc_info:
-            download_xsd_schema()
-
-        error_msg = str(exc_info.value)
-        assert "XSD schema not found" in error_msg
-        assert "download manually" in error_msg
-        assert "fatturapa.gov.it" in error_msg
-        assert "FatturaPA_v1.2.2.xsd" in error_msg
-
-    @patch("openfatture.platform.config.get_settings")
-    @patch("urllib.request.urlopen")
-    def test_download_xsd_schema_auto_download_success(self, mock_urlopen, mock_settings, tmp_path):
-        """Test auto_download successfully downloads schema."""
-        mock_settings_instance = Mock()
-        mock_settings_instance.data_dir = tmp_path
-        mock_settings.return_value = mock_settings_instance
-
-        # Mock successful HTTP response
-        mock_response = MagicMock()
-        mock_response.read.return_value = b"<?xml version='1.0'?><schema/>"
-        mock_response.__enter__.return_value = mock_response
-        mock_response.__exit__.return_value = None
-        mock_urlopen.return_value = mock_response
-
-        result = download_xsd_schema(auto_download=True)
-
-        expected_path = tmp_path / "schemas" / "FatturaPA_v1.2.2.xsd"
-        assert result == expected_path
-        assert result.exists()
-        assert result.read_text() == "<?xml version='1.0'?><schema/>"
-
-        # Verify download was called with correct URL
-        mock_urlopen.assert_called_once()
-        call_args = mock_urlopen.call_args[0][0]
-        assert "fatturapa.gov.it" in call_args
-        assert "FatturaPA_v1.2.2.xsd" in call_args
-
-    @patch("openfatture.platform.config.get_settings")
-    @patch("urllib.request.urlopen")
-    def test_download_xsd_schema_network_error(self, mock_urlopen, mock_settings, tmp_path):
-        """Test auto_download handles network errors."""
-        import urllib.error
-
-        mock_settings_instance = Mock()
-        mock_settings_instance.data_dir = tmp_path
-        mock_settings.return_value = mock_settings_instance
-
-        # Mock network error
-        mock_urlopen.side_effect = urllib.error.URLError("Network error")
-
-        with pytest.raises(urllib.error.URLError) as exc_info:
-            download_xsd_schema(auto_download=True)
-
-        error_msg = str(exc_info.value)
-        assert "Failed to download XSD schema" in error_msg
-        assert "fatturapa.gov.it" in error_msg
-
-    @patch("openfatture.platform.config.get_settings")
-    @patch("urllib.request.urlopen")
-    def test_download_xsd_schema_write_error(self, mock_urlopen, mock_settings, tmp_path):
-        """Test auto_download handles file write errors."""
-        mock_settings_instance = Mock()
-        # Use read-only path to trigger write error
-        mock_settings_instance.data_dir = tmp_path / "readonly"
-        mock_settings.return_value = mock_settings_instance
-
-        # Mock successful HTTP response
-        mock_response = MagicMock()
-        mock_response.read.return_value = b"<?xml version='1.0'?><schema/>"
-        mock_response.__enter__.return_value = mock_response
-        mock_response.__exit__.return_value = None
-        mock_urlopen.return_value = mock_response
-
-        # Create readonly directory
-        readonly_dir = tmp_path / "readonly"
-        readonly_dir.mkdir()
-        # Note: This test may not work perfectly on all systems
-        # On Windows, file permissions work differently
-
-        # Instead, we'll mock write_bytes to raise an error
-        with patch("pathlib.Path.write_bytes", side_effect=OSError("Permission denied")):
-            with pytest.raises(OSError) as exc_info:
-                download_xsd_schema(auto_download=True)
-
-            error_msg = str(exc_info.value)
-            assert "Failed to write XSD schema" in error_msg

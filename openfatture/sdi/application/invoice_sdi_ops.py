@@ -1,9 +1,11 @@
 """Invoice SDI tools (XML validation and PEC sending)."""
 
+from pathlib import Path
 from typing import Any
 
 from pydantic import validate_call
 
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import (
@@ -88,7 +90,44 @@ def validate_invoice_xml(fattura_id: int) -> dict[str, Any]:
 
         except Exception as e:
             logger.error("validate_invoice_xml_failed", fattura_id=fattura_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
+
+
+def _prepare_transmission(fattura: Fattura, service: Any, signed: bool) -> Path | str:
+    """Return the file to transmit, or an error message.
+
+    Unsigned: the XML is regenerated from the current invoice and validated
+    against the FatturaPA schema. Signed: the stored ``.p7m`` is sent only if
+    the XML it was made from is still valid and identical to what the current
+    invoice data produces (an edit after signing requires signing again).
+    """
+    from openfatture.exceptions import XMLValidationError
+    from openfatture.sdi.validator.xsd_validator import FatturaPAValidator
+    from openfatture.sdi.xml_builder.fatturapa import FatturaPABuilder
+
+    if not signed:
+        try:
+            _content, error = service.generate_xml(fattura, validate=True)
+        except XMLValidationError as exc:
+            return f"XML validation failed: {exc}"
+        if error:
+            return f"XML validation failed: {error}"
+        return Path(service.get_xml_path(fattura))
+
+    signed_path = Path(fattura.xml_firmato_path) if fattura.xml_firmato_path else None
+    if signed_path is None or not signed_path.exists():
+        return "No signed XML for this invoice: sign it first (sign_invoice_xml)"
+    xml_file = Path(fattura.xml_path) if fattura.xml_path else None
+    if xml_file is None or not xml_file.exists():
+        return "The XML that was signed is missing: generate and sign it again"
+    stored = xml_file.read_text(encoding="utf-8")
+    valid, error = FatturaPAValidator().validate(stored)
+    if not valid:
+        return f"XML validation failed: {error}"
+    current = FatturaPABuilder(service.settings).build(fattura)
+    if current.strip() != stored.strip():
+        return "The invoice changed after signing: generate the XML and sign it again"
+    return signed_path
 
 
 @validate_call
@@ -147,14 +186,14 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
             settings = get_settings()
             service = InvoiceService(settings)
 
-            # Step 1: Generate/validate XML if not exists
-            if not fattura.xml_path:
-                xml_content, error = service.generate_xml(fattura, validate=True)
-                if error:
-                    return {"error": f"XML validation failed: {error}"}
+            # Step 1: never transmit XML that was not validated against the
+            # current invoice data (it may predate edits or skip validation).
+            prepared = _prepare_transmission(fattura, service, signed)
+            if isinstance(prepared, str):
+                return {"error": prepared}
+            xml_path = prepared
 
             # Step 2: Send via PEC
-            xml_path = service.get_xml_path(fattura)
             sender = TemplatePECSender(settings=settings, locale=settings.locale)
 
             success, error = sender.send_invoice_to_sdi(fattura, xml_path, signed=signed)
@@ -198,7 +237,7 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
         except Exception as e:
             db.rollback()
             logger.error("send_invoice_to_sdi_failed", fattura_id=fattura_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def generate_invoice_xml(

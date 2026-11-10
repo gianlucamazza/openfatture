@@ -6,6 +6,8 @@ from decimal import Decimal
 from typing import Any
 
 from openfatture.billing.application.numbering import next_numero
+from openfatture.billing.application.totals import recompute_totals
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import (
@@ -103,9 +105,6 @@ def create_nota_credito_from_fattura(
 
             # Copy line items from source invoice
             # TD04 standard practice: use positive amounts (not negative)
-            total_imponibile = Decimal("0")
-            total_iva = Decimal("0")
-            total_totale = Decimal("0")
 
             if full_refund:
                 # Copy all lines
@@ -124,9 +123,6 @@ def create_nota_credito_from_fattura(
                         totale=source_riga.totale,
                     )
                     db.add(riga)
-                    total_imponibile += riga.imponibile
-                    total_iva += riga.iva
-                    total_totale += riga.totale
             else:
                 # Partial refund: copy only specified lines with adjusted quantities
                 if not line_items:
@@ -171,14 +167,12 @@ def create_nota_credito_from_fattura(
                         totale=totale,
                     )
                     db.add(riga)
-                    total_imponibile += imponibile
-                    total_iva += iva
-                    total_totale += totale
 
             # Update nota di credito totals
-            nota_credito.imponibile = total_imponibile
-            nota_credito.iva = total_iva
-            nota_credito.totale = total_totale
+            db.flush()
+            recompute_totals(
+                nota_credito, db.query(RigaFattura).filter_by(fattura_id=nota_credito.id).all()
+            )
 
             db.commit()
             db.refresh(nota_credito)
@@ -226,7 +220,7 @@ def create_nota_credito_from_fattura(
         except ValueError as e:
             db.rollback()
             logger.error("create_nota_credito_validation_error", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
         except Exception as e:
             db.rollback()
             logger.error("create_nota_credito_failed", error=str(e))

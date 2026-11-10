@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from openfatture.payment.application import collection_ledger as ledger
 from openfatture.payment.application.collection_migration import ensure_balances
+from openfatture.platform.errors import describe_error
 from openfatture.storage.database.models import (
     CollectionEntry,
     CollectionOperation,
@@ -62,7 +63,7 @@ def run_operation(
             return {
                 "success": False,
                 "request_id": request_id,
-                "error": str(exc),
+                "error": describe_error(exc),
                 "error_code": "collection_operation_failed",
             }
 
@@ -253,7 +254,7 @@ def create_payment(
         if not paid.is_finite() or paid < 0 or paid > due or paid != paid.quantize(Decimal(".01")):
             raise ValueError("Invalid paid amount")
     except Exception as exc:
-        return {"error": str(exc)}
+        return {"error": describe_error(exc)}
     key = request_id or str(uuid4())
 
     def action(session: Session) -> dict[str, Any]:
@@ -345,7 +346,7 @@ def update_payment(
         ):
             raise ValueError("Invalid paid amount")
     except Exception as exc:
-        return {"error": str(exc)}
+        return {"error": describe_error(exc)}
     key = request_id or str(uuid4())
 
     def action(session: Session) -> dict[str, Any]:
@@ -467,7 +468,7 @@ def delete_payment(payment_id: int) -> dict[str, Any]:
             return {"success": True, "payment_id": payment_id}
         except Exception as exc:
             session.rollback()
-            return {"error": str(exc)}
+            return {"error": describe_error(exc)}
 
 
 def record_bank_collection(transaction_id: str, request_id: str) -> dict[str, Any]:

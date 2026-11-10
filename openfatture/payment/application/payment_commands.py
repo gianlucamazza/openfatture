@@ -15,6 +15,7 @@ from openfatture.payment.application.collection_api import (
     update_payment as update_payment,
 )
 from openfatture.payment.domain.enums import MatchType
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.session import db_session
@@ -131,13 +132,13 @@ def reconcile_payment(
             }
 
         except ValueError as e:
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
         except RuntimeError as e:
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
         except Exception as e:
             db.rollback()
             logger.error("reconcile_payment_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 # Backwards-compatible names route to the single collection application service.
@@ -245,4 +246,4 @@ def import_bank_transactions(
         except Exception as e:
             db.rollback()
             logger.error("import_bank_transactions_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}

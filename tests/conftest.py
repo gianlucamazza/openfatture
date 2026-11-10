@@ -771,9 +771,22 @@ def no_stray_files_in_repository_root():
 
 @pytest.fixture(autouse=True)
 def isolated_user_config(tmp_path_factory, monkeypatch):
-    """Never read or write the developer's real config.toml or OS keychain."""
+    """Never read or write the developer's config, keychain, data or archive."""
+    import openfatture.platform.config as config_module
+
     monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path_factory.mktemp("openfatture-config")))
     monkeypatch.setenv("OPENFATTURE_SECRET_BACKEND", "file")
+    data = tmp_path_factory.mktemp("openfatture-data")
+    for name, path in {
+        "DATA_DIR": data,
+        "ARCHIVIO_DIR": data / "archivio",
+        "CERTIFICATES_DIR": data / "certificates",
+        "VECTOR_STORE_PATH": data / "vector_store",
+        "AI_CHAT_SESSIONS_DIR": data / "sessions",
+    }.items():
+        monkeypatch.setenv(name, str(path))
+    # Settings built by an earlier test must not leak its paths into this one.
+    monkeypatch.setattr(config_module, "_settings", None)
 
 
 @pytest.fixture(autouse=True)

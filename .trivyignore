@@ -1,7 +1,7 @@
 # Unfixed chromadb 1.5.9 findings (patched: none through 1.5.9).
 # OpenFatture only constructs chromadb.PersistentClient locally
 # (openfatture/ai/rag/vector_store.py). No HttpClient, no chroma server.
-# chromadb_host/chromadb_port in AISettings are unused dead fields.
+# The unused chromadb_* AI settings were removed in 2.8.1.
 # Expiry: revisit when chroma-core/chroma lists a first_patched_version.
 #
 # FastAPI POST /api/v2/tenants/{tenant}/databases/{db}/collections (pre-auth RCE) — https://github.com/advisories/GHSA-f4j7-r4q5-qw2c

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from openfatture.platform.errors import describe_error
 from openfatture.sdi.application.submissions import resolve_submission
 from openfatture.sdi.notifiche.parser import NotificaSDI
 from openfatture.sdi.notifiche.processor import NotificationProcessor
@@ -61,5 +62,5 @@ def resolve_submission_attempt(attempt_id: int, *, sent: bool, evidence: str) ->
             resolve_submission(session, attempt_id, sent=sent, note=evidence)
         except ValueError as exc:
             session.rollback()
-            return {"error": str(exc)}
+            return {"error": describe_error(exc)}
     return {"success": True, "attempt_id": attempt_id, "sent": sent}

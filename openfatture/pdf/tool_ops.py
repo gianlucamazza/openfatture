@@ -7,6 +7,7 @@ from pydantic import validate_call
 from openfatture.pdf.generator import PDFGenerator, PDFGeneratorConfig
 from openfatture.pdf.preventivo_generator import PreventivoPDFGenerator
 from openfatture.platform.config import get_settings
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import Fattura, Preventivo
@@ -113,7 +114,7 @@ def generate_invoice_pdf(
 
         except Exception as e:
             logger.error("generate_invoice_pdf_failed", fattura_id=fattura_id, error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -198,7 +199,7 @@ def generate_preventivo_pdf(
             logger.error(
                 "generate_preventivo_pdf_failed", preventivo_id=preventivo_id, error=str(e)
             )
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -266,4 +267,4 @@ def get_pdf_configuration() -> dict[str, Any]:
 
     except Exception as e:
         logger.error("get_pdf_configuration_failed", error=str(e))
-        return {"error": str(e)}
+        return {"error": describe_error(e)}

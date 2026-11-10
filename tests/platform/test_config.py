@@ -30,8 +30,10 @@ def test_settings_env_override(monkeypatch):
     assert settings.debug is True
 
 
-def test_platformdirs_usage():
+def test_platformdirs_usage(monkeypatch):
     """Test that platformdirs is actually being used."""
+    for name in ("DATA_DIR", "ARCHIVIO_DIR", "CERTIFICATES_DIR", "VECTOR_STORE_PATH"):
+        monkeypatch.delenv(name, raising=False)
     import importlib
     from unittest.mock import MagicMock
 

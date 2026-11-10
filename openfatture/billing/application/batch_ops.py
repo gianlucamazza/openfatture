@@ -10,6 +10,7 @@ from openfatture.billing.batch.operations import (
     export_invoices_csv,
     import_invoices_csv,
 )
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
@@ -97,7 +98,7 @@ def export_invoices_to_csv(
 
         except Exception as e:
             logger.error("export_invoices_to_csv_failed", error=str(e))
-            return {"success": False, "error": str(e), "exported_count": 0}
+            return {"success": False, "error": describe_error(e), "exported_count": 0}
 
 
 @validate_call
@@ -179,7 +180,7 @@ def export_clients_to_csv(
 
         except Exception as e:
             logger.error("export_clients_to_csv_failed", error=str(e))
-            return {"success": False, "error": str(e), "exported_count": 0}
+            return {"success": False, "error": describe_error(e), "exported_count": 0}
 
 
 # =============================================================================
@@ -247,7 +248,7 @@ def import_invoices_from_csv(
             logger.error("import_invoices_from_csv_failed", error=str(e))
             return {
                 "success": False,
-                "error": str(e),
+                "error": describe_error(e),
                 "imported_count": 0,
                 "failed_count": 0,
             }
@@ -320,8 +321,9 @@ def import_clients_from_csv(
                             codice_destinatario=row.get("codice_destinatario") or "0000000",
                         )
 
-                        db.add(cliente)
-                        db.flush()
+                        with db.begin_nested():
+                            db.add(cliente)
+                            db.flush()
                         imported += 1
 
                     except Exception as e:
@@ -363,7 +365,7 @@ def import_clients_from_csv(
             logger.error("import_clients_from_csv_failed", error=str(e))
             return {
                 "success": False,
-                "error": str(e),
+                "error": describe_error(e),
                 "imported_count": 0,
                 "failed_count": 0,
             }
@@ -449,4 +451,4 @@ def bulk_update_invoices_status(
 
         except Exception as e:
             logger.error("bulk_update_invoices_status_failed", error=str(e))
-            return {"success": False, "error": str(e), "updated_count": 0}
+            return {"success": False, "error": describe_error(e), "updated_count": 0}

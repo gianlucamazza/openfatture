@@ -124,26 +124,38 @@ class TestExportInvoicesCSV:
 class TestImportInvoicesCSV:
     """Tests for import_invoices_csv."""
 
-    def test_import_success(self, tmp_path, mock_cliente):
-        """Test successful CSV import."""
-        # Create CSV file
+    def test_import_success(self, tmp_path, db_session, sample_cliente):
+        """Valid rows are imported and committed."""
         csv_path = tmp_path / "import.csv"
-        with open(csv_path, "w", encoding="utf-8") as f:
-            f.write("numero,anno,data_emissione,cliente_id,imponibile,iva,totale,note\n")
-            f.write("001,2025,2025-10-09,1,100.00,22.00,122.00,Test\n")
-            f.write("002,2025,2025-10-10,1,200.00,44.00,244.00,Test2\n")
+        csv_path.write_text(
+            "numero,anno,data_emissione,cliente_id,imponibile,iva,totale,note\n"
+            f"001,2025,2025-10-09,{sample_cliente.id},100.00,22.00,122.00,Test\n"
+            f"002,2025,2025-10-10,{sample_cliente.id},200.00,44.00,244.00,Test2\n",
+            encoding="utf-8",
+        )
 
-        # Mock database session
-        db_session = Mock()
-        db_session.query.return_value.filter.return_value.first.return_value = mock_cliente
+        result = import_invoices_csv(csv_path, db_session)
 
-        result = import_invoices_csv(csv_path, db_session, default_cliente_id=1)
+        assert (result.total, result.succeeded, result.failed) == (2, 2, 0)
+        assert db_session.query(Fattura).count() == 2
 
-        assert result.total == 2
-        assert result.succeeded == 2
-        assert result.failed == 0
-        assert db_session.add.call_count == 2
-        assert db_session.commit.called
+    def test_duplicate_row_does_not_discard_valid_rows(self, tmp_path, db_session, sample_cliente):
+        """A rejected row is reported; the other rows are still committed."""
+        csv_path = tmp_path / "import.csv"
+        csv_path.write_text(
+            "numero,anno,data_emissione,cliente_id,imponibile,iva,totale\n"
+            f"1,2026,2026-01-10,{sample_cliente.id},100,22,122\n"
+            f"1,2026,2026-01-11,{sample_cliente.id},50,11,61\n"
+            f"2,2026,2026-01-12,{sample_cliente.id},10,2.2,12.2\n",
+            encoding="utf-8",
+        )
+
+        result = import_invoices_csv(csv_path, db_session)
+
+        assert (result.succeeded, result.failed) == (2, 1)
+        assert result.errors == ["Row 2: Invoice 1/2026 already exists"]
+        stored = {(f.numero, f.anno) for f in db_session.query(Fattura).all()}
+        assert stored == {("1", 2026), ("2", 2026)}
 
     def test_import_with_errors(self, tmp_path):
         """Test import with invalid data."""

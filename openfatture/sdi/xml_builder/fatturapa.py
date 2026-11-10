@@ -338,19 +338,11 @@ class FatturaPABuilder:
             if riga.natura:
                 etree.SubElement(dettaglio, self._qname("Natura")).text = riga.natura
 
-        # DatiRiepilogo (VAT summary by rate and natura)
-        from collections import defaultdict
+        # DatiRiepilogo: one block per (rate, natura), computed exactly like the
+        # stored invoice totals (billing.application.totals).
+        from openfatture.billing.application.totals import vat_summary
 
-        # Group by (aliquota_iva, natura) tuple to properly handle different natura codes
-        riepilogo_by_key: dict[tuple[Decimal, str | None], Decimal] = defaultdict(
-            lambda: Decimal("0")
-        )
-
-        for riga in fattura.righe:
-            key = (riga.aliquota_iva, riga.natura)
-            riepilogo_by_key[key] += riga.imponibile
-
-        for (aliquota, natura), imponibile in riepilogo_by_key.items():
+        for (aliquota, natura), (imponibile, iva_importo) in vat_summary(fattura.righe).items():
             riepilogo = etree.SubElement(dati_beni, self._qname("DatiRiepilogo"))
 
             etree.SubElement(riepilogo, self._qname("AliquotaIVA")).text = self._format_decimal(
@@ -368,7 +360,6 @@ class FatturaPABuilder:
                 riepilogo, self._qname("ImponibileImporto")
             ).text = self._format_decimal(imponibile)
 
-            iva_importo = imponibile * aliquota / Decimal("100")
             etree.SubElement(riepilogo, self._qname("Imposta")).text = self._format_decimal(
                 iva_importo
             )
@@ -431,7 +422,9 @@ class FatturaPABuilder:
         Returns:
             str: Formatted string
         """
-        return f"{value:.2f}"
+        from openfatture.billing.application.totals import cents
+
+        return f"{cents(value):.2f}"
 
 
 def generate_filename(fattura: Fattura, settings: Settings) -> str:

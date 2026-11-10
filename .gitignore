@@ -125,3 +125,6 @@ landing-page/dist/
 # Local scratch output and database backups
 /tmp/
 *.db.bak-*
+
+# CI dependency audit export
+requirements-audit.txt

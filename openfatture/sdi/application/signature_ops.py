@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import validate_call
 
 from openfatture.platform.config import get_settings
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.sdi.digital_signature.certificate_manager import CertificateManager
@@ -75,28 +76,16 @@ def sign_invoice_xml(
             if not cert_path.exists():
                 return {"success": False, "error": f"Certificate file not found: {cert_path}"}
 
-            # Determine XML path
+            # The XML to sign defaults to the archived XML generated for the invoice.
             if xml_path:
                 xml_file = Path(xml_path)
+            elif fattura.xml_path:
+                xml_file = Path(fattura.xml_path)
             else:
-                # Auto-detect XML file (common locations)
-                possible_paths = [
-                    Path(f"fattura_{fattura.numero}_{fattura.anno}.xml"),
-                    Path(f"IT{settings.cedente_partita_iva}_{fattura.numero:05d}.xml"),
-                    Path("output") / f"fattura_{fattura.numero}_{fattura.anno}.xml",
-                ]
-
-                xml_file = None
-                for p in possible_paths:
-                    if p.exists():
-                        xml_file = p
-                        break
-
-                if not xml_file:
-                    return {
-                        "success": False,
-                        "error": f"XML file not found. Tried: {[str(p) for p in possible_paths]}. Please provide xml_path parameter.",
-                    }
+                return {
+                    "success": False,
+                    "error": "No XML generated for this invoice: generate it first (generate-xml)",
+                }
 
             # At this point xml_file is guaranteed to be non-None
             assert xml_file is not None, "xml_file should be set by now"
@@ -116,6 +105,12 @@ def sign_invoice_xml(
 
             if not success:
                 return {"success": False, "error": error}
+
+            # Remember the signed file so a signed submission sends it.
+            if signed_path is not None:
+                fattura.xml_path = str(xml_file)
+                fattura.xml_firmato_path = str(signed_path)
+                db.commit()
 
             logger.info(
                 "invoice_xml_signed",
@@ -137,7 +132,7 @@ def sign_invoice_xml(
 
         except Exception as e:
             logger.error("sign_invoice_xml_failed", fattura_id=fattura_id, error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -208,7 +203,7 @@ def verify_signature(
 
     except Exception as e:
         logger.error("verify_signature_failed", signed_path=str(signed_path), error=str(e))
-        return {"success": False, "is_valid": False, "error": str(e)}
+        return {"success": False, "is_valid": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -314,4 +309,4 @@ def check_certificate_status(
 
     except Exception as e:
         logger.error("check_certificate_status_failed", error=str(e))
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": describe_error(e)}
