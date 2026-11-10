@@ -18,7 +18,10 @@ from typing import Any
 
 from openfatture.billing.batch.processor import BatchResult
 from openfatture.platform.config import Settings
-from openfatture.platform.email.models import (
+from openfatture.platform.rate_limiter import RateLimiter
+from openfatture.platform.retry import RetryConfig, retry_sync
+from openfatture.sdi.application.submissions import journaled_submission, single_submission_active
+from openfatture.sdi.email.models import (
     BatchSummaryContext,
     EmailAttachment,
     EmailMessage,
@@ -26,10 +29,7 @@ from openfatture.platform.email.models import (
     FatturaInvioContext,
     NotificaSDIContext,
 )
-from openfatture.platform.email.renderer import TemplateRenderer
-from openfatture.platform.rate_limiter import RateLimiter
-from openfatture.platform.retry import RetryConfig, retry_sync
-from openfatture.sdi.application.submissions import journaled_submission, single_submission_active
+from openfatture.sdi.email.renderer import TemplateRenderer
 from openfatture.sdi.notifiche.parser import NotificaSDI, TipoNotifica
 from openfatture.storage.database.models import Fattura
 

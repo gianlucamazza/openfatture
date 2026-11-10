@@ -230,7 +230,7 @@ uv run python scripts/check_i18n_coverage.py
 Old JSON-based email translations are automatically migrated:
 
 ```python
-# Old (openfatture/platform/email/i18n/it.json)
+# Old (openfatture/sdi/email/i18n/it.json)
 {
   "email": {
     "footer": {

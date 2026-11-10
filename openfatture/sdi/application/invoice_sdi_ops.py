@@ -110,7 +110,7 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
     from openfatture.billing.fatture.service import InvoiceService
     from openfatture.events import InvoiceSentEvent, get_global_event_bus
     from openfatture.platform.config import get_settings
-    from openfatture.platform.email.sender import TemplatePECSender
+    from openfatture.sdi.email.sender import TemplatePECSender
 
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)

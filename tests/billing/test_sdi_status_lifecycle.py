@@ -7,9 +7,9 @@ import pytest
 from sqlalchemy.orm import Session
 
 from openfatture.billing.application.invoice_status import InvoiceStateConflict, change_status
+from openfatture.sdi.email.sender import TemplatePECSender
 from openfatture.sdi.notifiche.parser import NotificaSDI
 from openfatture.sdi.notifiche.processor import NotificationProcessor
-from openfatture.sdi.pec_sender.sender import PECSender
 from openfatture.storage.database.models import (
     Fattura,
     LogSDI,
@@ -125,10 +125,10 @@ def test_uncertain_transport_blocks_second_attempt(
 ):
     path = tmp_path / "invoice.xml"
     path.write_text("<xml/>")
-    sender = PECSender(test_settings)
+    sender = TemplatePECSender(test_settings)
     with patch.object(sender, "_send_with_retry", return_value=(False, "timeout")) as transport:
-        assert not sender.send_invoice(sample_fattura, path)[0]
-        assert not sender.send_invoice(sample_fattura, path)[0]
+        assert not sender.send_invoice_to_sdi(sample_fattura, path)[0]
+        assert not sender.send_invoice_to_sdi(sample_fattura, path)[0]
         assert transport.call_count == 1
     assert db_session.query(SDISubmissionAttempt).one().outcome == "uncertain"
     assert sample_fattura.stato == S.BOZZA
@@ -147,7 +147,7 @@ def test_commit_failure_after_transport_keeps_durable_claim(
 ):
     path = tmp_path / "commit.xml"
     path.write_text("<xml/>")
-    sender = PECSender(test_settings)
+    sender = TemplatePECSender(test_settings)
     original_commit = db_session.commit
     calls = 0
 
@@ -162,23 +162,23 @@ def test_commit_failure_after_transport_keeps_durable_claim(
         patch.object(db_session, "commit", side_effect=commit),
         patch.object(sender, "_send_with_retry", return_value=(True, None)) as transport,
     ):
-        assert not sender.send_invoice(sample_fattura, path)[0]
+        assert not sender.send_invoice_to_sdi(sample_fattura, path)[0]
         assert transport.call_count == 1
     assert db_session.query(SDISubmissionAttempt).one().outcome == "pending"
     with patch.object(sender, "_send_with_retry") as transport:
-        assert not sender.send_invoice(sample_fattura, path)[0]
+        assert not sender.send_invoice_to_sdi(sample_fattura, path)[0]
         transport.assert_not_called()
 
 
 def test_claim_failure_prevents_network(db_session, sample_fattura, test_settings, tmp_path):
     path = tmp_path / "claim.xml"
     path.write_text("<xml/>")
-    sender = PECSender(test_settings)
+    sender = TemplatePECSender(test_settings)
     with (
         patch.object(db_session, "commit", side_effect=RuntimeError("disk full")),
         patch.object(sender, "_send_with_retry") as transport,
     ):
-        assert not sender.send_invoice(sample_fattura, path)[0]
+        assert not sender.send_invoice_to_sdi(sample_fattura, path)[0]
         transport.assert_not_called()
 
 
@@ -189,15 +189,15 @@ def test_explicit_resolution_can_release_uncertain_claim(
 
     path = tmp_path / "resolve.xml"
     path.write_text("<xml/>")
-    sender = PECSender(test_settings)
+    sender = TemplatePECSender(test_settings)
     with patch.object(sender, "_send_with_retry", return_value=(False, "timeout")):
-        sender.send_invoice(sample_fattura, path)
+        sender.send_invoice_to_sdi(sample_fattura, path)
     attempt = db_session.query(SDISubmissionAttempt).one()
     resolve_submission(
         db_session, attempt.id, sent=False, note="Provider confirmed no message accepted"
     )
     with patch.object(sender, "_send_with_retry", return_value=(True, None)) as transport:
-        assert sender.send_invoice(sample_fattura, path)[0]
+        assert sender.send_invoice_to_sdi(sample_fattura, path)[0]
         transport.assert_called_once()
     assert sample_fattura.stato == S.INVIATA
 
@@ -267,9 +267,9 @@ def test_concurrent_submission_claims_allow_one_transport(tmp_path):
 
 
 def test_historical_sender_refuses_before_network(db_session, historical, test_settings, tmp_path):
-    sender = PECSender(test_settings)
+    sender = TemplatePECSender(test_settings)
     with patch.object(sender, "_send_with_retry") as transport:
-        assert not sender.send_invoice(historical, tmp_path / "absent.xml")[0]
+        assert not sender.send_invoice_to_sdi(historical, tmp_path / "absent.xml")[0]
         transport.assert_not_called()
     assert db_session.query(SDISubmissionAttempt).count() == 0
 

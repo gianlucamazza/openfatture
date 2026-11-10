@@ -15,7 +15,7 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from pydantic import BaseModel
 
 from openfatture.platform.config import Settings
-from openfatture.platform.email.styles import EmailBranding, EmailStyles
+from openfatture.sdi.email.styles import EmailBranding, EmailStyles
 
 
 def _read_translation_file(path: Path) -> dict[str, Any]:

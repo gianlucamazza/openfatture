@@ -5,7 +5,7 @@ Provides professional HTML + text email templates with i18n support
 for SDI notifications, batch operations, and PEC communications.
 """
 
-from openfatture.platform.email.models import (
+from openfatture.sdi.email.models import (
     BatchSummaryContext,
     EmailAttachment,
     EmailMessage,
@@ -13,8 +13,8 @@ from openfatture.platform.email.models import (
     FatturaInvioContext,
     NotificaSDIContext,
 )
-from openfatture.platform.email.renderer import TemplateRenderer
-from openfatture.platform.email.sender import TemplatePECSender
+from openfatture.sdi.email.renderer import TemplateRenderer
+from openfatture.sdi.email.sender import TemplatePECSender
 
 __all__ = [
     "EmailAttachment",
