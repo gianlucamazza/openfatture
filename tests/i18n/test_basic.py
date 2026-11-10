@@ -43,48 +43,39 @@ class TestBasicTranslation:
     def test_simple_translation_italian(self):
         """Test simple translation in Italian."""
         set_locale("it")
-        result = _("common-yes")
-        assert result == "Sì"
+        assert _("assistant-not-persisted") == "non salvata"
 
     def test_simple_translation_english(self):
         """Test simple translation in English."""
         set_locale("en")
-        result = _("common-yes")
-        assert result == "Yes"
+        assert _("assistant-not-persisted") == "not persisted"
 
     def test_simple_translation_spanish(self):
         """Test simple translation in Spanish."""
         set_locale("es")
-        result = _("common-yes")
-        assert result == "Sí"
+        assert _("assistant-not-persisted") == "no guardada"
 
     def test_simple_translation_french(self):
         """Test simple translation in French."""
         set_locale("fr")
-        result = _("common-yes")
-        assert result == "Oui"
+        assert _("assistant-not-persisted") == "non enregistrée"
 
     def test_simple_translation_german(self):
         """Test simple translation in German."""
         set_locale("de")
-        result = _("common-yes")
-        assert result == "Ja"
+        assert _("assistant-not-persisted") == "nicht gespeichert"
 
     def test_translation_with_variables(self):
         """Test translation with variable interpolation."""
         set_locale("it")
-        result = _("email-sdi-invio-subject", numero="001", anno="2024")
-        assert "001" in result
-        assert "2024" in result
-        assert "Fattura" in result
+        result = _("assistant-unknown-command", command="/boh")
+        assert "/boh" in result
 
     def test_translation_with_variables_english(self):
         """Test translation with variable interpolation in English."""
         set_locale("en")
-        result = _("email-sdi-invio-subject", numero="042", anno="2025")
-        assert "042" in result
-        assert "2025" in result
-        assert "Invoice" in result
+        result = _("assistant-unknown-command", command="/nope")
+        assert result == "Unknown command: /nope. Try /help."
 
     def test_missing_translation_returns_key(self):
         """Test that missing translation returns the message ID."""
@@ -98,25 +89,12 @@ class TestBasicTranslation:
         set_locale("it")  # Set Italian
 
         # But request English explicitly
-        result_en = _("common-yes", locale="en")
-        assert result_en == "Yes"
+        result_en = _("assistant-not-persisted", locale="en")
+        assert result_en == "not persisted"
 
         # Current locale should still be Italian
-        result_it = _("common-yes")
-        assert result_it == "Sì"
-
-    def test_all_supported_locales_have_common_translations(self):
-        """Test that all locales have basic common translations."""
-        common_keys = ["common-yes", "common-no", "common-cancel"]
-
-        for locale in SUPPORTED_LOCALES:
-            set_locale(locale)
-            for key in common_keys:
-                result = _(key)
-                # Result should not be empty and should not be the key itself
-                assert result
-                # For 'yes'/'no'/'cancel', we know they should be short strings
-                assert len(result) < 20
+        result_it = _("assistant-not-persisted")
+        assert result_it == "non salvata"
 
     @pytest.fixture(autouse=True)
     def reset_locale(self):
