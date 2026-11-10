@@ -149,50 +149,6 @@ def _run_in_thread[T](coro: Coroutine[Any, Any, T]) -> T:
         return future.result()
 
 
-def run_with_lifespan[T](
-    coro: Coroutine[Any, Any, T],
-    *,
-    debug: bool = False,
-) -> T | None:
-    """Execute async coroutine with CLI lifespan management.
-
-    This is specifically for CLI commands that need proper startup/shutdown
-    of application resources (database connections, HTTP clients, etc.).
-
-    The lifespan context ensures:
-    - Database connections are initialized
-    - HTTP clients are properly configured
-    - Resources are cleaned up on exit
-    - Graceful shutdown on Ctrl+C
-
-    Args:
-        coro: Async coroutine to execute
-        debug: Enable debug mode (default: False)
-
-    Returns:
-        The return value of the coroutine
-
-    Examples:
-        # CLI command with database access
-        @app.command()
-        def my_command():
-            result = run_with_lifespan(async_my_command())
-            print(result)
-
-        async def async_my_command():
-            # Database and other resources are available here
-            async with get_db_session() as db:
-                return db.query(Model).all()
-
-    Note:
-        Only use this for CLI commands. Web applications handle lifespan
-        differently through ASGI lifecycle events.
-    """
-    from openfatture.cli.lifespan import run_sync_with_lifespan
-
-    return run_sync_with_lifespan(coro)
-
-
 class _CoroutineExecutor(Protocol):
     """Callable that runs a coroutine on the context's event loop."""
 

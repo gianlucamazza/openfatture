@@ -12,7 +12,7 @@ import pytest
 from openfatture.payment.application.services import MatchingService
 from openfatture.payment.domain.enums import MatchType, TransactionStatus
 from openfatture.payment.domain.models import BankTransaction
-from openfatture.payment.domain.value_objects import MatchResult, PaymentInsight
+from openfatture.payment.domain.value_objects import MatchResult
 from openfatture.payment.matchers import ExactAmountMatcher, IMatcherStrategy
 
 pytestmark = pytest.mark.asyncio
@@ -440,56 +440,6 @@ class TestMatchingService:
 
         # Verify no ExactAmountMatcher instances remain
         assert not any(isinstance(s, ExactAmountMatcher) for s in matching_service.strategies)
-
-    async def test_match_transaction_ai_insight_boosts_confidence(
-        self,
-        mock_tx_repo,
-        mock_payment_repo,
-        bank_transaction,
-        sample_fattura,
-    ):
-        """AI insight integration should boost match confidence and enrich reason."""
-        from openfatture.storage.database.models import Pagamento, StatoPagamento
-
-        payment = Pagamento(
-            fattura_id=sample_fattura.id,
-            importo=Decimal("1000.00"),
-            data_scadenza=bank_transaction.date,
-            stato=StatoPagamento.DA_PAGARE,
-        )
-        payment.id = 101
-        payment.fattura = sample_fattura
-
-        mock_payment_repo.get_unpaid.return_value = [payment]
-
-        class StubInsightService:
-            async def analyze(self, transaction, payments):
-                return PaymentInsight(
-                    probable_invoice_numbers=[getattr(sample_fattura, "numero", "INV-001")],
-                    is_partial_payment=True,
-                    suggested_allocation_amount=Decimal("400.00"),
-                    keywords=["acconto"],
-                    confidence=0.9,
-                    summary="La causale menziona un acconto per la fattura",
-                )
-
-        bank_transaction.raw_data = None
-
-        matching_service = MatchingService(
-            tx_repo=mock_tx_repo,
-            payment_repo=mock_payment_repo,
-            strategies=[MockMatcherStrategy(confidence=0.80)],
-            insight_service=StubInsightService(),
-        )
-
-        matches = await matching_service.match_transaction(bank_transaction)
-
-        assert matches
-        assert matches[0].confidence > 0.80
-        assert "AI partial payment" in matches[0].match_reason
-        assert bank_transaction.raw_data["ai_insight"]["probable_invoice_numbers"] == [
-            getattr(sample_fattura, "numero", "INV-001")
-        ]
 
     async def test_get_candidate_payments_date_window(
         self, matching_service, bank_transaction, mock_payment_repo

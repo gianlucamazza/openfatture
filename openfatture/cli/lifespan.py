@@ -28,12 +28,8 @@ if TYPE_CHECKING:
 from openfatture.events import GlobalEventBus, initialize_event_system
 from openfatture.hooks import HookEventBridge, initialize_hook_system
 from openfatture.platform.async_bridge import run_async
+from openfatture.platform.http_context import shared_http_client
 from openfatture.platform.logging import get_logger
-
-# Context variable to hold the shared HTTP client
-_http_client_context: ContextVar[httpx.AsyncClient | None] = ContextVar(
-    "_http_client_context", default=None
-)
 
 # Context variable to hold the global event bus
 _event_bus_context: ContextVar[GlobalEventBus | None] = ContextVar(
@@ -68,7 +64,7 @@ class LifespanManager:
             timeout=httpx.Timeout(30.0, connect=10.0),
             limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
         )
-        _http_client_context.set(self.http_client)
+        shared_http_client.set(self.http_client)
 
         # Initialize global event system
         logger.debug("Initializing global event system")

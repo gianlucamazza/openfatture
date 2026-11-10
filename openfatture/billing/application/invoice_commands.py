@@ -44,8 +44,7 @@ def create_invoice(
     """
     from datetime import datetime
 
-    from openfatture.cli.lifespan import get_event_bus
-    from openfatture.events import InvoiceCreatedEvent
+    from openfatture.events import InvoiceCreatedEvent, get_global_event_bus
 
     # Validate inputs
     cliente_id = validate_integer_input(cliente_id, min_value=1)
@@ -99,7 +98,7 @@ def create_invoice(
         db.refresh(fattura)
 
         # Publish event
-        event_bus = get_event_bus()
+        event_bus = get_global_event_bus()
         if event_bus:
             event_bus.publish(
                 InvoiceCreatedEvent(

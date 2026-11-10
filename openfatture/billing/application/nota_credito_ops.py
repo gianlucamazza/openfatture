@@ -59,8 +59,7 @@ def create_nota_credito_from_fattura(
     """
     from datetime import datetime
 
-    from openfatture.cli.lifespan import get_event_bus
-    from openfatture.events import InvoiceCreatedEvent
+    from openfatture.events import InvoiceCreatedEvent, get_global_event_bus
 
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
@@ -183,7 +182,7 @@ def create_nota_credito_from_fattura(
         db.refresh(nota_credito)
 
         # Publish event
-        event_bus = get_event_bus()
+        event_bus = get_global_event_bus()
         if event_bus:
             event_bus.publish(
                 InvoiceCreatedEvent(

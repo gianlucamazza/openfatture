@@ -108,8 +108,7 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
         Dictionary with send result
     """
     from openfatture.billing.fatture.service import InvoiceService
-    from openfatture.cli.lifespan import get_event_bus
-    from openfatture.events import InvoiceSentEvent
+    from openfatture.events import InvoiceSentEvent, get_global_event_bus
     from openfatture.platform.config import get_settings
     from openfatture.platform.email.sender import TemplatePECSender
 
@@ -166,7 +165,7 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
             return {"error": f"Failed to send invoice: {error}"}
 
         # Publish event
-        event_bus = get_event_bus()
+        event_bus = get_global_event_bus()
         if event_bus:
             try:
                 event_bus.publish(

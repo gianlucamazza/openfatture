@@ -1,7 +1,7 @@
 """Context models for AI agent execution."""
 
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -161,37 +161,6 @@ class CashFlowContext(AgentContext):
     cliente_nuovo: bool = False
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-class PaymentInsightContext(AgentContext):
-    """
-    Specialized context for analyzing bank transactions with AI support.
-
-    Provides transaction metadata and candidate payments that the agent can use
-    to infer possible matches and partial payment scenarios.
-    """
-
-    transaction_description: str | None = None
-    transaction_reference: str | None = None
-    transaction_amount: float
-    transaction_date: date
-    counterparty: str | None = None
-    counterparty_iban: str | None = None
-    candidate_payments: list[dict[str, Any]] = Field(default_factory=list)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Extend base serialization with payment insight specific fields."""
-        base = super().to_dict()
-        base.update(
-            {
-                "transaction_amount": self.transaction_amount,
-                "transaction_date": self.transaction_date.isoformat(),
-                "candidate_count": len(self.candidate_payments),
-            }
-        )
-        return base
 
 
 class ComplianceContext(AgentContext):
