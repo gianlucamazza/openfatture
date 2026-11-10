@@ -278,3 +278,21 @@ class TestLoggingIntegration:
             time.sleep(0.01)
 
         # Should complete without errors
+
+
+def test_log_handler_follows_redirected_stderr(monkeypatch, capsys):
+    """A handler configured under one stderr keeps working after it is replaced."""
+    import io
+    import logging as std_logging
+
+    from openfatture.platform.logging import configure_logging
+
+    first = io.StringIO()
+    monkeypatch.setattr("sys.stderr", first)
+    configure_logging(log_level="INFO")
+    first.close()
+
+    second = io.StringIO()
+    monkeypatch.setattr("sys.stderr", second)
+    std_logging.getLogger("openfatture.test").warning("still-logged")
+    assert "still-logged" in second.getvalue()

@@ -61,6 +61,25 @@ def list_invoices(
         _print_invoice_table(result)
 
 
+_PAYMENT_STATUS = {
+    "no_payment_record": "cli-invoice-no-payment-record",
+    "unpaid": "cli-invoice-unpaid",
+    "partially_paid": "cli-invoice-partially-paid",
+    "fully_paid": "cli-invoice-fully-paid",
+}
+_COLUMNS = {
+    "collected": "cli-invoice-collected",
+    "residual": "cli-invoice-residual",
+    "collection": "cli-invoice-collection",
+    "document": "cli-invoice-document",
+    "total": "cli-invoice-total",
+}
+
+
+def _payment_status(status: str) -> str:
+    return _(_PAYMENT_STATUS[status])
+
+
 def _paid_amount(invoice: dict[str, Any], field: str) -> str:
     """Format an amount; collected cash is unknown without any payment record."""
     if field == "amount_paid" and invoice["payment_status"] == "no_payment_record":
@@ -90,14 +109,14 @@ def _print_invoice_card(invoice: dict[str, Any]) -> None:
         ("outstanding", "residual"),
     ):
         value = _paid_amount(invoice, field)
-        console.print(f"  {_('cli-invoice-' + key)}: {value}", markup=False)
+        console.print(f"  {_(_COLUMNS[key])}: {value}", markup=False)
     document = _("cli-invoice-historical") if invoice["issued_elsewhere"] else invoice["stato"]
     if invoice.get("submission_state") in {"pending", "uncertain"}:
         document += " · " + _("cli-fattura-pec-to-verify")
     if invoice.get("status_origin") == "sdi_receipt":
         document += f" · SDI: {invoice['stato']}"
     console.print(
-        f"  {invoice['data']} · {document} · {_('cli-invoice-' + invoice['payment_status'])}",
+        f"  {invoice['data']} · {document} · {_payment_status(invoice['payment_status'])}",
         markup=False,
     )
     if invoice.get("collection_statement"):
@@ -122,7 +141,7 @@ def _print_invoice_table(result: dict[str, Any]) -> None:
     table.add_column(_("cli-common-amount"), justify="right")
     for key in ("collected", "residual", "collection", "document"):
         table.add_column(
-            _("cli-invoice-" + key), justify="right" if key in ("collected", "residual") else "left"
+            _(_COLUMNS[key]), justify="right" if key in ("collected", "residual") else "left"
         )
 
     for fattura in result["fatture"]:
@@ -134,7 +153,7 @@ def _print_invoice_table(result: dict[str, Any]) -> None:
             format_eur(fattura["importo"]),
             _paid_amount(fattura, "amount_paid"),
             format_eur(fattura["outstanding"]),
-            _("cli-invoice-" + fattura["payment_status"]),
+            _payment_status(fattura["payment_status"]),
             _table_document(fattura),
         )
 
@@ -183,14 +202,14 @@ def show_invoice(
         console.print(
             f"SDI #{receipt['id']} · {receipt['source']} · {receipt['outcome']}", markup=False
         )
-    console.print(_("cli-invoice-collection") + ": " + _("cli-invoice-" + result["payment_status"]))
+    console.print(_("cli-invoice-collection") + ": " + _payment_status(result["payment_status"]))
     for field, label in (("amount_paid", "collected"), ("outstanding", "residual")):
         value = (
             "—"
             if field == "amount_paid" and result["payment_status"] == "no_payment_record"
             else format_eur(result[field])
         )
-        console.print(_("cli-invoice-" + label) + ": " + value)
+        console.print(_(_COLUMNS[label]) + ": " + value)
 
     if result.get("collection_statement"):
         statement = result["collection_statement"]

@@ -71,7 +71,7 @@ def test_narrow_listing(monkeypatch: pytest.MonkeyPatch):
     assert f"  {_('cli-invoice-collected')}: 200,00\xa0€" in lines
     historical = _("cli-invoice-historical")
     pec = _("cli-fattura-pec-to-verify")
-    no_record = _("cli-invoice-no_payment_record")
+    no_record = _("cli-invoice-no-payment-record")
     assert f"  2026-01-15 · {historical} · {pec} · SDI: consegnata · {no_record}" in lines
     assert f"  2026-01-15 · inviata · {_('cli-invoice-unpaid')}" in lines
     assert f"  2026-01-15 · {historical} · {pec} · {_('cli-invoice-unpaid')}" in lines

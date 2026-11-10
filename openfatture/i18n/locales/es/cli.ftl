@@ -73,6 +73,9 @@ cli-invoice-collection = Collection
 cli-invoice-document = Document
 cli-invoice-historical = Historical
 cli-invoice-unpaid = Unpaid
+cli-invoice-no-payment-record = Ningún cobro registrado
+cli-invoice-partially-paid = Cobrada parcialmente
+cli-invoice-fully-paid = Cobrada
 cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
 cli-invoice-total = Total
 

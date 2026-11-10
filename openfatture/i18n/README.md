@@ -30,7 +30,7 @@ _("cli-config-set-success", key=key, value=value)
   `cli-invoice-*`, `status-*`).
 - Every id referenced by the code must exist in every locale, and no locale
   may define unused ids: `tests/i18n/test_cli_translations.py` enforces both.
-- Ids built at runtime must use a constant prefix (for example
-  `"cli-invoice-" + status`) that the test knows about.
+- Ids are always string literals (map runtime values to ids with a dict,
+  as `cli/commands/fattura.py` does for payment statuses) so the test sees them.
 - Keep Italian fiscal terms (IVA, SDI, PEC, partita IVA) untranslated where
   they are the legal names.
