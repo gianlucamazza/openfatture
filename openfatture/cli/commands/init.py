@@ -1,7 +1,5 @@
 """Initialize OpenFatture."""
 
-from pathlib import Path
-
 import questionary
 import typer
 from rich.console import Console
@@ -69,11 +67,11 @@ def init(
     if interactive:
         console.print("[bold yellow]Let's configure your company data[/bold yellow]\n")
 
-        from openfatture.platform.config import dirs
+        from openfatture.platform.secrets import config_file_path
 
-        env_file = Path(dirs.user_config_dir) / "config.toml"
+        config_path = config_file_path()
 
-        if env_file.exists():
+        if config_path.exists():
             if not Confirm.ask(
                 "[yellow]An OpenFatture profile already exists. Overwrite company/AI settings?[/yellow]",
                 default=False,
@@ -143,7 +141,15 @@ def init(
             default=False,
         )
 
-        ai_lines = []
+        from openfatture.ai.config.settings import AISettings
+
+        default_models = {
+            "anthropic": str(AISettings.model_fields["anthropic_model"].default),
+            "openai": str(AISettings.model_fields["openai_model"].default),
+            "ollama": str(AISettings.model_fields["ollama_model"].default),
+        }
+        ai_values: dict[str, object] = {}
+        ai_key = ""
         if configure_ai:
             ai_provider = questionary.select(
                 "AI Provider",
@@ -151,146 +157,71 @@ def init(
                 default="anthropic",
             ).ask()
 
-            if ai_provider != "Skip for now":
-                # Add to env_lines based on provider
+            if ai_provider in default_models:
+                ai_model = default_models[ai_provider]
                 if ai_provider == "anthropic":
-                    ai_model = "claude-3-5-sonnet-20241022"
                     console.print("\n[cyan]Anthropic Claude selected - get API key from:[/cyan]")
                     console.print("  https://console.anthropic.com/settings/keys")
-                    ai_key = Prompt.ask(
-                        "API Key (or leave empty to set later)", default="", password=True
-                    )
-
                 elif ai_provider == "openai":
-                    ai_model = "gpt-4o"
                     console.print("\n[cyan]OpenAI selected - get API key from:[/cyan]")
                     console.print("  https://platform.openai.com/api-keys")
+                if ai_provider == "ollama":
+                    console.print("\n[cyan]Ollama selected - FREE local model![/cyan]")
+                    console.print(f"  Install: [bold]ollama pull {ai_model}[/bold]")
+                    console.print("  Start: [bold]ollama serve[/bold]")
+                else:
                     ai_key = Prompt.ask(
                         "API Key (or leave empty to set later)", default="", password=True
                     )
-
-                else:  # ollama
-                    ai_model = "llama3.2"
-                    ai_key = ""
-                    console.print("\n[cyan]Ollama selected - FREE local model![/cyan]")
-                    console.print("  Install: [bold]ollama pull llama3.2[/bold]")
-                    console.print("  Start: [bold]ollama serve[/bold]")
-
-                # Add AI config
-                ai_lines = [
-                    "",
-                    "# AI Configuration",
-                    f"AI_PROVIDER={ai_provider}",
-                    f"AI_MODEL={ai_model}",
-                ]
-
-                if ai_key:
-                    ai_lines.append(f"AI_API_KEY={ai_key}")
-                else:
-                    ai_lines.append("# AI_API_KEY=your-key-here  # Add your key later")
-
+                ai_values = {
+                    "ai_provider": ai_provider,
+                    "ai_model": ai_model,
+                    "ai_chat_enabled": True,
+                    "ai_chat_auto_save": True,
+                    "ai_tools_enabled": True,
+                    "ai_tools_require_confirmation": True,
+                    "ai_enabled_tools": (
+                        "search_invoices,get_invoice_details,get_invoice_stats,"
+                        "search_clients,get_client_details,get_client_stats"
+                    ),
+                }
                 if ai_provider == "ollama":
-                    ai_lines.append("AI_BASE_URL=http://localhost:11434")
+                    ai_values["ai_base_url"] = "http://localhost:11434"
 
-                # Add chat defaults
-                ai_lines.extend(
-                    [
-                        "",
-                        "# AI Chat Assistant",
-                        "AI_CHAT_ENABLED=true",
-                        "AI_CHAT_AUTO_SAVE=true",
-                        "AI_CHAT_MAX_MESSAGES=100",
-                        "AI_CHAT_MAX_TOKENS=8000",
-                        "",
-                        "# AI Tools",
-                        "AI_TOOLS_ENABLED=true",
-                        "AI_ENABLED_TOOLS=search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats",
-                        "AI_TOOLS_REQUIRE_CONFIRMATION=true",
-                    ]
-                )
-            else:
-                # User chose "Skip for now"
-                ai_lines = [
-                    "",
-                    "# AI Configuration (optional - uncomment and configure to enable)",
-                    "# AI_PROVIDER=anthropic",
-                    "# AI_MODEL=claude-3-5-sonnet-20241022",
-                    "# AI_API_KEY=sk-ant-your-key-here",
-                    "# See docs for full configuration: docs/CONFIGURATION.md",
-                ]
-        else:
-            # User chose not to configure AI now
-            ai_lines = [
-                "",
-                "# AI Configuration (optional - uncomment and configure to enable)",
-                "# AI_PROVIDER=anthropic",
-                "# AI_MODEL=claude-3-5-sonnet-20241022",
-                "# AI_API_KEY=sk-ant-your-key-here",
-                "# See docs for full configuration: docs/CONFIGURATION.md",
-            ]
+        from openfatture.cli.config_file import store_secret, update_config
 
-        # Write .env file
-        env_lines = [
-            "# OpenFatture Configuration",
-            "# Generated by setup wizard",
-            "",
-            "# Database",
-            f'DATABASE_URL="{settings.database_url}"',
-            "",
-            "# Company Data",
-            f'CEDENTE_DENOMINAZIONE="{denominazione}"',
-            f"CEDENTE_PARTITA_IVA={partita_iva}",
-            f"CEDENTE_CODICE_FISCALE={codice_fiscale}",
-            f"CEDENTE_REGIME_FISCALE={regime_fiscale}",
-            f'CEDENTE_INDIRIZZO="{indirizzo}"',
-            f"CEDENTE_CAP={cap}",
-            f'CEDENTE_COMUNE="{comune}"',
-            f"CEDENTE_PROVINCIA={provincia}",
-            "CEDENTE_NAZIONE=IT",
-            "",
-            "# PEC Configuration",
-            f"PEC_SMTP_SERVER={pec_smtp}",
-            "PEC_SMTP_PORT=465",
-            f"PEC_ADDRESS={pec_address}",
-            f'PEC_PASSWORD="{pec_password}"',
-            "SDI_PEC_ADDRESS=sdi01@pec.fatturapa.it",
-            "",
-            "# Email Templates & Notifications",
-            f"NOTIFICATION_EMAIL={notification_email}",
-            "NOTIFICATION_ENABLED=true",
-            f"LOCALE={locale}",
-            "# Optional branding (uncomment to customize):",
-            "# EMAIL_LOGO_URL=https://yourcompany.com/logo.png",
-            "# EMAIL_PRIMARY_COLOR=#1976D2",
-            "# EMAIL_FOOTER_TEXT=© 2025 Your Company",
-        ]
-
-        # Add AI lines
-        env_lines.extend(ai_lines)
-
-        from io import StringIO
-
-        import tomlkit
-        from dotenv import dotenv_values
-
-        document = tomlkit.parse(env_file.read_text()) if env_file.exists() else tomlkit.document()
-        for key, value in dotenv_values(stream=StringIO("\n".join(env_lines))).items():
-            if value is not None:
-                field = key.lower()
-                if "password" in field and not value and document.get(field):
-                    continue
-                current = getattr(settings, field, None)
-                if isinstance(current, bool):
-                    document[field] = value.lower() == "true"
-                elif isinstance(current, int):
-                    document[field] = int(value)
-                else:
-                    document[field] = value
-        env_file.parent.mkdir(parents=True, exist_ok=True)
-        env_file.touch(mode=0o600, exist_ok=True)
-        env_file.chmod(0o600)
-        env_file.write_text(tomlkit.dumps(document))
-        console.print(f"\n Configuration saved to: {env_file.absolute()}\n")
+        values: dict[str, object] = {
+            "database_url": str(settings.database_url),
+            "cedente_denominazione": denominazione,
+            "cedente_partita_iva": partita_iva,
+            "cedente_codice_fiscale": codice_fiscale,
+            "cedente_regime_fiscale": regime_fiscale,
+            "cedente_indirizzo": indirizzo,
+            "cedente_cap": cap,
+            "cedente_comune": comune,
+            "cedente_provincia": provincia,
+            "cedente_nazione": "IT",
+            "pec_smtp_server": pec_smtp,
+            "pec_smtp_port": 465,
+            "pec_address": pec_address,
+            "sdi_pec_address": "sdi01@pec.fatturapa.it",
+            "notification_email": notification_email,
+            "notification_enabled": True,
+            "locale": locale,
+            **ai_values,
+        }
+        update_config(values)
+        # Secrets never go to config.toml; an empty answer keeps the stored one.
+        stored_in = {
+            store_secret(name, secret)
+            for name, secret in (("pec_password", pec_password), ("ai_api_key", ai_key))
+            if secret
+        }
+        console.print(f"\n Configuration saved to: {config_path}")
+        if stored_in:
+            where = "system keychain" if stored_in == {"keyring"} else "private credentials file"
+            console.print(f" Secrets saved to the {where}")
+        console.print()
 
     _print_setup_complete()
 

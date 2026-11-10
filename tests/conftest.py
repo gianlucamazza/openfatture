@@ -750,6 +750,13 @@ def mock_pec_server(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def isolated_user_config(tmp_path_factory, monkeypatch):
+    """Never read or write the developer's real config.toml or OS keychain."""
+    monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path_factory.mktemp("openfatture-config")))
+    monkeypatch.setenv("OPENFATTURE_SECRET_BACKEND", "file")
+
+
+@pytest.fixture(autouse=True)
 def reset_env():
     """Reset environment variables after each test."""
     original_env = os.environ.copy()

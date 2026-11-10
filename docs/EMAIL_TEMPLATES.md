@@ -32,7 +32,8 @@ openfatture/platform/email/
 
 ### 1. Configure Email Settings
 
-Add to your `.env` file:
+Set them with `openfatture config set <key> <value>` (shown here as environment
+variables, which also work as overrides):
 
 ```env
 # Email Branding

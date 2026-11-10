@@ -78,7 +78,7 @@ def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
     if not ai_extra:
         next_steps.append("For the assistant: uv sync --extra ai")
     elif not ai_credentials_ok:
-        next_steps.append("Set AI_API_KEY (or use AI_PROVIDER=ollama)")
+        next_steps.append("openfatture config set ai_api_key '<key>' (or ai_provider ollama)")
     if core_ready and assistant_ready:
         next_steps.append('Try: openfatture assistant "Elenca le fatture aperte"')
     elif core_ready and not ai_extra:
@@ -107,6 +107,26 @@ def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
     }
 
 
+def _configuration() -> dict[str, Any]:
+    """Where configuration lives and whether it needs attention (read-only)."""
+    from pathlib import Path
+
+    from openfatture.platform.config import plaintext_secrets
+    from openfatture.platform.secrets import backend_name as secret_backend
+    from openfatture.platform.secrets import config_file_path, credentials_file_path
+
+    config_file = config_file_path()
+    backend = secret_backend()
+    return {
+        "config_file": str(config_file),
+        "config_file_exists": config_file.exists(),
+        "secret_backend": backend,
+        "credentials_file": str(credentials_file_path()) if backend == "file" else None,
+        "plaintext_secrets": plaintext_secrets(),
+        "ignored_dotenv": (Path.cwd() / ".env").is_file(),
+    }
+
+
 def _build_status() -> dict[str, Any]:
     settings = get_settings()
     extras = available_extras()
@@ -117,6 +137,17 @@ def _build_status() -> dict[str, Any]:
             p.name for p in hooks_dir.iterdir() if p.is_file() and not p.name.startswith(".")
         )
     readiness = _readiness(settings, extras)
+    configuration = _configuration()
+    if configuration["plaintext_secrets"]:
+        readiness["next_steps"].insert(
+            0, "Move plaintext secrets to the keychain: openfatture config migrate"
+        )
+    if configuration["ignored_dotenv"]:
+        readiness["next_steps"].insert(
+            0,
+            "./.env is not read: use `uv run --env-file .env ...` "
+            "or import it with `openfatture config migrate --env-file .env`",
+        )
     # Backend ids SSOT: platform.assistant_backends (no AI package import).
     from openfatture.platform.assistant_backends import (
         DEFAULT_ASSISTANT_BACKEND,
@@ -143,6 +174,7 @@ def _build_status() -> dict[str, Any]:
         "assistant_backend": assistant_backend,
         "assistant_backend_id": assistant_backend_id,
         "readiness": readiness,
+        "configuration": configuration,
         "extras": extras,
         "extensions": {
             # Supported extension mechanism: user hook scripts (see docs/CORE_VS_EXTENSIONS.md)
@@ -198,6 +230,9 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
         "assistant_backend_id",
     ):
         table.add_row(key.replace("_", " ").title(), str(data[key]))
+    configuration = data["configuration"]
+    table.add_row("Config File", configuration["config_file"])
+    table.add_row("Secret Backend", configuration["secret_backend"])
     console.print(table)
 
     checks = Table(title="Readiness checks")

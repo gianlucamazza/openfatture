@@ -49,8 +49,11 @@ limited to setup, configuration, diagnostics, and output control.
 ```bash
 uv run openfatture config show
 uv run openfatture config set ai_provider ollama
-uv run openfatture config reload
+uv run openfatture config set ai_api_key sk-...   # stored in the OS keychain
 ```
+
+Configuration lives in `~/.config/openfatture/config.toml`; `.env` files are
+not read implicitly (use `uv run --env-file .env` for development).
 
 See [CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for the complete public surface
 and [CONFIGURATION.md](docs/CONFIGURATION.md) for settings.

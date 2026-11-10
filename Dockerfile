@@ -1,6 +1,7 @@
 # Multi-stage Dockerfile for OpenFatture
 # Build: docker build -t openfatture:latest .
-# Run: docker run -it --rm -v $(pwd)/.env:/app/.env openfatture:latest
+# Run: docker run -it --rm --env-file .env openfatture:latest
+# Configuration comes from environment variables; the app never reads ./.env itself.
 
 # Stage 1: Builder
 FROM python:3.12-slim as builder

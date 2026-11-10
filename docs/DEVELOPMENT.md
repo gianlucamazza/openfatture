@@ -17,8 +17,12 @@ uv sync --all-extras
 uv run pre-commit install
 ```
 
-Copy `.env.example` to `.env` only when local provider or email credentials are
-needed. The deterministic CLI demo does not require credentials.
+Personal settings live in `~/.config/openfatture/config.toml` and the keychain.
+For throwaway development credentials copy `.env.example` to `.env` and load it
+explicitly with `uv run --env-file .env ...`; the app never reads `.env` on its
+own. Tests isolate configuration through `OPENFATTURE_CONFIG_DIR` and
+`OPENFATTURE_SECRET_BACKEND=file`. The deterministic CLI demo does not require
+credentials.
 
 ## Daily checks
 

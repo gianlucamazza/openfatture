@@ -1,13 +1,66 @@
 # Configuration
 
-OpenFatture reads settings from the environment and the local configuration
-file. Use the CLI for inspection and simple updates:
+OpenFatture keeps one configuration per user, secrets in the operating-system
+keychain, and uses environment variables only as explicit overrides. Use the
+CLI for inspection and updates:
 
 ```bash
-openfatture config show
-openfatture config set ai_provider ollama
-openfatture config reload
+openfatture config show                 # effective values and where each comes from
+openfatture config set ai_provider openai
+openfatture config set ai_api_key       # value goes to the keychain, never to config.toml
+openfatture config unset ai_base_url
+openfatture config migrate              # move plaintext secrets out of config.toml
 ```
+
+## Sources and precedence
+
+Highest precedence first:
+
+| Source | Location | Written by |
+| --- | --- | --- |
+| Environment variables | process environment (`AI_MODEL`, `PEC_PASSWORD`, …) | you, CI, containers |
+| Secrets | OS keychain (Secret Service, macOS Keychain, Windows Credential Locker), or `credentials.toml` (0600) when no keychain is available | `init`, `config set`, `config migrate` |
+| User configuration | `config.toml` in the user config directory (`~/.config/openfatture/` on Linux) | `init`, `config set` |
+| Defaults | built in | — |
+
+OpenFatture **never reads a `.env` file by itself**, so a command behaves the
+same in every working directory. `openfatture status` warns when a `./.env` is
+present but ignored.
+
+- `OPENFATTURE_CONFIG_DIR` points to another configuration directory (for
+  example a second profile or tests).
+- `OPENFATTURE_SECRET_BACKEND=keyring|file` forces the secret backend; `file`
+  keeps secrets in `credentials.toml` next to `config.toml`.
+
+Secret settings are `ai_api_key`, `pec_password` and
+`signature_certificate_password`. `config set` validates every value against
+its type, writes only the given key (comments and other keys in `config.toml`
+are preserved) and reports when an environment variable overrides it.
+
+## Development and containers
+
+Load an env file explicitly when you need one:
+
+```bash
+uv run --env-file .env openfatture status
+docker run --env-file .env openfatture:latest
+```
+
+`docker-compose.yml` passes `.env` through `env_file:` and sets
+`OPENFATTURE_SECRET_BACKEND=file`, because containers have no keychain.
+
+## Migrating from `.env`
+
+Earlier versions read `./.env` implicitly. Import it once:
+
+```bash
+openfatture config migrate --env-file .env
+openfatture config show
+```
+
+Secrets go to the keychain; other values are added to `config.toml` only when
+not already set, and conflicting keys are listed instead of overwritten. The
+source file is left untouched: delete it once `config show` looks right.
 
 ## Optional extras
 
@@ -68,41 +121,36 @@ The provider factory hydrates `AISettings` from those values (see
 `OPENFATTURE_AI_*` prefix; when both are set, `OPENFATTURE_AI_*` wins for that
 field.
 
-Sensitive values should be provided through the environment or a protected
-local secrets file. Do not commit credentials.
+Credentials belong in the keychain (`openfatture config set ai_api_key …`) or
+in the environment. Do not commit credentials.
 
 ## Provider examples
 
-Cloud provider:
+Cloud provider (any OpenAI-compatible endpoint, e.g. DeepSeek, via `ai_base_url`):
 
 ```bash
-export AI_PROVIDER=openai
-export AI_MODEL=gpt-4-turbo-preview
-export AI_API_KEY=...
+openfatture config set ai_provider openai
+openfatture config set ai_model gpt-5
+openfatture config set ai_api_key sk-...
 ```
 
 Local provider:
 
 ```bash
-export AI_PROVIDER=ollama
-export AI_MODEL=llama3.2
-export AI_BASE_URL=http://localhost:11434
+openfatture config set ai_provider ollama
+openfatture config set ai_model qwen3:8b
+openfatture config set ai_base_url http://localhost:11434
 ```
 
-After changing environment variables, run:
-
-```bash
-openfatture config reload
-openfatture status
-```
+For a one-off override use the environment, e.g. `AI_MODEL=qwen3:14b openfatture`.
+Check the result with `openfatture config show` or `openfatture status`.
 
 ## User profile and assistant confirmations
 
-The setup wizard and `config set` save the user profile to the platform
-configuration directory (`~/.config/openfatture/config.toml` on Linux).
-Explicit settings, environment variables and the working-directory `.env`
-override this profile, in that order. New databases default to the user data
-directory; existing configured database URLs are preserved.
+The setup wizard and `config set` save the user profile to `config.toml` and
+secrets to the keychain (see [Sources and precedence](#sources-and-precedence)).
+New databases default to the user data directory; existing configured database
+URLs are preserved.
 
 With `ai_tools_require_confirmation=true` (the default), tools marked as
 requiring confirmation cannot execute without approval from a human-facing path. Noninteractive callers receive `confirmation_required`.

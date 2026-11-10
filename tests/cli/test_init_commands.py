@@ -20,13 +20,7 @@ TEST_BIC_SWIFT = "TESTBIC123"
 
 @pytest.fixture(autouse=True)
 def isolated_setup_profile(monkeypatch, tmp_path):
-    from types import SimpleNamespace
-
-    import openfatture.platform.config as configuration
-
-    monkeypatch.setattr(
-        configuration, "dirs", SimpleNamespace(user_config_dir=str(tmp_path / "profile"))
-    )
+    monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path / "profile"))
 
 
 class TestInitCommand:
@@ -402,7 +396,6 @@ def test_wizard_saves_user_profile_without_assuming_regime(monkeypatch, tmp_path
 
     import tomlkit
 
-    import openfatture.platform.config as platform_config
     from openfatture.cli.commands import init
 
     profile = tmp_path / "config.toml"
@@ -417,7 +410,7 @@ def test_wizard_saves_user_profile_without_assuming_regime(monkeypatch, tmp_path
         cedente_regime_fiscale="",
     )
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(platform_config, "dirs", SimpleNamespace(user_config_dir=str(tmp_path)))
+    monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path))
     monkeypatch.setattr(init, "get_settings", lambda: settings)
     monkeypatch.setattr(init, "init_db", lambda url: None)
 
