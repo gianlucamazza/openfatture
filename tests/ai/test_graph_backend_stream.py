@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -214,6 +214,7 @@ def test_closing_checkpointed_stream_cancels_the_turn() -> None:
     async def consume_first() -> StreamEvent:
         stream = backend.stream(_context(checkpoint_directory="/x", turn_id="t"))
         first = await anext(stream)
+        assert isinstance(stream, AsyncGenerator)
         await stream.aclose()
         return first
 

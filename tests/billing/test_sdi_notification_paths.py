@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from openfatture.events import SDINotificationReceivedEvent
 from openfatture.sdi.notifiche.parser import NotificaSDI
@@ -57,7 +58,7 @@ def other_invoice(db_session, sample_cliente):
     return invoice
 
 
-def _record(db_session) -> SDINotificationRecord:
+def _record(db_session: Session) -> SDINotificationRecord:
     return db_session.query(SDINotificationRecord).one()
 
 
