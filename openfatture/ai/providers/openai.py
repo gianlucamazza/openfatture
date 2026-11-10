@@ -163,7 +163,7 @@ class OpenAIProvider(BaseLLMProvider):
             total_tokens=total_tokens,
         )
         metrics.estimated_cost_usd = self.estimate_cost(metrics)
-        metrics.cost_known = self.model in self.PRICING
+        metrics.cost_known = usage is not None and self.model in self.PRICING
         return metrics
 
     def _build_message_input(self, role: str, content: str) -> dict[str, Any]:
@@ -371,14 +371,14 @@ class OpenAIProvider(BaseLLMProvider):
 
             function_item = cast(ResponseFunctionToolCall, item)
             try:
-                arguments = json.loads(function_item.arguments) if function_item.arguments else {}
+                arguments = json.loads(function_item.arguments)
             except json.JSONDecodeError:
                 logger.warning(
                     "tool_call_arguments_parse_failed",
                     tool_name=function_item.name,
                     arguments=function_item.arguments,
                 )
-                arguments = {}
+                raise ValueError("Invalid tool arguments") from None
 
             extracted.append(
                 ToolCall(
@@ -410,12 +410,12 @@ class OpenAIProvider(BaseLLMProvider):
                 tool_name=state.get("name"),
                 arguments=arguments_raw,
             )
-            arguments = {}
+            raise ValueError("Invalid tool arguments") from None
 
         return ToolCall(
             id=str(state.get("id") or f"tool_call_{int(time.time() * 1000)}"),
             name=state.get("name") or "unknown_tool",  # Use `or` to handle None values
-            arguments=arguments or {},
+            arguments=arguments,
         )
 
     async def generate(
@@ -467,18 +467,14 @@ class OpenAIProvider(BaseLLMProvider):
             if response.choices[0].message.tool_calls:
                 for tool_call in response.choices[0].message.tool_calls:
                     try:
-                        arguments = (
-                            json.loads(tool_call.function.arguments)
-                            if tool_call.function.arguments
-                            else {}
-                        )
+                        arguments = json.loads(tool_call.function.arguments)
                     except json.JSONDecodeError:
                         logger.warning(
                             "tool_call_arguments_parse_failed",
                             tool_name=tool_call.function.name,
                             arguments=tool_call.function.arguments,
                         )
-                        arguments = {}
+                        raise ValueError("Invalid tool arguments") from None
 
                     tool_calls.append(
                         ToolCall(
@@ -614,6 +610,7 @@ class OpenAIProvider(BaseLLMProvider):
             if not self.model.startswith("gpt-5") or temp == 1.0:
                 stream_params["temperature"] = temp
 
+            stream_params["stream_options"] = {"include_usage": True}
             stream_params.update(self._extract_extra_params(kwargs))
 
             tool_calls_buffer: list[dict[str, Any]] = []
@@ -623,12 +620,12 @@ class OpenAIProvider(BaseLLMProvider):
             stream = await self.client.chat.completions.create(**stream_params)
 
             async for chunk in stream:
+                if getattr(chunk, "usage", None):
+                    final_usage = chunk.usage
+                if not chunk.choices:
+                    continue
                 choice = chunk.choices[0]
                 delta = choice.delta
-
-                # Store usage if available
-                if hasattr(chunk, "usage") and chunk.usage:
-                    final_usage = chunk.usage
 
                 # Handle content deltas
                 if delta.content:
@@ -667,18 +664,14 @@ class OpenAIProvider(BaseLLMProvider):
                     # Yield any pending tool calls
                     for tool_call_data in tool_calls_buffer:
                         try:
-                            arguments = (
-                                json.loads(tool_call_data["function"]["arguments"])
-                                if tool_call_data["function"]["arguments"]
-                                else {}
-                            )
+                            arguments = json.loads(tool_call_data["function"]["arguments"])
                         except json.JSONDecodeError:
                             logger.warning(
                                 "tool_call_arguments_stream_parse_failed",
                                 tool_name=tool_call_data["function"]["name"],
                                 arguments=tool_call_data["function"]["arguments"],
                             )
-                            arguments = {}
+                            raise ValueError("Invalid streamed tool arguments") from None
 
                         tool_call = ToolCall(
                             id=tool_call_data["id"],
@@ -687,9 +680,12 @@ class OpenAIProvider(BaseLLMProvider):
                         )
                         yield StreamChunk(content="", tool_call=tool_call)
 
-                    break
-
-            yield StreamChunk(content="", is_final=True, finish_reason=finish_reason)
+            yield StreamChunk(
+                content="",
+                is_final=True,
+                finish_reason=finish_reason,
+                usage=self._build_usage_metrics(final_usage),
+            )
 
             usage = self._build_usage_metrics(final_usage)
             logger.info(

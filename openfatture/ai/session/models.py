@@ -145,6 +145,8 @@ class ChatSession(BaseModel):
     # Identity
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     status: SessionStatus = SessionStatus.ACTIVE
+    pending_turn_id: str | None = None
+    pending_user_input: str | None = None
 
     # Messages
     messages: list[ChatMessage] = Field(default_factory=list)
@@ -325,6 +327,8 @@ class ChatSession(BaseModel):
         return {
             "id": self.id,
             "status": self.status.value,
+            "pending_turn_id": self.pending_turn_id,
+            "pending_user_input": self.pending_user_input,
             "metadata": {
                 "title": self.metadata.title,
                 "description": self.metadata.description,
@@ -368,6 +372,8 @@ class ChatSession(BaseModel):
         return cls(
             id=data.get("id", str(uuid.uuid4())),
             status=SessionStatus(data.get("status", "active")),
+            pending_turn_id=data.get("pending_turn_id"),
+            pending_user_input=data.get("pending_user_input"),
             messages=messages,
             metadata=metadata,
         )

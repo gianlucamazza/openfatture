@@ -7,13 +7,14 @@ from openfatture import __version__
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import configure_dynamic_logging
 
-from .commands import assistant, cliente, config, fattura, init, interactive, pagamento, status
+from .commands import assistant, cliente, config, fattura, init, pagamento, status
 from .output import OutputGroup
 
 app = typer.Typer(
     cls=OutputGroup,
     name="openfatture",
-    help="Agentic electronic invoicing for Italian freelancers.",
+    help="Fatturazione elettronica con assistente. Avvia openfatture per conversare.",
+    epilog='Esempi: openfatture · openfatture assistant "Mostra le fatture non pagate"',
     add_completion=True,
     rich_markup_mode="rich",
     no_args_is_help=False,
@@ -49,29 +50,53 @@ def main(
         help="Output format: rich, json, markdown, stream-json, html",
     ),
 ) -> None:
-    """Configure output and logging for the selected command."""
-    if ctx.invoked_subcommand is None:
-        typer.echo(ctx.get_help())
-        return
+    """Configure the CLI and start the assistant when no command is selected."""
     settings = get_settings()
     settings.debug_config.enable_debug_logging |= debug
     configure_dynamic_logging(settings.debug_config)
     ctx.ensure_object(dict)
     ctx.obj["format"] = format_type
+    if ctx.invoked_subcommand is None:
+        assistant.assistant(ctx, message=None, stream=True, json_output=False, session=None)
 
 
-app.command("assistant", help="Ask the business assistant")(assistant.assistant)
-app.add_typer(interactive.app, name="interactive", help="Start a conversational session")
-app.command("init", help="Initialize OpenFatture")(init.init)
-app.add_typer(config.app, name="config", help="Manage configuration")
-app.command("status", help="Show local readiness and configuration")(status.status)
-app.add_typer(cliente.app, name="cliente", help="Manage clients (list, show, create)")
+app.command(
+    "assistant", help="Invia una richiesta o riprendi una sessione", rich_help_panel="Assistente"
+)(assistant.assistant)
+app.command("init", help="Inizializza OpenFatture", rich_help_panel="Configurazione e diagnostica")(
+    init.init
+)
 app.add_typer(
-    fattura.app, name="fattura", help="Manage invoices (list, show, create, generate-pdf)"
+    config.app,
+    name="config",
+    help="Gestisci la configurazione",
+    rich_help_panel="Configurazione e diagnostica",
+)
+app.command(
+    "status",
+    help="Verifica configurazione e disponibilità",
+    rich_help_panel="Configurazione e diagnostica",
+)(status.status)
+app.add_typer(
+    cliente.app,
+    name="cliente",
+    help="Consulta e gestisci i clienti",
+    rich_help_panel="Gestione dati",
+)
+app.add_typer(
+    fattura.app,
+    name="fattura",
+    help="Consulta e gestisci le fatture",
+    rich_help_panel="Gestione dati",
 )
 
 
-app.add_typer(pagamento.app, name="pagamento", help="Record, allocate and reverse collections")
+app.add_typer(
+    pagamento.app,
+    name="pagamento",
+    help="Registra e gestisci gli incassi",
+    rich_help_panel="Gestione dati",
+)
 
 if __name__ == "__main__":
     app()

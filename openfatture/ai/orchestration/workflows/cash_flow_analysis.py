@@ -82,7 +82,8 @@ class CashFlowAnalysisWorkflow:
     def __init__(
         self,
         batch_size: int = 20,
-        enable_checkpointing: bool = True,
+        enable_checkpointing: bool = False,
+        checkpointer: Any = None,
     ):
         """Initialize cash flow analysis workflow.
 
@@ -91,7 +92,10 @@ class CashFlowAnalysisWorkflow:
             enable_checkpointing: Enable state persistence
         """
         self.batch_size = batch_size
-        self.enable_checkpointing = enable_checkpointing
+        self.enable_checkpointing = enable_checkpointing or checkpointer is not None
+        self.checkpointer = checkpointer
+        if self.enable_checkpointing and checkpointer is None:
+            raise ValueError("Checkpointing requires an injected checkpointer")
 
         # AI provider
         self.ai_provider = create_provider()
@@ -155,12 +159,7 @@ class CashFlowAnalysisWorkflow:
 
         # Compile
         if self.enable_checkpointing:
-            checkpoint_module = import_module("langgraph.checkpoint")
-            memory_saver_cls = getattr(checkpoint_module, "MemorySaver", None)
-            if memory_saver_cls is None:
-                raise RuntimeError("LangGraph MemorySaver unavailable")
-            checkpointer = memory_saver_cls()
-            return workflow.compile(checkpointer=checkpointer)
+            return workflow.compile(checkpointer=self.checkpointer)
         return workflow.compile()
 
     # ========================================================================
@@ -581,7 +580,10 @@ Rispondi in italiano, conciso e professionale."""
         )
 
         # Execute graph
-        raw_final_state = await self.graph.ainvoke(initial_state)
+        raw_final_state = await self.graph.ainvoke(
+            initial_state,
+            config={"configurable": {"thread_id": str(initial_state.workflow_id)}},
+        )
 
         # LangGraph's ainvoke() is untyped and returns the state as a plain dict:
         # normalise it back into the workflow's own state model.

@@ -78,20 +78,8 @@ class OutputGroup(TyperGroup):
                 "Supported formats: " + ", ".join(sorted(FORMAT_NAMES)), param_hint="--format"
             )
         args = [*getattr(ctx, "_protected_args", []), *ctx.args]
-        if kind == "rich" or (args and args[0] == "assistant"):
+        if kind == "rich" or not args or args[0] == "assistant":
             return super().invoke(ctx)
-        if args and args[0] == "interactive":
-            emit(
-                {
-                    "success": False,
-                    "error": {
-                        "code": "interactive_format",
-                        "message": "Use assistant with a single request for machine-readable output",
-                    },
-                },
-                kind,
-            )
-            raise typer.Exit(2)
         buffer = io.StringIO()
         tables = []
         token = _result.set(None)

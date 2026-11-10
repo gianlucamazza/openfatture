@@ -268,6 +268,9 @@ class Settings(BaseSettings):
     ai_temperature: float = Field(default=0.7, description="AI temperature")
     ai_max_tokens: int = Field(default=2000, description="AI max tokens")
 
+    ai_model_timeout_seconds: float = Field(default=120, gt=0)
+    ai_tool_timeout_seconds: float = Field(default=60, gt=0)
+
     # AI Chat Assistant
     assistant_backend: Literal["chat", "langgraph"] = Field(
         default=DEFAULT_ASSISTANT_BACKEND,

@@ -113,7 +113,7 @@ Once configured, start with read-only requests:
 uv run openfatture status --json
 uv run openfatture assistant "List my clients"
 uv run openfatture assistant "Show invoice 1 and its line items"
-uv run openfatture interactive start
+uv run openfatture
 ```
 
 The assistant interprets the request; registered tools call application services

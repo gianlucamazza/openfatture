@@ -662,15 +662,13 @@ class TestStreamingToolCalls:
         messages = [Message(role=Role.USER, content="Test malformed JSON")]
         chunks = []
 
-        async for chunk in mock_openai_provider.stream_structured(messages):
-            chunks.append(chunk)
+        from openfatture.ai.providers.base import ProviderError
 
-        # Should have content chunk, tool call chunk (with empty args), and final chunk
-        assert len(chunks) == 3
+        with pytest.raises(ProviderError, match="Invalid streamed tool arguments"):
+            async for chunk in mock_openai_provider.stream_structured(messages):
+                chunks.append(chunk)
         assert chunks[0].content == "Calling tool"
-        assert chunks[1].tool_call.name == "search_invoices"
-        assert chunks[1].tool_call.arguments == {}  # Should default to empty dict
-        assert chunks[2].is_final is True
+        assert all(chunk.tool_call is None for chunk in chunks)
 
     async def test_chat_agent_stream_uses_graph_tool_events(self):
         """ChatAgent.execute_stream emits tool lifecycle via GraphAssistantBackend."""

@@ -3,26 +3,13 @@
 from __future__ import annotations
 
 import json
-import sys
-import types
 from collections.abc import AsyncIterator
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
 
 import pytest
+import pytest_asyncio
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from sqlalchemy.orm import sessionmaker
-
-# Stub cash flow workflow to avoid heavy ML config during imports
-_cash_flow_stub: Any = types.ModuleType("openfatture.ai.orchestration.workflows.cash_flow_analysis")
-_cash_flow_stub.CashFlowAnalysisWorkflow = object
-_cash_flow_stub.create_cash_flow_workflow = lambda *args, **kwargs: None
-sys.modules.setdefault(
-    "openfatture.ai.orchestration.workflows.cash_flow_analysis",
-    _cash_flow_stub,
-)
-
-if TYPE_CHECKING:
-    pass
 
 from openfatture.ai.domain.response import AgentResponse, UsageMetrics
 from openfatture.ai.orchestration.workflows.compliance_check import ComplianceCheckWorkflow
@@ -31,6 +18,12 @@ from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.platform import config
 from openfatture.storage.database import base
 from openfatture.storage.database.models import Fattura, StatoFattura
+
+
+@pytest_asyncio.fixture
+async def durable_saver(tmp_path):
+    async with AsyncSqliteSaver.from_conn_string(str(tmp_path / "workflows.sqlite")) as saver:
+        yield saver
 
 
 class FakeLLMProvider(BaseLLMProvider):
@@ -90,11 +83,14 @@ class FakeLLMProvider(BaseLLMProvider):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("checkpointing", [False, True])
 async def test_invoice_creation_workflow_creates_invoice(
     db_engine,
     db_session,
     test_settings,
     sample_cliente,
+    durable_saver,
+    checkpointing,
 ):
     """Full execution of the invoice creation workflow populates DB and generates XML."""
 
@@ -136,7 +132,7 @@ async def test_invoice_creation_workflow_creates_invoice(
 
     workflow = InvoiceCreationWorkflow(
         confidence_threshold=0.8,
-        enable_checkpointing=False,
+        checkpointer=durable_saver if checkpointing else None,
         settings=test_settings,
         provider=provider,
         validate_xml=False,
@@ -171,11 +167,14 @@ async def test_invoice_creation_workflow_creates_invoice(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("checkpointing", [False, True])
 async def test_compliance_workflow_produces_report(
     db_engine,
     db_session,
     test_settings,
     sample_fattura,
+    durable_saver,
+    checkpointing,
 ):
     """Compliance workflow returns structured report data."""
 
@@ -187,7 +186,9 @@ async def test_compliance_workflow_produces_report(
 
     compliance_module.SessionLocal = base.SessionLocal
 
-    workflow = ComplianceCheckWorkflow(level="standard", enable_checkpointing=False)
+    workflow = ComplianceCheckWorkflow(
+        level="standard", checkpointer=durable_saver if checkpointing else None
+    )
 
     result = await workflow.execute(invoice_id=sample_fattura.id)
 

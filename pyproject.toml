@@ -79,6 +79,7 @@ ai = [
   "openai>=2.4.0",
   "anthropic>=0.71.0",
   "tiktoken>=0.8.0",
+  "langgraph-checkpoint-sqlite>=3.0.1",
 ]
 # Vector store + embeddings (implies AI for typical use)
 rag = [

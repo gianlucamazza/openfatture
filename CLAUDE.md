@@ -4,8 +4,8 @@ OpenFatture is a Python 3.12+ CLI-first application for Italian electronic
 invoicing. The public interface is intentionally agentic and small:
 
 - `openfatture init`
+- `openfatture` (starts the interactive assistant)
 - `openfatture assistant [MESSAGE]`
-- `openfatture interactive start`
 - `openfatture config ...`
 - `openfatture status`
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import time
 import warnings
 from collections.abc import AsyncIterator
@@ -13,6 +14,7 @@ from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import (
     AgentResponse,
     ResponseStatus,
+    StreamChunk,
     ToolCall,
     UsageMetrics,
 )
@@ -111,6 +113,47 @@ class AnthropicProvider(BaseLLMProvider):
             timeout=timeout,
         )
 
+    async def stream_structured(
+        self,
+        messages: list[Message],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamChunk]:
+        async with self.client.messages.stream(
+            model=self.model,
+            messages=self._prepare_claude_messages(messages),
+            system=system_prompt or "",
+            temperature=self._get_temperature(temperature),
+            max_tokens=self._get_max_tokens(max_tokens),
+            **kwargs,
+        ) as stream:
+            async for text in stream.text_stream:
+                yield StreamChunk(content=text)
+            final = await stream.get_final_message()
+            for block in final.content:
+                if block.type == "tool_use":
+                    if not isinstance(block.input, dict):
+                        raise ValueError("Tool arguments must be an object")
+                    yield StreamChunk(
+                        content="",
+                        tool_call=ToolCall(
+                            id=block.id,
+                            name=block.name,
+                            arguments=block.input,
+                        ),
+                    )
+            usage = UsageMetrics(
+                prompt_tokens=final.usage.input_tokens,
+                completion_tokens=final.usage.output_tokens,
+                total_tokens=final.usage.input_tokens + final.usage.output_tokens,
+            )
+            usage.estimated_cost_usd = self.estimate_cost(usage)
+            yield StreamChunk(
+                content="", is_final=True, finish_reason=final.stop_reason, usage=usage
+            )
+
     def _get_deprecated_models(self) -> list[str]:
         """Get list of deprecated model names."""
         return [
@@ -158,6 +201,8 @@ class AnthropicProvider(BaseLLMProvider):
             for block in response.content:
                 block_type = getattr(block, "type", None)
                 if block_type == "tool_use":
+                    if not isinstance(block.input, dict):
+                        raise ValueError("Tool arguments must be an object")
                     tool_calls.append(
                         ToolCall(
                             id=block.id,
@@ -398,9 +443,37 @@ class AnthropicProvider(BaseLLMProvider):
             if msg.role == Role.SYSTEM:
                 continue  # System handled separately
 
-            # Convert role to Claude format
-            role = "user" if msg.role == Role.USER else "assistant"
-
-            prepared.append(cast(MessageParam, {"role": role, "content": msg.content}))
+            blocks: list[dict[str, Any]] = []
+            if msg.role == Role.TOOL:
+                role = "user"
+                blocks.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": msg.tool_call_id,
+                        "content": msg.content or "",
+                    }
+                )
+            else:
+                role = "assistant" if msg.role == Role.ASSISTANT else "user"
+                if msg.content:
+                    blocks.append({"type": "text", "text": msg.content})
+                for call in msg.tool_calls or []:
+                    function = call.get("function", call)
+                    arguments = function.get("arguments", {})
+                    if isinstance(arguments, str):
+                        arguments = json.loads(arguments)
+                    if not isinstance(arguments, dict):
+                        raise ValueError("Tool arguments must be an object")
+                    blocks.append(
+                        {
+                            "type": "tool_use",
+                            "id": call["id"],
+                            "name": function["name"],
+                            "input": arguments,
+                        }
+                    )
+            if not blocks:
+                blocks = [{"type": "text", "text": " "}]
+            prepared.append(cast(MessageParam, {"role": role, "content": blocks}))
 
         return prepared

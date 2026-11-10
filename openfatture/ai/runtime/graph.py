@@ -17,6 +17,7 @@ from typing import Any, Literal, Protocol, TypedDict
 
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.providers.base import BaseLLMProvider
+from openfatture.ai.runtime.model_calls import generate, generate_streamed
 from openfatture.ai.tools.registry import ToolRegistry
 from openfatture.platform.extras import require_extra
 from openfatture.platform.logging import get_logger
@@ -34,6 +35,10 @@ class _RuntimeProviderAccess(Protocol):
 class ToolLoopState(TypedDict, total=False):
     """State for the multi-node tool-calling graph."""
 
+    tools_enabled: bool
+    react: bool
+    streaming: bool
+    streamed: bool
     user_input: str
     system_prompt: str
     messages: list[dict[str, Any]]
@@ -80,6 +85,11 @@ def build_tool_loop_graph(
     provider: BaseLLMProvider,
     tool_registry: ToolRegistry,
     max_iterations: int = 5,
+    temperature: float = 0.7,
+    max_tokens: int = 1500,
+    model_timeout_seconds: float = 120,
+    checkpointer: Any = None,
+    journal: Any = None,
 ) -> Any:
     """Compile a LangGraph model↔tools loop.
 
@@ -90,6 +100,7 @@ def build_tool_loop_graph(
     """
     require_extra("ai", feature="LangGraph tool loop")
     try:
+        from langgraph.config import get_config, get_stream_writer
         from langgraph.graph import END, StateGraph
     except ImportError as exc:
         from openfatture.platform.extras import MissingExtraError
@@ -107,16 +118,57 @@ def build_tool_loop_graph(
         return "auto"
 
     async def call_model(state: ToolLoopState) -> ToolLoopState:
+        logger.info(
+            "assistant_graph_node",
+            node="call_model",
+            thread_id=get_config().get("configurable", {}).get("thread_id"),
+            iteration=state.get("iteration", 0),
+        )
         messages = [_dict_to_message(m) for m in state.get("messages") or []]
         if not messages and state.get("user_input"):
             messages = [Message(role=Role.USER, content=state["user_input"])]
-        use_tools = provider.supports_tools
-        response = await provider.generate(
+        if state.get("react"):
+            messages = [
+                Message(role=Role.USER, content=f"Observation: {m.content}")
+                if m.role == Role.TOOL
+                else Message(role=m.role, content=m.content)
+                for m in messages
+            ]
+        use_tools = provider.supports_tools and state.get("tools_enabled", True)
+        generate_model = (
+            generate_streamed if state.get("streaming") and not state.get("react") else generate
+        )
+        stream_options = (
+            {"emit": get_stream_writer()}
+            if state.get("streaming") and not state.get("react")
+            else {}
+        )
+        response = await generate_model(
+            provider,
+            **stream_options,
+            timeout=model_timeout_seconds,
             messages=messages,
             system_prompt=state.get("system_prompt"),
+            temperature=temperature,
+            max_tokens=max_tokens,
             tools=_tool_schemas() if use_tools else None,
             tool_choice=_tool_choice() if use_tools else None,
         )
+        if state.get("react") and response.success:
+            from openfatture.ai.domain.response import ToolCall
+            from openfatture.ai.orchestration.parsers import ToolCallParser
+
+            parsed = ToolCallParser().parse(response.content)
+            if parsed.tool_call:
+                response.tool_calls = [
+                    ToolCall(
+                        id=f"react-{state.get('iteration', 0)}",
+                        name=parsed.tool_call.tool_name,
+                        arguments=parsed.tool_call.parameters,
+                    )
+                ]
+            elif parsed.is_final:
+                response.content = parsed.content
         assistant_msg: dict[str, Any] = {
             "role": "assistant",
             "content": response.content or "",
@@ -147,7 +199,7 @@ def build_tool_loop_graph(
             current, "cost_known", False
         )
         return {
-            **state,
+            "streamed": bool(response.metadata.get("streamed")),
             "usage": usage,
             "messages": new_messages,
             "content": response.content or "",
@@ -156,36 +208,115 @@ def build_tool_loop_graph(
             else "tool_calls"
             if response.has_tool_calls
             else "final",
-            "error": response.error,
+            "error": response.error
+            or (
+                "max_iterations_reached"
+                if response.has_tool_calls
+                and int(state.get("iteration") or 0) + 1
+                >= int(state.get("max_iterations") or max_iterations)
+                else None
+            ),
             "tokens": tokens,
             "iteration": int(state.get("iteration") or 0) + 1,
             "max_iterations": int(state.get("max_iterations") or max_iterations),
         }
 
     async def call_tools(state: ToolLoopState) -> ToolLoopState:
+        config = get_config()
+        writer = get_stream_writer()
         messages = list(state.get("messages") or [])
         if not messages:
-            return {**state, "status": "final"}
+            return {"status": "final"}
         last = messages[-1]
         tool_calls = last.get("tool_calls") or []
         results = list(state.get("tool_results") or [])
         for tc in tool_calls:
             fn = tc.get("function") or {}
             name = fn.get("name") or tc.get("name") or ""
-            raw_args = fn.get("arguments") or tc.get("arguments") or {}
+            raw_args = fn.get("arguments", tc.get("arguments", {}))
             if isinstance(raw_args, str):
                 try:
-                    arguments = json.loads(raw_args) if raw_args else {}
+                    arguments = json.loads(raw_args)
                 except json.JSONDecodeError:
-                    arguments = {}
+                    arguments = None
             else:
-                arguments = dict(raw_args)
+                arguments = raw_args
             tool_call_id = tc.get("id") or name
+            logger.info(
+                "assistant_graph_tool",
+                node="call_tools",
+                tool=name,
+                tool_call_id=tool_call_id,
+                thread_id=config.get("configurable", {}).get("thread_id"),
+            )
+            approved = None
+            if journal and isinstance(arguments, dict):
+                from langgraph.types import interrupt
+
+                from openfatture.ai.tools.models import Tool
+                from openfatture.ai.tools.registry.policy import confirmation_required
+                from openfatture.platform.config import get_settings
+
+                tool = tool_registry.get_tool(name)
+                if isinstance(tool, Tool) and confirmation_required(
+                    name,
+                    tool_requires_confirmation=tool.requires_confirmation,
+                    require_confirmation=get_settings().ai_tools_require_confirmation,
+                ):
+                    approved = interrupt(
+                        {
+                            "kind": "approval",
+                            "tool": name,
+                            "parameters": arguments,
+                            "tool_call_id": tool_call_id,
+                        }
+                    )
+            reserved = False
             try:
-                result = await tool_registry.execute_tool(
-                    tool_name=name,
-                    parameters=arguments,
+                if not isinstance(arguments, dict):
+                    raise ValueError("Tool arguments must be a valid JSON object")
+                writer(
+                    {
+                        "event": "tool_start",
+                        "tool": name,
+                        "parameters": arguments,
+                        "tool_call_id": tool_call_id,
+                    }
                 )
+                from openfatture.ai.tools.models import ToolResult
+
+                receipt_id = f"{config.get('configurable', {}).get('thread_id', '')}:{state.get('iteration', 0)}:{tool_call_id}"
+                if approved is False:
+                    result = ToolResult(
+                        success=False,
+                        error="Human declined operation",
+                        error_type="confirmation_denied",
+                        tool_name=name,
+                    )
+                    cached: Any = result.model_dump(mode="json")
+                else:
+                    cached = journal.begin(receipt_id, name, arguments) if journal else None
+                    reserved = journal is not None and cached is None
+                if cached is not None:
+                    result = ToolResult.model_validate(cached)
+                else:
+                    execution_options: dict[str, Any] = (
+                        {"source": "human", "confirmed": True} if approved is True else {}
+                    )
+                    result = await tool_registry.execute_tool(
+                        tool_name=name,
+                        parameters=arguments,
+                        **execution_options,
+                    )
+                    if journal and (
+                        result.metadata.get("outcome_uncertain")
+                        or result.error_type in {"TimeoutError", "ConnectionError", "OSError"}
+                    ):
+                        from openfatture.ai.runtime.durability import UncertainToolOutcome
+
+                        raise UncertainToolOutcome(receipt_id)
+                    if journal:
+                        journal.complete(receipt_id, result.model_dump(mode="json"))
                 content = (
                     json.dumps(result.data, default=str, ensure_ascii=False)
                     if result.success
@@ -202,10 +333,17 @@ def build_tool_loop_graph(
                     }
                 )
             except Exception as exc:
+                from openfatture.ai.runtime.durability import UncertainToolOutcome
+
+                if isinstance(exc, UncertainToolOutcome):
+                    raise
+                if reserved:
+                    raise UncertainToolOutcome(receipt_id) from exc
                 content = f"Error executing tool: {exc}"
                 results.append(
                     {"tool": name, "parameters": arguments, "success": False, "result": str(exc)}
                 )
+            writer({"event": "tool_finished", **results[-1], "tool_call_id": tool_call_id})
             messages.append(
                 {
                     "role": "tool",
@@ -215,7 +353,6 @@ def build_tool_loop_graph(
                 }
             )
         return {
-            **state,
             "messages": messages,
             "tool_results": results,
             "status": "continue",
@@ -249,7 +386,7 @@ def build_tool_loop_graph(
         route_after_tools,
         {"call_model": "call_model", "end": END},
     )
-    compiled = graph.compile()
+    compiled = graph.compile(checkpointer=checkpointer)
     logger.info(
         "tool_loop_graph_compiled",
         max_iterations=max_iterations,

@@ -84,7 +84,8 @@ class ComplianceCheckWorkflow:
     def __init__(
         self,
         level: str = "standard",
-        enable_checkpointing: bool = True,
+        enable_checkpointing: bool = False,
+        checkpointer: Any = None,
     ):
         """Initialize compliance check workflow.
 
@@ -93,7 +94,10 @@ class ComplianceCheckWorkflow:
             enable_checkpointing: Enable state persistence
         """
         self.level = self._parse_level(level)
-        self.enable_checkpointing = enable_checkpointing
+        self.enable_checkpointing = enable_checkpointing or checkpointer is not None
+        self.checkpointer = checkpointer
+        if self.enable_checkpointing and checkpointer is None:
+            raise ValueError("Checkpointing requires an injected checkpointer")
 
         # Compliance checker
         self.checker = ComplianceChecker(level=self.level)
@@ -186,14 +190,7 @@ class ComplianceCheckWorkflow:
 
         # Compile
         if self.enable_checkpointing:
-            from importlib import import_module
-
-            checkpoint_module = import_module("langgraph.checkpoint")
-            memory_saver_cls = getattr(checkpoint_module, "MemorySaver", None)
-            if memory_saver_cls is None:
-                raise RuntimeError("LangGraph MemorySaver unavailable")
-            checkpointer = memory_saver_cls()
-            return workflow.compile(checkpointer=checkpointer)
+            return workflow.compile(checkpointer=self.checkpointer)
         return workflow.compile()
 
     # ========================================================================
@@ -556,7 +553,10 @@ class ComplianceCheckWorkflow:
         )
 
         # Execute graph
-        raw_final_state = await self.graph.ainvoke(initial_state)
+        raw_final_state = await self.graph.ainvoke(
+            initial_state,
+            config={"configurable": {"thread_id": str(initial_state.workflow_id)}},
+        )
 
         # LangGraph's ainvoke() is untyped: normalise whatever it returns back
         # into the workflow's own state model.

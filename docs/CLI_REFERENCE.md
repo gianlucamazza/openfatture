@@ -4,6 +4,13 @@ OpenFatture exposes a deliberately small public command surface. Business
 operations are expressed as requests to the assistant; setup and diagnostics
 remain deterministic commands.
 
+## `openfatture`
+
+Starts the interactive assistant directly, using the same session handling and
+runtime as `openfatture assistant` without a message. Use `openfatture --help`
+to display the command reference. Structured output requires an explicit
+`assistant` request, for example `openfatture --format json assistant "List unpaid invoices"`.
+
 ## `openfatture init`
 
 Creates the local data directories, database, and optional company
@@ -31,15 +38,6 @@ Without a message argument, starts an interactive multi-turn session. Interactiv
 mode persists turns to the file session store and prints the session ID.
 One-shot messages do not create a session unless `--session` is set (resume /
 continue that session).
-
-## `openfatture interactive start`
-
-Starts a persistent conversational session in the terminal (same assistant
-runtime; sessions stored under the configured data directory).
-
-```bash
-openfatture interactive start
-```
 
 ## `openfatture config`
 
@@ -71,3 +69,15 @@ Interactive assistant slash commands (when no one-shot message is given):
 
 Use `openfatture --help` and command-specific `--help` output as the
 canonical option reference.
+
+
+### Pending assistant turns
+
+`openfatture assistant --session ID` resumes a pending turn before processing
+another message. In the interactive assistant, `/resume` continues that turn;
+`/pending` lists tool calls whose outcomes require verification. `/reconcile`
+accepts a JSON object containing `call_id`, a verified ToolResult in `result`,
+and nonempty `evidence`. It records the outcome without rerunning the operation.
+See [reconciliation instructions](AI_ARCHITECTURE.md#reconciling-an-uncertain-operation).
+A pending turn must be resolved before clearing history or starting another
+request. Existing sessions without pending-turn metadata continue normally.

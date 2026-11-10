@@ -153,3 +153,14 @@ wizard no longer assumes RF19.
 Direct `fattura` and `cliente` commands initialize database access on each new
 CLI process. No prior assistant or setup process is needed for an existing
 database. Running `openfatture` alone displays help and exits successfully.
+
+
+### Assistant execution timeouts
+
+- `AI_MODEL_TIMEOUT_SECONDS`: positive seconds per model attempt (default `120`).
+- `AI_TOOL_TIMEOUT_SECONDS`: positive seconds per tool execution, excluding
+  human approval (default `60`). Synchronous domain calls finish cooperatively.
+
+Persistent LangGraph sessions keep per-turn checkpoints and tool receipts in
+`data_dir/ai/runtime/`. See [AI architecture](AI_ARCHITECTURE.md#durable-local-execution)
+for restart, approval and reconciliation behavior.

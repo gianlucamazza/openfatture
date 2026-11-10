@@ -263,3 +263,144 @@ async def test_error_tool_result_continues_to_final() -> None:
     result = await runtime.run("list")
     assert result.content == "recovered"
     assert registry.execute_tool.await_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("native", [True, False])
+async def test_persistent_runtime_resumes_failed_turn(tmp_path: Path, native: bool) -> None:
+    from openfatture.ai.session.file_store import FileSessionStore
+    from openfatture.platform.config import Settings
+
+    provider, registry = _provider_and_registry(
+        generate_side_effect=[
+            _with_tool()
+            if native
+            else _final("<action>get_invoice_count</action><action_input>{}</action_input>"),
+            RuntimeError("lost model connection"),
+        ]
+    )
+    provider.supports_tools = native
+    store = FileSessionStore(sessions_dir=tmp_path / "sessions")
+    with (
+        patch("openfatture.ai.runtime.service.get_tool_registry", return_value=registry),
+        patch("openfatture.ai.session.get_session_store", return_value=store),
+    ):
+        from openfatture.ai.runtime import create_assistant_runtime
+
+        settings = Settings(data_dir=tmp_path)
+        runtime = create_assistant_runtime(
+            provider=provider, settings=settings, persist_session=True
+        )
+        with pytest.raises(RuntimeError, match="lost model connection"):
+            await runtime.run("create")
+        session_id = runtime.session_id
+        assert session_id is not None
+        loaded = store.load(session_id)
+        assert loaded is not None
+        assert loaded.messages == []
+        assert loaded.pending_user_input == "create"
+        provider.generate = AsyncMock(
+            return_value=_final("recovered" if native else "<final_answer>recovered</final_answer>")
+        )
+        restarted = create_assistant_runtime(
+            provider=provider,
+            settings=settings,
+            persist_session=True,
+            session_id=session_id,
+        )
+        result = await restarted.resume()
+        assert result.content == "recovered"
+        assert registry.execute_tool.await_count == 1
+        loaded = store.load(session_id)
+        assert loaded is not None
+        assert loaded.pending_turn_id is None
+        assert len(loaded.messages) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("with_tools", [False, True])
+async def test_history_save_failure_replays_checkpoint_without_duplicate_effect(
+    tmp_path: Path,
+    with_tools: bool,
+) -> None:
+    from openfatture.ai.session.file_store import FileSessionStore
+    from openfatture.platform.config import Settings
+
+    provider, registry = _provider_and_registry(
+        generate_side_effect=[_with_tool(), _final("done")] if with_tools else [_final("done")]
+    )
+    if not with_tools:
+        registry.list_tools.return_value = []
+    store = FileSessionStore(sessions_dir=tmp_path / "sessions")
+    original_save = store.save
+    saves = 0
+
+    def fail_completed(session):
+        nonlocal saves
+        saves += 1
+        return False if saves == 2 else original_save(session)
+
+    with (
+        patch("openfatture.ai.runtime.service.get_tool_registry", return_value=registry),
+        patch("openfatture.ai.session.get_session_store", return_value=store),
+        patch.object(store, "save", side_effect=fail_completed),
+    ):
+        from openfatture.ai.runtime import create_assistant_runtime
+
+        settings = Settings(data_dir=tmp_path)
+        runtime = create_assistant_runtime(
+            provider=provider, settings=settings, persist_session=True
+        )
+        with pytest.raises(RuntimeError, match="Unable to persist completed turn"):
+            await runtime.run("create")
+        restarted = create_assistant_runtime(
+            provider=provider,
+            settings=settings,
+            persist_session=True,
+            session_id=runtime.session_id,
+        )
+        assert (await restarted.resume()).content == "done"
+        assert registry.execute_tool.await_count == int(with_tools)
+        assert provider.generate.await_count == (2 if with_tools else 1)
+        loaded = store.load(runtime.session_id)
+        assert len(loaded.messages) == 2
+
+
+@pytest.mark.asyncio
+async def test_same_session_runtime_turns_are_exclusive(tmp_path: Path) -> None:
+    import asyncio
+
+    from openfatture.ai.session.file_store import FileSessionStore
+    from openfatture.platform.config import Settings
+
+    provider, registry = _provider_and_registry(generate_side_effect=[])
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def generate(**kwargs):
+        entered.set()
+        await release.wait()
+        return _final("done")
+
+    provider.generate.side_effect = generate
+    store = FileSessionStore(sessions_dir=tmp_path / "sessions")
+    with (
+        patch("openfatture.ai.runtime.service.get_tool_registry", return_value=registry),
+        patch("openfatture.ai.session.get_session_store", return_value=store),
+    ):
+        from openfatture.ai.runtime import create_assistant_runtime
+
+        settings = Settings(data_dir=tmp_path)
+        first = create_assistant_runtime(provider=provider, settings=settings, persist_session=True)
+        task = asyncio.create_task(first.run("first"))
+        await asyncio.wait_for(entered.wait(), 5)
+        second = create_assistant_runtime(
+            provider=provider, settings=settings, persist_session=True, session_id=first.session_id
+        )
+        try:
+            with pytest.raises(RuntimeError, match="Session already executing"):
+                await second.run("second")
+        finally:
+            release.set()
+            await task
+        assert len(store.load(first.session_id).messages) == 2
