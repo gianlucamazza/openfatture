@@ -1,7 +1,9 @@
 """Recovery after abrupt process exit, without provider/network dependencies."""
 
+import sqlite3
 import subprocess
 import sys
+from contextlib import closing
 from pathlib import Path
 
 SCRIPT = r"""
@@ -49,6 +51,9 @@ def test_abrupt_process_restart_does_not_repeat_effect(tmp_path: Path) -> None:
         [sys.executable, "-c", SCRIPT, str(tmp_path), "crash"], capture_output=True, timeout=30
     )
     assert crashed.returncode == 23, crashed.stderr.decode()
+    with closing(sqlite3.connect(tmp_path / "checkpoints.sqlite")) as conn:
+        saved = conn.execute("SELECT COUNT(*) FROM checkpoints").fetchone()[0]
+    assert saved > 0, "checkpoints must be durable before the next step runs"
     recovered = subprocess.run(
         [sys.executable, "-c", SCRIPT, str(tmp_path), "resume"], capture_output=True, timeout=30
     )

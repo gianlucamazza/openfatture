@@ -161,6 +161,8 @@ class DurableToolExecutor:
                 }
                 snapshot = await graph.aget_state(config)
                 # Existing checkpoints always take precedence over caller input.
+                # Checkpoints are written synchronously (durability="sync") so an
+                # abrupt exit never loses a completed step.
                 if snapshot.values:
                     if not snapshot.next:
                         return dict(snapshot.values)
@@ -179,10 +181,16 @@ class DurableToolExecutor:
                         decision = await callback(payload["tool"], payload["parameters"])
                         initial = Command(resume=decision is True)
                     if on_event is None:
-                        result = dict(await graph.ainvoke(initial, config=config))
+                        result = dict(
+                            await graph.ainvoke(initial, config=config, durability="sync")
+                        )
                     else:
                         async for event in graph.astream(
-                            initial, config=config, stream_mode="custom", version="v2"
+                            initial,
+                            config=config,
+                            stream_mode="custom",
+                            version="v2",
+                            durability="sync",
                         ):
                             on_event(event["data"])
                         result = dict((await graph.aget_state(config)).values)
