@@ -86,12 +86,11 @@ class GraphAssistantBackend:
             context, enable_tools=self.enable_tools, include_system=False
         )
         if self._use_react(context):
-            from openfatture.ai.orchestration.react import ReActOrchestrator
+            from openfatture.ai.orchestration.react import build_react_messages
 
-            history_messages = ReActOrchestrator(
-                provider=self.provider,
-                tool_registry=self.tool_registry,
-            )._build_react_messages(context)
+            history_messages = build_react_messages(
+                context, self.tool_registry.list_tools(enabled_only=True)
+            )
             system_prompt = history_messages[0].content
             history_messages = history_messages[1:]
         messages: list[dict[str, Any]] = []

@@ -5,12 +5,9 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
-from openfatture.ai.orchestration.resilience import (
-    BulkheadConfig,
-    CircuitBreaker,
-    CircuitBreakerConfig,
-)
+from openfatture.ai.orchestration.resilience import CircuitBreaker
 from openfatture.ai.tools.models import Tool, ToolResult
+from openfatture.ai.tools.registry.metrics import circuit_breaker_stats, circuit_breaker_summary
 from openfatture.ai.tools.registry.policy import (
     ToolSource,
     confirmation_required,
@@ -18,6 +15,11 @@ from openfatture.ai.tools.registry.policy import (
     is_tool_enabled_for_agent,
     is_transmit_tool,
     strip_reserved_parameters,
+)
+from openfatture.ai.tools.registry.resilience import (
+    Bulkhead,
+    bulkhead_config_for,
+    circuit_breaker_config_for,
 )
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import get_logger
@@ -58,11 +60,8 @@ class ToolRegistry:
         # Rate limiters: 10 calls per minute per tool
         self._rate_limiters: dict[str, RateLimiter] = {}
 
-        # Circuit breakers for resilience (Phase 3)
         self._circuit_breakers: dict[str, CircuitBreaker] = {}
-
-        # Bulkhead semaphores for concurrency limiting (Phase 3)
-        self._bulkhead_semaphores: dict[str, asyncio.Semaphore] = {}
+        self._bulkheads: dict[str, Bulkhead] = {}
 
         # Initialize cache and metrics (lazy loaded)
         self._cache: ToolResultCache | None = None
@@ -95,6 +94,12 @@ class ToolRegistry:
                 logger.warning("tool_metrics_not_available")
                 self._metrics = None
         return self._metrics
+
+    def _record(self, result: ToolResult) -> None:
+        """Record an execution outcome in the metrics collector, when available."""
+        metrics = self._get_metrics()
+        if metrics:
+            metrics.record_execution(result)
 
     def register(self, tool: Tool) -> None:
         """
@@ -169,256 +174,22 @@ class ToolRegistry:
         return tools
 
     def get_circuit_breaker(self, tool_name: str) -> CircuitBreaker:
-        """
-        Get or create circuit breaker for a tool.
-
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            CircuitBreaker instance for the tool
-        """
+        """Get or create the circuit breaker for a tool."""
         if tool_name not in self._circuit_breakers:
-            config = self._get_resilience_config(tool_name)
             self._circuit_breakers[tool_name] = CircuitBreaker(
-                name=f"tool_{tool_name}", config=config
+                name=f"tool_{tool_name}", config=circuit_breaker_config_for(tool_name)
             )
             logger.debug("circuit_breaker_created", tool_name=tool_name)
 
         return self._circuit_breakers[tool_name]
 
-    def get_bulkhead_semaphore(self, tool_name: str) -> asyncio.Semaphore:
-        """
-        Get or create bulkhead semaphore for a tool.
+    def get_bulkhead(self, tool_name: str) -> Bulkhead:
+        """Get or create the bulkhead limiting concurrent executions of a tool."""
+        if tool_name not in self._bulkheads:
+            self._bulkheads[tool_name] = Bulkhead(bulkhead_config_for(tool_name))
+            logger.debug("bulkhead_created", tool_name=tool_name)
 
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            Semaphore for limiting concurrent executions
-        """
-        if tool_name not in self._bulkhead_semaphores:
-            config = self._get_bulkhead_config(tool_name)
-            self._bulkhead_semaphores[tool_name] = asyncio.Semaphore(
-                config.max_concurrent_executions
-            )
-            logger.debug("bulkhead_semaphore_created", tool_name=tool_name)
-
-        return self._bulkhead_semaphores[tool_name]
-
-    def _get_bulkhead_config(self, tool_name: str) -> BulkheadConfig:
-        """
-        Get bulkhead configuration based on tool characteristics.
-
-        Different concurrency limits for different tool types:
-        - Read operations: higher concurrency (more parallel requests)
-        - Write operations: lower concurrency (safer, less resource intensive)
-
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            BulkheadConfig for the tool
-        """
-        # Read operations - higher concurrency allowed
-        read_tools = {
-            "search_invoices",
-            "get_invoice_details",
-            "get_invoice_stats",
-            "search_clients",
-            "get_client_details",
-            "get_client_stats",
-            "search_knowledge_base",
-            "generate_vat_report",
-            "generate_client_report",
-            "get_due_dates",
-            "export_invoices_to_csv",
-            "export_clients_to_csv",
-            "search_preventivi",
-            "get_preventivo_details",
-            # Payment tools (Phase 5)
-            "get_payment_status",
-            "search_payments",
-            "search_bank_transactions",
-            "get_payment_stats",
-            # Product tools (Phase 6 - TIER 1)
-            "search_prodotti",
-            "get_prodotto_details",
-            # PDF tools (Phase 6 - TIER 1)
-            "get_pdf_configuration",
-            # SDI tools (Phase 6 - TIER 1)
-            "list_sdi_notifications",
-            "get_sdi_notification_details",
-            "check_invoice_sdi_status",
-            # Signature tools (Phase 6 - TIER 1)
-            "verify_signature",
-            "check_certificate_status",
-        }
-
-        if tool_name in read_tools:
-            return BulkheadConfig(
-                max_concurrent_executions=10,  # Higher concurrency for reads
-                acquisition_timeout_seconds=15.0,  # Longer timeout
-            )
-
-        # Write operations - lower concurrency for safety
-        write_tools = {
-            "create_invoice",
-            "create_riga",
-            "send_invoice_to_sdi",
-            "create_client",
-            "update_client",
-            "delete_invoice",
-            "reconcile_payment",
-            "import_invoices_from_csv",
-            "import_clients_from_csv",
-            "bulk_update_invoices_status",
-            "create_preventivo",
-            "update_preventivo_status",
-            "convert_preventivo_to_invoice",
-            # Product tools (Phase 6 - TIER 1)
-            "create_prodotto",
-            "update_prodotto",
-            "delete_prodotto",
-            # PDF tools (Phase 6 - TIER 1)
-            "generate_invoice_pdf",
-            "generate_preventivo_pdf",
-            # SDI tools (Phase 6 - TIER 1)
-            "process_sdi_notification_file",
-            # Signature tools (Phase 6 - TIER 1)
-            "sign_invoice_xml",
-            # Invoice management tools (Phase 6 - TIER 2)
-            "update_invoice",
-            "update_invoice_status",
-            # CRUD completion tools (Phase 6 - TIER 3)
-            "delete_client",
-            "update_preventivo",
-            "delete_preventivo",
-            "update_riga",
-            "delete_riga",
-            "create_manual_payment",
-            "update_payment",
-            "delete_payment",
-            "import_bank_transactions",
-        }
-
-        if tool_name in write_tools:
-            return BulkheadConfig(
-                max_concurrent_executions=2,  # Lower concurrency for writes
-                acquisition_timeout_seconds=5.0,  # Shorter timeout
-            )
-
-        # Default configuration for other tools
-        return BulkheadConfig()
-
-    def _get_resilience_config(self, tool_name: str) -> CircuitBreakerConfig:
-        """
-        Get resilience configuration based on tool characteristics.
-
-        Different policies for different tool types:
-        - Read operations: more lenient (higher failure threshold, faster recovery)
-        - Write operations: stricter (lower failure threshold, longer recovery)
-
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            CircuitBreakerConfig for the tool
-        """
-        # Read operations - more lenient
-        read_tools = {
-            "search_invoices",
-            "get_invoice_details",
-            "get_invoice_stats",
-            "validate_invoice_xml",  # Validation is a read operation
-            "search_clients",
-            "get_client_details",
-            "get_client_stats",
-            "search_knowledge_base",
-            "get_payment_status",
-            "search_payments",
-            "search_bank_transactions",
-            "get_payment_stats",
-            "generate_vat_report",
-            "generate_client_report",
-            "get_due_dates",
-            "export_invoices_to_csv",
-            "export_clients_to_csv",
-            "search_preventivi",
-            "get_preventivo_details",
-            # Product tools (Phase 6 - TIER 1)
-            "search_prodotti",
-            "get_prodotto_details",
-            # PDF tools (Phase 6 - TIER 1)
-            "get_pdf_configuration",
-            # SDI tools (Phase 6 - TIER 1)
-            "list_sdi_notifications",
-            "get_sdi_notification_details",
-            "check_invoice_sdi_status",
-            # Signature tools (Phase 6 - TIER 1)
-            "verify_signature",
-            "check_certificate_status",
-        }
-
-        if tool_name in read_tools:
-            return CircuitBreakerConfig(
-                failure_threshold=10,  # Higher tolerance for read ops
-                success_threshold=3,  # Need more successes to close
-                timeout_seconds=30,  # Faster recovery
-                half_open_max_calls=5,  # More calls in half-open
-            )
-
-        # Write operations - stricter
-        write_tools = {
-            "create_invoice",
-            "create_riga",
-            "send_invoice_to_sdi",
-            "create_client",
-            "update_client",
-            "delete_invoice",
-            "reconcile_payment",
-            "import_invoices_from_csv",
-            "import_clients_from_csv",
-            "bulk_update_invoices_status",
-            "create_preventivo",
-            "update_preventivo_status",
-            "convert_preventivo_to_invoice",
-            # Product tools (Phase 6 - TIER 1)
-            "create_prodotto",
-            "update_prodotto",
-            "delete_prodotto",
-            # PDF tools (Phase 6 - TIER 1)
-            "generate_invoice_pdf",
-            "generate_preventivo_pdf",
-            # SDI tools (Phase 6 - TIER 1)
-            "process_sdi_notification_file",
-            # Signature tools (Phase 6 - TIER 1)
-            "sign_invoice_xml",
-            # Invoice management tools (Phase 6 - TIER 2)
-            "update_invoice",
-            "update_invoice_status",
-            # CRUD completion tools (Phase 6 - TIER 3)
-            "delete_client",
-            "update_preventivo",
-            "delete_preventivo",
-            "update_riga",
-            "delete_riga",
-            "create_manual_payment",
-            "update_payment",
-            "delete_payment",
-            "import_bank_transactions",
-        }
-
-        if tool_name in write_tools:
-            return CircuitBreakerConfig(
-                failure_threshold=3,  # Lower tolerance for write ops
-                success_threshold=1,  # Single success closes circuit
-                timeout_seconds=120,  # Longer recovery time
-                half_open_max_calls=2,  # Fewer calls in half-open
-            )
-
-        # Default configuration for other tools
-        return CircuitBreakerConfig()
+        return self._bulkheads[tool_name]
 
     def reset_circuit_breaker(self, tool_name: str) -> bool:
         """
@@ -439,26 +210,8 @@ class ToolRegistry:
         return False
 
     def get_circuit_breaker_stats(self) -> dict[str, dict[str, Any]]:
-        """
-        Get statistics for all circuit breakers.
-
-        Returns:
-            Dictionary mapping tool names to circuit breaker stats
-        """
-        stats = {}
-        for tool_name, breaker in self._circuit_breakers.items():
-            stats[tool_name] = {
-                "state": breaker.state.state.value,
-                "failure_count": breaker.state.failure_count,
-                "success_count": breaker.state.success_count,
-                "last_failure_time": (
-                    breaker.state.last_failure_time.isoformat()
-                    if breaker.state.last_failure_time
-                    else None
-                ),
-                "last_state_change": breaker.state.last_state_change.isoformat(),
-            }
-        return stats
+        """Statistics for all circuit breakers, keyed by tool name."""
+        return circuit_breaker_stats(self._circuit_breakers)
 
     def get_openai_functions(
         self,
@@ -569,10 +322,7 @@ class ToolRegistry:
                 error=f"Tool '{tool_name}' not found",
                 tool_name=tool_name,
             )
-            # Record metrics even for failures
-            metrics = self._get_metrics()
-            if metrics:
-                metrics.record_execution(result)
+            self._record(result)
             return result
 
         settings = get_settings()
@@ -596,9 +346,7 @@ class ToolRegistry:
                 error_type="tool_disabled",
                 tool_name=tool_name,
             )
-            metrics = self._get_metrics()
-            if metrics:
-                metrics.record_execution(result)
+            self._record(result)
             return result
 
         if confirmation_required(
@@ -626,9 +374,7 @@ class ToolRegistry:
                     error_type=error_type,
                     tool_name=tool_name,
                 )
-                metrics = self._get_metrics()
-                if metrics:
-                    metrics.record_execution(result)
+                self._record(result)
                 return result
 
         # Try cache first for read operations
@@ -637,10 +383,7 @@ class ToolRegistry:
             cached_result = await cache.get_cached_result(tool_name, parameters)
             if cached_result:
                 logger.info("tool_cache_hit", name=tool_name)
-                # Record metrics for cache hit
-                metrics = self._get_metrics()
-                if metrics:
-                    metrics.record_execution(cached_result)
+                self._record(cached_result)
                 return cached_result
 
         # Check rate limiting (per tool)
@@ -654,9 +397,7 @@ class ToolRegistry:
                 error="Tool rate limit exceeded. Please wait before making another request.",
                 tool_name=tool_name,
             )
-            metrics = self._get_metrics()
-            if metrics:
-                metrics.record_execution(result)
+            self._record(result)
             return result
 
         # Check circuit breaker (Phase 3)
@@ -671,21 +412,11 @@ class ToolRegistry:
             )
             # Record circuit breaker state in result
             result.circuit_breaker_state = circuit_breaker.state.state.value
-            metrics = self._get_metrics()
-            if metrics:
-                metrics.record_execution(result)
+            self._record(result)
             return result
 
-        # Check bulkhead (concurrency limiting) (Phase 3)
-        bulkhead_semaphore = self.get_bulkhead_semaphore(tool_name)
-        bulkhead_config = self._get_bulkhead_config(tool_name)
-
-        try:
-            # Try to acquire semaphore with timeout
-            await asyncio.wait_for(
-                bulkhead_semaphore.acquire(), timeout=bulkhead_config.acquisition_timeout_seconds
-            )
-        except TimeoutError:
+        bulkhead = self.get_bulkhead(tool_name)
+        if not await bulkhead.acquire():
             logger.warning("tool_bulkhead_limit_exceeded", name=tool_name)
             result = ToolResult(
                 success=False,
@@ -693,16 +424,8 @@ class ToolRegistry:
                 tool_name=tool_name,
                 error_type="bulkhead_limit_exceeded",
             )
-            # Waiting count approximates queue pressure (holders + waiters not exposed;
-            # use _value of semaphore when available).
-            result.bulkhead_queue_length = max(
-                0,
-                bulkhead_config.max_concurrent_executions
-                - getattr(bulkhead_semaphore, "_value", 0),
-            )
-            metrics = self._get_metrics()
-            if metrics:
-                metrics.record_execution(result)
+            result.bulkhead_queue_length = bulkhead.queued
+            self._record(result)
             return result
 
         try:
@@ -729,11 +452,7 @@ class ToolRegistry:
             # Add circuit breaker state to result
             result.circuit_breaker_state = circuit_breaker.state.state.value
 
-            result.bulkhead_queue_length = max(
-                0,
-                bulkhead_config.max_concurrent_executions
-                - getattr(bulkhead_semaphore, "_value", 0),
-            )
+            result.bulkhead_queue_length = bulkhead.queued
 
             # Cache successful results for read operations
             if cache and cache.is_cacheable(tool_name) and result.success:
@@ -751,15 +470,11 @@ class ToolRegistry:
                 bulkhead_queue_length=result.bulkhead_queue_length,
             )
 
-            # Record metrics
-            metrics = self._get_metrics()
-            if metrics:
-                metrics.record_execution(result)
+            self._record(result)
 
             return result
         finally:
-            # Always release the bulkhead semaphore
-            bulkhead_semaphore.release()
+            bulkhead.release()
 
     def get_stats(self) -> dict[str, Any]:
         """
@@ -772,7 +487,6 @@ class ToolRegistry:
         Returns:
             Dictionary with stats
         """
-        circuit_breaker_stats = self.get_circuit_breaker_stats()
         policy_enabled = self.list_tools(enabled_only=True)
         flag_enabled = [tool for tool in self._tools.values() if tool.enabled]
 
@@ -783,31 +497,5 @@ class ToolRegistry:
             "enabled_tool_names": [tool.name for tool in policy_enabled],
             "categories": len(self._categories),
             "tools_by_category": {cat: len(tools) for cat, tools in self._categories.items()},
-            "circuit_breakers": {
-                "total": len(self._circuit_breakers),
-                "by_state": {
-                    "closed": len(
-                        [
-                            cb
-                            for cb in self._circuit_breakers.values()
-                            if cb.state.state.value == "closed"
-                        ]
-                    ),
-                    "open": len(
-                        [
-                            cb
-                            for cb in self._circuit_breakers.values()
-                            if cb.state.state.value == "open"
-                        ]
-                    ),
-                    "half_open": len(
-                        [
-                            cb
-                            for cb in self._circuit_breakers.values()
-                            if cb.state.state.value == "half_open"
-                        ]
-                    ),
-                },
-                "details": circuit_breaker_stats,
-            },
+            "circuit_breakers": circuit_breaker_summary(self._circuit_breakers),
         }

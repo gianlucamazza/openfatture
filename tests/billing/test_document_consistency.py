@@ -23,7 +23,7 @@ from openfatture.billing.application.totals import (
     resolve_vat,
 )
 from openfatture.pdf.generator import PDFGenerator, PDFGeneratorConfig
-from openfatture.pdf.templates.base import summary_rows
+from openfatture.pdf.templates.totals import summary_rows
 from openfatture.platform.config import get_settings
 from openfatture.sdi.validator.xsd_validator import FatturaPAValidator
 from openfatture.sdi.xml_builder.fatturapa import FatturaPABuilder

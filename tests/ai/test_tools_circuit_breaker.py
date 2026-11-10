@@ -10,6 +10,7 @@ import pytest
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolResult
 from openfatture.ai.tools.registry import ToolRegistry
+from openfatture.ai.tools.registry.resilience import circuit_breaker_config_for
 
 
 class TestToolCircuitBreaker:
@@ -49,7 +50,7 @@ class TestToolCircuitBreaker:
 
     def test_resilience_config_read_tools(self):
         """Test resilience config for read operations."""
-        config = self.registry._get_resilience_config("search_invoices")
+        config = circuit_breaker_config_for("search_invoices")
 
         assert config.failure_threshold == 10  # Higher tolerance
         assert config.success_threshold == 3  # Need more successes
@@ -58,7 +59,7 @@ class TestToolCircuitBreaker:
 
     def test_resilience_config_write_tools(self):
         """Test resilience config for write operations."""
-        config = self.registry._get_resilience_config("create_invoice")
+        config = circuit_breaker_config_for("create_invoice")
 
         assert config.failure_threshold == 3  # Lower tolerance
         assert config.success_threshold == 1  # Single success closes
@@ -67,7 +68,7 @@ class TestToolCircuitBreaker:
 
     def test_resilience_config_default(self):
         """Test default resilience config."""
-        config = self.registry._get_resilience_config("unknown_tool")
+        config = circuit_breaker_config_for("unknown_tool")
 
         # Should use CircuitBreakerConfig defaults
         assert config.failure_threshold == 5

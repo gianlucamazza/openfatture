@@ -144,9 +144,6 @@ def mock_openai_provider(monkeypatch):
     # Mock basic helpers to keep deterministic behaviour
     monkeypatch.setattr(provider, "_get_max_output_tokens", MagicMock(return_value=2000))
     monkeypatch.setattr(provider, "_get_temperature", MagicMock(return_value=0.7))
-    monkeypatch.setattr(
-        provider, "_extract_extra_params", MagicMock(side_effect=lambda params: params)
-    )
 
     return provider
 

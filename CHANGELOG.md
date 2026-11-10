@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Credit notes copy the social security contribution of the source invoice.
 - PDF: sections that do not fit move to a new page instead of running under the footer or off
   the page; the footer shows the real page count.
+- Tool results report `bulkhead_queue_length` as the number of callers actually waiting for
+  the tool's concurrency slot, instead of a value derived from a private semaphore field (#40).
 
 ### Added
 
@@ -33,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - `create_lump_line` and `create_rate_line` tools (duplicates of `create_riga`).
+- `ReActOrchestrator`, a second ReAct loop unused by the assistant: the assistant graph runs
+  ReAct turns with the prompt from `orchestration.react.build_react_messages`.
 - The unimplemented pagoPA QR option (pagoPA notices are issued by public creditors).
 - `fatture.bollo_assolto_virtuale` (electronic invoices always pay the stamp duty virtually)
   and the unused `user_feedback` / `model_prediction_feedback` tables; run `openfatture init`
