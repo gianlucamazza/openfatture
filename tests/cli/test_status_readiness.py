@@ -166,6 +166,7 @@ def test_status_reports_configuration_sources(tmp_path, monkeypatch):
     assert configuration["secret_backend"] == "file"
     assert configuration["plaintext_secrets"] == ["ai_api_key"]
     assert configuration["ignored_dotenv"] is True
+    assert payload["database_schema"] in {"empty", "current", "unversioned"}
     steps = " ".join(payload["readiness"]["next_steps"])
     assert "openfatture config migrate" in steps
     assert "--env-file .env" in steps

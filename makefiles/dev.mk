@@ -84,7 +84,7 @@ db-seed: ## Seed database with example data
 		echo "$(YELLOW)Seed script not found$(NC)"; \
 	fi
 
-db-migrate: ## Run database migrations
+db-migrate: ## Upgrade the database schema (same as `openfatture init`)
 	@echo "$(BLUE)Running migrations...$(NC)"
 	$(UV) run alembic upgrade head
 

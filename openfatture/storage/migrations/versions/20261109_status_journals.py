@@ -1,6 +1,7 @@
 """Merge tracked branches and add status/transport journals without changing invoices."""
 
 from alembic import op
+
 from openfatture.storage.database.status_migration import (
     downgrade_status_schema,
     upgrade_status_schema,

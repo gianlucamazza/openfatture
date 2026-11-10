@@ -76,8 +76,11 @@ def init_db(database_url: str = "sqlite:///./openfatture.db") -> None:
 
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
+    # New databases get the current schema stamped at the Alembic head; an
+    # outdated schema is refused until `openfatture init` upgrades it.
+    from openfatture.storage.schema import prepare_schema
+
+    prepare_schema(engine)
 
 
 def get_db() -> Generator[Session, None, None]:

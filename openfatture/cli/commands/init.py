@@ -58,10 +58,25 @@ def init(
     settings.certificates_dir.mkdir(parents=True, exist_ok=True)
     console.print(" Data directories created\n")
 
-    # Initialize database
+    # Initialize or upgrade the database schema (Alembic head)
     console.print("[cyan]Initializing database...[/cyan]")
+    from openfatture.storage.schema import SchemaError, upgrade_database
+
+    try:
+        previous, backup = upgrade_database(str(settings.database_url))
+    except SchemaError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
     init_db(str(settings.database_url))
-    console.print(f" Database initialized at: {settings.database_url}\n")
+    if backup is not None:
+        console.print(f" Backup before upgrade: {backup}")
+    action = {
+        "empty": "created",
+        "current": "up to date",
+        "outdated": "upgraded",
+        "unversioned": "adopted and upgraded",
+    }.get(previous, previous)
+    console.print(f" Database {action}: {settings.database_url}\n")
 
     # Interactive configuration
     if interactive:

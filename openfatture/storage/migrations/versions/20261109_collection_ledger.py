@@ -1,6 +1,7 @@
 """Add collection ledger and migrate historical cumulative payment balances."""
 
 from alembic import op
+
 from openfatture.payment.application.collection_migration import upgrade_collections
 
 revision = "20261109_collections"
@@ -9,9 +10,9 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():
+def upgrade() -> None:
     upgrade_collections(op.get_bind())
 
 
-def downgrade():
+def downgrade() -> None:
     raise RuntimeError("Restore a pre-upgrade backup; collection history must not be discarded")

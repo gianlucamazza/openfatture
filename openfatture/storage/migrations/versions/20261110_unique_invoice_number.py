@@ -5,7 +5,6 @@ deliberately instead of being silently altered.
 """
 
 import sqlalchemy as sa
-
 from alembic import op
 
 revision = "20261110_uq_numero"
