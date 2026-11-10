@@ -50,7 +50,7 @@ class TestMatchingService:
     @pytest.fixture
     def matching_service(self, db_session, mock_tx_repo, mock_payment_repo):
         """Create matching service with mock repositories."""
-        strategies = [MockMatcherStrategy(confidence=0.80)]
+        strategies: list[IMatcherStrategy] = [MockMatcherStrategy(confidence=0.80)]
         return MatchingService(
             tx_repo=mock_tx_repo,
             payment_repo=mock_payment_repo,

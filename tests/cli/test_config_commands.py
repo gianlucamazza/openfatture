@@ -11,30 +11,17 @@ validated against ``get_settings()``, type-converted from the current value, and
 persisted via ``save_config``.
 """
 
-from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from click.testing import Result
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.config import app
 
-
-class _WideCliRunner(CliRunner):
-    """CliRunner that renders Rich output at a wide terminal width.
-
-    Under the default 80-column terminal Rich truncates table cells, which would
-    make substring assertions ("Not set", "Set", the API key) flaky. A fixed wide
-    width keeps the rendered tokens intact and deterministic.
-    """
-
-    def invoke(self, *args: Any, **kwargs: Any) -> Result:
-        env = {"COLUMNS": "220", **(kwargs.pop("env", None) or {})}
-        return super().invoke(*args, env=env, **kwargs)
-
-
-runner = _WideCliRunner()
+# Under the default 80-column terminal Rich truncates table cells, which would
+# make substring assertions ("Not set", "Set", the API key) flaky. A fixed wide
+# width keeps the rendered tokens intact and deterministic.
+runner = CliRunner(env={"COLUMNS": "220"})
 pytestmark = pytest.mark.unit
 
 

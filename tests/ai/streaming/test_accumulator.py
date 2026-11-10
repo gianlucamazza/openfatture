@@ -344,6 +344,7 @@ class TestMultiStreamAccumulator:
         assert len(multi.accumulators) == 3
         for name in ["a", "b", "c"]:
             acc = multi.get_accumulator(name)
+            assert acc is not None
             assert len(acc) == 0
 
     def test_bounded_per_stream(self):
@@ -360,8 +361,10 @@ class TestMultiStreamAccumulator:
         acc1 = multi.get_accumulator("stream1")
         acc2 = multi.get_accumulator("stream2")
 
+        assert acc1 is not None
         assert len(acc1) == 3
         assert acc1.overflow_count == 2
+        assert acc2 is not None
         assert len(acc2) == 2
         assert acc2.overflow_count == 0
 

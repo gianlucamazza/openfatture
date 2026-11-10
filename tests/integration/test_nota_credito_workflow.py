@@ -257,24 +257,23 @@ def test_fatturapa_xml_with_dati_fatture_collegate(
 
     # Parse XML
     root = etree.fromstring(xml_string.encode("utf-8"))
-    ns = {"f": "http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"}
 
     # Verify TipoDocumento is TD04
-    tipo_doc = root.xpath("//TipoDocumento", namespaces=ns)
+    tipo_doc = root.findall(".//TipoDocumento")
     assert len(tipo_doc) == 1
     assert tipo_doc[0].text == "TD04"
 
     # Verify DatiFattureCollegate exists
-    dati_coll = root.xpath("//DatiFattureCollegate", namespaces=ns)
+    dati_coll = root.findall(".//DatiFattureCollegate")
     assert len(dati_coll) == 1, "DatiFattureCollegate must be present for TD04"
 
     # Verify IdDocumento
-    id_doc = root.xpath("//DatiFattureCollegate/IdDocumento", namespaces=ns)
+    id_doc = root.findall(".//DatiFattureCollegate/IdDocumento")
     assert len(id_doc) == 1
     assert id_doc[0].text == f"{source_fattura.numero}/{source_fattura.anno}"
 
     # Verify Data
-    data = root.xpath("//DatiFattureCollegate/Data", namespaces=ns)
+    data = root.findall(".//DatiFattureCollegate/Data")
     assert len(data) == 1
     assert data[0].text == source_fattura.data_emissione.isoformat()
 
@@ -292,15 +291,14 @@ def test_fatturapa_xml_without_linkage_no_dati_fatture_collegate(
 
     # Parse XML
     root = etree.fromstring(xml_string.encode("utf-8"))
-    ns = {"f": "http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"}
 
     # Verify TipoDocumento is TD01
-    tipo_doc = root.xpath("//TipoDocumento", namespaces=ns)
+    tipo_doc = root.findall(".//TipoDocumento")
     assert len(tipo_doc) == 1
     assert tipo_doc[0].text == "TD01"
 
     # Verify DatiFattureCollegate does NOT exist
-    dati_coll = root.xpath("//DatiFattureCollegate", namespaces=ns)
+    dati_coll = root.findall(".//DatiFattureCollegate")
     assert len(dati_coll) == 0, "DatiFattureCollegate must not be present for TD01 without linkage"
 
 

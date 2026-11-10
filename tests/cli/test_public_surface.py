@@ -57,7 +57,7 @@ def test_init_runs_directly_without_nested_subcommand(tmp_path, monkeypatch) -> 
         database_url=f"sqlite:///{tmp_path / 'test.db'}",
     )
     monkeypatch.setattr(init, "get_settings", lambda: settings)
-    databases = []
+    databases: list[str] = []
     monkeypatch.setattr(init, "init_db", databases.append)
 
     result = runner.invoke(app, ["init", "--no-interactive"])

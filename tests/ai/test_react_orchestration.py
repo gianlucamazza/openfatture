@@ -101,6 +101,7 @@ Final Answer: Ecco le tue fatture:
 
         assert parsed.is_final is False
         assert parsed.tool_call is not None
+        assert parsed.tool_call.thought is not None
         assert "Devo cercare" in parsed.tool_call.thought
 
     def test_parse_no_tool_or_final_treats_as_final(self):
@@ -287,6 +288,7 @@ and should be preserved.
 
         assert parsed.is_final is False
         assert parsed.tool_call is not None
+        assert parsed.tool_call.thought is not None
         assert "multiline thought" in parsed.tool_call.thought
         assert "spans multiple lines" in parsed.tool_call.thought
 
@@ -302,6 +304,7 @@ and should be preserved.
         parsed = parser.parse(response_text)
 
         assert parsed.is_final is False
+        assert parsed.tool_call is not None
         assert parsed.tool_call.parameters["filters"]["status"] == "INVIATA"
         assert parsed.tool_call.parameters["filters"]["year"] == 2025
         assert parsed.tool_call.parameters["limit"] == 10

@@ -351,24 +351,24 @@ def test_extract_entity_info_patterns():
 
     # Test invoice patterns
     entity_type, entity_id = listener._extract_entity_info(
-        None, {"invoice_id": 123, "other": "data"}
+        BaseEvent(), {"invoice_id": 123, "other": "data"}
     )
     assert entity_type == "invoice"
     assert entity_id == 123
 
     entity_type, entity_id = listener._extract_entity_info(
-        None, {"fattura_id": 456, "other": "data"}
+        BaseEvent(), {"fattura_id": 456, "other": "data"}
     )
     assert entity_type == "invoice"
     assert entity_id == 456
 
     # Test client patterns
-    entity_type, entity_id = listener._extract_entity_info(None, {"client_id": 789})
+    entity_type, entity_id = listener._extract_entity_info(BaseEvent(), {"client_id": 789})
     assert entity_type == "client"
     assert entity_id == 789
 
     # Test no entity
-    entity_type, entity_id = listener._extract_entity_info(None, {"random_field": "value"})
+    entity_type, entity_id = listener._extract_entity_info(BaseEvent(), {"random_field": "value"})
     assert entity_type is None
     assert entity_id is None
 

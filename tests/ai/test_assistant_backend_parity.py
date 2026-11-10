@@ -363,6 +363,7 @@ async def test_history_save_failure_replays_checkpoint_without_duplicate_effect(
         assert registry.execute_tool.await_count == int(with_tools)
         assert provider.generate.await_count == (2 if with_tools else 1)
         loaded = store.load(runtime.session_id)
+        assert loaded is not None
         assert len(loaded.messages) == 2
 
 
@@ -403,4 +404,6 @@ async def test_same_session_runtime_turns_are_exclusive(tmp_path: Path) -> None:
         finally:
             release.set()
             await task
-        assert len(store.load(first.session_id).messages) == 2
+        reloaded = store.load(first.session_id)
+        assert reloaded is not None
+        assert len(reloaded.messages) == 2

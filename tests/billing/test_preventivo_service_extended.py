@@ -100,6 +100,7 @@ class TestPreventivoServiceExceptionHandling:
         prev1, _ = preventivo_service.create_preventivo(
             db=db_session, cliente_id=test_cliente.id, righe=righe
         )
+        assert prev1 is not None
         preventivo_service.update_stato(db_session, prev1.id, StatoPreventivo.INVIATO)
 
         prev2, _ = preventivo_service.create_preventivo(
@@ -115,6 +116,8 @@ class TestPreventivoServiceExceptionHandling:
         )
 
         assert len(result) == 1
+        assert result[0] is not None
+        assert prev2 is not None
         assert result[0].id == prev2.id
 
     def test_list_preventivi_with_limit(
@@ -143,6 +146,7 @@ class TestPreventivoServiceExceptionHandling:
         success, error = preventivo_service.update_stato(db_session, 9999, StatoPreventivo.INVIATO)
 
         assert success is False
+        assert error is not None
         assert "not found" in error.lower()
 
     def test_update_stato_cannot_change_convertito(
@@ -158,6 +162,7 @@ class TestPreventivoServiceExceptionHandling:
         )
 
         # Mark as converted
+        assert preventivo is not None
         preventivo.stato = StatoPreventivo.CONVERTITO
         db_session.commit()
 
@@ -167,6 +172,7 @@ class TestPreventivoServiceExceptionHandling:
         )
 
         assert success is False
+        assert error is not None
         assert "cannot change status" in error.lower() or "converted" in error.lower()
 
     def test_delete_preventivo_nonexistent(
@@ -176,6 +182,7 @@ class TestPreventivoServiceExceptionHandling:
         success, error = preventivo_service.delete_preventivo(db_session, 9999)
 
         assert success is False
+        assert error is not None
         assert "not found" in error.lower()
 
     def test_check_scadenza_nonexistent_preventivo(
@@ -185,6 +192,7 @@ class TestPreventivoServiceExceptionHandling:
         is_expired, error = preventivo_service.check_scadenza(db_session, 9999)
 
         assert is_expired is False
+        assert error is not None
         assert "not found" in error.lower()
 
 
@@ -436,6 +444,7 @@ class TestPreventivoServiceConcurrency:
         )
 
         # Set expired date
+        assert preventivo is not None
         preventivo.data_scadenza = date.today() - timedelta(days=1)
         db_session.commit()
 

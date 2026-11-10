@@ -41,6 +41,7 @@ class TestMatchResult:
             match_reason="Description similarity: 85%",
         )
 
+        assert result.transaction is not None
         assert result.transaction.id == "tx-123"
         assert result.payment.id == 1
         assert result.confidence == 0.85

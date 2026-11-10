@@ -128,7 +128,7 @@ def mock_error_streaming_provider():
 
 
 @pytest.fixture
-def mock_openai_provider():
+def mock_openai_provider(monkeypatch):
     """Create a mock OpenAI provider for testing."""
     from openfatture.ai.providers.openai import OpenAIProvider
 
@@ -142,9 +142,11 @@ def mock_openai_provider():
     provider.client.chat.completions = AsyncMock()
 
     # Mock basic helpers to keep deterministic behaviour
-    provider._get_max_output_tokens = MagicMock(return_value=2000)
-    provider._get_temperature = MagicMock(return_value=0.7)
-    provider._extract_extra_params = MagicMock(side_effect=lambda params: params)
+    monkeypatch.setattr(provider, "_get_max_output_tokens", MagicMock(return_value=2000))
+    monkeypatch.setattr(provider, "_get_temperature", MagicMock(return_value=0.7))
+    monkeypatch.setattr(
+        provider, "_extract_extra_params", MagicMock(side_effect=lambda params: params)
+    )
 
     return provider
 
@@ -166,8 +168,9 @@ class TestBaseAgentStreaming:
         context = AgentContext(user_input="Test streaming")
 
         # Collect chunks
-        chunks = []
+        chunks: list[str] = []
         async for chunk in agent.execute_stream(context):
+            assert isinstance(chunk, str)
             chunks.append(chunk)
 
         # Verify
@@ -204,8 +207,9 @@ class TestBaseAgentStreaming:
         context = AgentContext(user_input="")  # Empty input
 
         # Should yield error message
-        chunks = []
+        chunks: list[str] = []
         async for chunk in agent.execute_stream(context):
+            assert isinstance(chunk, str)
             chunks.append(chunk)
 
         full_response = "".join(chunks)
@@ -246,8 +250,9 @@ class TestBaseAgentStreaming:
         context = AgentContext(user_input="Test")
 
         # Should yield partial response then error
-        chunks = []
+        chunks: list[str] = []
         async for chunk in agent.execute_stream(context):
+            assert isinstance(chunk, str)
             chunks.append(chunk)
 
         full_response = "".join(chunks)
@@ -289,8 +294,9 @@ class TestBaseAgentStreaming:
         agent = DummyStreamingAgent(config=config, provider=provider)
         context = AgentContext(user_input="Test retry")
 
-        chunks = []
+        chunks: list[str] = []
         async for chunk in agent.execute_stream(context):
+            assert isinstance(chunk, str)
             chunks.append(chunk)
 
         # Should succeed on second attempt

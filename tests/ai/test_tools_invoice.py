@@ -6,6 +6,7 @@ to avoid external database and network dependencies.
 
 from contextlib import nullcontext
 from decimal import Decimal
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -160,8 +161,9 @@ class TestSearchInvoices:
         with pytest.raises(ValueError):
             validate_integer_input(2101, max_value=2100)  # Too high
 
+        untyped_input: Any = "not_a_number"
         with pytest.raises(ValueError):
-            validate_integer_input("not_a_number")  # Not an integer
+            validate_integer_input(untyped_input)  # Not an integer
 
 
 class TestGetInvoiceDetails:
@@ -277,8 +279,9 @@ class TestGetInvoiceDetails:
         with pytest.raises(ValueError):
             validate_integer_input(0, min_value=1)  # Too low
 
+        untyped_input: Any = "not_a_number"
         with pytest.raises(ValueError):
-            validate_integer_input("not_a_number")  # Not an integer
+            validate_integer_input(untyped_input)  # Not an integer
 
 
 class TestGetInvoiceStats:

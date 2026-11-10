@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime, timedelta
+from typing import Any
 
 import pytest
 
@@ -97,7 +98,7 @@ class TestLRUCache:
 
     async def test_cache_basic_operations(self):
         """Test basic get/set operations."""
-        cache = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Set value
@@ -116,7 +117,7 @@ class TestLRUCache:
 
     async def test_cache_size_limit(self):
         """Test that cache respects max_size."""
-        cache = LRUCache(max_size=3, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=3, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Add 3 entries
@@ -140,7 +141,7 @@ class TestLRUCache:
 
     async def test_cache_lru_eviction(self):
         """Test LRU eviction policy."""
-        cache = LRUCache(max_size=3, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=3, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Add 3 entries
@@ -164,7 +165,7 @@ class TestLRUCache:
 
     async def test_cache_ttl_expiration(self):
         """Test TTL expiration."""
-        cache = LRUCache(max_size=10, default_ttl=1, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=1, cleanup_interval=0)
 
         try:
             # Set value with 1 second TTL
@@ -186,7 +187,7 @@ class TestLRUCache:
 
     async def test_cache_custom_ttl(self):
         """Test custom TTL per entry."""
-        cache = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Set with custom TTL
@@ -209,7 +210,7 @@ class TestLRUCache:
 
     async def test_cache_delete(self):
         """Test delete operation."""
-        cache = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
 
         try:
             await cache.set("key1", "value1")
@@ -231,7 +232,7 @@ class TestLRUCache:
 
     async def test_cache_clear(self):
         """Test clear operation."""
-        cache = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Add multiple entries
@@ -254,7 +255,7 @@ class TestLRUCache:
 
     async def test_cache_exists(self):
         """Test exists operation."""
-        cache = LRUCache(max_size=10, default_ttl=1, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=1, cleanup_interval=0)
 
         try:
             await cache.set("key1", "value1")
@@ -276,7 +277,7 @@ class TestLRUCache:
 
     async def test_cache_stats(self):
         """Test statistics tracking."""
-        cache = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Add entries
@@ -303,7 +304,7 @@ class TestLRUCache:
 
     async def test_cache_cleanup(self):
         """Test manual cleanup of expired entries."""
-        cache = LRUCache(max_size=10, default_ttl=1, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=1, cleanup_interval=0)
 
         try:
             # Add entries
@@ -329,7 +330,7 @@ class TestLRUCache:
 
     async def test_cache_update_existing_key(self):
         """Test updating an existing key."""
-        cache = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
 
         try:
             await cache.set("key1", "value1")
@@ -347,7 +348,7 @@ class TestLRUCache:
 
     async def test_cache_repr(self):
         """Test string representation."""
-        cache = LRUCache(max_size=100, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=100, default_ttl=3600, cleanup_interval=0)
 
         try:
             await cache.set("key1", "value1")
@@ -367,7 +368,7 @@ class TestLRUCachePerformance:
 
     async def test_cache_concurrent_access(self):
         """Test concurrent access to cache."""
-        cache = LRUCache(max_size=100, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=100, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Concurrent writes
@@ -392,7 +393,7 @@ class TestLRUCachePerformance:
 
     async def test_cache_high_throughput(self):
         """Test cache with high throughput."""
-        cache = LRUCache(max_size=1000, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=1000, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Write 10000 entries (will trigger evictions)
@@ -416,7 +417,7 @@ class TestLRUCacheEdgeCases:
 
     async def test_cache_with_none_value(self):
         """Test caching None values."""
-        cache = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
 
         try:
             await cache.set("key1", None)
@@ -433,7 +434,7 @@ class TestLRUCacheEdgeCases:
 
     async def test_cache_with_complex_values(self):
         """Test caching complex objects."""
-        cache = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=3600, cleanup_interval=0)
 
         try:
             # Dictionary
@@ -452,6 +453,7 @@ class TestLRUCacheEdgeCases:
             obj = CustomObject(42)
             await cache.set("obj", obj)
             retrieved = await cache.get("obj")
+            assert retrieved is not None
             assert retrieved.x == 42
 
         finally:
@@ -459,7 +461,7 @@ class TestLRUCacheEdgeCases:
 
     async def test_cache_zero_ttl(self):
         """Test cache with zero TTL (immediate expiration)."""
-        cache = LRUCache(max_size=10, default_ttl=0, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=10, default_ttl=0, cleanup_interval=0)
 
         try:
             await cache.set("key1", "value1")
@@ -475,7 +477,7 @@ class TestLRUCacheEdgeCases:
 
     async def test_cache_max_size_one(self):
         """Test cache with max_size=1."""
-        cache = LRUCache(max_size=1, default_ttl=3600, cleanup_interval=0)
+        cache: LRUCache[Any] = LRUCache(max_size=1, default_ttl=3600, cleanup_interval=0)
 
         try:
             await cache.set("key1", "value1")

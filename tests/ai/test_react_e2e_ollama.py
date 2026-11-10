@@ -14,6 +14,8 @@ Requirements:
 Run with: pytest tests/ai/test_react_e2e_ollama.py -v -m "ollama and e2e"
 """
 
+from typing import Any
+
 import pytest
 import pytest_asyncio
 
@@ -82,7 +84,7 @@ def tool_registry_with_mock_tools():
         },
     ]
 
-    mock_clients = [
+    mock_clients: list[dict[str, Any]] = [
         {
             "id": 1,
             "denominazione": "Acme Corp",

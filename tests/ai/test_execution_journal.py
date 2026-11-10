@@ -270,7 +270,9 @@ async def test_effect_completed_before_receipt_failure_requires_reconciliation(
 
 
 @pytest.mark.asyncio
-async def test_tool_timeout_is_not_automatically_retried(tmp_path: Path) -> None:
+async def test_tool_timeout_is_not_automatically_retried(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import asyncio
     from unittest.mock import AsyncMock, MagicMock
 
@@ -288,8 +290,8 @@ async def test_tool_timeout_is_not_automatically_retried(tmp_path: Path) -> None
 
     registry = ToolRegistry()
     registry.execution_timeout_seconds = 0.01
-    registry._get_cache = lambda: None
-    registry._get_metrics = lambda: None
+    monkeypatch.setattr(registry, "_get_cache", lambda: None)
+    monkeypatch.setattr(registry, "_get_metrics", lambda: None)
     registry.register(Tool(name="slow", description="slow operation", func=slow))
     provider = MagicMock(provider_name="openai", supports_tools=True)
     provider.generate = AsyncMock(

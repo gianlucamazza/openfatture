@@ -146,7 +146,7 @@ jobs:
         run: .venv/bin/ruff check .
 
       - name: Run MyPy
-        run: .venv/bin/python -m mypy openfatture/
+        run: .venv/bin/python -m mypy openfatture/ tests/
 
   security:
     runs-on: ubuntu-latest

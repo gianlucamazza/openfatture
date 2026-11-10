@@ -112,6 +112,7 @@ def test_unknown_receipt_is_preserved_without_transition(db_session, historical)
 def test_compare_and_set_rejects_stale_reader(db_session, sample_fattura):
     other = Session(bind=db_session.get_bind())
     stale = other.get(Fattura, sample_fattura.id)
+    assert stale is not None
     change_status(db_session, sample_fattura, S.CONSEGNATA)
     db_session.commit()
     with pytest.raises(InvoiceStateConflict):
@@ -261,7 +262,9 @@ def test_concurrent_submission_claims_allow_one_transport(tmp_path):
         assert calls == [invoice_id]
         with sessions() as session:
             assert session.query(SDISubmissionAttempt).count() == 1
-            assert session.get(Fattura, invoice_id).stato == S.INVIATA
+            stored = session.get(Fattura, invoice_id)
+            assert stored is not None
+            assert stored.stato == S.INVIATA
     finally:
         engine.dispose()
 

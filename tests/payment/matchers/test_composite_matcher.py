@@ -15,6 +15,7 @@ from hypothesis import strategies as st
 from openfatture.payment.domain.enums import MatchType
 from openfatture.payment.domain.value_objects import MatchResult
 from openfatture.payment.matchers.composite import CompositeMatcher
+from openfatture.storage.database.models import Pagamento
 
 pytestmark = pytest.mark.unit
 
@@ -30,7 +31,7 @@ class TestCompositeMatcherBasic:
         strategy1.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.80"),
+                confidence=0.80,
                 match_type=MatchType.EXACT,
                 match_reason="Exact amount",
             )
@@ -40,7 +41,7 @@ class TestCompositeMatcherBasic:
         strategy2.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.70"),
+                confidence=0.70,
                 match_type=MatchType.FUZZY,
                 match_reason="Fuzzy description",
             )
@@ -54,7 +55,7 @@ class TestCompositeMatcherBasic:
         transaction.description = "Test payment"
         transaction.date = date.today()
 
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -73,7 +74,7 @@ class TestCompositeMatcherBasic:
         strategy1.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("1.00"),  # Perfect match
+                confidence=1.00,  # Perfect match
                 match_type=MatchType.EXACT,
                 match_reason="Exact",
             )
@@ -83,7 +84,7 @@ class TestCompositeMatcherBasic:
         strategy2.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.50"),  # Medium match
+                confidence=0.50,  # Medium match
                 match_type=MatchType.FUZZY,
                 match_reason="Fuzzy",
             )
@@ -96,7 +97,7 @@ class TestCompositeMatcherBasic:
         )
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -112,7 +113,7 @@ class TestCompositeMatcherBasic:
         strategy1.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("1.00"),
+                confidence=1.00,
                 match_type=MatchType.EXACT,
                 match_reason="Exact",
             )
@@ -122,7 +123,7 @@ class TestCompositeMatcherBasic:
         strategy2.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.60"),
+                confidence=0.60,
                 match_type=MatchType.FUZZY,
                 match_reason="Fuzzy",
             )
@@ -135,7 +136,7 @@ class TestCompositeMatcherBasic:
         )
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -149,7 +150,7 @@ class TestCompositeMatcherBasic:
         strategy.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("1.0"),
+                confidence=1.0,
                 match_type=MatchType.EXACT,
                 match_reason="Max",
             )
@@ -158,7 +159,7 @@ class TestCompositeMatcherBasic:
         composite = CompositeMatcher(strategies=[strategy])
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -170,7 +171,7 @@ class TestCompositeMatcherBasic:
         composite = CompositeMatcher(strategies=[])
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -184,7 +185,7 @@ class TestCompositeMatcherBasic:
         strategy1.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.80"),
+                confidence=0.80,
                 match_type=MatchType.EXACT,
                 match_reason="Exact",
             )
@@ -194,7 +195,7 @@ class TestCompositeMatcherBasic:
         strategy2.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),  # Same payment ID
-                confidence=Decimal("0.70"),
+                confidence=0.70,
                 match_type=MatchType.FUZZY,
                 match_reason="Fuzzy",
             )
@@ -203,7 +204,7 @@ class TestCompositeMatcherBasic:
         composite = CompositeMatcher(strategies=[strategy1, strategy2])
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -226,7 +227,7 @@ class TestCompositeMatcherBasic:
         strategy2.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.85"),
+                confidence=0.85,
                 match_type=MatchType.EXACT,
                 match_reason="Exact match",
             )
@@ -238,7 +239,7 @@ class TestCompositeMatcherBasic:
         strategy3.match.return_value = [
             MatchResult(
                 payment=Mock(id=2),
-                confidence=Decimal("0.75"),
+                confidence=0.75,
                 match_type=MatchType.FUZZY,
                 match_reason="Fuzzy match",
             )
@@ -253,7 +254,7 @@ class TestCompositeMatcherBasic:
             description="Test payment",
             date=date.today(),
         )
-        candidates = [Mock(id=1), Mock(id=2)]
+        candidates: list[Pagamento] = [Mock(id=1), Mock(id=2)]
 
         results = await composite.match(transaction, candidates)
 
@@ -278,7 +279,7 @@ class TestCompositeMatcherBasic:
         strategy1.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.90"),
+                confidence=0.90,
                 match_type=MatchType.EXACT,
                 match_reason="Exact",
             )
@@ -288,7 +289,7 @@ class TestCompositeMatcherBasic:
         strategy2.match.return_value = [
             MatchResult(
                 payment=Mock(id=2),
-                confidence=Decimal("0.80"),
+                confidence=0.80,
                 match_type=MatchType.FUZZY,
                 match_reason="Fuzzy",
             )
@@ -298,7 +299,7 @@ class TestCompositeMatcherBasic:
         strategy3.match.return_value = [
             MatchResult(
                 payment=Mock(id=3),
-                confidence=Decimal("0.70"),
+                confidence=0.70,
                 match_type=MatchType.DATE_WINDOW,
                 match_reason="Date window",
             )
@@ -307,7 +308,7 @@ class TestCompositeMatcherBasic:
         composite = CompositeMatcher(strategies=[strategy1, strategy2, strategy3])
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1), Mock(id=2), Mock(id=3)]
+        candidates: list[Pagamento] = [Mock(id=1), Mock(id=2), Mock(id=3)]
 
         results = await composite.match(transaction, candidates)
 
@@ -341,7 +342,7 @@ class TestCompositeMatcherBasic:
             description="Test",
             date=date.today(),
         )
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -359,7 +360,7 @@ class TestCompositeMatcherBasic:
         async_strategy.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.85"),
+                confidence=0.85,
                 match_type=MatchType.EXACT,
                 match_reason="Async match",
             )
@@ -370,7 +371,7 @@ class TestCompositeMatcherBasic:
         sync_strategy.match.return_value = [
             MatchResult(
                 payment=Mock(id=1),
-                confidence=Decimal("0.75"),
+                confidence=0.75,
                 match_type=MatchType.FUZZY,
                 match_reason="Sync match",
             )
@@ -379,7 +380,7 @@ class TestCompositeMatcherBasic:
         composite = CompositeMatcher(strategies=[async_strategy, sync_strategy])
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -434,7 +435,7 @@ class TestCompositeMatcherPropertyBased:
         composite = CompositeMatcher(strategies=strategies, weights=normalized_weights)
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 
@@ -457,7 +458,7 @@ class TestCompositeMatcherPropertyBased:
             strategy.match.return_value = [
                 MatchResult(
                     payment=Mock(id=1),
-                    confidence=Decimal(str(conf)),
+                    confidence=float(conf),
                     match_type=MatchType.COMPOSITE,
                     match_reason="Test",
                 )
@@ -467,7 +468,7 @@ class TestCompositeMatcherPropertyBased:
         composite = CompositeMatcher(strategies=strategies)
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         # Run twice
         results1 = await composite.match(transaction, candidates)
@@ -493,7 +494,7 @@ class TestCompositeMatcherPropertyBased:
             strategy.match.return_value = [
                 MatchResult(
                     payment=Mock(id=1),
-                    confidence=Decimal(str(conf)),
+                    confidence=float(conf),
                     match_type=MatchType.COMPOSITE,
                     match_reason="Test",
                 )
@@ -503,7 +504,7 @@ class TestCompositeMatcherPropertyBased:
         composite = CompositeMatcher(strategies=strategies, weights=weights)
 
         transaction = Mock(amount=Decimal("100.00"), description="Test", date=date.today())
-        candidates = [Mock(id=1)]
+        candidates: list[Pagamento] = [Mock(id=1)]
 
         results = await composite.match(transaction, candidates)
 

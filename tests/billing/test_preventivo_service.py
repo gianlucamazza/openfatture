@@ -132,6 +132,7 @@ class TestPreventivoServiceCreate:
         )
 
         assert preventivo is None
+        assert error is not None
         assert "not found" in error.lower()
 
     def test_create_preventivo_sequential_numbers(
@@ -157,8 +158,11 @@ class TestPreventivoServiceCreate:
             db=db_session, cliente_id=test_cliente.id, righe=righe
         )
 
+        assert prev1 is not None
         assert prev1.numero == "1"
+        assert prev2 is not None
         assert prev2.numero == "2"
+        assert prev3 is not None
         assert prev3.numero == "3"
 
 
@@ -182,6 +186,7 @@ class TestPreventivoServiceCRUD:
             db=db_session, cliente_id=test_cliente.id, righe=righe
         )
 
+        assert preventivo is not None
         retrieved = preventivo_service.get_preventivo(db_session, preventivo.id)
 
         assert retrieved is not None
@@ -235,6 +240,7 @@ class TestPreventivoServiceCRUD:
         )
 
         # Update to INVIATO
+        assert preventivo is not None
         success, error = preventivo_service.update_stato(
             db_session, preventivo.id, StatoPreventivo.INVIATO
         )
@@ -243,6 +249,7 @@ class TestPreventivoServiceCRUD:
         assert error is None
 
         retrieved = preventivo_service.get_preventivo(db_session, preventivo.id)
+        assert retrieved is not None
         assert retrieved.stato == StatoPreventivo.INVIATO
 
     def test_delete_preventivo(
@@ -263,6 +270,7 @@ class TestPreventivoServiceCRUD:
         )
 
         # Delete
+        assert preventivo is not None
         success, error = preventivo_service.delete_preventivo(db_session, preventivo.id)
 
         assert success is True
@@ -290,6 +298,7 @@ class TestPreventivoServiceCRUD:
         )
 
         # Mark as converted
+        assert preventivo is not None
         preventivo.stato = StatoPreventivo.CONVERTITO
         db_session.commit()
 
@@ -297,6 +306,7 @@ class TestPreventivoServiceCRUD:
         success, error = preventivo_service.delete_preventivo(db_session, preventivo.id)
 
         assert success is False
+        assert error is not None
         assert "cannot delete" in error.lower()
 
 
@@ -320,6 +330,7 @@ class TestPreventivoServiceExpiration:
             db=db_session, cliente_id=test_cliente.id, righe=righe, validita_giorni=30
         )
 
+        assert preventivo is not None
         is_expired, error = preventivo_service.check_scadenza(db_session, preventivo.id)
 
         assert is_expired is False
@@ -343,6 +354,7 @@ class TestPreventivoServiceExpiration:
         )
 
         # Manually set expiration date to past
+        assert preventivo is not None
         preventivo.data_scadenza = date.today() - timedelta(days=1)
         db_session.commit()
 
@@ -353,4 +365,5 @@ class TestPreventivoServiceExpiration:
 
         # Verify status updated
         retrieved = preventivo_service.get_preventivo(db_session, preventivo.id)
+        assert retrieved is not None
         assert retrieved.stato == StatoPreventivo.SCADUTO

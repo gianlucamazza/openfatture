@@ -12,13 +12,14 @@ from openfatture.ai.providers.openai import OpenAIProvider
 class TestAnthropicTokenCounter:
     """Tests for Anthropic official token counter."""
 
-    def test_token_counter_uses_official_api(self):
+    def test_token_counter_uses_official_api(self, monkeypatch):
         """Test that token counter uses official Anthropic API."""
         # Create provider
         provider = AnthropicProvider(api_key="test-key", model="claude-4.5-sonnet")
 
         # Mock the client's count_tokens method
-        provider.client.count_tokens = MagicMock(return_value=42)
+        count_tokens = MagicMock(return_value=42)
+        monkeypatch.setattr(provider.client, "count_tokens", count_tokens, raising=False)
 
         # Count tokens
         text = "This is a test message for token counting."
@@ -26,14 +27,15 @@ class TestAnthropicTokenCounter:
 
         # Verify official API was called
         assert count == 42
-        provider.client.count_tokens.assert_called_once_with(text)
+        count_tokens.assert_called_once_with(text)
 
-    def test_token_counter_fallback_on_error(self):
+    def test_token_counter_fallback_on_error(self, monkeypatch):
         """Test fallback to approximation if API fails."""
         provider = AnthropicProvider(api_key="test-key", model="claude-4.5-sonnet")
 
         # Mock client to raise error
-        provider.client.count_tokens = MagicMock(side_effect=Exception("API Error"))
+        count_tokens = MagicMock(side_effect=Exception("API Error"))
+        monkeypatch.setattr(provider.client, "count_tokens", count_tokens, raising=False)
 
         text = "Test message"
         count = provider.count_tokens(text)
@@ -53,12 +55,13 @@ class TestAnthropicTokenCounter:
         # Should use approximation (len // 4)
         assert count == len(text) // 4
 
-    def test_token_counter_accuracy_comparison(self):
+    def test_token_counter_accuracy_comparison(self, monkeypatch):
         """Compare official counter vs approximation accuracy."""
         provider = AnthropicProvider(api_key="test-key", model="claude-4.5-sonnet")
 
         # Mock official counter with realistic value
-        provider.client.count_tokens = MagicMock(return_value=100)
+        count_tokens = MagicMock(return_value=100)
+        monkeypatch.setattr(provider.client, "count_tokens", count_tokens, raising=False)
 
         text = "A" * 400  # 400 characters
 
@@ -71,7 +74,8 @@ class TestAnthropicTokenCounter:
 
         # But for complex text, they differ
         complex_text = "日本語のテキスト"  # Japanese text
-        provider.client.count_tokens = MagicMock(return_value=15)
+        count_tokens = MagicMock(return_value=15)
+        monkeypatch.setattr(provider.client, "count_tokens", count_tokens, raising=False)
 
         official_count = provider.count_tokens(complex_text)
         approx_count = len(complex_text) // 4
@@ -100,14 +104,15 @@ class TestTokenCounterIntegration:
             assert isinstance(count, int)
             assert count > 0
 
-    def test_cost_estimation_accuracy(self):
+    def test_cost_estimation_accuracy(self, monkeypatch):
         """Test that accurate token count improves cost estimation."""
         from openfatture.ai.domain.response import UsageMetrics
 
         provider = AnthropicProvider(api_key="test", model="claude-4.5-sonnet")
 
         # Mock accurate token count
-        provider.client.count_tokens = MagicMock(return_value=1000)
+        count_tokens = MagicMock(return_value=1000)
+        monkeypatch.setattr(provider.client, "count_tokens", count_tokens, raising=False)
 
         usage = UsageMetrics(
             prompt_tokens=1000,
@@ -127,10 +132,11 @@ class TestTokenCounterIntegration:
 class TestTokenCounterPerformance:
     """Performance tests for token counting."""
 
-    def test_token_counter_latency(self, benchmark):
+    def test_token_counter_latency(self, monkeypatch, benchmark):
         """Benchmark token counter latency."""
         provider = AnthropicProvider(api_key="test", model="claude-4.5-sonnet")
-        provider.client.count_tokens = MagicMock(return_value=100)
+        count_tokens = MagicMock(return_value=100)
+        monkeypatch.setattr(provider.client, "count_tokens", count_tokens, raising=False)
 
         text = "Test message" * 100
 

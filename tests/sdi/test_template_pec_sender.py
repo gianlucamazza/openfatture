@@ -43,6 +43,7 @@ class TestTemplatePECSender:
         success, error = sender.send_invoice_to_sdi(sample_fattura, xml_path)
 
         assert success is False
+        assert error is not None
         assert "PEC address not configured" in error
 
     def test_send_invoice_missing_file(self, test_settings, sample_fattura):
@@ -53,6 +54,7 @@ class TestTemplatePECSender:
         success, error = sender.send_invoice_to_sdi(sample_fattura, xml_path)
 
         assert success is False
+        assert error is not None
         assert "not found" in error
 
     def test_send_invoice_auth_failure(
@@ -68,6 +70,7 @@ class TestTemplatePECSender:
         success, error = sender.send_invoice_to_sdi(sample_fattura, xml_path)
 
         assert success is False
+        assert error is not None
         assert "Authentication" in error or "Authentication failed" in str(error)
 
     def test_send_test_email(self, test_settings, mock_pec_server):
@@ -91,6 +94,7 @@ class TestTemplatePECSender:
         success, error = sender.send_invoice_to_sdi(sample_fattura, xml_path)
 
         assert success is False
+        assert error is not None
         assert "password" in error.lower()
 
     def test_send_test_email_missing_config(self, test_settings):
@@ -101,6 +105,7 @@ class TestTemplatePECSender:
         success, error = sender.send_test_email()
 
         assert success is False
+        assert error is not None
         assert "not configured" in error
 
     def test_send_invoice_with_signed_xml(
@@ -153,6 +158,7 @@ class TestTemplatePECSenderRetryLogic:
 
         # Assert
         assert success is False
+        assert error is not None
         assert "verification" in error
         assert sample_fattura.stato == StatoFattura.BOZZA
 
@@ -188,6 +194,7 @@ class TestTemplatePECSenderRetryLogic:
 
         # Assert
         assert success is False
+        assert error is not None
         assert "authentication failed" in error.lower()
 
         # Should only try once (no retries for auth errors - not in retryable_exceptions)
@@ -221,6 +228,7 @@ class TestTemplatePECSenderRetryLogic:
 
         # Assert
         assert success is False
+        assert error is not None
         assert "verification" in error
         assert "Connection lost" in error
 
@@ -254,6 +262,7 @@ class TestTemplatePECSenderRetryLogic:
         # Assert - verify delays increase (3 retries = 3 sleeps)
         assert mock_sleep.call_count == 0
         assert success is False
+        assert error is not None
         assert "verification" in error
 
     @patch("openfatture.sdi.email.sender.smtplib.SMTP_SSL")
@@ -277,6 +286,7 @@ class TestTemplatePECSenderRetryLogic:
         # Assert
         assert success is False
         # Unexpected exceptions return the error message directly
+        assert error is not None
         assert "Unexpected error" in error
 
         # Should only try once
@@ -304,6 +314,7 @@ class TestTemplatePECSenderRateLimiting:
 
         # Assert
         assert success is False
+        assert error is not None
         assert "Rate limit exceeded" in error
 
         # Verify rate limiter was called

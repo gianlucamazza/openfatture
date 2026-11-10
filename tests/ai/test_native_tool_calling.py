@@ -82,7 +82,7 @@ def _make_response(content="", tool_calls=None):
 
 
 @pytest.mark.asyncio
-async def test_anthropic_extracts_tool_use_block():
+async def test_anthropic_extracts_tool_use_block(monkeypatch):
     """Anthropic generate() populates tool_calls from a tool_use block."""
     from openfatture.ai.providers.anthropic import AnthropicProvider
 
@@ -102,7 +102,7 @@ async def test_anthropic_extracts_tool_use_block():
         stop_reason="tool_use",
     )
 
-    provider.client.messages.create = AsyncMock(return_value=fake_message)
+    monkeypatch.setattr(provider.client.messages, "create", AsyncMock(return_value=fake_message))
 
     response = await provider.generate(messages=[], system_prompt="sys")
 
@@ -117,7 +117,7 @@ async def test_anthropic_extracts_tool_use_block():
 
 
 @pytest.mark.asyncio
-async def test_anthropic_text_only_has_no_tool_calls():
+async def test_anthropic_text_only_has_no_tool_calls(monkeypatch):
     """Text-only Anthropic responses keep tool_calls empty."""
     from openfatture.ai.providers.anthropic import AnthropicProvider
 
@@ -129,7 +129,7 @@ async def test_anthropic_text_only_has_no_tool_calls():
         usage=SimpleNamespace(input_tokens=5, output_tokens=3),
         stop_reason="end_turn",
     )
-    provider.client.messages.create = AsyncMock(return_value=fake_message)
+    monkeypatch.setattr(provider.client.messages, "create", AsyncMock(return_value=fake_message))
 
     response = await provider.generate(messages=[])
 
@@ -144,7 +144,7 @@ async def test_anthropic_text_only_has_no_tool_calls():
 
 
 @pytest.mark.asyncio
-async def test_openai_extracts_tool_calls():
+async def test_openai_extracts_tool_calls(monkeypatch):
     """OpenAI generate() populates tool_calls from message.tool_calls."""
     from openfatture.ai.providers.openai import OpenAIProvider
 
@@ -161,7 +161,9 @@ async def test_openai_extracts_tool_calls():
         usage=SimpleNamespace(prompt_tokens=12, completion_tokens=6, total_tokens=18),
     )
 
-    provider.client.chat.completions.create = AsyncMock(return_value=fake_response)
+    monkeypatch.setattr(
+        provider.client.chat.completions, "create", AsyncMock(return_value=fake_response)
+    )
 
     response = await provider.generate(messages=[])
 
@@ -174,7 +176,7 @@ async def test_openai_extracts_tool_calls():
 
 
 @pytest.mark.asyncio
-async def test_openai_text_only_has_no_tool_calls():
+async def test_openai_text_only_has_no_tool_calls(monkeypatch):
     """Text-only OpenAI responses keep tool_calls empty."""
     from openfatture.ai.providers.openai import OpenAIProvider
 
@@ -186,7 +188,9 @@ async def test_openai_text_only_has_no_tool_calls():
         choices=[choice],
         usage=SimpleNamespace(prompt_tokens=4, completion_tokens=2, total_tokens=6),
     )
-    provider.client.chat.completions.create = AsyncMock(return_value=fake_response)
+    monkeypatch.setattr(
+        provider.client.chat.completions, "create", AsyncMock(return_value=fake_response)
+    )
 
     response = await provider.generate(messages=[])
 

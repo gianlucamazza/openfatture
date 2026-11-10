@@ -173,7 +173,8 @@ plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
-ignore_errors = true
+disallow_untyped_defs = false
+check_untyped_defs = true
 
 # External libraries without stubs
 [[tool.mypy.overrides]]

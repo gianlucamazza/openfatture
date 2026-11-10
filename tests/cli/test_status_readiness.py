@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 
 from openfatture.cli.commands.status import _readiness
 from openfatture.platform.config import Settings
@@ -111,7 +111,7 @@ def test_status_text_exposes_blocking_fields(tmp_path, monkeypatch):
     settings.cedente_codice_fiscale = ""
     settings.cedente_regime_fiscale = ""
     settings.locale = "it"
-    data = {
+    data: dict[str, Any] = {
         "readiness": _readiness(settings, {"ai": True}),
         "extras": {"ai": True},
         "configuration": {"config_file": str(tmp_path / "config.toml"), "secret_backend": "file"},

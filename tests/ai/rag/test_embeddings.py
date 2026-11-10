@@ -5,6 +5,7 @@ Tests embedding strategies (OpenAI and SentenceTransformers) with mocked APIs.
 Run with: pytest tests/ai/rag/test_embeddings.py -v
 """
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -39,7 +40,7 @@ def mock_openai_response():
 def mock_embedding_cache():
     """Create mock embedding cache."""
     cache = MagicMock()
-    cache_storage = {}
+    cache_storage: dict[str, Any] = {}
 
     async def mock_get(key):
         return cache_storage.get(key)

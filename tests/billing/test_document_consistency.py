@@ -35,12 +35,12 @@ D = Decimal
 def _riepilogo(xml: str) -> list[tuple[str | None, str, str]]:
     rows = []
     for block in re.findall(r"<DatiRiepilogo>.*?</DatiRiepilogo>", xml, re.S):
-        natura = re.search(r"<Natura>(.*?)</Natura>", block)
+        natura = _tag(block, "Natura")
         rows.append(
             (
-                natura.group(1) if natura else None,
-                re.search(r"<ImponibileImporto>(.*?)<", block).group(1),
-                re.search(r"<Imposta>(.*?)<", block).group(1),
+                natura[0] if natura else None,
+                _tag(block, "ImponibileImporto")[0],
+                _tag(block, "Imposta")[0],
             )
         )
     return rows
@@ -68,7 +68,7 @@ def forfettario_invoice(runtime_session, seed_cliente) -> int:
         unita_misura="",
         natura="N1",
     ).get("success")
-    return invoice_id
+    return int(invoice_id)
 
 
 def test_forfettario_invoice_totals(runtime_session, forfettario_invoice):

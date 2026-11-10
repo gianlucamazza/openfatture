@@ -19,6 +19,7 @@ from openfatture.ai.rag.auto_update import (
     setup_event_listeners,
     teardown_event_listeners,
 )
+from openfatture.storage.database.models import Cliente, Fattura
 
 
 class TestAutoUpdateConfig:
@@ -565,7 +566,7 @@ class TestEventListeners:
             with patch(
                 "openfatture.ai.rag.auto_update.listeners.get_change_tracker", return_value=tracker
             ):
-                _on_invoice_insert(None, None, mock_fattura)
+                _on_invoice_insert(Fattura.__mapper__, None, mock_fattura)
 
                 stats = tracker.get_queue_stats()
                 assert stats["by_entity_type"].get("invoice", 0) == 1
@@ -584,7 +585,7 @@ class TestEventListeners:
             with patch(
                 "openfatture.ai.rag.auto_update.listeners.get_change_tracker", return_value=tracker
             ):
-                _on_invoice_update(None, None, mock_fattura)
+                _on_invoice_update(Fattura.__mapper__, None, mock_fattura)
 
                 stats = tracker.get_queue_stats()
                 assert stats["by_entity_type"].get("invoice", 0) == 1
@@ -603,7 +604,7 @@ class TestEventListeners:
             with patch(
                 "openfatture.ai.rag.auto_update.listeners.get_change_tracker", return_value=tracker
             ):
-                _on_invoice_delete(None, None, mock_fattura)
+                _on_invoice_delete(Fattura.__mapper__, None, mock_fattura)
 
                 stats = tracker.get_queue_stats()
                 assert stats["by_entity_type"].get("invoice", 0) == 1
@@ -622,7 +623,7 @@ class TestEventListeners:
             with patch(
                 "openfatture.ai.rag.auto_update.listeners.get_change_tracker", return_value=tracker
             ):
-                _on_client_insert(None, None, mock_cliente)
+                _on_client_insert(Cliente.__mapper__, None, mock_cliente)
 
                 stats = tracker.get_queue_stats()
                 assert stats["by_entity_type"].get("client", 0) == 1
@@ -641,7 +642,7 @@ class TestEventListeners:
             with patch(
                 "openfatture.ai.rag.auto_update.listeners.get_change_tracker", return_value=tracker
             ):
-                _on_client_update(None, None, mock_cliente)
+                _on_client_update(Cliente.__mapper__, None, mock_cliente)
 
                 stats = tracker.get_queue_stats()
                 assert stats["by_entity_type"].get("client", 0) == 1
@@ -660,7 +661,7 @@ class TestEventListeners:
             with patch(
                 "openfatture.ai.rag.auto_update.listeners.get_change_tracker", return_value=tracker
             ):
-                _on_client_delete(None, None, mock_cliente)
+                _on_client_delete(Cliente.__mapper__, None, mock_cliente)
 
                 stats = tracker.get_queue_stats()
                 assert stats["by_entity_type"].get("client", 0) == 1

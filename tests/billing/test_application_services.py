@@ -16,7 +16,9 @@ from openfatture.storage.database.models import Fattura, Preventivo
 
 
 def _invoice_with_lines(cliente_id: int, lines: list[tuple[str, float, float]]) -> int:
-    invoice_id = invoice_commands.create_invoice(cliente_id=cliente_id, anno=2026)["invoice_id"]
+    invoice_id: int = invoice_commands.create_invoice(cliente_id=cliente_id, anno=2026)[
+        "invoice_id"
+    ]
     for descrizione, quantita, prezzo in lines:
         result = invoice_commands.create_riga(
             fattura_id=invoice_id,

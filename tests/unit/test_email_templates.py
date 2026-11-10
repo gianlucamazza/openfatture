@@ -470,6 +470,7 @@ class TestTemplatePECSender:
         # Should succeed after retry
         assert mock_server.send_message.call_count == 1
         assert success is False
+        assert error is not None
         assert "verification" in error
 
 

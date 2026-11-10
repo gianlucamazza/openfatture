@@ -91,6 +91,7 @@ class TestFatturaPABuilder:
         # Check number
         numero = dati_gen.find("{*}Numero")
         assert numero is not None
+        assert numero.text is not None
         assert f"{sample_fattura.numero}/{sample_fattura.anno}" in numero.text
 
     def test_dettaglio_linee(self, test_settings, sample_fattura):
@@ -136,6 +137,7 @@ class TestFatturaPABuilder:
 
         importo_ritenuta = dati_ritenuta.find("{*}ImportoRitenuta")
         assert importo_ritenuta is not None
+        assert importo_ritenuta.text is not None
         assert Decimal(importo_ritenuta.text) == sample_fattura_with_ritenuta.ritenuta_acconto
 
     def test_bollo(self, test_settings, sample_fattura_with_bollo):
@@ -154,6 +156,7 @@ class TestFatturaPABuilder:
 
         importo_bollo = dati_bollo.find("{*}ImportoBollo")
         assert importo_bollo is not None
+        assert importo_bollo.text is not None
         assert Decimal(importo_bollo.text) == Decimal("2.00")
 
     def test_progressivo_invio(self, test_settings, sample_fattura):
@@ -165,6 +168,7 @@ class TestFatturaPABuilder:
         progressivo = root.find(".//{*}ProgressivoInvio")
 
         assert progressivo is not None
+        assert progressivo.text is not None
         assert len(progressivo.text) <= 10
         assert progressivo.text.isalnum()
         assert FatturaPABuilder(test_settings).build(sample_fattura) == xml_content
@@ -206,6 +210,7 @@ class TestFatturaPABuilder:
         assert prezzo is not None
 
         # FatturaPA requires at least two fractional digits.
+        assert prezzo.text is not None
         assert prezzo.text.endswith(".00")
 
     def test_save_to_file(self, test_settings, sample_fattura, tmp_path):
@@ -303,14 +308,17 @@ class TestGenerateFilename:
 
         al_cassa = cassa.find("{*}AlCassa")
         assert al_cassa is not None
+        assert al_cassa.text is not None
         assert Decimal(al_cassa.text) == Decimal("4.00")
 
         importo = cassa.find("{*}ImportoContributoCassa")
         assert importo is not None
+        assert importo.text is not None
         assert Decimal(importo.text) == Decimal("40.00")
 
         aliquota_iva = cassa.find("{*}AliquotaIVA")
         assert aliquota_iva is not None
+        assert aliquota_iva.text is not None
         assert Decimal(aliquota_iva.text) == Decimal("22.00")
 
 

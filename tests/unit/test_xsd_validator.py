@@ -156,6 +156,7 @@ class TestFatturaPAValidator:
         is_valid, error = validator.validate(xml_content)
 
         assert is_valid is False
+        assert error is not None
         assert "Validation error" in error
 
     def test_validate_invalid_xml_syntax(self):
@@ -167,6 +168,7 @@ class TestFatturaPAValidator:
         is_valid, error = validator.validate(invalid_xml)
 
         assert is_valid is False
+        assert error is not None
         assert "XML syntax error" in error
 
     def test_validate_valid_xml_with_custom_schema(self, tmp_path):
@@ -213,6 +215,7 @@ class TestFatturaPAValidator:
         is_valid, error = validator.validate(invalid_xml)
 
         assert is_valid is False
+        assert error is not None
         assert "Validation error" in error
 
     def test_validate_file_not_found(self, tmp_path):
@@ -223,6 +226,7 @@ class TestFatturaPAValidator:
         is_valid, error = validator.validate_file(non_existent)
 
         assert is_valid is False
+        assert error is not None
         assert "File not found" in error
 
     def test_validate_file_success(self):

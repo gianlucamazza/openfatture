@@ -20,7 +20,7 @@ class MinimalImporter(BaseImporter):
         return []
 
 
-def _write(tmp_path, name: str, content: str) -> Path:
+def _write(tmp_path: Path, name: str, content: str) -> Path:
     file_path = tmp_path / name
     file_path.write_text(content, encoding="utf-8")
     return file_path

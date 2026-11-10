@@ -223,7 +223,7 @@ class TestBulkUpdateStatus:
         mock_invoice.numero = "001"
         mock_invoice.anno = 2025
 
-        invoices = [mock_invoice]
+        invoices: list[Fattura] = [mock_invoice]
         db_session = Mock()
 
         result = bulk_update_status(invoices, StatoFattura.BOZZA, db_session)

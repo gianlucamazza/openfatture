@@ -123,6 +123,7 @@ async def test_interrupted_turn_remains_pending_with_partial_usage(monkeypatch, 
     with pytest.raises(RuntimeError):
         _ = [event async for event in instance.stream("read")]
     loaded = store.load(instance.session_id)
+    assert loaded is not None
     assert loaded.messages == []
     assert loaded.pending_user_input == "read"
     assert instance.last_response.usage.total_tokens == 10

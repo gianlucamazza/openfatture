@@ -127,6 +127,7 @@ class TestCertificateManager:
         is_valid, error = manager.validate_certificate()
 
         assert is_valid is False
+        assert error is not None
         assert "not loaded" in error
 
     def test_get_certificate_info(self, temp_certificate):
@@ -213,6 +214,7 @@ class TestDigitalSigner:
         success, error, result_path = signer.sign_file(non_existent)
 
         assert success is False
+        assert error is not None
         assert "not found" in error
 
     def test_sign_data_success(self, temp_certificate):
@@ -265,6 +267,7 @@ class TestSignatureVerifier:
         is_valid, error = verifier.verify_file(non_existent)
 
         assert is_valid is False
+        assert error is not None
         assert "not found" in error
 
     def test_extract_content_success(self, temp_certificate, tmp_path):
@@ -319,6 +322,7 @@ class TestSignatureVerifier:
 
         assert success is True
         assert error is None
+        assert info is not None
         assert info["signer"]["common_name"] == "Test Certificate"
         assert info["signer"]["organization"] == "Test Company"
         assert "valid_from" in info

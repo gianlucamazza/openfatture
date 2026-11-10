@@ -15,6 +15,7 @@ import pytest
 from openfatture.payment.domain.enums import MatchType
 from openfatture.payment.domain.value_objects import MatchResult
 from openfatture.payment.matchers.composite import CompositeMatcher
+from openfatture.storage.database.models import Pagamento
 
 pytestmark = pytest.mark.unit
 
@@ -33,7 +34,7 @@ def mock_transaction():
 @pytest.fixture
 def mock_payments():
     """Create mock payment candidates (realistic dataset)."""
-    payments = []
+    payments: list[Pagamento] = []
     for i in range(100):  # 100 candidate payments
         payment = Mock()
         payment.id = i + 1
@@ -54,7 +55,7 @@ def create_async_strategy_with_delay(
         return [
             MatchResult(
                 payment=Mock(id=payment_id),
-                confidence=Decimal(str(confidence)),
+                confidence=float(confidence),
                 match_type=MatchType.COMPOSITE,
                 match_reason=f"Strategy {payment_id}",
             )
@@ -175,7 +176,7 @@ class TestCompositeMatcherPerformance:
     def test_benchmark_large_payment_dataset(self, benchmark, mock_transaction):
         """Benchmark with realistic large dataset (1000 payments)."""
         # Create 1000 candidate payments
-        large_payments = []
+        large_payments: list[Pagamento] = []
         for i in range(1000):
             payment = Mock()
             payment.id = i + 1
