@@ -221,6 +221,10 @@ skips = ["B701"]
 # Dev tooling lives in the `dev` extra.
 pep621_dev_dependency_groups = ["dev"]
 
+[tool.deptry.package_module_name_map]
+# Namespace package: imported as langgraph.checkpoint.sqlite.
+langgraph-checkpoint-sqlite = "langgraph"
+
 [tool.deptry.per_rule_ignores]
 # Optional nested-loop helper, ImportError-guarded in platform/async_bridge.py.
 DEP001 = ["nest_asyncio"]
