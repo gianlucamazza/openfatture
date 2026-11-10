@@ -140,7 +140,7 @@ jobs:
         run: .venv/bin/ruff format --check .
 
       - name: Check declared vs imported dependencies (deptry)
-        run: uv run --frozen --with deptry deptry .
+        run: uv run --frozen --all-extras --with deptry deptry .
 
       - name: Run Ruff check
         run: .venv/bin/ruff check .
