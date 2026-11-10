@@ -12,6 +12,11 @@ from openfatture.i18n import _
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def _isolated_database(runtime_db):
+    """The command group opens the configured database before listing."""
+
+
 def _invoice(**overrides: Any) -> dict[str, Any]:
     invoice: dict[str, Any] = {
         "id": 1,

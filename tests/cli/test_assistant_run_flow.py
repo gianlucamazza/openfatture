@@ -156,6 +156,8 @@ def harness(monkeypatch: pytest.MonkeyPatch) -> Iterator[Harness]:
     monkeypatch.setattr(assistant, "get_settings", lambda: settings)
     monkeypatch.setattr(assistant, "get_event_bus", lambda: h.bus)
     monkeypatch.setattr(ai_runtime, "create_assistant_runtime", factory)
+    # The runtime is faked: the flow must not depend on the ai extra being installed.
+    monkeypatch.setattr(extras, "require_extra", lambda *args, **kwargs: None)
     monkeypatch.setattr(base, "init_db", lambda url: None)
     monkeypatch.setattr(assistant_ui.ChatPresentation, "read", read)
     yield h
