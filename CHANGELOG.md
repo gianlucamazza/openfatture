@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-11-10
+
+Consistency of invoice amounts across totals, XML and PDF, and burn-down of all open
+technical debt ([ledger](docs/TECHNICAL_DEBT.md)).
+
 ### Fixed
 
 - **XML, PDF and stored totals now agree** on every amount (`billing.application.totals`):
@@ -27,6 +32,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the page; the footer shows the real page count.
 - Tool results report `bulkhead_queue_length` as the number of callers actually waiting for
   the tool's concurrency slot, instead of a value derived from a private semaphore field (#40).
+- **Assistant tool errors**: an application refusal (`{"error": ...}`, e.g. "invoice not found")
+  was reported as a successful tool call, so read tools cached it and metrics counted it as a
+  success. It is now a failed result that keeps its payload for the model, and it does not open
+  the circuit breaker. Tool exceptions no longer expose SQL.
+- `fattura list`/`show`: payment statuses `fully_paid`, `partially_paid` and
+  `no_payment_record` had no translation and printed the raw message id.
+- Logging no longer writes to a closed stream when `sys.stderr` was redirected after start-up.
+- Nested event loops: `run_async` uses one strategy (`asyncio.run`, or a worker thread with its
+  own loop and the caller's context when a loop is running); `nest_asyncio` is gone (#43).
+
+### Changed
+
+- CLI command output is localized in all five locales (it, en, de, es, fr), and euro amounts are
+  formatted for the active locale.
+- Payment matchers have one synchronous contract.
+- Internal structure: oversized modules split by cohesion (`storage.database.models` package,
+  invoice line and quote commands/queries, invoice tool definitions, tool registry resilience
+  and metrics, OpenAI payload mapping, PDF template sections); complexity hotspots refactored.
+- Tests are type-checked with mypy in CI.
 
 ### Added
 

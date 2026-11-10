@@ -55,3 +55,18 @@ The 7 XSD validation tests were always skipped by a stale check; they now run.
 | D-ERRORS | Error dicts vs exceptions vs `ToolResult` are three contracts; 54 log-only broad `except` blocks (mostly isolation of post-commit side effects, reviewed) | Consistency | L | P3 |
 | D-XML-TOTAL | `ImportoTotaleDocumento` is not emitted (optional in FatturaPA) | Customer tooling expectations | S | P3 |
 | D-TYPES-TESTS (#42), D-OBS (#40), D-ASYNC (#43), D-PDF-PAGOPA (#41) | unchanged | — | — | as before |
+
+## Follow-up: 2.9.0 burn-down
+
+All remaining items were closed in 2.9.0 (see the closed ledger in
+[TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md)):
+
+- **Amounts**: social security contributions, per-rate VAT, stamp duty, the
+  amount due and `ImportoTotaleDocumento` come from one module for stored
+  totals, XML and PDF. Checked on a copy of a real forfettario database (INPS
+  4%, re-charged stamp duty): summaries match the stored totals and the XML
+  validates.
+- **D-SIZE**: no function above radon rank C; largest product module ~520 LOC.
+- **D-CLI-I18N**: command output in `cli.ftl` for five locales.
+- **D-ERRORS**: application refusals are failed tool results.
+- **D-TYPES-TESTS, D-ASYNC, D-OBS, D-PDF-PAGOPA, D-XML-TOTAL**: closed.
