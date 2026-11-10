@@ -27,6 +27,7 @@ def generate_invoice_pdf(
     template: str = "minimalist",
     enable_qr_code: bool = False,
     watermark_text: str | None = None,
+    logo_path: str | None = None,
 ) -> dict[str, Any]:
     """
     Generate PDF for an invoice.
@@ -37,6 +38,7 @@ def generate_invoice_pdf(
         template: Template name (minimalist/professional/branded, default: minimalist)
         enable_qr_code: Enable SEPA QR code for payments (default: False)
         watermark_text: Optional watermark text (e.g., "BOZZA", "DRAFT")
+        logo_path: Company logo overriding the configured one
 
     Returns:
         Dictionary with generation result and PDF path
@@ -72,7 +74,8 @@ def generate_invoice_pdf(
             company_address=settings.cedente_indirizzo,
             company_city=f"{settings.cedente_cap} {settings.cedente_comune} ({settings.cedente_provincia})",
             regime_fiscale=settings.cedente_regime_fiscale,
-            logo_path=settings.email_logo_url if hasattr(settings, "email_logo_url") else None,
+            logo_path=logo_path
+            or (settings.email_logo_url if hasattr(settings, "email_logo_url") else None),
             primary_color=(
                 settings.email_primary_color
                 if hasattr(settings, "email_primary_color")

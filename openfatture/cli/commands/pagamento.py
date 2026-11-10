@@ -98,30 +98,11 @@ def declare(
 @app.command("migrate")
 def migrate_collections() -> None:
     """Upgrade existing collection data without changing monetary balances."""
+    from openfatture.payment.application.collection_migration import upgrade_collection_database
     from openfatture.storage.database import base
-    from openfatture.storage.database.collection_migration import upgrade_collections
 
     assert base.engine is not None
-    with base.engine.connect() as connection:
-        if connection.dialect.name == "sqlite":
-            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
-            connection.commit()
-            connection.exec_driver_sql("BEGIN IMMEDIATE")
-        try:
-            upgrade_collections(connection)
-            if (
-                connection.dialect.name == "sqlite"
-                and connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
-            ):
-                raise ValueError("Foreign-key validation failed")
-            connection.commit()
-        except Exception:
-            connection.rollback()
-            raise
-        finally:
-            if connection.dialect.name == "sqlite":
-                connection.exec_driver_sql("PRAGMA foreign_keys=ON")
-                connection.commit()
+    upgrade_collection_database(base.engine)
     show_result({"success": True, "message": "Collection migration complete"})
 
 

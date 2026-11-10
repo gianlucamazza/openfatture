@@ -1,7 +1,7 @@
 """Add collection ledger and migrate historical cumulative payment balances."""
 
 from alembic import op
-from openfatture.storage.database.collection_migration import upgrade_collections
+from openfatture.payment.application.collection_migration import upgrade_collections
 
 revision = "20261109_collections"
 down_revision = "20261109_status"
