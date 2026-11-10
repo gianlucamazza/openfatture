@@ -749,6 +749,26 @@ def mock_pec_server(monkeypatch):
     return sent_emails
 
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_ROOT_ENTRIES_AT_START = {path.name for path in _REPO_ROOT.iterdir()}
+_TOOL_CACHES = {
+    ".benchmarks",
+    ".coverage",
+    ".hypothesis",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def no_stray_files_in_repository_root():
+    """Tests must write to tmp_path, never to the working directory."""
+    yield
+    created = {path.name for path in _REPO_ROOT.iterdir()} - _ROOT_ENTRIES_AT_START - _TOOL_CACHES
+    assert not created, f"tests created files in the repository root: {sorted(created)}"
+
+
 @pytest.fixture(autouse=True)
 def isolated_user_config(tmp_path_factory, monkeypatch):
     """Never read or write the developer's real config.toml or OS keychain."""

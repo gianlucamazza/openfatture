@@ -35,7 +35,7 @@ class TestInitCommand:
         mock_settings_instance.data_dir = tmp_path / "data"
         mock_settings_instance.archivio_dir = tmp_path / "archivio"
         mock_settings_instance.certificates_dir = tmp_path / "certificates"
-        mock_settings_instance.database_url = "sqlite:///test.db"
+        mock_settings_instance.database_url = f"sqlite:///{tmp_path / 'test.db'}"
         mock_settings.return_value = mock_settings_instance
 
         result = runner.invoke(app, ["--no-interactive"])
@@ -47,7 +47,7 @@ class TestInitCommand:
         assert "Setup Complete" in result.stdout
 
         # Verify init_db was called
-        mock_init_db.assert_called_once_with("sqlite:///test.db")
+        mock_init_db.assert_called_once_with(f"sqlite:///{tmp_path / 'test.db'}")
 
     @pytest.mark.skip(
         reason="Complex interactive test - requires working directory mocking refactor"
@@ -65,7 +65,7 @@ class TestInitCommand:
         mock_settings_instance.data_dir = tmp_path / "data"
         mock_settings_instance.archivio_dir = tmp_path / "archivio"
         mock_settings_instance.certificates_dir = tmp_path / "certificates"
-        mock_settings_instance.database_url = "sqlite:///test.db"
+        mock_settings_instance.database_url = f"sqlite:///{tmp_path / 'test.db'}"
         mock_settings.return_value = mock_settings_instance
 
         # Mock user inputs
@@ -121,7 +121,7 @@ class TestInitCommand:
         mock_settings_instance.data_dir = tmp_path / "data"
         mock_settings_instance.archivio_dir = tmp_path / "archivio"
         mock_settings_instance.certificates_dir = tmp_path / "certificates"
-        mock_settings_instance.database_url = "sqlite:///test.db"
+        mock_settings_instance.database_url = f"sqlite:///{tmp_path / 'test.db'}"
         mock_settings.return_value = mock_settings_instance
 
         # User declines to overwrite
@@ -162,7 +162,7 @@ class TestInitCommand:
         mock_settings_instance.data_dir = tmp_path / "data"
         mock_settings_instance.archivio_dir = tmp_path / "archivio"
         mock_settings_instance.certificates_dir = tmp_path / "certificates"
-        mock_settings_instance.database_url = "sqlite:///test.db"
+        mock_settings_instance.database_url = f"sqlite:///{tmp_path / 'test.db'}"
         mock_settings.return_value = mock_settings_instance
 
         # User accepts overwrite
@@ -218,7 +218,7 @@ class TestInitCommand:
         mock_settings_instance.data_dir = tmp_path / "data"
         mock_settings_instance.archivio_dir = tmp_path / "archivio"
         mock_settings_instance.certificates_dir = tmp_path / "certificates"
-        mock_settings_instance.database_url = "sqlite:///test.db"
+        mock_settings_instance.database_url = f"sqlite:///{tmp_path / 'test.db'}"
         mock_settings.return_value = mock_settings_instance
 
         # Mock user inputs - first P.IVA invalid, then valid
@@ -272,7 +272,7 @@ class TestInitCommand:
         mock_settings_instance.data_dir = tmp_path / "data"
         mock_settings_instance.archivio_dir = tmp_path / "archivio"
         mock_settings_instance.certificates_dir = tmp_path / "certificates"
-        mock_settings_instance.database_url = "sqlite:///test.db"
+        mock_settings_instance.database_url = f"sqlite:///{tmp_path / 'test.db'}"
         mock_settings.return_value = mock_settings_instance
 
         # Mock user inputs - first CF invalid, then valid
@@ -326,7 +326,7 @@ class TestInitCommand:
         mock_settings_instance.data_dir = tmp_path / "data"
         mock_settings_instance.archivio_dir = tmp_path / "archivio"
         mock_settings_instance.certificates_dir = tmp_path / "certificates"
-        mock_settings_instance.database_url = "sqlite:///test.db"
+        mock_settings_instance.database_url = f"sqlite:///{tmp_path / 'test.db'}"
         mock_settings.return_value = mock_settings_instance
 
         # Mock user inputs
@@ -378,7 +378,7 @@ class TestInitCommand:
         mock_settings_instance.data_dir = mock_data_dir
         mock_settings_instance.archivio_dir = mock_archivio_dir
         mock_settings_instance.certificates_dir = mock_certificates_dir
-        mock_settings_instance.database_url = "sqlite:///test.db"
+        mock_settings_instance.database_url = f"sqlite:///{tmp_path / 'test.db'}"
         mock_settings.return_value = mock_settings_instance
 
         result = runner.invoke(app, ["--no-interactive"])
