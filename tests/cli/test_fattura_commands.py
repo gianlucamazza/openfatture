@@ -11,7 +11,7 @@ def test_fattura_list_empty(runtime_db):
     """Test fattura list with no invoices."""
     result = runner.invoke(app, ["fattura", "list"])
     assert result.exit_code == 0
-    assert "No invoices found" in result.stdout
+    assert "Nessuna fattura trovata" in result.stdout
 
 
 def test_fattura_create(runtime_db, seed_cliente):
@@ -29,14 +29,14 @@ def test_fattura_create(runtime_db, seed_cliente):
     )
     assert result.exit_code == 0
     assert "created successfully" in result.stdout
-    assert "Invoice ID:" in result.stdout
+    assert "ID fattura:" in result.stdout
 
 
 def test_fattura_list_with_results(runtime_db, seed_fattura):
     """Test fattura list with existing invoices."""
     result = runner.invoke(app, ["fattura", "list"])
     assert result.exit_code == 0
-    assert "Invoices" in result.stdout
+    assert "Fatture" in result.stdout
     assert seed_fattura.numero in result.stdout
 
 
@@ -52,7 +52,7 @@ def test_fattura_show_not_found(runtime_db):
     """Test showing non-existent invoice."""
     result = runner.invoke(app, ["fattura", "show", "99999"])
     assert result.exit_code == 1
-    assert "Error" in result.stdout
+    assert "Errore" in result.stdout
 
 
 def test_fattura_add_line(runtime_db, seed_fattura):
@@ -90,7 +90,7 @@ def test_fattura_generate_pdf(runtime_db, seed_fattura, tmp_path):
         ],
     )
     assert result.exit_code == 0
-    assert "PDF generated successfully" in result.stdout
+    assert "PDF generato correttamente" in result.stdout
     assert output_file.exists()
 
 
@@ -113,15 +113,15 @@ def test_fattura_create_invalid_client(runtime_db):
         ],
     )
     assert result.exit_code == 1
-    assert "Error" in result.stdout
+    assert "Errore" in result.stdout
 
 
 def test_fattura_generate_xml(runtime_db, seed_fattura):
     """Test generating FatturaPA XML for invoice."""
     result = runner.invoke(app, ["fattura", "generate-xml", str(seed_fattura.id)])
     assert result.exit_code == 0
-    assert "XML generated successfully" in result.stdout
-    assert "Output:" in result.stdout
+    assert "XML generato correttamente" in result.stdout
+    assert "File:" in result.stdout
 
 
 def test_fattura_generate_xml_with_output(runtime_db, seed_fattura, tmp_path):
@@ -138,7 +138,7 @@ def test_fattura_generate_xml_with_output(runtime_db, seed_fattura, tmp_path):
         ],
     )
     assert result.exit_code == 0
-    assert "XML generated successfully" in result.stdout
+    assert "XML generato correttamente" in result.stdout
     assert output_file.exists()
     xml_content = output_file.read_text()
     assert "FatturaElettronica" in xml_content
@@ -149,7 +149,7 @@ def test_fattura_generate_xml_dry_run(runtime_db, seed_fattura):
     """Test generating XML in dry-run mode (no file written)."""
     result = runner.invoke(app, ["fattura", "generate-xml", str(seed_fattura.id), "--dry-run"])
     assert result.exit_code == 0
-    assert "XML generated successfully (dry-run mode)" in result.stdout
+    assert "XML generato correttamente (simulazione" in result.stdout
     assert "FatturaElettronica" in result.stdout
     assert seed_fattura.numero in result.stdout
 
@@ -158,5 +158,5 @@ def test_fattura_generate_xml_not_found(runtime_db):
     """Test generating XML for non-existent invoice."""
     result = runner.invoke(app, ["fattura", "generate-xml", "99999"])
     assert result.exit_code == 1
-    assert "Error" in result.stdout
+    assert "Errore" in result.stdout
     assert "not found" in result.stdout

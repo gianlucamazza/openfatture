@@ -41,10 +41,10 @@ class TestInitCommand:
         result = runner.invoke(app, ["--no-interactive"])
 
         assert result.exit_code == 0
-        assert "OpenFatture Setup" in result.stdout
-        assert "Creating directories" in result.stdout
-        assert "Initializing database" in result.stdout
-        assert "Setup Complete" in result.stdout
+        assert "Configurazione di OpenFatture" in result.stdout
+        assert "Creazione delle directory" in result.stdout
+        assert "Inizializzazione del database" in result.stdout
+        assert "Configurazione completata" in result.stdout
 
         # Verify init_db was called
         mock_init_db.assert_called_once_with(f"sqlite:///{tmp_path / 'test.db'}")
@@ -92,8 +92,8 @@ class TestInitCommand:
             result = runner.invoke(app, ["--interactive"])
 
             assert result.exit_code == 0
-            assert "Let's configure your company data" in result.stdout
-            assert "Configuration saved" in result.stdout
+            assert "Configuriamo i dati della tua azienda" in result.stdout
+            assert "Configurazione salvata" in result.stdout
 
             # Verify .env file was created
             env_file = tmp_path / ".env"
@@ -140,7 +140,7 @@ class TestInitCommand:
             result = runner.invoke(app, ["--interactive"])
 
             assert result.exit_code == 0
-            assert "Existing configuration preserved" in result.stdout
+            assert "Configurazione esistente mantenuta" in result.stdout
             # Verify original content preserved
             assert "# Existing content" in env_file.read_text()
         finally:
@@ -194,7 +194,7 @@ class TestInitCommand:
             result = runner.invoke(app, ["--interactive"])
 
             assert result.exit_code == 0
-            assert "Configuration saved" in result.stdout
+            assert "Configurazione salvata" in result.stdout
             # Verify file was overwritten
             content = env_file.read_text()
             assert "Test Company" in content
@@ -246,8 +246,8 @@ class TestInitCommand:
             result = runner.invoke(app, ["--interactive"])
 
             assert result.exit_code == 0
-            assert "Invalid Partita IVA" in result.stdout
-            assert "Configuration saved" in result.stdout
+            assert "Partita IVA non valida" in result.stdout
+            assert "Configurazione salvata" in result.stdout
 
             # Verify valid P.IVA was saved
             env_file = tmp_path / ".env"
@@ -300,8 +300,8 @@ class TestInitCommand:
             result = runner.invoke(app, ["--interactive"])
 
             assert result.exit_code == 0
-            assert "Invalid Codice Fiscale" in result.stdout
-            assert "Configuration saved" in result.stdout
+            assert "Codice fiscale non valido" in result.stdout
+            assert "Configurazione salvata" in result.stdout
 
             # Verify valid CF was saved
             env_file = tmp_path / ".env"
@@ -355,7 +355,7 @@ class TestInitCommand:
             result = runner.invoke(app, ["--interactive"])
 
             assert result.exit_code == 0
-            assert "Configuration saved" in result.stdout
+            assert "Configurazione salvata" in result.stdout
 
             # Verify .env was created (not example)
             env_file = tmp_path / ".env"
@@ -397,6 +397,7 @@ def test_wizard_saves_user_profile_without_assuming_regime(monkeypatch, tmp_path
     import tomlkit
 
     from openfatture.cli.commands import init
+    from openfatture.i18n import _
 
     profile = tmp_path / "config.toml"
     profile.write_text(
@@ -416,24 +417,26 @@ def test_wizard_saves_user_profile_without_assuming_regime(monkeypatch, tmp_path
 
     def prompt(label, **kwargs):
         answers = {
-            "Company/Your name": "Test",
-            "Partita IVA (11 digits)": "12345678903",
-            "Codice Fiscale (16 characters)": "RSSMRA80A01H501U",
-            "Tax regime (use your actual RF code)": "RF01",
-            "Address (Via/Piazza)": "Via Roma 1",
-            "CAP (Postal code)": "00100",
-            "City (Comune)": "Roma",
-            "Province (2 letters, e.g., RM)": "RM",
-            "Your PEC address": "test@example.it",
-            "PEC password": "",
-            "PEC SMTP server": "smtp.example.it",
-            "Email for notifications (SDI alerts, batch summaries)": "test@example.it",
-            "Locale (it/en)": "it",
+            _("cli-init-prompt-name"): "Test",
+            _("cli-init-prompt-partita-iva"): "12345678903",
+            _("cli-init-prompt-codice-fiscale"): "RSSMRA80A01H501U",
+            _("cli-init-prompt-regime"): "RF01",
+            _("cli-init-prompt-address"): "Via Roma 1",
+            _("cli-init-prompt-cap"): "00100",
+            _("cli-init-prompt-city"): "Roma",
+            _("cli-init-prompt-province"): "RM",
+            _("cli-init-prompt-pec-address"): "test@example.it",
+            _("cli-init-prompt-pec-password"): "",
+            _("cli-init-prompt-pec-smtp"): "smtp.example.it",
+            _("cli-init-prompt-notification-email"): "test@example.it",
+            _("cli-init-prompt-locale"): "it",
         }
         return answers[label]
 
     monkeypatch.setattr(init.Prompt, "ask", prompt)
-    monkeypatch.setattr(init.Confirm, "ask", lambda label, **kwargs: "Overwrite" in label)
+    monkeypatch.setattr(
+        init.Confirm, "ask", lambda label, **kwargs: label == _("cli-init-overwrite-confirm")
+    )
     result = runner.invoke(app, [])
     assert result.exit_code == 0, result.output
     saved = tomlkit.parse(profile.read_text())

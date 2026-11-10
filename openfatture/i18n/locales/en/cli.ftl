@@ -111,3 +111,177 @@ assistant-resolve-pending-first = Resolve the pending turn with /resume before c
 assistant-resuming = Resuming the interrupted turn…
 assistant-uncertain-tool = Uncertain tool outcome: use /pending and /reconcile before /resume.
 assistant-no-pending = No pending turn.
+
+## Shared command output
+cli-common-error = [red]Error:[/red] { $error }
+cli-common-more-results = [dim]... and more. Use --limit to see more results.[/dim]
+cli-common-not-available = N/A
+cli-common-number = Number
+cli-common-date = Date
+cli-common-status = Status
+cli-common-client = Client
+cli-common-amount = Amount
+cli-common-name = Name
+cli-common-notes = Notes
+cli-common-vat-number = VAT number
+cli-common-tax-code = Tax code
+
+## FATTURA Commands
+cli-fattura-none-found = [yellow]No invoices found.[/yellow]
+cli-fattura-list-title = Invoices ({ $count })
+cli-fattura-pec-to-verify = PEC: to be verified
+cli-fattura-statement = Statement: { $value } · source: { $source }
+cli-fattura-show-title = [bold cyan]Invoice #{ $id }[/bold cyan]
+cli-fattura-submission-unverified = Submission outcome to be verified; do not repeat the transmission automatically.
+cli-fattura-amounts = Amounts
+cli-fattura-taxable = Taxable amount
+cli-fattura-vat = VAT
+cli-fattura-line-items = [bold]Line items:[/bold] { $count } total
+cli-fattura-column-description = Description
+cli-fattura-column-quantity = Qty
+cli-fattura-column-unit-price = Unit price
+cli-fattura-column-vat-rate = VAT %
+cli-fattura-created-id = Invoice ID: [cyan]{ $id }[/cyan]
+cli-fattura-line = Line #{ $numero }: { $descrizione }
+cli-fattura-invoice-total = Invoice total
+cli-fattura-pdf-generated = [green]✓[/green] PDF generated successfully
+cli-fattura-xml-generated = [green]✓[/green] XML generated successfully
+cli-fattura-xml-generated-dry-run = [green]✓[/green] XML generated successfully (dry run, no file written)
+cli-fattura-xml-content = [bold]XML content:[/bold]
+cli-fattura-output = Output: [cyan]{ $path }[/cyan]
+cli-fattura-size = Size: { $size } bytes
+cli-fattura-status-change = Status: { $old } → { $new }
+cli-fattura-credit-note-id = Credit note ID: [cyan]{ $id }[/cyan]
+cli-fattura-document-type = Document type
+cli-fattura-source-invoice = [dim]Source invoice:[/dim]
+cli-fattura-journal-submission = Submission #{ $id } · invoice { $invoice } · { $filename } · { $outcome }
+cli-fattura-journal-receipt = Receipt #{ $id } · invoice { $invoice } · { $outcome } · source { $source }
+cli-fattura-associate-confirm = Associate receipt { $receipt } with invoice { $invoice }?
+cli-fattura-receipt-associated = Receipt associated
+cli-fattura-resolve-confirm = Confirm that submission { $attempt } { $sent ->
+        [yes] was transmitted
+       *[no] was not transmitted
+    }?
+cli-fattura-submission-resolved = Verification recorded
+
+## CLIENTE Commands
+cli-cliente-none-found = [yellow]No clients found.[/yellow]
+cli-cliente-list-title = Clients ({ $count })
+cli-cliente-column-invoices = Invoices
+cli-cliente-show-title = [bold cyan]Client #{ $id }[/bold cyan]
+cli-cliente-address = Address
+cli-cliente-contacts = Contacts
+cli-cliente-phone = Phone
+cli-cliente-invoices-total = [bold]Invoices:[/bold] { $count } total
+cli-cliente-recent-invoices = Recent invoices
+cli-cliente-created-id = Client ID: [cyan]{ $id }[/cyan]
+
+## PAGAMENTO Commands
+cli-pagamento-reverse-confirm = Reverse { $amount } from ledger entry { $entry }?
+
+## INIT Command
+cli-init-title = [bold blue]OpenFatture Setup[/bold blue]
+cli-init-structured-needs-no-interactive = Use --no-interactive with a structured output format
+cli-init-creating-dirs = [cyan]Creating directories...[/cyan]
+cli-init-dirs-created = Data directories created
+cli-init-initializing-db = [cyan]Initializing database...[/cyan]
+cli-init-backup = Backup before upgrade: { $path }
+cli-init-database = Database { $state ->
+        [empty] created
+        [current] up to date
+        [outdated] upgraded
+        [unversioned] adopted and upgraded
+       *[other] { $state }
+    }: { $url }
+cli-init-configure-company = [bold yellow]Let's configure your company data[/bold yellow]
+cli-init-overwrite-confirm = [yellow]An OpenFatture profile already exists. Overwrite company/AI settings?[/yellow]
+cli-init-config-preserved = [green]Existing configuration preserved.[/green] Directories and database were still ensured.
+cli-init-company-section = [bold]Company information (Cedente Prestatore)[/bold]
+cli-init-prompt-name = Company or your name
+cli-init-prompt-partita-iva = Partita IVA (11 digits)
+cli-init-invalid-partita-iva = [red]Invalid Partita IVA. Please try again.[/red]
+cli-init-prompt-codice-fiscale = Codice fiscale (16 characters)
+cli-init-invalid-codice-fiscale = [red]Invalid codice fiscale. Please try again.[/red]
+cli-init-prompt-regime = Tax regime (use your actual RF code)
+cli-init-invalid-regime = [red]Enter a tax regime supported by FatturaPA.[/red]
+cli-init-prompt-address = Address (street)
+cli-init-prompt-cap = Postal code (CAP)
+cli-init-prompt-city = City (Comune)
+cli-init-prompt-province = Province (2 letters, e.g. RM)
+cli-init-pec-section = [bold]PEC configuration[/bold]
+cli-init-prompt-pec-address = Your PEC address
+cli-init-prompt-pec-password = PEC password
+cli-init-prompt-pec-smtp = PEC SMTP server
+cli-init-notifications-section = [bold]Email notifications[/bold]
+cli-init-prompt-notification-email = Email for notifications (SDI alerts, summaries)
+cli-init-prompt-locale = Language (it/en/de/es/fr)
+cli-init-ai-section = [bold]AI configuration (optional)[/bold]
+cli-init-ai-description = [dim]Configure AI features: invoice descriptions, tax suggestions and the chat assistant.[/dim]
+cli-init-ai-confirm = Configure AI features now? (You can also do this later with openfatture config)
+cli-init-ai-provider = AI provider
+cli-init-ai-skip = Skip for now
+cli-init-api-key-from = [cyan]{ $provider } selected - get an API key from:[/cyan]
+cli-init-ollama-selected = [cyan]Ollama selected - free local model![/cyan]
+cli-init-ollama-install = Install: [bold]ollama pull { $model }[/bold]
+cli-init-ollama-start = Start: [bold]ollama serve[/bold]
+cli-init-prompt-api-key = API key (leave empty to set it later)
+cli-init-config-saved = Configuration saved to: { $path }
+cli-init-secrets-saved = Secrets saved to the { $backend ->
+        [keyring] system keychain
+       *[file] private credentials file
+    }
+cli-init-complete-title = Setup complete
+cli-init-complete-body = [bold green]Setup finished[/bold green]
+
+    Next steps:
+      • Check readiness: [cyan]openfatture status[/cyan]
+      • Review settings: [cyan]openfatture config show[/cyan]
+      • Assistant (needs [cyan]uv sync --extra ai[/cyan]): [cyan]openfatture assistant "List the open invoices"[/cyan]
+      • Help: [cyan]openfatture --help[/cyan]
+
+## STATUS Command
+cli-status-readiness = [bold]Readiness[/bold]  core: [cyan]{ $core ->
+        [yes] ready
+       *[no] not ready
+    }[/cyan]  assistant: [cyan]{ $assistant ->
+        [yes] configured
+       *[no] not configured
+    }[/cyan]
+cli-status-title = OpenFatture status
+cli-status-label-ai-api-key-configured = AI API key configured
+cli-status-label-assistant-backend = Assistant backend
+cli-status-label-assistant-backend-id = Assistant backend ID
+cli-status-label-config-file = Config file
+cli-status-label-secret-backend = Secret backend
+cli-status-checks-title = Readiness checks
+cli-status-column-check = Check
+cli-status-yes = yes
+cli-status-no = no
+cli-status-next-steps = [bold]Next steps[/bold]
+cli-status-extras-title = Optional extras (feature modules)
+cli-status-column-extra = Extra
+cli-status-column-installed = Installed
+cli-status-extensions-title = Extensions
+cli-status-column-mechanism = Mechanism
+cli-status-column-detail = Detail
+cli-status-hooks = hooks (supported)
+cli-status-hooks-detail = { $path } ({ $count ->
+        [one] 1 script
+       *[other] { $count } scripts
+    })
+cli-status-plugins = in-process plugins
+
+## Global
+cli-main-version = [bold blue]OpenFatture[/bold blue] version { $version }
+cli-output-unsupported-format = Supported formats: { $formats }
+
+## Rich formatter
+cli-formatter-error = [bold red]Error:[/bold red] { $error }
+cli-formatter-unknown-error = Unknown error
+cli-formatter-ai-response = [bold]AI Response[/bold]
+cli-formatter-unknown = unknown
+cli-formatter-provider = Provider: { $provider }
+cli-formatter-model = Model: { $model }
+cli-formatter-tokens = Tokens: { $tokens }
+cli-formatter-cost = Cost: { $cost }
+cli-formatter-latency = Latency: { $latency } ms

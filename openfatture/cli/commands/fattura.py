@@ -1,7 +1,6 @@
 """Fattura (invoice) management CLI commands."""
 
 import typer
-from babel.numbers import format_currency
 from rich.console import Console
 from rich.table import Table
 
@@ -14,8 +13,8 @@ from openfatture.billing.application.invoice_queries import (
     get_invoice_details,
     search_invoices,
 )
-from openfatture.cli.output import remember_result
-from openfatture.i18n import _, get_locale
+from openfatture.cli.output import format_eur, remember_result
+from openfatture.i18n import _
 
 app = typer.Typer(name="fattura", help="Manage invoices")
 console = Console()
@@ -47,15 +46,15 @@ def list_invoices(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     if result["count"] == 0:
-        console.print("[yellow]No invoices found.[/yellow]")
+        console.print(_("cli-fattura-none-found"))
         return
 
     if console.width < 120:
-        console.print(f"Invoices ({result['count']})")
+        console.print(_("cli-fattura-list-title", count=result["count"]))
         for invoice in result["fatture"]:
             console.print(
                 f"{invoice['numero']}/{invoice['anno']} · {invoice['cliente']}", markup=False
@@ -68,14 +67,14 @@ def list_invoices(
                 value = (
                     "—"
                     if field == "amount_paid" and invoice["payment_status"] == "no_payment_record"
-                    else format_currency(invoice[field], "EUR", locale=get_locale())
+                    else format_eur(invoice[field])
                 )
                 console.print(f"  {_('cli-invoice-' + key)}: {value}", markup=False)
             document = (
                 _("cli-invoice-historical") if invoice["issued_elsewhere"] else invoice["stato"]
             )
             if invoice.get("submission_state") in {"pending", "uncertain"}:
-                document += " · PEC: da verificare"
+                document += " · " + _("cli-fattura-pec-to-verify")
             if invoice.get("status_origin") == "sdi_receipt":
                 document += f" · SDI: {invoice['stato']}"
             console.print(
@@ -83,8 +82,14 @@ def list_invoices(
                 markup=False,
             )
             if invoice.get("collection_statement"):
+                statement = invoice["collection_statement"]
                 console.print(
-                    f"  Dichiarazione: {invoice['collection_statement']['value']} · fonte: {invoice['collection_statement']['source']}",
+                    "  "
+                    + _(
+                        "cli-fattura-statement",
+                        value=statement["value"],
+                        source=statement["source"],
+                    ),
                     markup=False,
                 )
             console.print()
@@ -93,12 +98,12 @@ def list_invoices(
         return
 
     # Display as table
-    table = Table(title=f"Invoices ({result['count']})")
+    table = Table(title=_("cli-fattura-list-title", count=result["count"]))
     table.add_column("ID", style="cyan")
-    table.add_column("Number")
-    table.add_column("Date")
-    table.add_column("Client", style="green")
-    table.add_column("Amount", justify="right")
+    table.add_column(_("cli-common-number"))
+    table.add_column(_("cli-common-date"))
+    table.add_column(_("cli-common-client"), style="green")
+    table.add_column(_("cli-common-amount"), justify="right")
     for key in ("collected", "residual", "collection", "document"):
         table.add_column(
             _("cli-invoice-" + key), justify="right" if key in ("collected", "residual") else "left"
@@ -110,11 +115,11 @@ def list_invoices(
             f"{fattura['numero']}/{fattura['anno']}",
             fattura["data"],
             fattura["cliente"],
-            format_currency(fattura["importo"], "EUR", locale=get_locale()),
+            format_eur(fattura["importo"]),
             "—"
             if fattura["payment_status"] == "no_payment_record"
-            else format_currency(fattura["amount_paid"], "EUR", locale=get_locale()),
-            format_currency(fattura["outstanding"], "EUR", locale=get_locale()),
+            else format_eur(fattura["amount_paid"]),
+            format_eur(fattura["outstanding"]),
             _("cli-invoice-" + fattura["payment_status"]),
             (
                 _("cli-invoice-historical")
@@ -133,12 +138,13 @@ def list_invoices(
         if invoice.get("collection_statement"):
             statement = invoice["collection_statement"]
             console.print(
-                f"{invoice['numero']}/{invoice['anno']} · dichiarazione: {statement['value']} · fonte: {statement['source']}",
+                f"{invoice['numero']}/{invoice['anno']} · "
+                + _("cli-fattura-statement", value=statement["value"], source=statement["source"]),
                 markup=False,
             )
 
     if result.get("has_more"):
-        console.print("[dim]... and more. Use --limit to see more results.[/dim]")
+        console.print(_("cli-common-more-results"))
 
 
 @app.command("show")
@@ -150,14 +156,14 @@ def show_invoice(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     # Display invoice details
-    console.print(f"\n[bold cyan]Invoice #{result['id']}[/bold cyan]")
-    console.print(f"[bold]Number:[/bold] {result['numero']}/{result['anno']}")
-    console.print(f"[bold]Date:[/bold] {result['data_emissione']}")
-    console.print(f"[bold]Status:[/bold] {result['stato']}")
+    console.print("\n" + _("cli-fattura-show-title", id=str(result["id"])))
+    console.print(f"[bold]{_('cli-common-number')}:[/bold] {result['numero']}/{result['anno']}")
+    console.print(f"[bold]{_('cli-common-date')}:[/bold] {result['data_emissione']}")
+    console.print(f"[bold]{_('cli-common-status')}:[/bold] {result['stato']}")
 
     console.print(
         _("cli-invoice-document")
@@ -169,7 +175,7 @@ def show_invoice(
     for attempt in result.get("submission_evidence", []):
         console.print(f"PEC #{attempt['id']} · {attempt['outcome']}", markup=False)
     if result.get("submission_state") in {"pending", "uncertain"}:
-        console.print("Esito invio da verificare; non ripetere automaticamente la trasmissione.")
+        console.print(_("cli-fattura-submission-unverified"))
     for receipt in result.get("sdi_evidence", []):
         console.print(
             f"SDI #{receipt['id']} · {receipt['source']} · {receipt['outcome']}", markup=False
@@ -179,50 +185,53 @@ def show_invoice(
         value = (
             "—"
             if field == "amount_paid" and result["payment_status"] == "no_payment_record"
-            else format_currency(result[field], "EUR", locale=get_locale())
+            else format_eur(result[field])
         )
         console.print(_("cli-invoice-" + label) + ": " + value)
 
     if result.get("collection_statement"):
+        statement = result["collection_statement"]
         console.print(
-            f"Dichiarazione: {result['collection_statement']['value']} · fonte: {result['collection_statement']['source']}",
+            _("cli-fattura-statement", value=statement["value"], source=statement["source"]),
             markup=False,
         )
 
     # Client
     cliente = result.get("cliente", {})
-    console.print("\n[bold]Client:[/bold]")
-    console.print(f"  {cliente.get('denominazione', 'N/A')}")
+    console.print(f"\n[bold]{_('cli-common-client')}:[/bold]")
+    console.print(f"  {cliente.get('denominazione') or _('cli-common-not-available')}")
     if cliente.get("partita_iva"):
-        console.print(f"  P.IVA: {cliente['partita_iva']}")
+        console.print(f"  {_('cli-common-vat-number')}: {cliente['partita_iva']}")
 
     # Amounts
     importi = result.get("importi", {})
-    console.print("\n[bold]Amounts:[/bold]")
-    console.print(f"  Imponibile: € {importi.get('imponibile', 0):.2f}")
-    console.print(f"  IVA:        € {importi.get('iva', 0):.2f}")
-    console.print(f"  [bold]Total:      € {importi.get('totale', 0):.2f}[/bold]")
+    console.print(f"\n[bold]{_('cli-fattura-amounts')}:[/bold]")
+    console.print(f"  {_('cli-fattura-taxable')}: {format_eur(importi.get('imponibile', 0))}")
+    console.print(f"  {_('cli-fattura-vat')}: {format_eur(importi.get('iva', 0))}")
+    console.print(
+        f"  [bold]{_('cli-invoice-total')}: {format_eur(importi.get('totale', 0))}[/bold]"
+    )
 
     for payment in result.get("pagamenti", []):
         console.print(
-            f"  #{payment['id']} · {_('cli-invoice-collected')}: {format_currency(payment['incassato'], 'EUR', locale=get_locale())} · {_('cli-invoice-residual')}: {format_currency(payment['residuo'], 'EUR', locale=get_locale())}",
+            f"  #{payment['id']} · {_('cli-invoice-collected')}: {format_eur(payment['incassato'])} · {_('cli-invoice-residual')}: {format_eur(payment['residuo'])}",
             markup=False,
         )
 
     # Line items
-    console.print(f"\n[bold]Line Items:[/bold] {result['righe_count']} total")
+    console.print("\n" + _("cli-fattura-line-items", count=result["righe_count"]))
     if result.get("righe"):
         table = Table()
-        table.add_column("Description", style="green")
-        table.add_column("Qty", justify="right")
-        table.add_column("Unit Price", justify="right")
-        table.add_column("IVA %", justify="right")
+        table.add_column(_("cli-fattura-column-description"), style="green")
+        table.add_column(_("cli-fattura-column-quantity"), justify="right")
+        table.add_column(_("cli-fattura-column-unit-price"), justify="right")
+        table.add_column(_("cli-fattura-column-vat-rate"), justify="right")
 
         for riga in result["righe"]:
             table.add_row(
                 riga["descrizione"],
                 f"{riga['quantita']:.2f}",
-                f"€ {riga['prezzo_unitario']:.2f}",
+                format_eur(riga["prezzo_unitario"]),
                 f"{riga['aliquota_iva']:.0f}%",
             )
 
@@ -230,7 +239,7 @@ def show_invoice(
 
     # Notes
     if result.get("note"):
-        console.print("\n[bold]Notes:[/bold]")
+        console.print(f"\n[bold]{_('cli-common-notes')}:[/bold]")
         console.print(f"  {result['note']}")
 
 
@@ -253,14 +262,14 @@ def create_new_invoice(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     console.print(f"[green]✓[/green] {result['message']}")
-    console.print(f"Invoice ID: [cyan]{result['invoice_id']}[/cyan]")
-    console.print(f"Number: {result['numero']}/{result['anno']}")
-    console.print(f"Client: {result['cliente']}")
-    console.print(f"Status: {result['stato']}")
+    console.print(_("cli-fattura-created-id", id=str(result["invoice_id"])))
+    console.print(f"{_('cli-common-number')}: {result['numero']}/{result['anno']}")
+    console.print(f"{_('cli-common-client')}: {result['cliente']}")
+    console.print(f"{_('cli-common-status')}: {result['stato']}")
 
 
 @app.command("add-line")
@@ -290,13 +299,17 @@ def add_line_item(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     console.print(f"[green]✓[/green] {result['message']}")
-    console.print(f"Line #{result['numero_riga']}: {result['descrizione']}")
-    console.print(f"Total: € {result['totale']:.2f}")
-    console.print(f"Invoice total: [bold]€ {result['invoice_totale']:.2f}[/bold]")
+    console.print(
+        _("cli-fattura-line", numero=str(result["numero_riga"]), descrizione=result["descrizione"])
+    )
+    console.print(f"{_('cli-invoice-total')}: {format_eur(result['totale'])}")
+    console.print(
+        f"{_('cli-fattura-invoice-total')}: [bold]{format_eur(result['invoice_totale'])}[/bold]"
+    )
 
 
 @app.command("generate-pdf")
@@ -316,12 +329,12 @@ def generate_pdf(
     )
     remember_result(result)
     if not result.get("success"):
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
-    console.print("[green]✓[/green] PDF generated successfully")
-    console.print(f"Output: [cyan]{result['pdf_path']}[/cyan]")
-    console.print(f"Size: {result['file_size']:,} bytes")
+    console.print(_("cli-fattura-pdf-generated"))
+    console.print(_("cli-fattura-output", path=str(result["pdf_path"])))
+    console.print(_("cli-fattura-size", size=result["file_size"]))
 
 
 @app.command("generate-xml")
@@ -336,17 +349,17 @@ def generate_xml(
     result = generate_invoice_xml(fattura_id, output_path=output, dry_run=dry_run)
     remember_result(result)
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     if dry_run:
-        console.print("[green]✓[/green] XML generated successfully (dry-run mode)")
-        console.print("\n[bold]XML Content:[/bold]")
+        console.print(_("cli-fattura-xml-generated-dry-run"))
+        console.print("\n" + _("cli-fattura-xml-content"))
         console.print(result["xml_content"])
         return
-    console.print("[green]✓[/green] XML generated successfully")
-    console.print(f"Output: [cyan]{result['xml_path']}[/cyan]")
-    console.print(f"Size: {result['file_size']:,} bytes")
+    console.print(_("cli-fattura-xml-generated"))
+    console.print(_("cli-fattura-output", path=str(result["xml_path"])))
+    console.print(_("cli-fattura-size", size=result["file_size"]))
 
 
 @app.command("set-status")
@@ -359,11 +372,13 @@ def set_status(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     console.print(f"[green]✓[/green] {result['message']}")
-    console.print(f"Status: {result['old_status']} → {result['new_status']}")
+    console.print(
+        _("cli-fattura-status-change", old=result["old_status"], new=result["new_status"])
+    )
 
 
 @app.command("create-credit-note")
@@ -385,19 +400,20 @@ def create_credit_note(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     console.print(f"[green]✓[/green] {result['message']}")
-    console.print(f"Nota di credito ID: [cyan]{result['nota_credito_id']}[/cyan]")
-    console.print(f"Number: {result['numero']}/{result['anno']}")
-    console.print(f"Type: {result['tipo_documento']}")
-    console.print(f"Client: {result['cliente']}")
-    console.print(f"Total: [bold]€ {result['totale']:.2f}[/bold]")
-    console.print("\n[dim]Source invoice:[/dim]")
-    console.print(f"  ID: {result['source_invoice']['id']}")
-    console.print(f"  Number: {result['source_invoice']['numero']}")
-    console.print(f"  Date: {result['source_invoice']['data']}")
+    source = result["source_invoice"]
+    console.print(_("cli-fattura-credit-note-id", id=str(result["nota_credito_id"])))
+    console.print(f"{_('cli-common-number')}: {result['numero']}/{result['anno']}")
+    console.print(f"{_('cli-fattura-document-type')}: {result['tipo_documento']}")
+    console.print(f"{_('cli-common-client')}: {result['cliente']}")
+    console.print(f"{_('cli-invoice-total')}: [bold]{format_eur(result['totale'])}[/bold]")
+    console.print("\n" + _("cli-fattura-source-invoice"))
+    console.print(f"  ID: {source['id']}")
+    console.print(f"  {_('cli-common-number')}: {source['numero']}")
+    console.print(f"  {_('cli-common-date')}: {source['data']}")
 
 
 @app.command("sdi-journal")
@@ -409,14 +425,24 @@ def sdi_journal() -> None:
     remember_result(journal)
     for attempt in journal["submissions"]:
         console.print(
-            f"Invio #{attempt['id']} · fattura {attempt['invoice_id']} · "
-            f"{attempt['filename']} · {attempt['outcome']}",
+            _(
+                "cli-fattura-journal-submission",
+                id=str(attempt["id"]),
+                invoice=str(attempt["invoice_id"]),
+                filename=attempt["filename"],
+                outcome=attempt["outcome"],
+            ),
             markup=False,
         )
     for receipt in journal["receipts"]:
         console.print(
-            f"Ricevuta #{receipt['id']} · fattura {receipt['invoice_id']} · "
-            f"{receipt['outcome']} · origine {receipt['source']}",
+            _(
+                "cli-fattura-journal-receipt",
+                id=str(receipt["id"]),
+                invoice=str(receipt["invoice_id"]),
+                outcome=receipt["outcome"],
+                source=receipt["source"],
+            ),
             markup=False,
         )
 
@@ -429,7 +455,8 @@ def associate_receipt(
     from openfatture.sdi.application import journal_ops
 
     if not typer.confirm(
-        f"Associare ricevuta {receipt_id} alla fattura {invoice_id}?", default=False
+        _("cli-fattura-associate-confirm", receipt=str(receipt_id), invoice=str(invoice_id)),
+        default=False,
     ):
         raise typer.Abort()
     result = journal_ops.associate_receipt(receipt_id, invoice_id, evidence)
@@ -437,7 +464,7 @@ def associate_receipt(
     if "error" in result:
         console.print(result["error"], markup=False)
         raise typer.Exit(1)
-    console.print("Ricevuta associata")
+    console.print(_("cli-fattura-receipt-associated"))
 
 
 @app.command("resolve-submission")
@@ -449,11 +476,18 @@ def resolve_submission_command(
     """Resolve an uncertain PEC attempt only after checking transport evidence."""
     from openfatture.sdi.application.journal_ops import resolve_submission_attempt
 
-    if not typer.confirm(f"Confermare verifica invio {attempt_id}: inviato={sent}?", default=False):
+    if not typer.confirm(
+        _(
+            "cli-fattura-resolve-confirm",
+            attempt=str(attempt_id),
+            sent="yes" if sent else "no",
+        ),
+        default=False,
+    ):
         raise typer.Abort()
     result = resolve_submission_attempt(attempt_id, sent=sent, evidence=evidence)
     remember_result(result)
     if "error" in result:
         console.print(result["error"], markup=False)
         raise typer.Exit(1)
-    console.print("Verifica registrata")
+    console.print(_("cli-fattura-submission-resolved"))

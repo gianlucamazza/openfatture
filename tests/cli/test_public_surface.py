@@ -63,7 +63,7 @@ def test_init_runs_directly_without_nested_subcommand(tmp_path, monkeypatch) -> 
     result = runner.invoke(app, ["init", "--no-interactive"])
 
     assert result.exit_code == 0, result.output
-    assert "Setup Complete" in result.stdout
+    assert "Configurazione completata" in result.stdout
     assert databases == [settings.database_url]
     assert settings.data_dir.is_dir()
     assert settings.archivio_dir.is_dir()

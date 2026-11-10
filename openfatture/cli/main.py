@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 
 from openfatture import __version__
+from openfatture.i18n import _
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import configure_dynamic_logging, set_correlation_id
 
@@ -29,7 +30,7 @@ console = Console()
 def version_callback(value: bool) -> None:
     """Show version and exit."""
     if value:
-        console.print(f"[bold blue]OpenFatture[/bold blue] version {__version__}")
+        console.print(_("cli-main-version", version=__version__))
         raise typer.Exit()
 
 
