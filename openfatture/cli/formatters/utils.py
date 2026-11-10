@@ -1,7 +1,5 @@
 """Utility functions for using formatters in CLI commands."""
 
-from typing import Any
-
 import typer
 from rich.console import Console
 
@@ -79,69 +77,6 @@ def render_response(
     else:
         # For other formats, print formatted output
         output = formatter.format_response(response)
-        if console:
-            console.print(output, markup=False, highlight=False, soft_wrap=True)
-        else:
-            print(output)
-
-
-def render_error(
-    error: Exception | str,
-    format_type: str = "rich",
-    console: Console | None = None,
-) -> None:
-    """Render an error using the specified formatter.
-
-    Args:
-        error: Exception or error message string
-        format_type: Format type ("rich", "json", "markdown", etc.)
-        console: Rich Console instance (used for rich format)
-    """
-    formatter = get_formatter(format_type)
-    output = formatter.format_error(error)
-
-    if console:
-        console.print(output, markup=False, highlight=False, soft_wrap=True)
-    else:
-        print(output)
-
-
-def render_data(
-    data: dict[str, Any],
-    format_type: str = "rich",
-    console: Console | None = None,
-) -> None:
-    """Render arbitrary data using the specified formatter.
-
-    Args:
-        data: Dictionary of data to render
-        format_type: Format type ("rich", "json", "markdown", etc.)
-        console: Rich Console instance
-    """
-    if format_type == "json":
-        import json
-
-        from rich.json import JSON
-
-        output = json.dumps(data, indent=2, ensure_ascii=False)
-        if console:
-            console.print(JSON(output))
-        else:
-            print(output)
-    elif format_type == "rich":
-        # Use Rich's native JSON rendering
-        import json
-
-        from rich.json import JSON
-
-        if console:
-            console.print(JSON(json.dumps(data, indent=2, ensure_ascii=False)))
-        else:
-            print(json.dumps(data, indent=2))
-    else:
-        # For other formats, render as metadata
-        formatter = get_formatter(format_type)
-        output = formatter.format_metadata(data)
         if console:
             console.print(output, markup=False, highlight=False, soft_wrap=True)
         else:

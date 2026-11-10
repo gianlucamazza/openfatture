@@ -7,7 +7,6 @@ including performance monitoring, error tracking, and usage statistics.
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 
 from openfatture.ai.tools.models import ToolResult
 from openfatture.platform.logging import get_logger
@@ -134,18 +133,6 @@ class ToolMetricsCollector:
             error_type=result.error_type,
         )
 
-    def get_tool_stats(self, tool_name: str) -> ToolStats:
-        """
-        Get statistics for a specific tool.
-
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            ToolStats for the tool
-        """
-        return self._stats[tool_name]
-
     def get_all_stats(self) -> dict[str, ToolStats]:
         """
         Get statistics for all tools.
@@ -154,94 +141,6 @@ class ToolMetricsCollector:
             Dictionary mapping tool names to their stats
         """
         return dict(self._stats)
-
-    def get_global_stats(self) -> dict[str, Any]:
-        """
-        Get global aggregated statistics.
-
-        Returns:
-            Dictionary with global metrics
-        """
-        total_calls = sum(stats.calls for stats in self._stats.values())
-        total_successes = sum(stats.successes for stats in self._stats.values())
-        total_failures = sum(stats.failures for stats in self._stats.values())
-        total_execution_time = sum(stats.total_execution_time for stats in self._stats.values())
-        total_retries = sum(stats.total_retries for stats in self._stats.values())
-        total_cache_hits = sum(stats.cache_hits for stats in self._stats.values())
-
-        return {
-            "total_tools": len(self._stats),
-            "total_calls": total_calls,
-            "total_successes": total_successes,
-            "total_failures": total_failures,
-            "global_success_rate": total_successes / total_calls if total_calls > 0 else 0.0,
-            "average_execution_time": (
-                total_execution_time / total_calls if total_calls > 0 else 0.0
-            ),
-            "total_retries": total_retries,
-            "total_cache_hits": total_cache_hits,
-            "global_cache_hit_rate": total_cache_hits / total_calls if total_calls > 0 else 0.0,
-        }
-
-    def get_recent_executions(self, limit: int = 100) -> list[ToolExecutionMetrics]:
-        """
-        Get recent tool executions.
-
-        Args:
-            limit: Maximum number of executions to return
-
-        Returns:
-            List of recent ToolExecutionMetrics
-        """
-        return self._execution_history[-limit:]
-
-    def get_error_summary(self) -> dict[str, int]:
-        """
-        Get summary of errors by type.
-
-        Returns:
-            Dictionary mapping error types to counts
-        """
-        error_summary: dict[str, int] = defaultdict(int)
-
-        for stats in self._stats.values():
-            for error_type, count in stats.error_counts.items():
-                error_summary[error_type] += count
-
-        return dict(error_summary)
-
-    def reset_stats(self) -> None:
-        """Reset all collected statistics."""
-        self._stats.clear()
-        self._execution_history.clear()
-        logger.info("tool_metrics_reset")
-
-    def export_metrics(self) -> dict[str, Any]:
-        """
-        Export all metrics for external monitoring systems.
-
-        Returns:
-            Dictionary with all metrics in a structured format
-        """
-        return {
-            "global": self.get_global_stats(),
-            "tools": {
-                tool_name: {
-                    "calls": stats.calls,
-                    "successes": stats.successes,
-                    "failures": stats.failures,
-                    "success_rate": stats.success_rate,
-                    "average_execution_time": stats.average_execution_time,
-                    "cache_hits": stats.cache_hits,
-                    "cache_hit_rate": stats.cache_hit_rate,
-                    "total_retries": stats.total_retries,
-                    "error_counts": dict(stats.error_counts),
-                }
-                for tool_name, stats in self._stats.items()
-            },
-            "errors": self.get_error_summary(),
-            "export_timestamp": datetime.now().isoformat(),
-        }
 
 
 # Global metrics collector instance

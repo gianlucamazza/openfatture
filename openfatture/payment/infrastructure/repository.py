@@ -57,42 +57,6 @@ class BankAccountRepository:
         """
         return self.session.get(BankAccount, account_id)
 
-    def get_by_iban(self, iban: str) -> BankAccount | None:
-        """Get bank account by IBAN.
-
-        Args:
-            iban: IBAN string
-
-        Returns:
-            BankAccount if found, None otherwise
-        """
-        stmt = select(BankAccount).where(BankAccount.iban == iban)
-        return self.session.execute(stmt).scalar_one_or_none()
-
-    def get_active_accounts(self) -> list[BankAccount]:
-        """Get all active bank accounts.
-
-        Returns:
-            List of active BankAccount entities
-        """
-        stmt = select(BankAccount).where(BankAccount.is_active.is_(True))
-        return list(self.session.execute(stmt).scalars())
-
-    def list_accounts(self, include_inactive: bool = True) -> list[BankAccount]:
-        """List bank accounts with optional inactive accounts.
-
-        Args:
-            include_inactive: If False, returns only active accounts
-
-        Returns:
-            List of BankAccount entities
-        """
-        stmt = select(BankAccount)
-        if not include_inactive:
-            stmt = stmt.where(BankAccount.is_active.is_(True))
-        stmt = stmt.order_by(BankAccount.name.asc())
-        return list(self.session.execute(stmt).scalars())
-
     def update(self, account: BankAccount) -> BankAccount:
         """Update an existing bank account.
 
@@ -199,37 +163,6 @@ class BankTransactionRepository:
 
         return list(self.session.execute(stmt).scalars())
 
-    def get_unmatched(
-        self,
-        account_id: int | None = None,
-        date_from: date | None = None,
-        date_to: date | None = None,
-    ) -> list[BankTransaction]:
-        """Get unmatched transactions for reconciliation.
-
-        Args:
-            account_id: Optional account ID filter
-            date_from: Optional start date filter
-            date_to: Optional end date filter
-
-        Returns:
-            List of unmatched transactions
-        """
-        stmt = select(BankTransaction).where(BankTransaction.status == TransactionStatus.UNMATCHED)
-
-        if account_id is not None:
-            stmt = stmt.where(BankTransaction.account_id == account_id)
-
-        if date_from is not None:
-            stmt = stmt.where(BankTransaction.date >= date_from)
-
-        if date_to is not None:
-            stmt = stmt.where(BankTransaction.date <= date_to)
-
-        stmt = stmt.order_by(BankTransaction.date.desc())
-
-        return list(self.session.execute(stmt).scalars())
-
     def update(self, transaction: BankTransaction) -> BankTransaction:
         """Update an existing transaction.
 
@@ -241,37 +174,6 @@ class BankTransactionRepository:
         """
         self.session.flush()
         return transaction
-
-    def list_transactions(
-        self,
-        account_id: int | None = None,
-        status: TransactionStatus | None = None,
-        limit: int | None = None,
-    ) -> list[BankTransaction]:
-        """List transactions with optional filters.
-
-        Args:
-            account_id: Optional account ID filter
-            status: Optional transaction status filter
-            limit: Optional max results
-
-        Returns:
-            List of BankTransaction entities
-        """
-        stmt = select(BankTransaction)
-
-        if account_id is not None:
-            stmt = stmt.where(BankTransaction.account_id == account_id)
-
-        if status is not None:
-            stmt = stmt.where(BankTransaction.status == status)
-
-        stmt = stmt.order_by(BankTransaction.date.desc())
-
-        if limit is not None:
-            stmt = stmt.limit(limit)
-
-        return list(self.session.execute(stmt).scalars())
 
 
 class PaymentRepository:
@@ -351,12 +253,6 @@ class PaymentRepository:
             PaymentAllocation.transaction_id == transaction_id,
         )
         return self.session.execute(stmt).scalar_one_or_none()
-
-    def list_allocations_for_payment(self, payment_id: int) -> list[PaymentAllocation]:
-        """Return allocations recorded for the given payment."""
-
-        stmt = select(PaymentAllocation).where(PaymentAllocation.payment_id == payment_id)
-        return list(self.session.execute(stmt).scalars())
 
     def delete_allocation(self, allocation: PaymentAllocation) -> None:
         """Delete a previously stored payment allocation."""

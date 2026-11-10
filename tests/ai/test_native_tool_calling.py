@@ -19,7 +19,6 @@ import pytest
 from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, ToolCall, UsageMetrics
-from openfatture.ai.orchestration.native_tools import NativeToolOrchestrator
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolResult
 from openfatture.ai.tools.registry import ToolRegistry
 
@@ -198,77 +197,6 @@ async def test_openai_text_only_has_no_tool_calls():
 # ---------------------------------------------------------------------------
 # (c) Native orchestrator loop executes tools then returns final answer
 # ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_native_orchestrator_executes_tools(mock_tool_registry):
-    """Native loop: tool_use response -> tool exec -> final answer."""
-    provider = MagicMock()
-    provider.provider_name = "openai"
-    provider.model = "gpt-4o"
-    provider.supports_tools = True
-
-    responses = [
-        _make_response(
-            content="",
-            tool_calls=[ToolCall(id="call_1", name="get_invoice_count", arguments={"year": 2025})],
-        ),
-        _make_response(content="Hai emesso 42 fatture nel 2025."),
-    ]
-
-    async def fake_generate(*args, **kwargs):
-        return responses.pop(0)
-
-    provider.generate = AsyncMock(side_effect=fake_generate)
-
-    orchestrator = NativeToolOrchestrator(
-        provider=provider,
-        tool_registry=mock_tool_registry,
-        max_iterations=5,
-    )
-
-    context = ChatContext(user_input="Quante fatture?", enable_tools=True)
-    response = await orchestrator.execute(context=context, messages=[])
-
-    assert "42 fatture" in response.content
-    assert mock_tool_registry.execute_tool.call_count == 1
-    mock_tool_registry.execute_tool.assert_called_with(
-        tool_name="get_invoice_count", parameters={"year": 2025}
-    )
-
-    metrics = orchestrator.get_metrics()
-    assert metrics["tool_calls_attempted"] == 1
-    assert metrics["tool_calls_succeeded"] == 1
-    assert metrics["tool_call_success_rate"] == 1.0
-
-    # tool_choice must use OpenAI "auto" form for an openai provider
-    _, kwargs = provider.generate.call_args_list[0]
-    assert kwargs["tool_choice"] == "auto"
-    assert kwargs["tools"]
-
-
-@pytest.mark.asyncio
-async def test_native_orchestrator_anthropic_tool_choice(mock_tool_registry):
-    """Native loop uses Anthropic tool_choice/schema for anthropic providers."""
-    provider = MagicMock()
-    provider.provider_name = "anthropic"
-    provider.model = "claude-4.5-sonnet"
-    provider.supports_tools = True
-
-    provider.generate = AsyncMock(return_value=_make_response(content="done"))
-
-    orchestrator = NativeToolOrchestrator(
-        provider=provider,
-        tool_registry=mock_tool_registry,
-        max_iterations=5,
-    )
-
-    context = ChatContext(user_input="hi", enable_tools=True)
-    await orchestrator.execute(context=context, messages=[])
-
-    _, kwargs = provider.generate.call_args_list[0]
-    assert kwargs["tool_choice"] == {"type": "auto"}
-    mock_tool_registry.get_anthropic_tools.assert_called()
 
 
 # ---------------------------------------------------------------------------

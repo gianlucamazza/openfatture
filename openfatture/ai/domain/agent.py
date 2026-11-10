@@ -8,7 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from openfatture.ai.domain.context import AgentContext
-from openfatture.ai.domain.message import Message, Role
+from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus
 from openfatture.ai.providers.base import BaseLLMProvider, ProviderError
 from openfatture.ai.streaming.events import StreamEvent
@@ -590,19 +590,6 @@ class BaseAgent[ContextT: AgentContext](AgentProtocol[ContextT]):
             "LLM streaming call failed after all retries",
             provider=self.provider.provider_name,
         )
-
-    def _create_message(self, role: Role, content: str) -> Message:
-        """
-        Create a message.
-
-        Args:
-            role: Message role
-            content: Message content
-
-        Returns:
-            Message instance
-        """
-        return Message(role=role, content=content)
 
     def get_metrics(self) -> dict[str, Any]:
         """

@@ -274,11 +274,6 @@ class PaymentReminder(IntPKMixin, Base):
         self.status = ReminderStatus.SENT
         self.sent_date = datetime.now(UTC)
 
-    def mark_failed(self, error: str) -> None:
-        """Mark this reminder as failed with an error message."""
-        self.status = ReminderStatus.FAILED
-        self.error_message = error
-
     def cancel(self) -> None:
         """Cancel this reminder (e.g., payment received before reminder sent)."""
         self.status = ReminderStatus.CANCELLED
@@ -297,18 +292,6 @@ class PaymentReminder(IntPKMixin, Base):
             f"reminder_date={self.reminder_date}, "
             f"status='{self.status.value}')>"
         )
-
-    def recompute_days_before_due(self) -> int:
-        """Recompute days_before_due based on payment due date."""
-        if not self.reminder_date:
-            self.days_before_due = 0
-            return self.days_before_due
-
-        payment = getattr(self, "payment", None)
-        due_date = getattr(payment, "data_scadenza", None)
-        if due_date:
-            self.days_before_due = (due_date - self.reminder_date).days
-        return self.days_before_due
 
 
 @event.listens_for(PaymentReminder, "before_insert")

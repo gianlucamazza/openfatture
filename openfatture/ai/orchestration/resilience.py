@@ -315,13 +315,6 @@ class ResiliencePolicy(BaseModel):
             timeout_seconds=self.circuit_timeout_seconds,
         )
 
-    def get_bulkhead_config(self) -> BulkheadConfig:
-        """Get bulkhead configuration."""
-        return BulkheadConfig(
-            max_concurrent_executions=self.bulkhead_max_concurrent,
-            acquisition_timeout_seconds=self.bulkhead_acquisition_timeout,
-        )
-
 
 class ResilientProvider:
     """AI Provider wrapper with resilience patterns.

@@ -200,17 +200,3 @@ class InvoiceSummary(BaseModel):
             stato=fattura.stato.value.upper(),
             numero_sdi=fattura.numero_sdi,
         )
-
-
-class ErrorDetail(BaseModel):
-    """
-    Error detail for email display.
-
-    Represents a single error in batch operations or SDI rejections.
-    """
-
-    code: str | None = Field(None, description="Error code")
-    message: str = Field(..., description="Error message")
-    context: str | None = Field(None, description="Additional context")
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)

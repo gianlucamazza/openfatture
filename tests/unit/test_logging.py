@@ -66,13 +66,19 @@ class TestLoggingProcessors:
     """Test logging processors."""
 
     def test_add_correlation_id_processor(self):
-        """Test that correlation_id is added to events."""
-        event_dict = {"event": "test_event"}
-        result = add_correlation_id(None, None, event_dict)
+        """The current correlation ID is added; nothing is added when unset."""
+        from contextvars import copy_context
 
-        assert "correlation_id" in result
-        # Should be None if not set
-        assert result["correlation_id"] is None
+        from openfatture.platform import logging as platform_logging
+
+        def run(correlation: str | None) -> dict:
+            platform_logging._correlation_id_var.set(None)
+            if correlation:
+                platform_logging.set_correlation_id(correlation)
+            return add_correlation_id(None, None, {"event": "test_event"})
+
+        assert "correlation_id" not in copy_context().run(run, None)
+        assert copy_context().run(run, "abc123")["correlation_id"] == "abc123"
 
     def test_add_correlation_id_preserves_existing(self):
         """Test that existing correlation_id is preserved."""

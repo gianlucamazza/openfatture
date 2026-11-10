@@ -90,18 +90,9 @@ rag = [
   "sentence-transformers>=2.6.0",
   "transformers>=5.5.0",
 ]
-# Cash-flow forecasting models
-ml = [
-  "prophet>=1.1.5",
-  "xgboost>=2.1.0",
-  "pandas>=2.3.3",
-  "plotly>=6.3.1",
-  "numpy>=1.26.0",
-  "apscheduler>=3.10.4",
-]
 # Full feature set for developers and production AI installs
 all = [
-  "openfatture[ai,rag,ml]",
+  "openfatture[ai,rag]",
 ]
 dev = [
   # Testing
@@ -128,7 +119,6 @@ dev = [
   "types-reportlab>=4.0.0",
   "types-PyYAML>=6.0.0",
   "types-pyasn1>=0.5.0",
-  "pandas-stubs>=2.0.0",
   "lxml-stubs>=0.5.1",
   "types-python-dateutil>=2.9.0",
 ]
@@ -188,29 +178,11 @@ ignore_errors = true
 
 # External libraries without stubs
 [[tool.mypy.overrides]]
-module = ["prophet.*", "prophet"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["xgboost.*", "xgboost"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["sklearn.*", "sklearn"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
 module = ["ofxparse.*", "ofxparse"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["pyasn1_modules.*", "pyasn1_modules"]
-ignore_missing_imports = true
-
-# Third-party packages without usable type stubs (not project suppressions).
-# Grouped by product extra / optional stack for readability.
-[[tool.mypy.overrides]]
-module = ["apscheduler.*", "apscheduler"]
 ignore_missing_imports = true
 
 # Optional nested-loop helper (async_bridge); ImportError-guarded at runtime

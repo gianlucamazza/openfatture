@@ -204,35 +204,6 @@ class BaseLLMProvider(ABC):
         """Check if this provider supports tool/function calling."""
         pass
 
-    def _prepare_messages(
-        self,
-        messages: list[Message],
-        system_prompt: str | None = None,
-    ) -> list[dict[str, Any]]:
-        """
-        Prepare messages for API call.
-
-        Handles system prompt injection and message formatting.
-
-        Args:
-            messages: List of Message objects
-            system_prompt: Optional system prompt to prepend
-
-        Returns:
-            List of message dicts for API
-        """
-        prepared = []
-
-        # Add system prompt if provided
-        if system_prompt:
-            prepared.append({"role": "system", "content": system_prompt})
-
-        # Convert Message objects to dicts
-        for msg in messages:
-            prepared.append(msg.to_dict())
-
-        return prepared
-
     def _get_temperature(self, override: float | None = None) -> float:
         """Get temperature with optional override."""
         return override if override is not None else self.temperature

@@ -243,19 +243,6 @@ class ChatSession(BaseModel):
 
         return messages
 
-    def get_conversation_history(self) -> list[dict[str, Any]]:
-        """
-        Get conversation history in LLM API format.
-
-        Returns:
-            List of message dicts compatible with OpenAI/Anthropic APIs
-        """
-        return [
-            {"role": msg.role.value, "content": msg.content}
-            for msg in self.messages
-            if msg.role != Role.SYSTEM
-        ]
-
     def clear_messages(self, keep_system: bool = True) -> None:
         """
         Clear all messages from the session.
@@ -376,20 +363,6 @@ class ChatSession(BaseModel):
             pending_user_input=data.get("pending_user_input"),
             messages=messages,
             metadata=metadata,
-        )
-
-    def get_summary(self) -> str:
-        """
-        Get a short summary of the session.
-
-        Returns:
-            Summary string
-        """
-        return (
-            f"{self.metadata.title} | "
-            f"{self.metadata.message_count} msgs | "
-            f"{self.metadata.total_tokens} tokens | "
-            f"${self.metadata.total_cost_usd:.4f}"
         )
 
     def _truncate_if_needed(self) -> None:

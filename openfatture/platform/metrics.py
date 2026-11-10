@@ -115,12 +115,6 @@ class MetricsCollector:
             self._counters[name] += amount
             self.record_metric(f"{name}_total", self._counters[name], tags)
 
-    def set_gauge(self, name: str, value: float, tags: dict[str, str] | None = None) -> None:
-        """Set a gauge metric value."""
-        with self._lock:
-            self._gauges[name] = value
-            self.record_metric(name, value, tags)
-
     def record_timing(
         self, name: str, duration_ms: float, tags: dict[str, str] | None = None
     ) -> None:
@@ -138,13 +132,6 @@ class MetricsCollector:
             error_message=error_message[:200],
             context=context,
         )
-
-    def get_metric_stats(self, name: str, hours: int = 1) -> dict[str, Any]:
-        """Get statistics for a metric."""
-        with self._lock:
-            if name in self._series:
-                return self._series[name].get_stats(hours)
-            return {"count": 0, "avg": 0, "min": 0, "max": 0}
 
     def get_all_metrics(self) -> dict[str, Any]:
         """Get all current metrics data."""
@@ -165,48 +152,6 @@ class MetricsCollector:
         data = self.get_all_metrics()
         data["export_timestamp"] = datetime.now().isoformat()
         return json.dumps(data, indent=2, default=str)
-
-    def export_prometheus(self) -> str:
-        """Export metrics in Prometheus format."""
-        lines = []
-        timestamp_ms = int(time.time() * 1000)
-
-        with self._lock:
-            # Counters
-            for name, value in self._counters.items():
-                lines.append(f"# HELP {name} Counter metric")
-                lines.append(f"# TYPE {name} counter")
-                lines.append(f"{name}_total {value} {timestamp_ms}")
-
-            # Gauges
-            for name, gauge_value in self._gauges.items():
-                lines.append(f"# HELP {name} Gauge metric")
-                lines.append(f"# TYPE {name} gauge")
-                lines.append(f"{name} {gauge_value} {timestamp_ms}")
-
-            # Series (latest values)
-            for name, series in self._series.items():
-                if series.points:
-                    latest = series.points[-1]
-                    lines.append(f"# HELP {name} Time series metric")
-                    lines.append(f"# TYPE {name} gauge")
-                    lines.append(f"{name} {latest.value} {timestamp_ms}")
-
-        return "\n".join(lines)
-
-    def cleanup_old_data(self, max_age_hours: int = 48) -> int:
-        """Clean up old metric data. Returns number of points removed."""
-        with self._lock:
-            removed_count = 0
-            cutoff = datetime.now() - timedelta(hours=max_age_hours)
-
-            for series in self._series.values():
-                old_count = len(series.points)
-                series.points = [p for p in series.points if p.timestamp > cutoff]
-                removed_count += old_count - len(series.points)
-
-            logger.info("metrics_cleanup_completed", removed_points=removed_count)
-            return removed_count
 
 
 # Global metrics collector instance
@@ -266,22 +211,3 @@ def record_ai_request(
         "ai_request_duration", duration_ms, {"provider": provider, "model": model}
     )
     collector.record_metric("ai_tokens_used", tokens, {"provider": provider, "model": model})
-
-
-def record_invoice_operation(operation: str, duration_ms: float, success: bool) -> None:
-    """Record invoice operation metrics."""
-    collector = get_metrics_collector()
-    collector.record_metric(
-        "invoice_operations_total", 1, {"operation": operation, "success": str(success)}
-    )
-    collector.record_timing("invoice_operation_duration", duration_ms, {"operation": operation})
-
-
-def record_payment_reconciliation(
-    duration_ms: float, transactions_processed: int, matches_found: int
-) -> None:
-    """Record payment reconciliation metrics."""
-    collector = get_metrics_collector()
-    collector.record_timing("payment_reconciliation_duration", duration_ms)
-    collector.record_metric("payment_transactions_processed", transactions_processed)
-    collector.record_metric("payment_matches_found", matches_found)

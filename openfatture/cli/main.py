@@ -1,11 +1,13 @@
 """Main CLI entry point for OpenFatture."""
 
+from uuid import uuid4
+
 import typer
 from rich.console import Console
 
 from openfatture import __version__
 from openfatture.platform.config import get_settings
-from openfatture.platform.logging import configure_dynamic_logging
+from openfatture.platform.logging import configure_dynamic_logging, set_correlation_id
 
 from .commands import assistant, cliente, config, fattura, init, pagamento, status
 from .output import OutputGroup
@@ -51,6 +53,9 @@ def main(
     ),
 ) -> None:
     """Configure the CLI and start the assistant when no command is selected."""
+    # One correlation ID per CLI invocation ties together every log line,
+    # event and tool call of that command.
+    set_correlation_id(uuid4().hex[:12])
     settings = get_settings()
     settings.debug_config.enable_debug_logging |= debug
     configure_dynamic_logging(settings.debug_config)

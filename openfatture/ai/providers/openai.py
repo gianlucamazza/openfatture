@@ -8,8 +8,6 @@ import warnings
 from collections.abc import AsyncIterator
 from typing import Any, cast
 
-from pydantic import BaseModel
-
 from openfatture.ai.domain.message import Message, Role
 from openfatture.ai.domain.response import (
     AgentResponse,
@@ -27,8 +25,6 @@ from openfatture.platform.logging import get_logger
 
 try:
     from openai import AsyncOpenAI
-    from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
-    from openai.types.responses.response_output_item import ResponseOutputItem
 except ImportError as exc:
     raise MissingExtraError("ai", feature="OpenAI provider", cause=exc) from exc
 
@@ -166,19 +162,6 @@ class OpenAIProvider(BaseLLMProvider):
         metrics.cost_known = usage is not None and self.model in self.PRICING
         return metrics
 
-    def _build_message_input(self, role: str, content: str) -> dict[str, Any]:
-        """Build Responses API message input item."""
-        return {
-            "role": role,
-            "type": "message",
-            "content": [
-                {
-                    "type": "input_text",
-                    "text": content,
-                }
-            ],
-        }
-
     def _build_chat_payload(
         self,
         messages: list[Message],
@@ -269,126 +252,6 @@ class OpenAIProvider(BaseLLMProvider):
 
         return chat_messages
 
-    def _build_responses_payload(
-        self,
-        messages: list[Message],
-        system_prompt: str | None,
-    ) -> tuple[str | None, list[dict[str, Any]]]:
-        """
-        Convert internal messages into Responses API instructions + input payload.
-        """
-        instructions_parts: list[str] = []
-        inputs: list[dict[str, Any]] = []
-
-        if system_prompt:
-            instructions_parts.append(system_prompt)
-
-        for message in messages:
-            if message.role == Role.SYSTEM:
-                instructions_parts.append(message.content)
-                continue
-
-            if message.role == Role.USER:
-                inputs.append(self._build_message_input("user", message.content))
-                continue
-
-            if message.role == Role.ASSISTANT:
-                if message.tool_calls:
-                    for tool_call in message.tool_calls:
-                        tool_payload = self._convert_tool_call(tool_call)
-                        if tool_payload:
-                            inputs.append(tool_payload)
-
-                if message.content:
-                    inputs.append(self._build_message_input("assistant", message.content))
-                continue
-
-            if message.role == Role.TOOL:
-                if not message.tool_call_id:
-                    logger.warning(
-                        "tool_message_missing_id",
-                        message="Skipping tool message without tool_call_id",
-                    )
-                    continue
-
-                inputs.append(
-                    {
-                        "type": "function_call_output",
-                        "call_id": message.tool_call_id,
-                        "output": message.content,
-                    }
-                )
-
-        instructions = "\n\n".join(part for part in instructions_parts if part)
-        return (instructions or None, inputs)
-
-    def _convert_tool_call(self, tool_call: Any) -> dict[str, Any] | None:
-        """Convert a stored tool call into Responses API format."""
-        try:
-            arguments: Any
-            name: str | None
-            call_id: str | None
-
-            if isinstance(tool_call, ToolCall):
-                arguments = tool_call.arguments
-                name = tool_call.name
-                call_id = tool_call.id
-            else:
-                # Handle OpenAI-style dict tool call
-                if isinstance(tool_call, dict):
-                    function = tool_call.get("function", {})
-                    arguments = function.get("arguments") or tool_call.get("arguments", {})
-                    name = function.get("name") or tool_call.get("name")
-                    call_id = (
-                        tool_call.get("id")
-                        or tool_call.get("call_id")
-                        or f"tool_call_{int(time.time() * 1000)}"
-                    )
-                else:
-                    return None
-
-            if arguments and isinstance(arguments, str):
-                arguments_str = arguments
-            else:
-                arguments_str = json.dumps(arguments or {})
-
-            return {
-                "type": "function_call",
-                "call_id": call_id or f"tool_call_{int(time.time() * 1000)}",
-                "name": name or "unknown_tool",
-                "arguments": arguments_str,
-            }
-        except Exception as exc:
-            logger.warning("tool_call_conversion_failed", error=str(exc))
-            return None
-
-    def _extract_tool_calls(self, output_items: list[ResponseOutputItem]) -> list[ToolCall]:
-        """Extract tool calls from a Responses output array."""
-        extracted: list[ToolCall] = []
-        for item in output_items:
-            if getattr(item, "type", None) != "function_call":
-                continue
-
-            function_item = cast(ResponseFunctionToolCall, item)
-            try:
-                arguments = json.loads(function_item.arguments)
-            except json.JSONDecodeError:
-                logger.warning(
-                    "tool_call_arguments_parse_failed",
-                    tool_name=function_item.name,
-                    arguments=function_item.arguments,
-                )
-                raise ValueError("Invalid tool arguments") from None
-
-            extracted.append(
-                ToolCall(
-                    id=function_item.id or function_item.call_id,
-                    name=function_item.name,
-                    arguments=arguments,
-                )
-            )
-        return extracted
-
     def _extract_extra_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Filter kwargs to supported Chat Completions API parameters."""
         extra: dict[str, Any] = {}
@@ -396,27 +259,6 @@ class OpenAIProvider(BaseLLMProvider):
             if key in self._ALLOWED_EXTRA_PARAMS:
                 extra[key] = value
         return extra
-
-    def _build_tool_call_from_state(self, state: dict[str, Any]) -> ToolCall:
-        """Convert accumulated streaming state into a ToolCall."""
-        arguments_raw = state.get("arguments") or "{}"
-        try:
-            arguments = (
-                json.loads(arguments_raw) if isinstance(arguments_raw, str) else arguments_raw
-            )
-        except json.JSONDecodeError:
-            logger.warning(
-                "tool_call_arguments_stream_parse_failed",
-                tool_name=state.get("name"),
-                arguments=arguments_raw,
-            )
-            raise ValueError("Invalid tool arguments") from None
-
-        return ToolCall(
-            id=str(state.get("id") or f"tool_call_{int(time.time() * 1000)}"),
-            name=state.get("name") or "unknown_tool",  # Use `or` to handle None values
-            arguments=arguments,
-        )
 
     async def generate(
         self,
@@ -750,74 +592,6 @@ class OpenAIProvider(BaseLLMProvider):
         if tokens is None or tokens <= 0:
             return None
         return tokens
-
-    async def generate_structured(
-        self,
-        messages: list[Message],
-        response_model: type[BaseModel],
-        system_prompt: str | None = None,
-        temperature: float | None = None,
-        max_tokens: int | None = None,
-        **kwargs: Any,
-    ) -> tuple[AgentResponse, BaseModel | None]:
-        """
-        Generate a structured response using Pydantic model.
-
-        Uses OpenAI's JSON mode and validates output against Pydantic model.
-
-        Args:
-            messages: List of conversation messages
-            response_model: Pydantic model class for validation
-            system_prompt: Optional system prompt override
-            temperature: Optional temperature override
-            max_tokens: Optional max tokens override
-            **kwargs: Provider-specific arguments
-
-        Returns:
-            Tuple of (AgentResponse, parsed_model or None)
-        """
-        schema = response_model.model_json_schema()
-        kwargs = dict(kwargs)
-        kwargs["text"] = {
-            "format": {
-                "type": "json_schema",
-                "name": response_model.__name__,
-                "schema": schema,
-                "strict": True,
-            }
-        }
-
-        # Generate with JSON mode
-        response = await self.generate(
-            messages=messages,
-            system_prompt=system_prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            **kwargs,
-        )
-
-        # Try to parse as Pydantic model
-        try:
-            parsed_data = json.loads(response.content)
-            model_instance = response_model(**parsed_data)
-
-            logger.info(
-                "structured_output_parsed",
-                model=self.model,
-                schema=response_model.__name__,
-            )
-
-            return response, model_instance
-
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(
-                "structured_output_parse_failed",
-                model=self.model,
-                error=str(e),
-                content_preview=response.content[:200],
-            )
-
-            return response, None
 
     async def health_check(self) -> bool:
         """Check if OpenAI API is accessible."""
