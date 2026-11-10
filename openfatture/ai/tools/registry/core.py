@@ -443,8 +443,9 @@ class ToolRegistry:
                 tool.execute(**parameters), timeout=self.execution_timeout_seconds
             )
 
-            # Record circuit breaker success/failure (Phase 3)
-            if result.success:
+            # Refusals by the application ("not found", validation) are not
+            # faults of the tool and must not open the circuit.
+            if result.success or result.metadata.get("application_error"):
                 circuit_breaker.record_success()
             else:
                 circuit_breaker.record_failure()

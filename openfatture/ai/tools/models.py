@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from openfatture.platform.errors import describe_error
+
 
 class ToolParameterType(StrEnum):
     """Parameter type for tools."""
@@ -180,6 +182,19 @@ class Tool(BaseModel):
                         result = self.func(**kwargs)
 
                     execution_time = time.time() - start_time
+                    if isinstance(result, dict) and result.get("error"):
+                        # Application services report refusals as {"error": ...}:
+                        # a failed call, not an infrastructure fault.
+                        return ToolResult(
+                            success=False,
+                            data=result,
+                            error=str(result["error"]),
+                            error_type=str(result.get("error_code") or "application_error"),
+                            metadata={"application_error": True},
+                            tool_name=self.name,
+                            execution_time=execution_time,
+                            retries=attempt,
+                        )
                     return ToolResult(
                         success=True,
                         data=result,
@@ -206,7 +221,7 @@ class Tool(BaseModel):
                         execution_time = time.time() - start_time
                         return ToolResult(
                             success=False,
-                            error=str(e),
+                            error=describe_error(e),
                             error_type=error_type,
                             metadata={"outcome_uncertain": not self.retry_safe},
                             tool_name=self.name,
@@ -218,7 +233,7 @@ class Tool(BaseModel):
             execution_time = time.time() - start_time
             return ToolResult(
                 success=False,
-                error=str(e),
+                error=describe_error(e),
                 error_type=type(e).__name__,
                 tool_name=self.name,
                 execution_time=execution_time,
