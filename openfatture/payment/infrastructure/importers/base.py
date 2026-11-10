@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Session, object_session
 
 from openfatture.payment.domain.models import BankTransaction
+from openfatture.platform.errors import describe_error
 from openfatture.storage.session import db_session
 
 if TYPE_CHECKING:
@@ -194,7 +195,7 @@ class BaseImporter(ABC):
 
             except Exception as e:
                 result.error_count += 1
-                result.errors.append(f"Transaction import error: {str(e)}")
+                result.errors.append(f"Transaction import error: {describe_error(e)}")
 
     def validate_file(self) -> None:
         """Validate that file exists and is readable.
