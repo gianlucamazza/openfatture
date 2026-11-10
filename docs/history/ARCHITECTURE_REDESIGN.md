@@ -4,7 +4,7 @@
 **Scope:** what should be redesigned given modern agentic products and LangGraph, and what is non-core enough to remove or deprecate.  
 **Constraint:** public surface stays small (`init`, `assistant`, `interactive`, `config`, `status`). No long-lived import shims.
 
-Related: [ARCHITECTURE.md](ARCHITECTURE.md), [AI_ARCHITECTURE.md](AI_ARCHITECTURE.md), [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md).
+Related: [ARCHITECTURE.md](../ARCHITECTURE.md), [AI_ARCHITECTURE.md](../AI_ARCHITECTURE.md), [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md).
 
 ---
 

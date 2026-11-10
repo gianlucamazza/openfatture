@@ -87,7 +87,7 @@ AI command lifecycle events record success, latency, token usage, and cost when
 available.
 
 See [CLI_REFERENCE.md](CLI_REFERENCE.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
-[ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md).
+[ARCHITECTURE_REDESIGN.md](history/ARCHITECTURE_REDESIGN.md).
 
 
 ## Durable local execution

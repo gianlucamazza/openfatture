@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.6.0] - 2026-11-09
+## [2.6.0] - 2026-11-10
 
 ### Added
 
@@ -17,8 +17,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Provenance-backed owner declarations, separate from recorded cash movements.
 - Structured output for public business CLI commands in JSON, Markdown, HTML and JSONL.
 - Packaged migration of historical cumulative balances without changing invoice totals.
+- Durable assistant turns: per-turn LangGraph checkpoints, tool receipts reserved
+  before execution, resumable pending turns (`/resume`, `/pending`, `/reconcile`);
+  uncertain tool outcomes are never retried automatically.
+- `tests/test_import_rules.py` enforces the package import rules.
+
+### Changed
+
+- `openfatture` without a subcommand starts the interactive assistant.
+- `cliente`, `fattura` and `pagamento` are documented deterministic commands and
+  call application services only (PDF, XML, SDI journal, collection upgrade).
+- A model-chosen `output_path` for PDF/CSV export tools is confined to
+  `data_dir/exports`.
+- Payment reconciliation events are global domain events (audit log, EventLog,
+  hooks, `EVENT_LISTENERS`).
+- ML retraining is no longer started by the CLI lifespan.
+- Historical design and implementation reports moved to `docs/history/`.
+
+### Removed
+
+- `openfatture interactive start` (use `openfatture`).
+- `PAYMENT_EVENT_LISTENERS` setting and the payment-only event bus.
+- Unused payment AI insight agent/service, `ai.context` enrichment and
+  `InvoiceBatchProcessor`.
 
 ### Fixed
+
+- Invoice and quote numbers were derived from a text sort, reissuing "10" after
+  ten invoices. Numbering is numeric per year, and `(numero, anno)` is unique;
+  the migration refuses to run while duplicates exist.
+- Alembic had two heads; `alembic upgrade head` works again.
+- Payment events failed on publish (`event_id` missing) and were only logged.
+- A broken tool module started the assistant with no tools; it now fails loudly.
 
 - Bank reconciliation accepts incoming EUR funds, preserves partial availability and
   reverses allocations without deleting financial history.

@@ -522,7 +522,7 @@ Ogni settlement Lightning √® registrato separatamente. Se una fattura riceve pi√
 
 - **Guida Lightning Network:** `docs/LIGHTNING_NETWORK.md`
 - **Troubleshooting:** `docs/LIGHTNING_TROUBLESHOOTING.md`
-- **Architettura:** `docs/ARCHITECTURE_DIAGRAMS.md`
+- **Architettura:** `docs/history/ARCHITECTURE_DIAGRAMS.md`
 
 ### Consulenza Professionale
 

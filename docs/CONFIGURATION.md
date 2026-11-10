@@ -23,7 +23,7 @@ public CLI (`init`, `config`, `status`). Feature stacks are opt-in:
 | `dev` | `uv sync --extra dev` | Tests and linters |
 
 Voice STT/TTS and the regulatory web scraper were removed from the product
-(see [ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md)).
+(see [ARCHITECTURE_REDESIGN.md](history/ARCHITECTURE_REDESIGN.md)).
 
 ### Extensions (not plugins)
 
@@ -118,7 +118,7 @@ for diagnostic logs.
 
 ## Terminal assistant behavior
 
-`assistant` and `interactive start` share a terminal presentation layer.
+`openfatture` and `openfatture assistant` share a terminal presentation layer.
 Live previews are temporary; the complete Markdown response is printed once
 into scrollback. Slash commands support help, session ID, clearing messages
 and exit. Input history stays in memory. `NO_COLOR` is respected.
@@ -150,9 +150,25 @@ it does not authenticate providers or certify fiscal correctness. Missing or
 invalid fiscal fields must be corrected before issuing documents. The setup
 wizard no longer assumes RF19.
 
-Direct `fattura` and `cliente` commands initialize database access on each new
-CLI process. No prior assistant or setup process is needed for an existing
-database. Running `openfatture` alone displays help and exits successfully.
+Direct `cliente`, `fattura` and `pagamento` commands initialize database
+access on each new CLI process. No prior assistant or setup process is needed
+for an existing database. Running `openfatture` alone starts the interactive
+assistant; `openfatture --help` lists the commands.
+
+### Assistant file exports
+
+When the assistant chooses an output path for PDF or CSV exports, the path is
+resolved inside `data_dir/exports`. Absolute paths or `..` segments that would
+leave that directory are refused before the tool runs. Commands typed by a
+person (`fattura generate-pdf --output ...`) are not restricted.
+
+### Event listeners
+
+`EVENT_LISTENERS` (comma-separated dotted paths) registers custom listeners on
+the global event bus. Payment reconciliation events (`TransactionMatchedEvent`,
+`TransactionUnmatchedEvent`) are global events; subscribe to
+`openfatture.payment.application.events.PaymentEvent` to receive only those.
+The former `PAYMENT_EVENT_LISTENERS` setting was removed.
 
 
 ### Assistant execution timeouts

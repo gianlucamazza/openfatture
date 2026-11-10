@@ -4,7 +4,7 @@ How OpenFatture draws the line between **what ships as product core**,
 **optional in-tree features**, and **out-of-process extensions**.
 
 Related: [ARCHITECTURE.md](ARCHITECTURE.md), [CONFIGURATION.md](CONFIGURATION.md),
-[ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md).
+[ARCHITECTURE_REDESIGN.md](history/ARCHITECTURE_REDESIGN.md).
 
 ---
 

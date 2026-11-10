@@ -1,7 +1,7 @@
 # OpenFatture project status
 
-**Current version:** 2.3.0  
-**Product posture:** CLI-first, with an interactive terminal mode for guided workflows  
+**Current version:** 2.6.0  
+**Product posture:** CLI-first; `openfatture` starts the interactive assistant  
 **Runtime:** Python 3.12+ and `uv`
 
 ## Supported product surface
@@ -10,7 +10,7 @@
 - PEC/SDI delivery and notification processing
 - Client, invoice, quote, payment, and batch workflows
 - Event audit trail, reports, hooks
-- Optional AI assistance, RAG, and forecasting workflows (feature extras)
+- Optional AI assistance and RAG (feature extras); ML forecasting is frozen
 
 ## Quality expectations
 
@@ -37,16 +37,18 @@ fix the root cause instead.
 
 ## Current focus (post-2.2)
 
-**Shipped in 2.3.0:** Real TD04 (nota di credito) support with FatturaPA
-`DatiFattureCollegate` linkage; `openfatture fattura generate-xml` now
-actually generates XML (no longer a stub); `openfatture fattura
-create-credit-note` command; Alembic migration for TD04 linkage columns.
+**Shipped in 2.6.0:** durable collection ledger; durable assistant turns
+(checkpoints, tool receipts, resumable pending turns); bare `openfatture`
+starts the assistant; numeric unique invoice numbering; payment events on the
+global bus; enforced package import rules; documented `cliente` / `fattura` /
+`pagamento` data commands over application services. See
+[CHANGELOG](../CHANGELOG.md).
 
 **Optional next (on demand, not blocking):** see [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)
 for IDs/triggers, and GitHub [milestone Post-2.1 backlog](https://github.com/gianlucamazza/openfatture/milestone/1)
 / [tracker #36](https://github.com/gianlucamazza/openfatture/issues/36). No release-blocking debt.
 
-See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [ARCHITECTURE_COMPLETE.md](ARCHITECTURE_COMPLETE.md), and [releases/v2.3.0.md](releases/v2.3.0.md).
+See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 ## Coverage floors (CI)
 
 | Suite | Floor | Source of truth |

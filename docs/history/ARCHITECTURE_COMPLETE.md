@@ -4,7 +4,7 @@
 **Last updated:** 2026-09-11  
 **Purpose:** Comprehensive honest picture of layers, public surface, phased delivery, and remaining product decisions.
 
-Related: [ARCHITECTURE.md](ARCHITECTURE.md), [STATUS.md](STATUS.md), [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md).
+Related: [ARCHITECTURE.md](../ARCHITECTURE.md), [STATUS.md](../STATUS.md), [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md), [CORE_VS_EXTENSIONS.md](../CORE_VS_EXTENSIONS.md).
 
 ---
 
@@ -95,7 +95,7 @@ openfatture/
 
 ## 2. Real public surface
 
-**Documented in [CLAUDE.md](../CLAUDE.md) and [CLI_REFERENCE.md](CLI_REFERENCE.md):**
+**Documented in [CLAUDE.md](../../CLAUDE.md) and [CLI_REFERENCE.md](../CLI_REFERENCE.md):**
 
 ### 2.1 Primary agentic surface
 
@@ -164,7 +164,7 @@ ml = ["prophet>=1.1.5", "xgboost>=2.1.0", "pandas>=2.3.3", "plotly>=6.3.1", ...]
 all = ["openfatture[ai,rag,ml]"]
 ```
 
-**No in-process plugin API.** The experimental `openfatture.plugins` package was removed in 2.0. User extensions use **hooks** (see [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md)).
+**No in-process plugin API.** The experimental `openfatture.plugins` package was removed in 2.0. User extensions use **hooks** (see [CORE_VS_EXTENSIONS.md](../CORE_VS_EXTENSIONS.md)).
 
 ---
 
@@ -186,7 +186,7 @@ all = ["openfatture[ai,rag,ml]"]
 ✅ D2: AI tools are thin adapters over application services (not a second domain layer)  
 ✅ Zero in-code suppressions (`noqa`, `type: ignore`, `pragma: no cover`)  
 
-**See:** [releases/v2.0.0.md](releases/v2.0.0.md), [ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md).
+**See:** [releases/v2.0.0.md](../releases/v2.0.0.md), [ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md).
 
 ### 4.2 Done (2.1 LangGraph default — shipped)
 
@@ -199,7 +199,7 @@ all = ["openfatture[ai,rag,ml]"]
 ✅ Dead Lightning i18n keys GC'd from all locales  
 ✅ Config SSOT: version, backends, AI credentials hydrated consistently (#32)  
 
-**See:** [releases/v2.1.0.md](releases/v2.1.0.md), [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) closed ledger.
+**See:** [releases/v2.1.0.md](../releases/v2.1.0.md), [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md) closed ledger.
 
 ### 4.3 Done (2.2 forfettario PDF — shipped)
 
@@ -214,7 +214,7 @@ all = ["openfatture[ai,rag,ml]"]
 ✅ CLI commands for invoice/client management (`fattura`, `cliente`) fully wired  
 ✅ Fix: premature page break for single-row invoices with payment info (#55)  
 
-**See:** [releases/v2.2.0.md](releases/v2.2.0.md), PR #56 (forfettario PDF), PR #53 (FatturaPA natura/cassa).
+**See:** [releases/v2.2.0.md](../releases/v2.2.0.md), PR #56 (forfettario PDF), PR #53 (FatturaPA natura/cassa).
 
 ### 4.4 Done (2.3 nota di credito TD04 — shipped)
 
@@ -232,7 +232,7 @@ all = ["openfatture[ai,rag,ml]"]
 ✅ CLI generate-xml honors `--output` and `--dry-run` flags  
 ✅ Comprehensive test coverage for XML generation (normal, custom output, dry-run, error handling)  
 
-**See:** [releases/v2.3.0.md](releases/v2.3.0.md), PR #57 (TD04), PR #58 (Alembic migration 8cf82bd24752).
+**See:** [releases/v2.3.0.md](../releases/v2.3.0.md), PR #57 (TD04), PR #58 (Alembic migration 8cf82bd24752).
 
 ### 4.5 Experimental (not on public CLI by design)
 
@@ -248,7 +248,7 @@ all = ["openfatture[ai,rag,ml]"]
 - ⚠️ **Not** exposed on public CLI (intentional)
 - ⚠️ No invented human decisions; honest awaiting-approval gates only
 
-**Product path:** Remains experimental until explicit product decision to ship multi-agent UX. See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) D-WF #38.
+**Product path:** Remains experimental until explicit product decision to ship multi-agent UX. See [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md) D-WF #38.
 
 ### 4.6 Product decisions (blocked / not code yet)
 
@@ -262,7 +262,7 @@ all = ["openfatture[ai,rag,ml]"]
 | Browser / web app surface | [#44](https://github.com/gianlucamazza/openfatture/issues/44) | Explicit non-goal (see STATUS.md) |
 | Domain CLI command tree growth | N/A | **Forbidden** per CLAUDE.md; domain ops stay on assistant + app layer |
 
-**See:** [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) § Product decisions, [STATUS.md](STATUS.md) § Explicit non-goals.
+**See:** [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md) § Product decisions, [STATUS.md](../STATUS.md) § Explicit non-goals.
 
 ### 4.7 On-demand technical debt (not blocking releases)
 
@@ -278,7 +278,7 @@ All debt has explicit **trigger** conditions (when to act) and GitHub issues. Do
 - **D-TYPES-TESTS** (#42): mypy does not type-check `tests.*`; trigger: optional incremental enable
 - **D-ASYNC** (#43): Nested event-loop bridge; trigger: only if interactive hosts hit real nested failures
 
-**See:** [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) for full inventory, triggers, and non-goals.
+**See:** [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md) for full inventory, triggers, and non-goals.
 
 ---
 
@@ -364,7 +364,7 @@ Supported in `RigaFattura` model and FatturaPA XML builder:
 
 **Status:** PEC integration and SDI notification parsing are production-ready.
 
-**Covered in dedicated doc:** [SDI_TRANSPORT_READINESS.md](SDI_TRANSPORT_READINESS.md)
+**Covered in dedicated doc:** [SDI_TRANSPORT_READINESS.md](../SDI_TRANSPORT_READINESS.md)
 
 **Summary:**
 
@@ -394,7 +394,7 @@ fail_under = 49  # Package-wide floor (prevents large regressions)
 
 **Linters:** Ruff only (no flake8/black/isort). Zero in-code suppressions.
 
-**See:** [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) D-COV, [STATUS.md](STATUS.md) § Quality expectations.
+**See:** [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md) D-COV, [STATUS.md](../STATUS.md) § Quality expectations.
 
 ---
 
@@ -410,16 +410,16 @@ fail_under = 49  # Package-wide floor (prevents large regressions)
 
 **Release tags:** `v2.0.0`, `v2.1.0`, `v2.2.0`, `v2.3.0`, ...
 
-**Changelog:** [CHANGELOG.md](../CHANGELOG.md) with user-facing release notes
+**Changelog:** [CHANGELOG.md](../../CHANGELOG.md) with user-facing release notes
 
 **Release process:**
 1. Update version in `openfatture/__about__.py` (single source of truth)
-2. Update [CHANGELOG.md](../CHANGELOG.md) with release notes
+2. Update [CHANGELOG.md](../../CHANGELOG.md) with release notes
 3. Create release notes doc under `docs/releases/vX.Y.Z.md`
 4. Tag release: `git tag vX.Y.Z && git push origin vX.Y.Z`
 5. PyPI publish (manual or CI automation — not yet automated)
 
-**See:** [releases/](releases/) directory for historical release notes.
+**See:** [releases/](../releases/) directory for historical release notes.
 
 ---
 
@@ -445,9 +445,9 @@ fail_under = 49  # Package-wide floor (prevents large regressions)
 
 **Read first:**
 
-- [CLAUDE.md](../CLAUDE.md) — Contributor guide with design rules
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — Workflow and PR guidelines
-- [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) — Honest debt inventory with triggers
+- [CLAUDE.md](../../CLAUDE.md) — Contributor guide with design rules
+- [CONTRIBUTING.md](../../CONTRIBUTING.md) — Workflow and PR guidelines
+- [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md) — Honest debt inventory with triggers
 
 **Key constraints from CLAUDE.md:**
 
@@ -463,4 +463,4 @@ fail_under = 49  # Package-wide floor (prevents large regressions)
 
 ---
 
-**Questions or additions:** See [docs/README.md](README.md) for documentation index or file GitHub issues.
+**Questions or additions:** See [docs/README.md](../README.md) for documentation index or file GitHub issues.

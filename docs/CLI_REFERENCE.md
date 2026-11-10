@@ -1,8 +1,10 @@
 # CLI Reference
 
 OpenFatture exposes a deliberately small public command surface. Business
-operations are expressed as requests to the assistant; setup and diagnostics
-remain deterministic commands.
+operations are expressed as requests to the assistant; setup, diagnostics and
+a small set of data commands (`cliente`, `fattura`, `pagamento`) remain
+deterministic. Data commands call the same application services as the
+assistant tools.
 
 ## `openfatture`
 
@@ -59,6 +61,45 @@ state. Use `--json` for machine-readable output.
 openfatture status
 openfatture status --json
 ```
+
+## `openfatture cliente`
+
+```bash
+openfatture cliente list [--query TEXT]
+openfatture cliente show ID
+openfatture cliente create --name NAME --piva PIVA
+```
+
+## `openfatture fattura`
+
+| Command | Purpose |
+| --- | --- |
+| `list`, `show ID` | Search and inspect invoices |
+| `create --client ID`, `add-line --invoice ID ...` | Build a draft invoice |
+| `generate-pdf ID [--output PATH] [--template T] [--logo PATH]` | Render the human-readable PDF |
+| `generate-xml ID [--output PATH] [--dry-run]` | Build FatturaPA XML (no XSD validation, no transmission) |
+| `set-status ID STATUS` | Manual transitions allowed by the lifecycle rules |
+| `create-credit-note --from-invoice ID` | Create a linked TD04 credit note |
+| `sdi-journal` | Read-only list of PEC attempts and imported receipts |
+| `associate-receipt RECEIPT INVOICE --evidence TEXT` | Associate an unresolved receipt (asks for confirmation) |
+| `resolve-submission ID --sent/--not-sent --evidence TEXT` | Resolve an uncertain PEC attempt (asks for confirmation) |
+
+Invoice numbers are progressive per year and unique (`numero`, `anno`).
+
+## `openfatture pagamento`
+
+Collection ledger commands. Mutating commands accept `--request-id`; repeating
+a request with the same ID is idempotent.
+
+| Command | Purpose |
+| --- | --- |
+| `list [--invoice ID]`, `show INVOICE` | Inspect ledger entries |
+| `record AMOUNT [--invoice ID] [--payment ID] [--date D]` | Record a received amount |
+| `allocate RECEIPT INVOICE AMOUNT`, `allocate-batch RECEIPT --allocations JSON` | Allocate receipts |
+| `reverse ENTRY AMOUNT --reason TEXT` | Reverse an entry (asks for confirmation) |
+| `declare-status INVOICE VALUE [--source S]` | Record a declared collection status |
+| `bank-receipt TRANSACTION` | Turn an imported bank transaction into a receipt |
+| `migrate` | Upgrade pre-ledger collection data without changing balances |
 
 Interactive assistant slash commands (when no one-shot message is given):
 

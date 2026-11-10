@@ -29,11 +29,13 @@ def show_result(result: Any) -> None:
 
 @app.command("list")
 def list_collections(invoice_id: int | None = typer.Option(None, "--invoice")) -> None:
+    """List collection ledger entries, optionally for one invoice."""
     show_result(api.get_collections(invoice_id))
 
 
 @app.command("show")
 def show_collections(invoice_id: int) -> None:
+    """Show the collection ledger of an invoice."""
     show_result(api.get_collections(invoice_id))
 
 
@@ -46,6 +48,7 @@ def record(
     request_id: str | None = typer.Option(None, "--request-id"),
     notes: str | None = typer.Option(None, "--notes"),
 ) -> None:
+    """Record a received amount (idempotent per --request-id)."""
     show_result(
         api.record_collection(
             amount, request_id or str(uuid4()), invoice_id, payment_id, effective_date, notes
@@ -61,6 +64,7 @@ def allocate(
     payment_id: int | None = typer.Option(None, "--payment"),
     request_id: str | None = typer.Option(None, "--request-id"),
 ) -> None:
+    """Allocate part of a recorded receipt to an invoice."""
     show_result(
         api.allocate_collection(
             receipt_id, invoice_id, amount, request_id or str(uuid4()), payment_id
@@ -75,6 +79,7 @@ def reverse(
     reason: str = typer.Option(..., "--reason"),
     request_id: str | None = typer.Option(None, "--request-id"),
 ) -> None:
+    """Reverse a ledger entry after confirmation; history is preserved."""
     if not typer.confirm(f"Stornare {amount} dalla registrazione {entry_id}?", default=False):
         raise typer.Abort()
     show_result(api.reverse_collection(entry_id, amount, reason, request_id or str(uuid4())))
@@ -88,6 +93,7 @@ def declare(
     declared_on: str | None = typer.Option(None, "--date"),
     request_id: str | None = typer.Option(None, "--request-id"),
 ) -> None:
+    """Declare an invoice collection status reported by the owner or another source."""
     show_result(
         api.declare_collection_status(
             invoice_id, value, source, request_id or str(uuid4()), declared_on
@@ -110,6 +116,7 @@ def migrate_collections() -> None:
 def bank_receipt(
     transaction_id: str, request_id: str | None = typer.Option(None, "--request-id")
 ) -> None:
+    """Record an imported bank transaction as a collection receipt."""
     show_result(api.record_bank_collection(transaction_id, request_id or str(uuid4())))
 
 
@@ -119,4 +126,5 @@ def allocate_batch(
     allocations: str = typer.Option(..., "--allocations"),
     request_id: str | None = typer.Option(None, "--request-id"),
 ) -> None:
+    """Allocate a receipt across several invoices (JSON --allocations)."""
     show_result(api.allocate_collection_batch(receipt_id, allocations, request_id or str(uuid4())))

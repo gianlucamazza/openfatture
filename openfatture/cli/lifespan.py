@@ -16,13 +16,12 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
-# The AI/ML self-learning stack (retraining scheduler, RAG auto-update) is heavy
-# and optional. Import it lazily inside the methods that use it so the core CLI
-# (and a minimal, AI-free install such as the payment-only Docker image) can
-# start without the AI extras; only type names are imported eagerly, guarded by
-# TYPE_CHECKING.
+# The RAG auto-update stack is heavy and optional. Import it lazily inside the
+# methods that use it so the core CLI (and a minimal, AI-free install such as the
+# payment-only Docker image) can start without the AI extras; only type names are
+# imported eagerly, guarded by TYPE_CHECKING. ML retraining is not started by the
+# CLI: no assistant tool consumes its forecasts.
 if TYPE_CHECKING:
-    from openfatture.ai.ml.retraining import RetrainingScheduler
     from openfatture.ai.rag.auto_update import AutoIndexingService
 
 from openfatture.events import GlobalEventBus, initialize_event_system
@@ -51,7 +50,6 @@ class LifespanManager:
 
         # Self-learning components
         self.auto_indexing_service: AutoIndexingService | None = None
-        self.retraining_scheduler: RetrainingScheduler | None = None
 
     @asynccontextmanager
     async def lifespan(self) -> AsyncGenerator[dict[str, Any], None]:
@@ -86,7 +84,6 @@ class LifespanManager:
                 "event_bus": self.event_bus,
                 "hook_bridge": self.hook_bridge,
                 "auto_indexing_service": self.auto_indexing_service,
-                "retraining_scheduler": self.retraining_scheduler,
             }
         finally:
             # Shutdown phase
@@ -94,63 +91,36 @@ class LifespanManager:
             await self._graceful_shutdown()
 
     async def _initialize_self_learning(self) -> None:
-        """Initialize RAG auto-update and ML retraining when those extras are installed.
-
-        Skipped entirely on core-only installs (no ``rag`` / ``ml`` extras).
-        """
+        """Start RAG auto-update when the ``rag`` extra is installed."""
         from openfatture.platform.extras import has_extra
 
-        want_rag = has_extra("rag")
-        want_ml = has_extra("ml")
-        if not want_rag and not want_ml:
-            logger.debug("Self-learning extras not installed; skipping RAG/ML startup")
+        if not has_extra("rag"):
+            logger.debug("RAG extra not installed; skipping auto-update startup")
             return
 
-        if want_rag:
-            try:
-                from openfatture.ai.rag.auto_update import (
-                    get_auto_indexing_service,
-                    get_auto_update_config,
-                    setup_event_listeners,
+        try:
+            from openfatture.ai.rag.auto_update import (
+                get_auto_indexing_service,
+                get_auto_update_config,
+                setup_event_listeners,
+            )
+
+            logger.debug("Setting up RAG auto-update event listeners")
+            setup_event_listeners()
+
+            auto_update_config = get_auto_update_config()
+            if auto_update_config.enabled:
+                logger.info("RAG auto-update enabled, starting service")
+                self.auto_indexing_service = get_auto_indexing_service()
+                await self.auto_indexing_service.start()
+                logger.info(
+                    "Auto-indexing service started",
+                    tracked_entities=auto_update_config.get_tracked_entities(),
                 )
-
-                logger.debug("Setting up RAG auto-update event listeners")
-                setup_event_listeners()
-
-                auto_update_config = get_auto_update_config()
-                if auto_update_config.enabled:
-                    logger.info("RAG auto-update enabled, starting service")
-                    self.auto_indexing_service = get_auto_indexing_service()
-                    await self.auto_indexing_service.start()
-                    logger.info(
-                        "Auto-indexing service started",
-                        tracked_entities=auto_update_config.get_tracked_entities(),
-                    )
-                else:
-                    logger.debug("RAG auto-update disabled by config")
-            except Exception as e:
-                logger.warning(f"RAG auto-update not started: {e}")
-
-        if want_ml:
-            try:
-                from openfatture.ai.ml.retraining import (
-                    get_scheduler as get_retraining_scheduler,
-                )
-
-                self.retraining_scheduler = get_retraining_scheduler()
-                retraining_status = self.retraining_scheduler.get_status()
-                if retraining_status.get("enabled"):
-                    logger.info("ML retraining enabled, starting scheduler")
-                    self.retraining_scheduler.start()
-                    logger.info(
-                        "Retraining scheduler started",
-                        interval_hours=retraining_status.get("interval_hours"),
-                        dry_run=retraining_status.get("dry_run"),
-                    )
-                else:
-                    logger.debug("ML retraining disabled by config")
-            except Exception as e:
-                logger.warning(f"ML retraining not started: {e}")
+            else:
+                logger.debug("RAG auto-update disabled by config")
+        except Exception as e:
+            logger.warning(f"RAG auto-update not started: {e}")
 
     async def _graceful_shutdown(self) -> None:
         """Perform graceful shutdown of all resources."""
@@ -175,13 +145,8 @@ class LifespanManager:
             logger.error(f"Error during graceful shutdown: {e}")
 
     async def _shutdown_self_learning(self) -> None:
-        """Shutdown optional RAG/ML systems gracefully."""
+        """Shutdown optional RAG systems gracefully."""
         try:
-            if self.retraining_scheduler:
-                logger.debug("Stopping retraining scheduler")
-                self.retraining_scheduler.stop()
-                self.retraining_scheduler = None
-
             if self.auto_indexing_service:
                 logger.debug("Stopping auto-indexing service")
                 await self.auto_indexing_service.stop()

@@ -14,8 +14,8 @@ def test_public_commands_are_agent_first() -> None:
     # Core commands
     for command in ("assistant", "init", "config", "status"):
         assert command in result.stdout
-    # First-class data commands (added per UX improvements)
-    for command in ("cliente", "fattura"):
+    # Deterministic data commands (documented in docs/CLI_REFERENCE.md)
+    for command in ("cliente", "fattura", "pagamento"):
         assert command in result.stdout
     # Commands that should remain hidden/removed
     for removed in ("interactive", "preventivo", "payment", "ai", "plugin", "web-scraper"):
