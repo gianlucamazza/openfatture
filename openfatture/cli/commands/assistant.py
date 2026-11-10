@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
+import sys
 import time
+import traceback
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from openfatture.ai.runtime.service import AssistantRuntime
+    from openfatture.cli.assistant_ui import ChatPresentation
+    from openfatture.events import GlobalEventBus
+    from openfatture.platform.config import Settings
 
 import typer
 from rich.console import Console
@@ -109,6 +116,222 @@ def assistant(
     run_sync_with_lifespan(_run_assistant(ctx, message, stream, json_output, session))
 
 
+@dataclass
+class _AssistantSession:
+    """One assistant command invocation: the runtime, its presentation and its outcome."""
+
+    runtime: AssistantRuntime
+    ui: ChatPresentation
+    settings: Settings
+    format_type: str
+    stream: bool
+    success: bool = False
+
+    @property
+    def machine(self) -> bool:
+        return self.format_type != "rich"
+
+    async def execute(self, text: str) -> bool:
+        from openfatture.cli.assistant_ui import interruptible_turn
+        from openfatture.cli.formatters.utils import render_response
+
+        async with interruptible_turn():
+            if self.stream and not self.machine:
+                await self.ui.render(self.runtime.stream(text))
+                response = self.runtime.last_response
+                if response is None:
+                    raise RuntimeError("Assistant stream finished without a response")
+            else:
+                response = await self.runtime.run(text)
+                render_response(response, self.format_type, console, show_metrics=False)
+            if not response.success and not self.machine:
+                console.print(Text(self.ui.text("assistant-turn-failed")))
+            return bool(response.success)
+
+    async def converse(self, message: str | None) -> None:
+        """Resume an interrupted turn, then serve the request, piped input or the chat."""
+        if await self._resume_pending(message):
+            return
+        if message is not None:
+            self.success = await self.execute(message)
+            if not self.success:
+                raise typer.Exit(1)
+            return
+        if self.machine:
+            # One JSON/other formatted response per input line; no interactive banners.
+            for line in sys.stdin:
+                if line.strip():
+                    await self.execute(line.strip())
+            self.success = True
+            return
+        await self._chat()
+
+    async def _resume_pending(self, message: str | None) -> bool:
+        """Run the turn left pending by a previous session; True when it was ``message``."""
+        pending = self.runtime.pending_user_input
+        if not isinstance(pending, str):
+            return False
+        if not self.machine:
+            console.print(Text(self.ui.text("assistant-resuming")))
+        from openfatture.ai.runtime.durability import UncertainToolOutcome
+
+        one_shot = self.machine or message is not None
+        try:
+            self.success = await self.execute(pending)
+        except UncertainToolOutcome:
+            if one_shot:
+                raise
+            console.print(Text(self.ui.text("assistant-uncertain-tool")))
+            self.success = False
+        if not self.success and one_shot:
+            raise typer.Exit(1)
+        return message == pending
+
+    async def _chat(self) -> None:
+        console.print(Text(f"OpenFatture · {self.settings.ai_model}"))
+        console.print(Text(self.ui.text("assistant-describe-what-you-need")))
+        while (user_input := await self._next_request()) is not None:
+            await self._chat_turn(user_input)
+            console.print()
+        self.success = True
+
+    async def _next_request(self) -> str | None:
+        """Read input until a request for the model arrives; None ends the chat."""
+        while True:
+            try:
+                user_input = (await self.ui.read()).strip()
+            except (EOFError, KeyboardInterrupt):
+                console.print()
+                return None
+            if not user_input:
+                continue
+            if user_input.lower() in {"exit", "quit", "q"}:
+                return None
+            if user_input.lower() == "/resume":
+                pending = self.runtime.pending_user_input
+                if not pending:
+                    console.print(Text(self.ui.text("assistant-no-pending")))
+                    continue
+                user_input = pending
+            slash = _handle_slash_command(user_input, runtime=self.runtime)
+            if slash == "exit":
+                return None
+            if not slash:
+                return user_input
+
+    async def _chat_turn(self, user_input: str) -> None:
+        from openfatture.platform.logging import redact_sensitive
+
+        try:
+            await self.execute(user_input)
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            console.print(Text(self.ui.text("assistant-interrupted")))
+        except Exception:
+            console.print(Text(self.ui.text("assistant-request-error")))
+            if self.settings.debug_config.enable_debug_logging:
+                console.print(Text(redact_sensitive(traceback.format_exc())))
+
+
+def _start_runtime(
+    settings: Settings,
+    ui: ChatPresentation,
+    *,
+    message: str | None,
+    stream: bool,
+    session_id: str | None,
+) -> AssistantRuntime:
+    from openfatture.platform.extras import require_extra
+    from openfatture.storage.database.base import init_db
+
+    require_extra("ai", feature="the business assistant")
+    from openfatture.ai.runtime import create_assistant_runtime
+
+    init_db(str(settings.database_url))
+    runtime: AssistantRuntime = create_assistant_runtime(
+        enable_streaming=stream,
+        debug_config=settings.debug_config,
+        persist_session=message is None or session_id is not None,
+        session_id=session_id,
+        interaction=ui if ui.interactive else None,
+    )
+    return runtime
+
+
+def _publish_started(
+    event_bus: GlobalEventBus | None,
+    settings: Settings,
+    *,
+    message: str | None,
+    stream: bool,
+    session_id: str | None,
+) -> None:
+    if event_bus:
+        event_bus.publish(
+            AICommandStartedEvent(
+                command="assistant",
+                user_input=message or "Interactive assistant session",
+                provider=settings.ai_provider,
+                model=settings.ai_model,
+                parameters={
+                    "stream": stream,
+                    "interactive": message is None,
+                    "session_id": session_id,
+                },
+            )
+        )
+
+
+def _publish_completed(
+    event_bus: GlobalEventBus | None,
+    session: _AssistantSession | None,
+    *,
+    started_at: float,
+    failure: str | None,
+) -> None:
+    if event_bus:
+        event_bus.publish(
+            AICommandCompletedEvent(
+                command="assistant",
+                success=session.success if session else False,
+                tokens_used=session.runtime.total_usage.total_tokens if session else 0,
+                cost_usd=session.runtime.total_usage.estimated_cost_usd if session else 0,
+                latency_ms=(time.monotonic() - started_at) * 1000,
+                error=failure,
+            )
+        )
+
+
+def _report_failure(
+    exc: BaseException, ui: ChatPresentation, settings: Settings, format_type: str
+) -> None:
+    """Explain a failed command; call only while ``exc`` is being handled."""
+    from openfatture.cli.formatters.utils import render_response
+    from openfatture.platform.extras import MissingExtraError
+    from openfatture.platform.logging import redact_sensitive
+
+    if format_type != "rich":
+        from openfatture.ai.domain.response import AgentResponse, ResponseStatus
+
+        render_response(
+            AgentResponse(content="", status=ResponseStatus.ERROR, error=type(exc).__name__),
+            format_type,
+            console,
+            show_metrics=False,
+        )
+        return
+    console.print(
+        Text(
+            ui.text(
+                "assistant-missing-extra"
+                if isinstance(exc, (MissingExtraError, ImportError))
+                else "assistant-request-error"
+            )
+        )
+    )
+    if settings.debug_config.enable_debug_logging:
+        console.print(Text(redact_sensitive(traceback.format_exc())))
+
+
 async def _run_assistant(
     ctx: typer.Context | None,
     message: str | None,
@@ -116,166 +339,32 @@ async def _run_assistant(
     json_output: bool,
     session_id: str | None,
 ) -> None:
-    import asyncio
-    import sys
-    import traceback
-
-    from openfatture.cli.assistant_ui import ChatPresentation, interruptible_turn
-    from openfatture.cli.formatters.utils import get_format_from_context, render_response
-    from openfatture.platform.extras import MissingExtraError, require_extra
-    from openfatture.platform.logging import redact_sensitive
-    from openfatture.storage.database.base import init_db
+    from openfatture.cli.assistant_ui import ChatPresentation
+    from openfatture.cli.formatters.utils import get_format_from_context
 
     format_type = get_format_from_context(ctx, json_output)
     settings = get_settings()
-    machine = format_type != "rich"
     ui = ChatPresentation(
         console,
         settings.locale,
-        interactive=console.is_terminal and sys.stdin.isatty() and not machine,
+        interactive=console.is_terminal and sys.stdin.isatty() and format_type == "rich",
     )
-    runtime = None
+    session: _AssistantSession | None = None
     started_at = time.monotonic()
     event_bus = get_event_bus()
-    success = False
     failure = None
     try:
-        require_extra("ai", feature="the business assistant")
-        from openfatture.ai.runtime import create_assistant_runtime
-
-        init_db(str(settings.database_url))
-        runtime = create_assistant_runtime(
-            enable_streaming=stream,
-            debug_config=settings.debug_config,
-            persist_session=message is None or session_id is not None,
-            session_id=session_id,
-            interaction=ui if ui.interactive else None,
+        runtime = _start_runtime(
+            settings, ui, message=message, stream=stream, session_id=session_id
         )
-        if event_bus:
-            event_bus.publish(
-                AICommandStartedEvent(
-                    command="assistant",
-                    user_input=message or "Interactive assistant session",
-                    provider=settings.ai_provider,
-                    model=settings.ai_model,
-                    parameters={
-                        "stream": stream,
-                        "interactive": message is None,
-                        "session_id": session_id,
-                    },
-                )
-            )
-
-        async def execute(text: str) -> bool:
-            async with interruptible_turn():
-                if stream and not machine:
-                    await ui.render(runtime.stream(text))
-                    response = runtime.last_response
-                else:
-                    response = await runtime.run(text)
-                    render_response(response, format_type, console, show_metrics=False)
-                if not response.success and not machine:
-                    console.print(Text(ui.text("assistant-turn-failed")))
-                return bool(response.success)
-
-        pending = runtime.pending_user_input
-        if isinstance(pending, str):
-            if not machine:
-                console.print(Text(ui.text("assistant-resuming")))
-            from openfatture.ai.runtime.durability import UncertainToolOutcome
-
-            try:
-                success = await execute(pending)
-            except UncertainToolOutcome:
-                if machine or message is not None:
-                    raise
-                console.print(Text(ui.text("assistant-uncertain-tool")))
-                success = False
-            if not success and (machine or message is not None):
-                raise typer.Exit(1)
-            if message == pending:
-                return
-
-        if message is not None:
-            success = await execute(message)
-            if not success:
-                raise typer.Exit(1)
-            return
-        if machine:
-            # One JSON/other formatted response per input line; no interactive banners.
-            for line in sys.stdin:
-                if line.strip():
-                    await execute(line.strip())
-            success = True
-            return
-        console.print(Text(f"OpenFatture · {settings.ai_model}"))
-        console.print(Text(ui.text("assistant-describe-what-you-need")))
-        while True:
-            try:
-                user_input = (await ui.read()).strip()
-            except (EOFError, KeyboardInterrupt):
-                console.print()
-                break
-            if not user_input:
-                continue
-            if user_input.lower() in {"exit", "quit", "q"}:
-                break
-            if user_input.lower() == "/resume":
-                if runtime.pending_user_input:
-                    user_input = runtime.pending_user_input
-                else:
-                    console.print(Text(ui.text("assistant-no-pending")))
-                    continue
-            slash = _handle_slash_command(user_input, runtime=runtime)
-            if slash == "exit":
-                break
-            if slash:
-                continue
-            try:
-                await execute(user_input)
-            except (asyncio.CancelledError, KeyboardInterrupt):
-                console.print(Text(ui.text("assistant-interrupted")))
-            except Exception:
-                console.print(Text(ui.text("assistant-request-error")))
-                if settings.debug_config.enable_debug_logging:
-                    console.print(Text(redact_sensitive(traceback.format_exc())))
-            console.print()
-        success = True
+        session = _AssistantSession(runtime, ui, settings, format_type, stream)
+        _publish_started(event_bus, settings, message=message, stream=stream, session_id=session_id)
+        await session.converse(message)
     except typer.Exit:
         raise
     except (Exception, asyncio.CancelledError) as exc:
         failure = type(exc).__name__
-        if machine:
-            from openfatture.ai.domain.response import AgentResponse, ResponseStatus
-
-            render_response(
-                AgentResponse(content="", status=ResponseStatus.ERROR, error=failure),
-                format_type,
-                console,
-                show_metrics=False,
-            )
-        else:
-            console.print(
-                Text(
-                    ui.text(
-                        "assistant-missing-extra"
-                        if isinstance(exc, (MissingExtraError, ImportError))
-                        else "assistant-request-error"
-                    )
-                )
-            )
-            if settings.debug_config.enable_debug_logging:
-                console.print(Text(redact_sensitive(traceback.format_exc())))
+        _report_failure(exc, ui, settings, format_type)
         raise typer.Exit(1) from exc
     finally:
-        if event_bus:
-            event_bus.publish(
-                AICommandCompletedEvent(
-                    command="assistant",
-                    success=success,
-                    tokens_used=runtime.total_usage.total_tokens if runtime else 0,
-                    cost_usd=runtime.total_usage.estimated_cost_usd if runtime else 0,
-                    latency_ms=(time.monotonic() - started_at) * 1000,
-                    error=failure,
-                )
-            )
+        _publish_completed(event_bus, session, started_at=started_at, failure=failure)

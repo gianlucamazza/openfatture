@@ -102,6 +102,68 @@ def test_partial_fiscal_profile_explains_not_ready(tmp_path):
     assert result["assistant_authenticated"] is None
 
 
+def test_invalid_fiscal_identifiers_block_core(tmp_path: Path) -> None:
+    (tmp_path / "archivio").mkdir()
+    settings = _settings(data_dir=tmp_path, partita_iva="12345678901")
+    settings.cedente_codice_fiscale = "NOT-A-CODE"
+    settings.cedente_regime_fiscale = "RF99"
+    result = _readiness(settings, {"ai": False})
+    assert result["core_ready"] is False
+    assert result["missing_fields"] == []
+    assert result["invalid_fields"] == [
+        "cedente_partita_iva",
+        "cedente_codice_fiscale",
+        "cedente_regime_fiscale",
+    ]
+    assert result["checks"]["fiscal_profile"] is False
+    assert result["next_steps"] == [
+        "Run: openfatture init",
+        "openfatture config set cedente_partita_iva '<value>'",
+        "openfatture config set cedente_codice_fiscale '<value>'",
+        "openfatture config set cedente_regime_fiscale '<value>'",
+        "For the assistant: uv sync --extra ai",
+    ]
+
+
+def test_partita_iva_is_accepted_as_fiscal_code(tmp_path: Path) -> None:
+    (tmp_path / "archivio").mkdir()
+    settings = _settings(data_dir=tmp_path, ai_provider="Ollama")
+    settings.cedente_codice_fiscale = "12345678903"
+    settings.pec_address = "pec@example.it"
+    settings.pec_password = "secret"
+    result = _readiness(settings, {"ai": True})
+    assert result["invalid_fields"] == []
+    assert result["core_ready"] is True
+    assert result["delivery_configured"] is True
+    assert result["assistant_ready"] is True
+    assert result["checks"]["ai_credentials"] is True
+    assert result["next_steps"] == ['Try: openfatture assistant "Elenca le fatture aperte"']
+
+
+def test_missing_company_and_directories(tmp_path: Path) -> None:
+    settings = _settings(data_dir=tmp_path / "absent", partita_iva="", denominazione=" ")
+    result = _readiness(settings, {})
+    assert result["checks"]["company_profile"] is False
+    assert result["checks"]["data_dir"] is False
+    assert result["checks"]["archive_dir"] is False
+    assert result["core_ready"] is result["invoice_ready"] is False
+    assert result["delivery_configured"] is False
+    assert result["invalid_fields"] == []
+    assert result["next_steps"] == [
+        "Run: openfatture init",
+        "For the assistant: uv sync --extra ai",
+    ]
+
+
+def test_core_not_ready_with_ai_extra_but_no_key(tmp_path: Path) -> None:
+    settings = _settings(data_dir=tmp_path / "absent")
+    result = _readiness(settings, {"ai": True})
+    assert result["next_steps"] == [
+        "Run: openfatture init",
+        "openfatture config set ai_api_key '<key>' (or ai_provider ollama)",
+    ]
+
+
 def test_status_text_exposes_blocking_fields(tmp_path, monkeypatch):
     from typer.testing import CliRunner
 

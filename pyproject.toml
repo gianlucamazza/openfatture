@@ -185,11 +185,6 @@ ignore_missing_imports = true
 module = ["pyasn1_modules.*", "pyasn1_modules"]
 ignore_missing_imports = true
 
-# Optional nested-loop helper (async_bridge); ImportError-guarded at runtime
-[[tool.mypy.overrides]]
-module = ["nest_asyncio"]
-ignore_missing_imports = true
-
 [tool.pytest.ini_options]
 minversion = "8.0"
 # Default gate = fast, deterministic functional suite (unit + integration).
@@ -227,8 +222,6 @@ pep621_dev_dependency_groups = ["dev"]
 langgraph-checkpoint-sqlite = "langgraph"
 
 [tool.deptry.per_rule_ignores]
-# Optional nested-loop helper, ImportError-guarded in platform/async_bridge.py.
-DEP001 = ["nest_asyncio"]
 # Declared on purpose without a direct import:
 # - click: Typer's runtime dependency; cli/output.py handles standalone Click APIs.
 # - urllib3, transformers: security floors for transitive dependencies.

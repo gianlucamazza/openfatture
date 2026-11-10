@@ -24,31 +24,26 @@ def _hooks_dir() -> Path:
     return Path.home() / ".openfatture" / "hooks"
 
 
-def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
-    """Compute honest setup readiness (core invoicing vs assistant)."""
-    company_ok = bool(
-        (settings.cedente_partita_iva or "").strip()
-        and (settings.cedente_denominazione or "").strip()
-    )
-    data_dir_ok = settings.data_dir.exists()
-    archive_ok = settings.archivio_dir.exists()
-    ai_extra = bool(extras.get("ai"))
-    provider = (settings.ai_provider or "").lower()
-    # Ollama needs no cloud key; cloud providers need a key for real calls.
-    ai_credentials_ok = provider == "ollama" or bool(settings.ai_api_key)
-    assistant_ready = ai_extra and ai_credentials_ok
-    required_fields = (
-        "cedente_codice_fiscale",
-        "cedente_regime_fiscale",
-        "cedente_indirizzo",
-        "cedente_cap",
-        "cedente_comune",
-        "cedente_provincia",
-        "cedente_nazione",
-    )
-    missing_fields = [
-        field for field in required_fields if not str(getattr(settings, field, "") or "").strip()
+_REQUIRED_FISCAL_FIELDS = (
+    "cedente_codice_fiscale",
+    "cedente_regime_fiscale",
+    "cedente_indirizzo",
+    "cedente_cap",
+    "cedente_comune",
+    "cedente_provincia",
+    "cedente_nazione",
+)
+
+
+def _missing_fiscal_fields(settings: Settings) -> list[str]:
+    return [
+        field
+        for field in _REQUIRED_FISCAL_FIELDS
+        if not str(getattr(settings, field, "") or "").strip()
     ]
+
+
+def _invalid_fiscal_fields(settings: Settings) -> list[str]:
     from openfatture.platform.validators import (
         validate_codice_fiscale,
         validate_partita_iva,
@@ -66,24 +61,52 @@ def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
     regime = getattr(settings, "cedente_regime_fiscale", "")
     if regime and not validate_regime_fiscale(regime):
         invalid_fields.append("cedente_regime_fiscale")
-    core_ready = (
-        company_ok and data_dir_ok and archive_ok and not missing_fields and not invalid_fields
-    )
+    return invalid_fields
 
+
+def _core_next_steps(core_ready: bool, blocking_fields: list[str]) -> list[str]:
+    if core_ready:
+        return []
+    return ["Run: openfatture init"] + [
+        f"openfatture config set {field} '<value>'" for field in blocking_fields
+    ]
+
+
+def _assistant_next_steps(core_ready: bool, ai_extra: bool, ai_credentials_ok: bool) -> list[str]:
     next_steps: list[str] = []
-    if not core_ready:
-        next_steps.append("Run: openfatture init")
-        for field in missing_fields + invalid_fields:
-            next_steps.append(f"openfatture config set {field} '<value>'")
     if not ai_extra:
         next_steps.append("For the assistant: uv sync --extra ai")
     elif not ai_credentials_ok:
         next_steps.append("openfatture config set ai_api_key '<key>' (or ai_provider ollama)")
-    if core_ready and assistant_ready:
+    if core_ready and ai_extra and ai_credentials_ok:
         next_steps.append('Try: openfatture assistant "Elenca le fatture aperte"')
     elif core_ready and not ai_extra:
         # Only when the ai extra itself is missing — not when credentials alone fail.
         next_steps.append("Core is ready; enable the ai extra to use the assistant")
+    return next_steps
+
+
+def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
+    """Compute honest setup readiness (core invoicing vs assistant)."""
+    company_ok = bool(
+        (settings.cedente_partita_iva or "").strip()
+        and (settings.cedente_denominazione or "").strip()
+    )
+    data_dir_ok = settings.data_dir.exists()
+    archive_ok = settings.archivio_dir.exists()
+    ai_extra = bool(extras.get("ai"))
+    provider = (settings.ai_provider or "").lower()
+    # Ollama needs no cloud key; cloud providers need a key for real calls.
+    ai_credentials_ok = provider == "ollama" or bool(settings.ai_api_key)
+    assistant_ready = ai_extra and ai_credentials_ok
+    missing_fields = _missing_fiscal_fields(settings)
+    invalid_fields = _invalid_fiscal_fields(settings)
+    core_ready = (
+        company_ok and data_dir_ok and archive_ok and not missing_fields and not invalid_fields
+    )
+
+    next_steps = _core_next_steps(core_ready, missing_fields + invalid_fields)
+    next_steps += _assistant_next_steps(core_ready, ai_extra, ai_credentials_ok)
     if not next_steps:
         next_steps.append("openfatture --help")
 
