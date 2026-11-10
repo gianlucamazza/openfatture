@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from fluent.runtime import FluentBundle, FluentLocalization, FluentResource, FluentResourceLoader
+from fluent.runtime import FluentBundle, FluentLocalization, FluentResource
 
 from openfatture.platform.config import get_settings
 
@@ -81,37 +81,6 @@ def _load_bundle(locale: str) -> FluentBundle:
     return bundle
 
 
-def _load_localization(locales: list[str]) -> FluentLocalization:
-    """Load FluentLocalization with fallback chain.
-
-    Args:
-        locales: List of locale codes in priority order (first = preferred)
-
-    Returns:
-        FluentLocalization instance with resource loader
-    """
-    locales_dir = get_locales_dir()
-
-    # Create resource loader with correct path template
-    # FluentResourceLoader expects: /path/to/locales/{locale}/{resource_id}.ftl
-    loader = FluentResourceLoader(str(locales_dir / "{locale}"))
-
-    # Get all .ftl file names from the first locale
-    first_locale_dir = locales_dir / locales[0]
-    if not first_locale_dir.exists():
-        logger.warning(f"Locale directory not found: {first_locale_dir}, using fallback")
-        first_locale_dir = locales_dir / FALLBACK_LOCALE
-
-    # resource_ids should be the file names without .ftl extension
-    resource_ids = [f.stem for f in sorted(first_locale_dir.glob("*.ftl"))]
-
-    # Create FluentLocalization with fallback chain
-    l10n = FluentLocalization(locales, resource_ids, loader)
-
-    logger.info(f"Loaded FluentLocalization for locales: {locales} ({len(resource_ids)} resources)")
-    return l10n
-
-
 def get_bundle(locale: str) -> FluentBundle:
     """Get cached Fluent bundle for a locale.
 
@@ -124,30 +93,6 @@ def get_bundle(locale: str) -> FluentBundle:
     if locale not in _bundle_cache:
         _bundle_cache[locale] = _load_bundle(locale)
     return _bundle_cache[locale]
-
-
-def get_localization(locale: str) -> FluentLocalization:
-    """Get cached FluentLocalization with fallback chain.
-
-    Args:
-        locale: Preferred language code
-
-    Returns:
-        FluentLocalization with locale en it fallback
-    """
-    cache_key = locale
-
-    if cache_key not in _localization_cache:
-        # Build fallback chain: requested en (if not requested) it
-        locales = [locale]
-        if locale != "en" and locale != FALLBACK_LOCALE:
-            locales.append("en")
-        if locale != FALLBACK_LOCALE:
-            locales.append(FALLBACK_LOCALE)
-
-        _localization_cache[cache_key] = _load_localization(locales)
-
-    return _localization_cache[cache_key]
 
 
 def get_locale() -> str:

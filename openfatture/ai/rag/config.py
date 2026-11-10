@@ -11,6 +11,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from openfatture.platform.logging import get_logger
 
+# Packaged knowledge base manifest (installed with the wheel, not read from the CWD).
+DEFAULT_KNOWLEDGE_MANIFEST = Path(__file__).parent / "sources.json"
+
+
+def _default_persist_directory() -> Path:
+    from openfatture.platform.config import get_settings
+
+    return get_settings().vector_store_path
+
 
 class RAGConfig(BaseModel):
     """RAG system configuration settings.
@@ -31,8 +40,8 @@ class RAGConfig(BaseModel):
 
     # ChromaDB settings
     persist_directory: Path = Field(
-        default=Path(".chroma"),
-        description="ChromaDB persistent storage directory",
+        default_factory=lambda: _default_persist_directory(),
+        description="ChromaDB persistent storage directory (defaults to data_dir/vector_store)",
     )
 
     collection_name: str = Field(
@@ -46,8 +55,8 @@ class RAGConfig(BaseModel):
     )
 
     knowledge_manifest_path: Path = Field(
-        default=Path("openfatture/ai/rag/sources.json"),
-        description="Manifest file containing knowledge base sources",
+        default=DEFAULT_KNOWLEDGE_MANIFEST,
+        description="Manifest of knowledge sources; source paths are relative to it",
     )
 
     # Embedding settings
@@ -166,14 +175,13 @@ def get_rag_config() -> RAGConfig:
 
     return RAGConfig(
         enabled=os.getenv("OPENFATTURE_RAG_ENABLED", "true").lower() == "true",
-        persist_directory=Path(os.getenv("OPENFATTURE_RAG_PERSIST_DIR", ".chroma")),
+        persist_directory=Path(
+            os.getenv("OPENFATTURE_RAG_PERSIST_DIR") or _default_persist_directory()
+        ),
         collection_name=os.getenv("OPENFATTURE_RAG_COLLECTION", "openfatture"),
         knowledge_collection_name=os.getenv("OPENFATTURE_RAG_KB_COLLECTION", "openfatture_kb"),
         knowledge_manifest_path=Path(
-            os.getenv(
-                "OPENFATTURE_RAG_KB_MANIFEST",
-                "openfatture/ai/rag/sources.json",
-            )
+            os.getenv("OPENFATTURE_RAG_KB_MANIFEST") or DEFAULT_KNOWLEDGE_MANIFEST
         ),
         embedding_provider=provider,
         embedding_model=os.getenv("OPENFATTURE_RAG_EMBEDDING_MODEL", "text-embedding-3-small"),

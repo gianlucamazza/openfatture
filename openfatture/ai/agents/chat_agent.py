@@ -228,11 +228,6 @@ class ChatAgent(BaseAgent[ChatContext]):
 
         return build_chat_messages(context, enable_tools=self.enable_tools)
 
-    def _build_system_prompt(self, context: ChatContext) -> str:
-        from openfatture.ai.runtime.prompt import build_chat_system_prompt
-
-        return build_chat_system_prompt(context, enable_tools=self.enable_tools)
-
     async def _parse_response(
         self,
         response: AgentResponse,
@@ -246,14 +241,3 @@ class ChatAgent(BaseAgent[ChatContext]):
     def get_available_tools(self, category: str | None = None) -> list[str]:
         tools = self.tool_registry.list_tools(category=category)
         return [t.name for t in tools]
-
-    def get_tools_schema(self, provider_format: str = "openai") -> list[dict[str, Any]]:
-        if provider_format == "anthropic":
-            return self.tool_registry.get_anthropic_tools()
-        return self.tool_registry.get_openai_functions()
-
-    async def generate_title(self, context: ChatContext) -> str:
-        first_message = context.user_input[:50]
-        if len(context.user_input) > 50:
-            first_message += "..."
-        return first_message

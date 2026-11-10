@@ -1,162 +1,56 @@
-"""Test CLI translations for all supported locales."""
+"""Every message id referenced by the code exists in every locale."""
+
+import ast
+import re
+from pathlib import Path
 
 import pytest
 
-from openfatture.i18n import _, set_locale
+from openfatture.i18n import _
+from openfatture.i18n.loader import SUPPORTED_LOCALES, get_bundle
+
+ROOT = Path(__file__).resolve().parents[2] / "openfatture"
+LOCALES = Path(ROOT / "i18n" / "locales")
+KEY = re.compile(r"^([a-z][a-z0-9-]*)\s*=", re.M)
 
 
-class TestItalianCLI:
-    """Test Italian CLI translations."""
-
-    def setup_method(self):
-        """Set locale to Italian."""
-        set_locale("it")
-
-    def test_fattura_create_title(self):
-        """Test invoice creation title."""
-        result = _("cli-fattura-create-title")
-        assert "Crea" in result
-        assert "Fattura" in result
-
-    def test_fattura_client_selected(self):
-        """Test client selection message with variable."""
-        result = _("cli-fattura-client-selected", client_name="Test SRL")
-        assert "Cliente" in result
-        assert "Test SRL" in result
-
-    def test_ai_forecast_pluralization_singular(self):
-        """Test pluralization with singular."""
-        result = _("cli-ai-forecast-results-title", months=1)
-        assert "mese" in result.lower()
-        assert "mesi" not in result.lower()
-
-    def test_ai_forecast_pluralization_plural(self):
-        """Test pluralization with plural."""
-        result = _("cli-ai-forecast-results-title", months=3)
-        assert "mesi" in result.lower()
-
-    def test_main_title(self):
-        """Test main CLI title."""
-        result = _("cli-main-title")
-        assert "OpenFatture" in result
-        assert "Fatturazione" in result
-
-    def test_cliente_list_title(self):
-        """Test client list title with count."""
-        result = _("cli-cliente-list-title", count=5)
-        assert "Clienti" in result
-        assert "5" in result
+def _defined(locale: str) -> set[str]:
+    return set(KEY.findall((LOCALES / locale / "cli.ftl").read_text(encoding="utf-8")))
 
 
-class TestEnglishCLI:
-    """Test English CLI translations."""
-
-    def setup_method(self):
-        """Set locale to English."""
-        set_locale("en")
-
-    def test_fattura_create_title(self):
-        """Test invoice creation title."""
-        result = _("cli-fattura-create-title")
-        assert "Create" in result
-        assert "Invoice" in result
-
-    def test_fattura_client_selected(self):
-        """Test client selection message with variable."""
-        result = _("cli-fattura-client-selected", client_name="Test Corp")
-        assert "Client" in result
-        assert "Test Corp" in result
-
-    def test_ai_forecast_pluralization_singular(self):
-        """Test pluralization with singular."""
-        result = _("cli-ai-forecast-results-title", months=1)
-        assert "month" in result.lower()
-        assert "months" not in result.lower()
-
-    def test_ai_forecast_pluralization_plural(self):
-        """Test pluralization with plural."""
-        result = _("cli-ai-forecast-results-title", months=3)
-        assert "months" in result.lower()
-
-    def test_main_title(self):
-        """Test main CLI title."""
-        result = _("cli-main-title")
-        assert "OpenFatture" in result
-        assert "Invoicing" in result
-
-    def test_cliente_list_title(self):
-        """Test client list title with count."""
-        result = _("cli-cliente-list-title", count=5)
-        assert "Clients" in result
-        assert "5" in result
+def _referenced() -> set[str]:
+    known = set().union(*(_defined(locale) for locale in SUPPORTED_LOCALES))
+    literals: set[str] = set()
+    for path in ROOT.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                literals.add(node.value)
+    referenced = known & literals
+    # Keys built at runtime from a constant prefix ("cli-invoice-" + status).
+    referenced |= {key for key in known if key.startswith("cli-invoice-")}
+    return referenced
 
 
-class TestCLIRichMarkup:
-    """Test that Rich markup is preserved in CLI translations."""
-
-    def test_italian_rich_markup(self):
-        """Test Italian Rich markup preservation."""
-        set_locale("it")
-        result = _("cli-fattura-create-title")
-        assert "[bold blue]" in result
-        assert "[/bold blue]" in result
-
-    def test_english_rich_markup(self):
-        """Test English Rich markup preservation."""
-        set_locale("en")
-        result = _("cli-fattura-create-title")
-        assert "[bold blue]" in result
-        assert "[/bold blue]" in result
+@pytest.mark.parametrize("locale", sorted(SUPPORTED_LOCALES))
+def test_every_referenced_message_exists(locale):
+    missing = sorted(_referenced() - _defined(locale))
+    assert not missing, f"{locale} is missing: {missing}"
 
 
-class TestCLIVariableInterpolation:
-    """Test variable interpolation in CLI strings."""
-
-    @pytest.mark.parametrize(
-        "locale,msg_id,variables,expected_substrings",
-        [
-            (
-                "it",
-                "cli-fattura-invoice-header",
-                {"numero": "001", "anno": "2024"},
-                ["001", "2024"],
-            ),
-            (
-                "en",
-                "cli-fattura-invoice-header",
-                {"numero": "001", "anno": "2024"},
-                ["001", "2024"],
-            ),
-            ("it", "cli-cliente-has-invoices", {"count": 3}, ["3"]),
-            ("en", "cli-cliente-has-invoices", {"count": 3}, ["3"]),
-        ],
-    )
-    def test_variable_interpolation(self, locale, msg_id, variables, expected_substrings):
-        """Test variable interpolation across locales."""
-        set_locale(locale)
-        result = _(msg_id, **variables)
-
-        for substring in expected_substrings:
-            assert substring in result
+@pytest.mark.parametrize("locale", sorted(SUPPORTED_LOCALES))
+def test_no_orphan_messages(locale):
+    orphans = sorted(_defined(locale) - _referenced())
+    assert not orphans, f"{locale} defines unused messages: {orphans}"
 
 
-class TestCLITranslations:
-    """Test translations used by the current CLI surface."""
+@pytest.mark.parametrize(
+    "locale, expected",
+    [("it", "Sessione: abc"), ("en", "Session: abc"), ("de", "Sitzung: abc")],
+)
+def test_variable_interpolation(locale, expected):
+    assert _("assistant-session", locale=locale, session="abc") == expected
 
-    @pytest.mark.parametrize("locale", ["it", "en"])
-    def test_current_cli_messages_present(self, locale):
-        """Test that current top-level CLI messages are translated."""
-        set_locale(locale)
 
-        messages = [
-            "cli-main-title",
-            "cli-main-description",
-            "cli-config-show-title",
-        ]
-
-        for message_id in messages:
-            result = _(message_id)
-            # Should not return the key itself (means translation not found)
-            assert result != message_id, f"Missing translation for {message_id} in {locale}"
-            # Should have some content
-            assert len(result) > 0
+def test_bundles_load_for_every_locale():
+    for locale in SUPPORTED_LOCALES:
+        assert get_bundle(locale).has_message("assistant-help")

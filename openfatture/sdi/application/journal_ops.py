@@ -8,15 +8,15 @@ from typing import Any
 from openfatture.sdi.application.submissions import resolve_submission
 from openfatture.sdi.notifiche.parser import NotificaSDI
 from openfatture.sdi.notifiche.processor import NotificationProcessor
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import SDINotificationRecord, SDISubmissionAttempt
+from openfatture.storage.session import db_session
 
 ASSOCIABLE_OUTCOMES = frozenset({"unassociated", "association_conflict"})
 
 
 def list_sdi_journal() -> dict[str, list[dict[str, Any]]]:
     """Return recorded PEC submission attempts and imported receipts (read-only)."""
-    with get_session() as session:
+    with db_session() as session:
         submissions = [
             {
                 "id": a.id,
@@ -40,7 +40,7 @@ def list_sdi_journal() -> dict[str, list[dict[str, Any]]]:
 
 def associate_receipt(receipt_id: int, invoice_id: int, evidence: str) -> dict[str, Any]:
     """Associate an unresolved receipt; callers must obtain human confirmation first."""
-    with get_session() as session:
+    with db_session() as session:
         receipt = session.get(SDINotificationRecord, receipt_id)
         if receipt is None or receipt.outcome not in ASSOCIABLE_OUTCOMES:
             return {"error": "Receipt cannot be associated"}
@@ -56,7 +56,7 @@ def associate_receipt(receipt_id: int, invoice_id: int, evidence: str) -> dict[s
 
 def resolve_submission_attempt(attempt_id: int, *, sent: bool, evidence: str) -> dict[str, Any]:
     """Resolve an uncertain PEC attempt; callers must obtain human confirmation first."""
-    with get_session() as session:
+    with db_session() as session:
         try:
             resolve_submission(session, attempt_id, sent=sent, note=evidence)
         except ValueError as exc:

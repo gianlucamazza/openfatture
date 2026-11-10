@@ -72,8 +72,10 @@ Rollback: `ASSISTANT_BACKEND=chat`. Inspect with `openfatture status --json`
   human-facing callers. No built-in UI uses that path yet (there is no TUI).
 - AI tools call **application services** (billing/payment/sdi/pdf), not raw
   SQLAlchemy sessions.
-- Multi-agent workflows under `ai/orchestration/workflows/` are **internal /
-  experimental** and are **not** registered on the public CLI.
+- The tool loop in `ai/runtime/graph.py` is the only orchestration path; the
+  experimental multi-agent workflows were removed in 2.8.0.
+- `search_knowledge_base` searches the tax knowledge packaged in
+  `ai/rag/knowledge/`, indexed into `data_dir/vector_store` on first use.
 
 ## Tooling
 
@@ -174,13 +176,3 @@ Interrupted streams are marked incomplete and do not become completed history.
 Logs correlate graph nodes and tools through thread ID, iteration and call ID;
 existing registry redaction applies to sensitive parameters.
 
-## Internal workflows
-
-Invoice creation, compliance and cash-flow workflows accept an injected
-checkpointer. They default to checkpointing disabled; passing a checkpointer
-enables it. `enable_checkpointing=True` without a checkpointer raises a clear
-error rather than silently creating an ephemeral memory saver. For durable
-execution, own an `AsyncSqliteSaver` context and pass it to the workflow.
-Every invocation supplies its workflow ID as `thread_id`. Memory savers are
-appropriate only for tests. These workflows remain internal/experimental and
-are not registered as public CLI commands.

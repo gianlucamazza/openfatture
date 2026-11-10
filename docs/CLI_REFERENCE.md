@@ -15,12 +15,14 @@ to display the command reference. Structured output requires an explicit
 
 ## `openfatture init`
 
-Creates the local data directories, database, and optional company
-configuration.
+Creates the local data directories and optional company configuration, and
+creates or **upgrades the database schema** (packaged Alembic migrations; SQLite
+files are backed up next to the database first). Run it after upgrading
+OpenFatture when `status` asks for it.
 
 ```bash
 openfatture init
-openfatture init --no-interactive
+openfatture init --no-interactive   # only directories and database schema
 ```
 
 ## `openfatture assistant`

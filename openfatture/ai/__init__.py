@@ -1,16 +1,11 @@
-"""AI-powered assistance features for OpenFatture.
-
-This package provides LLM-based agents for intelligent invoice management:
-- Invoice description generation
-- Tax advice and VAT suggestions
-- Cash flow prediction
-- Compliance checking
+"""Business assistant for OpenFatture.
 
 Architecture:
-    - Domain: Core models (Message, Response, Context, Agent)
-    - Providers: LLM provider abstractions (OpenAI, Anthropic, Ollama)
-    - Agents: Specialized agents for different tasks
-    - Config: Configuration management
+    - runtime: the assistant entry point and LangGraph tool loop
+    - tools: assistant tools over the application services
+    - providers: LLM provider adapters (OpenAI-compatible, Anthropic, Ollama)
+    - domain: messages, responses and agent contracts
+    - rag: optional knowledge search
 """
 
 from typing import Any
@@ -28,7 +23,6 @@ from openfatture.ai.domain import (
     AgentResponse,
     BaseAgent,
     Message,
-    PromptManager,
     ResponseStatus,
     Role,
 )
@@ -60,7 +54,6 @@ __all__ = [
     "Message",
     "Role",
     "ResponseStatus",
-    "PromptManager",
     # Config
     "AISettings",
     "get_ai_settings",

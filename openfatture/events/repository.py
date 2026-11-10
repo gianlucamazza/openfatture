@@ -9,8 +9,8 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import EventLog
+from openfatture.storage.session import session_scope
 
 
 class EventRepository:
@@ -27,13 +27,6 @@ class EventRepository:
             session: Database session. If None, creates new session per query.
         """
         self._session = session
-        self._owns_session = session is None
-
-    def _get_session(self) -> Session:
-        """Get database session."""
-        if self._session is not None:
-            return self._session
-        return get_session()
 
     def get_all(
         self,
@@ -59,33 +52,30 @@ class EventRepository:
         Returns:
             List of EventLog records
         """
-        db = self._get_session()
-        query = db.query(EventLog)
+        with session_scope(self._session) as db:
+            query = db.query(EventLog)
 
-        # Apply filters
-        if event_type:
-            query = query.filter(EventLog.event_type == event_type)
-        if entity_type:
-            query = query.filter(EventLog.entity_type == entity_type)
-        if entity_id is not None:
-            query = query.filter(EventLog.entity_id == entity_id)
-        if start_date:
-            query = query.filter(EventLog.occurred_at >= start_date)
-        if end_date:
-            query = query.filter(EventLog.occurred_at <= end_date)
+            # Apply filters
+            if event_type:
+                query = query.filter(EventLog.event_type == event_type)
+            if entity_type:
+                query = query.filter(EventLog.entity_type == entity_type)
+            if entity_id is not None:
+                query = query.filter(EventLog.entity_id == entity_id)
+            if start_date:
+                query = query.filter(EventLog.occurred_at >= start_date)
+            if end_date:
+                query = query.filter(EventLog.occurred_at <= end_date)
 
-        # Order by most recent first
-        query = query.order_by(EventLog.occurred_at.desc())
+            # Order by most recent first
+            query = query.order_by(EventLog.occurred_at.desc())
 
-        # Apply pagination
-        query = query.limit(limit).offset(offset)
+            # Apply pagination
+            query = query.limit(limit).offset(offset)
 
-        results = query.all()
+            results = query.all()
 
-        if self._owns_session:
-            db.close()
-
-        return results
+            return results
 
     def get_by_id(self, event_id: str) -> EventLog | None:
         """Get event by UUID.
@@ -96,13 +86,10 @@ class EventRepository:
         Returns:
             EventLog record or None if not found
         """
-        db = self._get_session()
-        result = db.query(EventLog).filter(EventLog.event_id == event_id).first()
+        with session_scope(self._session) as db:
+            result = db.query(EventLog).filter(EventLog.event_id == event_id).first()
 
-        if self._owns_session:
-            db.close()
-
-        return result
+            return result
 
     def get_by_event_type(self, event_type: str, limit: int = 100) -> list[EventLog]:
         """Get all events of a specific type.
@@ -171,71 +158,68 @@ class EventRepository:
         Returns:
             Dictionary with statistics
         """
-        db = self._get_session()
-        query = db.query(EventLog)
+        with session_scope(self._session) as db:
+            query = db.query(EventLog)
 
-        # Apply date filters
-        if start_date:
-            query = query.filter(EventLog.occurred_at >= start_date)
-        if end_date:
-            query = query.filter(EventLog.occurred_at <= end_date)
+            # Apply date filters
+            if start_date:
+                query = query.filter(EventLog.occurred_at >= start_date)
+            if end_date:
+                query = query.filter(EventLog.occurred_at <= end_date)
 
-        # Total events
-        total_events = query.count()
+            # Total events
+            total_events = query.count()
 
-        # Events by type
-        events_by_type = (
-            query.with_entities(EventLog.event_type, func.count(EventLog.id))
-            .group_by(EventLog.event_type)
-            .all()
-        )
+            # Events by type
+            events_by_type = (
+                query.with_entities(EventLog.event_type, func.count(EventLog.id))
+                .group_by(EventLog.event_type)
+                .all()
+            )
 
-        # Events by entity type
-        events_by_entity = (
-            query.filter(EventLog.entity_type.isnot(None))
-            .with_entities(EventLog.entity_type, func.count(EventLog.id))
-            .group_by(EventLog.entity_type)
-            .all()
-        )
+            # Events by entity type
+            events_by_entity = (
+                query.filter(EventLog.entity_type.isnot(None))
+                .with_entities(EventLog.entity_type, func.count(EventLog.id))
+                .group_by(EventLog.entity_type)
+                .all()
+            )
 
-        # Most recent event
-        most_recent = query.order_by(EventLog.occurred_at.desc()).first()
+            # Most recent event
+            most_recent = query.order_by(EventLog.occurred_at.desc()).first()
 
-        # Oldest event
-        oldest = query.order_by(EventLog.occurred_at.asc()).first()
+            # Oldest event
+            oldest = query.order_by(EventLog.occurred_at.asc()).first()
 
-        if self._owns_session:
-            db.close()
+            # Convert Row objects to tuples for dict()
+            events_by_type_list = [(row[0], row[1]) for row in events_by_type]
+            events_by_entity_list = [(row[0], row[1]) for row in events_by_entity]
 
-        # Convert Row objects to tuples for dict()
-        events_by_type_list = [(row[0], row[1]) for row in events_by_type]
-        events_by_entity_list = [(row[0], row[1]) for row in events_by_entity]
-
-        return {
-            "total_events": total_events,
-            "events_by_type": dict(events_by_type_list),
-            "events_by_entity": dict(events_by_entity_list),
-            "most_recent_event": (
-                {
-                    "event_type": most_recent.event_type,
-                    "occurred_at": most_recent.occurred_at,
-                }
-                if most_recent
-                else None
-            ),
-            "oldest_event": (
-                {
-                    "event_type": oldest.event_type,
-                    "occurred_at": oldest.occurred_at,
-                }
-                if oldest
-                else None
-            ),
-            "date_range": {
-                "start": start_date.isoformat() if start_date else None,
-                "end": end_date.isoformat() if end_date else None,
-            },
-        }
+            return {
+                "total_events": total_events,
+                "events_by_type": dict(events_by_type_list),
+                "events_by_entity": dict(events_by_entity_list),
+                "most_recent_event": (
+                    {
+                        "event_type": most_recent.event_type,
+                        "occurred_at": most_recent.occurred_at,
+                    }
+                    if most_recent
+                    else None
+                ),
+                "oldest_event": (
+                    {
+                        "event_type": oldest.event_type,
+                        "occurred_at": oldest.occurred_at,
+                    }
+                    if oldest
+                    else None
+                ),
+                "date_range": {
+                    "start": start_date.isoformat() if start_date else None,
+                    "end": end_date.isoformat() if end_date else None,
+                },
+            }
 
     def count(
         self,
@@ -255,25 +239,22 @@ class EventRepository:
         Returns:
             Number of matching events
         """
-        db = self._get_session()
-        query = db.query(EventLog)
+        with session_scope(self._session) as db:
+            query = db.query(EventLog)
 
-        # Apply filters
-        if event_type:
-            query = query.filter(EventLog.event_type == event_type)
-        if entity_type:
-            query = query.filter(EventLog.entity_type == entity_type)
-        if start_date:
-            query = query.filter(EventLog.occurred_at >= start_date)
-        if end_date:
-            query = query.filter(EventLog.occurred_at <= end_date)
+            # Apply filters
+            if event_type:
+                query = query.filter(EventLog.event_type == event_type)
+            if entity_type:
+                query = query.filter(EventLog.entity_type == entity_type)
+            if start_date:
+                query = query.filter(EventLog.occurred_at >= start_date)
+            if end_date:
+                query = query.filter(EventLog.occurred_at <= end_date)
 
-        count = query.count()
+            count = query.count()
 
-        if self._owns_session:
-            db.close()
-
-        return count
+            return count
 
     def _create_event_summary(self, event_type: str, event_data: dict[str, Any]) -> str:
         """Create human-readable event summary.
@@ -321,23 +302,14 @@ class EventRepository:
         Returns:
             List of matching EventLog records
         """
-        db = self._get_session()
+        with session_scope(self._session) as db:
+            # SQLite full-text search using LIKE
+            results = (
+                db.query(EventLog)
+                .filter(EventLog.event_data.like(f"%{query}%"))
+                .order_by(EventLog.occurred_at.desc())
+                .limit(limit)
+                .all()
+            )
 
-        # SQLite full-text search using LIKE
-        results = (
-            db.query(EventLog)
-            .filter(EventLog.event_data.like(f"%{query}%"))
-            .order_by(EventLog.occurred_at.desc())
-            .limit(limit)
-            .all()
-        )
-
-        if self._owns_session:
-            db.close()
-
-        return results
-
-    def close(self) -> None:
-        """Close database session if owned by repository."""
-        if self._owns_session and self._session is not None:
-            self._session.close()
+            return results

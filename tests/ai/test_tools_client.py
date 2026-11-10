@@ -4,6 +4,7 @@ Tests focus on individual tool functions in isolation using mocks
 to avoid external database and network dependencies.
 """
 
+from contextlib import nullcontext
 from unittest.mock import MagicMock, patch
 
 from sqlalchemy.orm import Session
@@ -19,12 +20,12 @@ from openfatture.storage.database.models import Cliente
 class TestSearchClients:
     """Test search_clients tool function."""
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_search_clients_basic(self, mock_get_session):
         """Test basic client search without filters."""
         # Mock database session
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query results
         mock_cliente = MagicMock(spec=Cliente)
@@ -55,11 +56,11 @@ class TestSearchClients:
         assert result["clienti"][0]["fatture_count"] == 2
         assert result["has_more"] is False
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_search_clients_with_query(self, mock_get_session):
         """Test client search with query filter."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         mock_cliente = MagicMock(spec=Cliente)
         mock_cliente.id = 2
@@ -82,11 +83,11 @@ class TestSearchClients:
         assert result["count"] == 1
         assert result["clienti"][0]["denominazione"] == "Rossi Company"
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_search_clients_with_limit(self, mock_get_session):
         """Test client search with custom limit."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Create multiple mock clients
         mock_clienti = []
@@ -114,11 +115,11 @@ class TestSearchClients:
         assert len(result["clienti"]) == 3
         assert result["has_more"] is True  # Should indicate more results available
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_search_clients_empty_results(self, mock_get_session):
         """Test client search with no results."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query chain
         mock_query = MagicMock()
@@ -134,11 +135,11 @@ class TestSearchClients:
         assert result["clienti"] == []
         assert result["has_more"] is False
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_search_clients_database_error(self, mock_get_session):
         """Test client search with database error."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query to raise exception
         mock_session.query.side_effect = Exception("Database connection failed")
@@ -153,11 +154,11 @@ class TestSearchClients:
 class TestGetClientDetails:
     """Test get_client_details tool function."""
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_get_client_details_success(self, mock_get_session):
         """Test successful client details retrieval."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock client
         mock_cliente = MagicMock(spec=Cliente)
@@ -216,11 +217,11 @@ class TestGetClientDetails:
         assert len(result["fatture_recenti"]) == 2
         assert result["fatture_recenti"][0]["numero"] == "002"  # Most recent first
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_get_client_details_not_found(self, mock_get_session):
         """Test client details retrieval for non-existent client."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query chain returning None
         mock_query = MagicMock()
@@ -234,11 +235,11 @@ class TestGetClientDetails:
         assert "error" in result
         assert "non trovato" in result["error"]
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_get_client_details_database_error(self, mock_get_session):
         """Test client details retrieval with database error."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query to raise exception
         mock_session.query.side_effect = Exception("Database connection failed")
@@ -248,11 +249,11 @@ class TestGetClientDetails:
         assert "error" in result
         assert "Database connection failed" in result["error"]
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_get_client_details_no_invoices(self, mock_get_session):
         """Test client details retrieval for client with no invoices."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock client with no invoices
         mock_cliente = MagicMock(spec=Cliente)
@@ -292,11 +293,11 @@ class TestGetClientDetails:
 class TestGetClientStats:
     """Test get_client_stats tool function."""
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_get_client_stats_success(self, mock_get_session):
         """Test successful client statistics retrieval."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query results for different counts
         mock_session.query.return_value.count.side_effect = [100, 80, 60, 20]
@@ -309,11 +310,11 @@ class TestGetClientStats:
         assert result["con_email"] == 60
         assert result["con_pec"] == 20
 
-    @patch("openfatture.billing.application.client_queries.get_session")
+    @patch("openfatture.billing.application.client_queries.session_scope")
     def test_get_client_stats_database_error(self, mock_get_session):
         """Test client statistics retrieval with database error."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query to raise exception
         mock_session.query.side_effect = Exception("Database connection failed")

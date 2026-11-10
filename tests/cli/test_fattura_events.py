@@ -122,30 +122,26 @@ def test_invoice_creation_publishes_event(runner, test_client, test_db):
 
         # Verify event was persisted
         repo = EventRepository()
-        try:
-            events = repo.get_by_event_type("InvoiceCreatedEvent")
-            assert len(events) >= 1
+        events = repo.get_by_event_type("InvoiceCreatedEvent")
+        assert len(events) >= 1
 
-            # Find our event
-            our_event = next(
-                (e for e in events if e.entity_id == fattura.id and e.entity_type == "invoice"),
-                None,
-            )
-            assert our_event is not None
-            assert our_event.event_type == "InvoiceCreatedEvent"
-            assert our_event.entity_type == "invoice"
-            assert our_event.entity_id == fattura.id
+        # Find our event
+        our_event = next(
+            (e for e in events if e.entity_id == fattura.id and e.entity_type == "invoice"),
+            None,
+        )
+        assert our_event is not None
+        assert our_event.event_type == "InvoiceCreatedEvent"
+        assert our_event.entity_type == "invoice"
+        assert our_event.entity_id == fattura.id
 
-            # Verify event data
-            import json
+        # Verify event data
+        import json
 
-            event_data = json.loads(our_event.event_data)
-            assert event_data["invoice_id"] == fattura.id
-            assert event_data["invoice_number"] == f"{fattura.numero}/{fattura.anno}"
-            assert event_data["client_id"] == test_client
-
-        finally:
-            repo.close()
+        event_data = json.loads(our_event.event_data)
+        assert event_data["invoice_id"] == fattura.id
+        assert event_data["invoice_number"] == f"{fattura.numero}/{fattura.anno}"
+        assert event_data["client_id"] == test_client
 
     finally:
         db.close()
@@ -203,22 +199,18 @@ def test_invoice_validation_publishes_event(test_client, test_db):
 
         # Verify event was persisted
         repo = EventRepository()
-        try:
-            events = repo.get_by_event_type("InvoiceValidatedEvent")
-            assert len(events) >= 1
+        events = repo.get_by_event_type("InvoiceValidatedEvent")
+        assert len(events) >= 1
 
-            our_event = next((e for e in events if e.entity_id == fattura.id), None)
-            assert our_event is not None
-            assert our_event.entity_type == "invoice"
+        our_event = next((e for e in events if e.entity_id == fattura.id), None)
+        assert our_event is not None
+        assert our_event.entity_type == "invoice"
 
-            import json
+        import json
 
-            event_data = json.loads(our_event.event_data)
-            assert event_data["validation_status"] == "passed"
-            assert event_data["issues"] == []
-
-        finally:
-            repo.close()
+        event_data = json.loads(our_event.event_data)
+        assert event_data["validation_status"] == "passed"
+        assert event_data["issues"] == []
 
     finally:
         db.close()
@@ -266,23 +258,19 @@ def test_invoice_deletion_publishes_event(test_client, test_db):
 
         # Verify event was persisted
         repo = EventRepository()
-        try:
-            events = repo.get_by_event_type("InvoiceDeletedEvent")
-            assert len(events) >= 1
+        events = repo.get_by_event_type("InvoiceDeletedEvent")
+        assert len(events) >= 1
 
-            our_event = next((e for e in events if e.entity_id == invoice_id), None)
-            assert our_event is not None
-            assert our_event.entity_type == "invoice"
+        our_event = next((e for e in events if e.entity_id == invoice_id), None)
+        assert our_event is not None
+        assert our_event.entity_type == "invoice"
 
-            import json
+        import json
 
-            event_data = json.loads(our_event.event_data)
-            assert event_data["invoice_id"] == invoice_id
-            assert event_data["invoice_number"] == invoice_number
-            assert "reason" in event_data
-
-        finally:
-            repo.close()
+        event_data = json.loads(our_event.event_data)
+        assert event_data["invoice_id"] == invoice_id
+        assert event_data["invoice_number"] == invoice_number
+        assert "reason" in event_data
 
     finally:
         db.close()
@@ -326,23 +314,19 @@ def test_invoice_sent_publishes_event(test_client, test_db):
 
         # Verify event was persisted
         repo = EventRepository()
-        try:
-            events = repo.get_by_event_type("InvoiceSentEvent")
-            assert len(events) >= 1
+        events = repo.get_by_event_type("InvoiceSentEvent")
+        assert len(events) >= 1
 
-            our_event = next((e for e in events if e.entity_id == fattura.id), None)
-            assert our_event is not None
-            assert our_event.entity_type == "invoice"
+        our_event = next((e for e in events if e.entity_id == fattura.id), None)
+        assert our_event is not None
+        assert our_event.entity_type == "invoice"
 
-            import json
+        import json
 
-            event_data = json.loads(our_event.event_data)
-            assert event_data["recipient"] == "ABCDEFG"
-            assert event_data["pec_address"] == "sdi01@pec.fatturapa.it"
-            assert event_data["signed"] is False
-
-        finally:
-            repo.close()
+        event_data = json.loads(our_event.event_data)
+        assert event_data["recipient"] == "ABCDEFG"
+        assert event_data["pec_address"] == "sdi01@pec.fatturapa.it"
+        assert event_data["signed"] is False
 
     finally:
         db.close()
@@ -426,23 +410,19 @@ def test_invoice_timeline_shows_all_events(test_client, test_db):
 
         # Get timeline
         repo = EventRepository()
-        try:
-            timeline = repo.get_timeline("invoice", fattura.id)
+        timeline = repo.get_timeline("invoice", fattura.id)
 
-            # Should have at least 3 events
-            assert len(timeline) >= 3
+        # Should have at least 3 events
+        assert len(timeline) >= 3
 
-            # Check event types are present
-            event_types = [e["event_type"] for e in timeline]
-            assert "InvoiceCreatedEvent" in event_types
-            assert "InvoiceValidatedEvent" in event_types
-            assert "InvoiceSentEvent" in event_types
+        # Check event types are present
+        event_types = [e["event_type"] for e in timeline]
+        assert "InvoiceCreatedEvent" in event_types
+        assert "InvoiceValidatedEvent" in event_types
+        assert "InvoiceSentEvent" in event_types
 
-            # Events should be in chronological order (most recent first)
-            assert timeline[0]["timestamp"] >= timeline[-1]["timestamp"]
-
-        finally:
-            repo.close()
+        # Events should be in chronological order (most recent first)
+        assert timeline[0]["timestamp"] >= timeline[-1]["timestamp"]
 
     finally:
         db.close()

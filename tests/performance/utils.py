@@ -5,16 +5,25 @@ Provides profiling, metrics collection, and analysis tools for performance tests
 
 import asyncio
 import functools
+import statistics
 import time
 import tracemalloc
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-import numpy as np
 from structlog import get_logger
 
 logger = get_logger(__name__)
+
+
+def _percentile(values: list[float], percent: float) -> float:
+    """Linear-interpolated percentile (numpy's default method)."""
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * percent / 100
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
 
 
 @dataclass
@@ -38,37 +47,37 @@ class PerformanceMetrics:
     @property
     def mean_latency_ms(self) -> float:
         """Mean latency in milliseconds."""
-        return float(np.mean(self.latencies_ms)) if self.latencies_ms else 0.0
+        return statistics.fmean(self.latencies_ms) if self.latencies_ms else 0.0
 
     @property
     def median_latency_ms(self) -> float:
         """Median latency (p50) in milliseconds."""
-        return float(np.median(self.latencies_ms)) if self.latencies_ms else 0.0
+        return float(statistics.median(self.latencies_ms)) if self.latencies_ms else 0.0
 
     @property
     def p95_latency_ms(self) -> float:
         """95th percentile latency in milliseconds."""
-        return float(np.percentile(self.latencies_ms, 95)) if self.latencies_ms else 0.0
+        return _percentile(self.latencies_ms, 95) if self.latencies_ms else 0.0
 
     @property
     def p99_latency_ms(self) -> float:
         """99th percentile latency in milliseconds."""
-        return float(np.percentile(self.latencies_ms, 99)) if self.latencies_ms else 0.0
+        return _percentile(self.latencies_ms, 99) if self.latencies_ms else 0.0
 
     @property
     def min_latency_ms(self) -> float:
         """Minimum latency in milliseconds."""
-        return float(np.min(self.latencies_ms)) if self.latencies_ms else 0.0
+        return float(min(self.latencies_ms)) if self.latencies_ms else 0.0
 
     @property
     def max_latency_ms(self) -> float:
         """Maximum latency in milliseconds."""
-        return float(np.max(self.latencies_ms)) if self.latencies_ms else 0.0
+        return float(max(self.latencies_ms)) if self.latencies_ms else 0.0
 
     @property
     def std_latency_ms(self) -> float:
         """Standard deviation of latency in milliseconds."""
-        return float(np.std(self.latencies_ms)) if self.latencies_ms else 0.0
+        return statistics.pstdev(self.latencies_ms) if self.latencies_ms else 0.0
 
     def summary(self) -> dict[str, Any]:
         """Get metrics summary dictionary."""

@@ -8,8 +8,8 @@ from openfatture.billing.preventivi.service import PreventivoService
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Preventivo, StatoPreventivo
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -45,63 +45,61 @@ def search_preventivi(
         anno = validate_integer_input(anno, min_value=2000, max_value=2100)
     limit = validate_integer_input(limit, min_value=1, max_value=100)
 
-    db = get_session()
-    try:
-        # Parse status if provided
-        stato_enum = None
-        if stato:
-            try:
-                stato_enum = StatoPreventivo(stato.lower())
-            except ValueError:
-                return {
-                    "error": f"Invalid status: {stato}. Valid: bozza, inviato, accettato, rifiutato, scaduto, convertito",
-                    "count": 0,
-                    "preventivi": [],
-                }
+    with db_session() as db:
+        try:
+            # Parse status if provided
+            stato_enum = None
+            if stato:
+                try:
+                    stato_enum = StatoPreventivo(stato.lower())
+                except ValueError:
+                    return {
+                        "error": f"Invalid status: {stato}. Valid: bozza, inviato, accettato, rifiutato, scaduto, convertito",
+                        "count": 0,
+                        "preventivi": [],
+                    }
 
-        # Use service to list preventivi
-        settings = get_settings()
-        service = PreventivoService(settings=settings)
+            # Use service to list preventivi
+            settings = get_settings()
+            service = PreventivoService(settings=settings)
 
-        preventivi = service.list_preventivi(
-            db=db,
-            stato=stato_enum,
-            cliente_id=cliente_id,
-            anno=anno,
-            limit=limit,
-        )
-
-        # Format results
-        results = []
-        for p in preventivi:
-            results.append(
-                {
-                    "preventivo_id": p.id,
-                    "numero": f"{p.numero}/{p.anno}",
-                    "data_emissione": p.data_emissione.isoformat(),
-                    "data_scadenza": p.data_scadenza.isoformat(),
-                    "cliente": p.cliente.denominazione if p.cliente else None,
-                    "cliente_id": p.cliente_id,
-                    "imponibile": float(p.imponibile),
-                    "iva": float(p.iva),
-                    "totale": float(p.totale),
-                    "stato": p.stato.value,
-                    "validita_giorni": p.validita_giorni,
-                    "righe_count": len(p.righe) if p.righe else 0,
-                }
+            preventivi = service.list_preventivi(
+                db=db,
+                stato=stato_enum,
+                cliente_id=cliente_id,
+                anno=anno,
+                limit=limit,
             )
 
-        return {
-            "count": len(results),
-            "preventivi": results,
-            "has_more": len(preventivi) == limit,
-        }
+            # Format results
+            results = []
+            for p in preventivi:
+                results.append(
+                    {
+                        "preventivo_id": p.id,
+                        "numero": f"{p.numero}/{p.anno}",
+                        "data_emissione": p.data_emissione.isoformat(),
+                        "data_scadenza": p.data_scadenza.isoformat(),
+                        "cliente": p.cliente.denominazione if p.cliente else None,
+                        "cliente_id": p.cliente_id,
+                        "imponibile": float(p.imponibile),
+                        "iva": float(p.iva),
+                        "totale": float(p.totale),
+                        "stato": p.stato.value,
+                        "validita_giorni": p.validita_giorni,
+                        "righe_count": len(p.righe) if p.righe else 0,
+                    }
+                )
 
-    except Exception as e:
-        logger.error("search_preventivi_failed", error=str(e))
-        return {"error": str(e), "count": 0, "preventivi": []}
-    finally:
-        db.close()
+            return {
+                "count": len(results),
+                "preventivi": results,
+                "has_more": len(preventivi) == limit,
+            }
+
+        except Exception as e:
+            logger.error("search_preventivi_failed", error=str(e))
+            return {"error": str(e), "count": 0, "preventivi": []}
 
 
 @validate_call
@@ -118,63 +116,61 @@ def get_preventivo_details(preventivo_id: int) -> dict[str, Any]:
     # Validate input
     preventivo_id = validate_integer_input(preventivo_id, min_value=1)
 
-    db = get_session()
-    try:
-        preventivo = db.query(Preventivo).filter(Preventivo.id == preventivo_id).first()
+    with db_session() as db:
+        try:
+            preventivo = db.query(Preventivo).filter(Preventivo.id == preventivo_id).first()
 
-        if not preventivo:
-            return {"error": f"Preventivo {preventivo_id} not found"}
+            if not preventivo:
+                return {"error": f"Preventivo {preventivo_id} not found"}
 
-        # Format righe
-        righe = []
-        for riga in preventivo.righe:
-            righe.append(
-                {
-                    "numero_riga": riga.numero_riga,
-                    "descrizione": riga.descrizione,
-                    "quantita": float(riga.quantita),
-                    "prezzo_unitario": float(riga.prezzo_unitario),
-                    "unita_misura": riga.unita_misura,
-                    "aliquota_iva": float(riga.aliquota_iva),
-                    "imponibile": float(riga.imponibile),
-                    "iva": float(riga.iva),
-                    "totale": float(riga.totale),
-                }
-            )
+            # Format righe
+            righe = []
+            for riga in preventivo.righe:
+                righe.append(
+                    {
+                        "numero_riga": riga.numero_riga,
+                        "descrizione": riga.descrizione,
+                        "quantita": float(riga.quantita),
+                        "prezzo_unitario": float(riga.prezzo_unitario),
+                        "unita_misura": riga.unita_misura,
+                        "aliquota_iva": float(riga.aliquota_iva),
+                        "imponibile": float(riga.imponibile),
+                        "iva": float(riga.iva),
+                        "totale": float(riga.totale),
+                    }
+                )
 
-        return {
-            "preventivo_id": preventivo.id,
-            "numero": f"{preventivo.numero}/{preventivo.anno}",
-            "anno": preventivo.anno,
-            "data_emissione": preventivo.data_emissione.isoformat(),
-            "data_scadenza": preventivo.data_scadenza.isoformat(),
-            "cliente_id": preventivo.cliente_id,
-            "cliente": (
-                {
-                    "id": preventivo.cliente.id,
-                    "denominazione": preventivo.cliente.denominazione,
-                    "partita_iva": preventivo.cliente.partita_iva,
-                    "email": preventivo.cliente.email,
-                }
-                if preventivo.cliente
-                else None
-            ),
-            "imponibile": float(preventivo.imponibile),
-            "iva": float(preventivo.iva),
-            "totale": float(preventivo.totale),
-            "stato": preventivo.stato.value,
-            "validita_giorni": preventivo.validita_giorni,
-            "note": preventivo.note,
-            "condizioni": preventivo.condizioni,
-            "righe": righe,
-            "fattura_id": preventivo.fattura.id if preventivo.fattura else None,
-        }
+            return {
+                "preventivo_id": preventivo.id,
+                "numero": f"{preventivo.numero}/{preventivo.anno}",
+                "anno": preventivo.anno,
+                "data_emissione": preventivo.data_emissione.isoformat(),
+                "data_scadenza": preventivo.data_scadenza.isoformat(),
+                "cliente_id": preventivo.cliente_id,
+                "cliente": (
+                    {
+                        "id": preventivo.cliente.id,
+                        "denominazione": preventivo.cliente.denominazione,
+                        "partita_iva": preventivo.cliente.partita_iva,
+                        "email": preventivo.cliente.email,
+                    }
+                    if preventivo.cliente
+                    else None
+                ),
+                "imponibile": float(preventivo.imponibile),
+                "iva": float(preventivo.iva),
+                "totale": float(preventivo.totale),
+                "stato": preventivo.stato.value,
+                "validita_giorni": preventivo.validita_giorni,
+                "note": preventivo.note,
+                "condizioni": preventivo.condizioni,
+                "righe": righe,
+                "fattura_id": preventivo.fattura.id if preventivo.fattura else None,
+            }
 
-    except Exception as e:
-        logger.error("get_preventivo_details_failed", preventivo_id=preventivo_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("get_preventivo_details_failed", preventivo_id=preventivo_id, error=str(e))
+            return {"error": str(e)}
 
 
 # =============================================================================
@@ -228,50 +224,48 @@ def create_preventivo(
                 "error": f"Riga {idx + 1}: missing required fields: {missing}",
             }
 
-    db = get_session()
-    try:
-        settings = get_settings()
-        service = PreventivoService(settings=settings)
+    with db_session() as db:
+        try:
+            settings = get_settings()
+            service = PreventivoService(settings=settings)
 
-        preventivo, error = service.create_preventivo(
-            db=db,
-            cliente_id=cliente_id,
-            righe=righe,
-            validita_giorni=validita_giorni,
-            note=note,
-            condizioni=condizioni,
-        )
+            preventivo, error = service.create_preventivo(
+                db=db,
+                cliente_id=cliente_id,
+                righe=righe,
+                validita_giorni=validita_giorni,
+                note=note,
+                condizioni=condizioni,
+            )
 
-        if error:
-            return {"success": False, "error": error}
+            if error:
+                return {"success": False, "error": error}
 
-        # Mypy type narrowing: if no error, preventivo must not be None
-        assert preventivo is not None
+            # Mypy type narrowing: if no error, preventivo must not be None
+            assert preventivo is not None
 
-        logger.info(
-            "preventivo_created",
-            preventivo_id=preventivo.id,
-            numero=f"{preventivo.numero}/{preventivo.anno}",
-            cliente_id=cliente_id,
-            totale=float(preventivo.totale),
-        )
+            logger.info(
+                "preventivo_created",
+                preventivo_id=preventivo.id,
+                numero=f"{preventivo.numero}/{preventivo.anno}",
+                cliente_id=cliente_id,
+                totale=float(preventivo.totale),
+            )
 
-        return {
-            "success": True,
-            "preventivo_id": preventivo.id,
-            "numero": f"{preventivo.numero}/{preventivo.anno}",
-            "data_emissione": preventivo.data_emissione.isoformat(),
-            "data_scadenza": preventivo.data_scadenza.isoformat(),
-            "totale": float(preventivo.totale),
-            "stato": preventivo.stato.value,
-            "message": f"Preventivo {preventivo.numero}/{preventivo.anno} created successfully",
-        }
+            return {
+                "success": True,
+                "preventivo_id": preventivo.id,
+                "numero": f"{preventivo.numero}/{preventivo.anno}",
+                "data_emissione": preventivo.data_emissione.isoformat(),
+                "data_scadenza": preventivo.data_scadenza.isoformat(),
+                "totale": float(preventivo.totale),
+                "stato": preventivo.stato.value,
+                "message": f"Preventivo {preventivo.numero}/{preventivo.anno} created successfully",
+            }
 
-    except Exception as e:
-        logger.error("create_preventivo_failed", error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("create_preventivo_failed", error=str(e))
+            return {"success": False, "error": str(e)}
 
 
 @validate_call
@@ -301,38 +295,36 @@ def update_preventivo_status(
             "error": f"Invalid status: {new_status}. Valid: bozza, inviato, accettato, rifiutato, scaduto",
         }
 
-    db = get_session()
-    try:
-        settings = get_settings()
-        service = PreventivoService(settings=settings)
+    with db_session() as db:
+        try:
+            settings = get_settings()
+            service = PreventivoService(settings=settings)
 
-        success, error = service.update_stato(
-            db=db,
-            preventivo_id=preventivo_id,
-            nuovo_stato=status_enum,
-        )
+            success, error = service.update_stato(
+                db=db,
+                preventivo_id=preventivo_id,
+                nuovo_stato=status_enum,
+            )
 
-        if not success:
-            return {"success": False, "error": error}
+            if not success:
+                return {"success": False, "error": error}
 
-        logger.info(
-            "preventivo_status_updated",
-            preventivo_id=preventivo_id,
-            new_status=new_status,
-        )
+            logger.info(
+                "preventivo_status_updated",
+                preventivo_id=preventivo_id,
+                new_status=new_status,
+            )
 
-        return {
-            "success": True,
-            "preventivo_id": preventivo_id,
-            "new_status": new_status,
-            "message": f"Preventivo {preventivo_id} status updated to {new_status}",
-        }
+            return {
+                "success": True,
+                "preventivo_id": preventivo_id,
+                "new_status": new_status,
+                "message": f"Preventivo {preventivo_id} status updated to {new_status}",
+            }
 
-    except Exception as e:
-        logger.error("update_preventivo_status_failed", error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("update_preventivo_status_failed", error=str(e))
+            return {"success": False, "error": str(e)}
 
 
 @validate_call
@@ -361,66 +353,66 @@ def update_preventivo(
     if validita_giorni is not None:
         validita_giorni = validate_integer_input(validita_giorni, min_value=1, max_value=365)
 
-    db = get_session()
-    try:
-        preventivo = db.query(Preventivo).filter(Preventivo.id == preventivo_id).first()
-        if not preventivo:
-            return {"success": False, "error": f"Preventivo {preventivo_id} not found"}
+    with db_session() as db:
+        try:
+            preventivo = db.query(Preventivo).filter(Preventivo.id == preventivo_id).first()
+            if not preventivo:
+                return {"success": False, "error": f"Preventivo {preventivo_id} not found"}
 
-        # Only BOZZA can be updated
-        if preventivo.stato != StatoPreventivo.BOZZA:
-            return {
-                "success": False,
-                "error": f"Cannot update preventivo in status '{preventivo.stato.value}'. Only BOZZA can be edited.",
-            }
+            # Only BOZZA can be updated
+            if preventivo.stato != StatoPreventivo.BOZZA:
+                return {
+                    "success": False,
+                    "error": f"Cannot update preventivo in status '{preventivo.stato.value}'. Only BOZZA can be edited.",
+                }
 
-        # Track changes
-        changes = []
+            # Track changes
+            changes = []
 
-        if note is not None and note != preventivo.note:
-            preventivo.note = note
-            changes.append("note")
+            if note is not None and note != preventivo.note:
+                preventivo.note = note
+                changes.append("note")
 
-        if condizioni is not None and condizioni != preventivo.condizioni:
-            preventivo.condizioni = condizioni
-            changes.append("condizioni")
+            if condizioni is not None and condizioni != preventivo.condizioni:
+                preventivo.condizioni = condizioni
+                changes.append("condizioni")
 
-        if validita_giorni is not None and validita_giorni != preventivo.validita_giorni:
-            preventivo.validita_giorni = validita_giorni
-            # Update data_scadenza based on new validity period
-            preventivo.data_scadenza = preventivo.data_emissione + timedelta(days=validita_giorni)
-            changes.append("validita_giorni")
-            changes.append("data_scadenza")
+            if validita_giorni is not None and validita_giorni != preventivo.validita_giorni:
+                preventivo.validita_giorni = validita_giorni
+                # Update data_scadenza based on new validity period
+                preventivo.data_scadenza = preventivo.data_emissione + timedelta(
+                    days=validita_giorni
+                )
+                changes.append("validita_giorni")
+                changes.append("data_scadenza")
 
-        if not changes:
+            if not changes:
+                return {
+                    "success": True,
+                    "preventivo_id": preventivo_id,
+                    "message": "No changes made (all fields same as current values)",
+                }
+
+            db.commit()
+            db.refresh(preventivo)
+
+            logger.info("preventivo_updated", preventivo_id=preventivo_id, changes=changes)
+
             return {
                 "success": True,
                 "preventivo_id": preventivo_id,
-                "message": "No changes made (all fields same as current values)",
+                "numero": f"{preventivo.numero}/{preventivo.anno}",
+                "changes": changes,
+                "data_scadenza": (
+                    preventivo.data_scadenza.isoformat() if "data_scadenza" in changes else None
+                ),
+                "message": f"Preventivo updated successfully. Changed fields: {', '.join(changes)}",
             }
 
-        db.commit()
-        db.refresh(preventivo)
-
-        logger.info("preventivo_updated", preventivo_id=preventivo_id, changes=changes)
-
-        return {
-            "success": True,
-            "preventivo_id": preventivo_id,
-            "numero": f"{preventivo.numero}/{preventivo.anno}",
-            "changes": changes,
-            "data_scadenza": (
-                preventivo.data_scadenza.isoformat() if "data_scadenza" in changes else None
-            ),
-            "message": f"Preventivo updated successfully. Changed fields: {', '.join(changes)}",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("update_preventivo_failed", preventivo_id=preventivo_id, error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("update_preventivo_failed", preventivo_id=preventivo_id, error=str(e))
+            return {"success": False, "error": str(e)}
 
 
 @validate_call
@@ -441,55 +433,53 @@ def delete_preventivo(
     # Validate input
     preventivo_id = validate_integer_input(preventivo_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get preventivo
-        preventivo = db.query(Preventivo).filter(Preventivo.id == preventivo_id).first()
-        if not preventivo:
-            return {"success": False, "error": f"Preventivo {preventivo_id} not found"}
+    with db_session() as db:
+        try:
+            # Get preventivo
+            preventivo = db.query(Preventivo).filter(Preventivo.id == preventivo_id).first()
+            if not preventivo:
+                return {"success": False, "error": f"Preventivo {preventivo_id} not found"}
 
-        # Only BOZZA can be deleted
-        if preventivo.stato != StatoPreventivo.BOZZA:
+            # Only BOZZA can be deleted
+            if preventivo.stato != StatoPreventivo.BOZZA:
+                return {
+                    "success": False,
+                    "error": f"Cannot delete preventivo in status '{preventivo.stato.value}'. Only BOZZA can be deleted.",
+                }
+
+            # Check if already converted to invoice
+            if preventivo.fattura is not None:
+                return {
+                    "success": False,
+                    "error": f"Cannot delete preventivo that has been converted to invoice (fattura_id: {preventivo.fattura.id})",
+                }
+
+            # Store info for response
+            numero = f"{preventivo.numero}/{preventivo.anno}"
+            cliente_name = preventivo.cliente.denominazione if preventivo.cliente else "Unknown"
+
+            # Delete preventivo (cascade will delete righe)
+            db.delete(preventivo)
+            db.commit()
+
+            logger.warning(
+                "preventivo_deleted",
+                preventivo_id=preventivo_id,
+                numero=numero,
+                cliente_name=cliente_name,
+            )
+
             return {
-                "success": False,
-                "error": f"Cannot delete preventivo in status '{preventivo.stato.value}'. Only BOZZA can be deleted.",
+                "success": True,
+                "preventivo_id": preventivo_id,
+                "numero": numero,
+                "message": f"Preventivo {numero} deleted successfully",
             }
 
-        # Check if already converted to invoice
-        if preventivo.fattura is not None:
-            return {
-                "success": False,
-                "error": f"Cannot delete preventivo that has been converted to invoice (fattura_id: {preventivo.fattura.id})",
-            }
-
-        # Store info for response
-        numero = f"{preventivo.numero}/{preventivo.anno}"
-        cliente_name = preventivo.cliente.denominazione if preventivo.cliente else "Unknown"
-
-        # Delete preventivo (cascade will delete righe)
-        db.delete(preventivo)
-        db.commit()
-
-        logger.warning(
-            "preventivo_deleted",
-            preventivo_id=preventivo_id,
-            numero=numero,
-            cliente_name=cliente_name,
-        )
-
-        return {
-            "success": True,
-            "preventivo_id": preventivo_id,
-            "numero": numero,
-            "message": f"Preventivo {numero} deleted successfully",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("delete_preventivo_failed", preventivo_id=preventivo_id, error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("delete_preventivo_failed", preventivo_id=preventivo_id, error=str(e))
+            return {"success": False, "error": str(e)}
 
 
 @validate_call
@@ -511,40 +501,38 @@ def convert_preventivo_to_invoice(
     # Validate input
     preventivo_id = validate_integer_input(preventivo_id, min_value=1)
 
-    db = get_session()
-    try:
-        settings = get_settings()
-        service = PreventivoService(settings=settings)
+    with db_session() as db:
+        try:
+            settings = get_settings()
+            service = PreventivoService(settings=settings)
 
-        fattura, error = service.converti_a_fattura(
-            db=db,
-            preventivo_id=preventivo_id,
-        )
+            fattura, error = service.converti_a_fattura(
+                db=db,
+                preventivo_id=preventivo_id,
+            )
 
-        if error:
-            return {"success": False, "error": error}
+            if error:
+                return {"success": False, "error": error}
 
-        # Mypy type narrowing: if no error, fattura must not be None
-        assert fattura is not None
+            # Mypy type narrowing: if no error, fattura must not be None
+            assert fattura is not None
 
-        logger.info(
-            "preventivo_converted_to_invoice",
-            preventivo_id=preventivo_id,
-            fattura_id=fattura.id,
-            numero_fattura=f"{fattura.numero}/{fattura.anno}",
-        )
+            logger.info(
+                "preventivo_converted_to_invoice",
+                preventivo_id=preventivo_id,
+                fattura_id=fattura.id,
+                numero_fattura=f"{fattura.numero}/{fattura.anno}",
+            )
 
-        return {
-            "success": True,
-            "preventivo_id": preventivo_id,
-            "fattura_id": fattura.id,
-            "fattura_numero": f"{fattura.numero}/{fattura.anno}",
-            "totale": float(fattura.totale),
-            "message": f"Preventivo {preventivo_id} converted to invoice {fattura.numero}/{fattura.anno}",
-        }
+            return {
+                "success": True,
+                "preventivo_id": preventivo_id,
+                "fattura_id": fattura.id,
+                "fattura_numero": f"{fattura.numero}/{fattura.anno}",
+                "totale": float(fattura.totale),
+                "message": f"Preventivo {preventivo_id} converted to invoice {fattura.numero}/{fattura.anno}",
+            }
 
-    except Exception as e:
-        logger.error("convert_preventivo_to_invoice_failed", error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("convert_preventivo_to_invoice_failed", error=str(e))
+            return {"success": False, "error": str(e)}

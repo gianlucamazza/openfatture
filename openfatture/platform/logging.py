@@ -50,11 +50,6 @@ def get_correlation_id() -> str | None:
     return _correlation_id_var.get()
 
 
-def clear_correlation_id() -> None:
-    """Clear the correlation ID from context."""
-    _correlation_id_var.set(None)
-
-
 def add_correlation_id(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
     """
     Add correlation ID to all log entries.
@@ -63,7 +58,7 @@ def add_correlation_id(logger: Any, method_name: str, event_dict: EventDict) -> 
     Uses contextvars for proper async-safe correlation ID tracking.
     """
     correlation_id = get_correlation_id()
-    if "correlation_id" not in event_dict:
+    if correlation_id and "correlation_id" not in event_dict:
         event_dict["correlation_id"] = correlation_id
     return event_dict
 
@@ -365,56 +360,6 @@ def configure_dynamic_logging(debug_config: DebugConfig) -> None:
                 logging.getLogger(module_name).setLevel(getattr(logging, level.upper()))
         except (json.JSONDecodeError, TypeError) as e:
             logger.warning("invalid_module_log_levels", error=str(e))
-
-
-def cleanup_old_logs(debug_config: DebugConfig, max_age_days: int = 30) -> int:
-    """
-    Clean up old log files beyond retention period.
-
-    Args:
-        debug_config: Debug configuration instance
-        max_age_days: Maximum age of log files to keep
-
-    Returns:
-        Number of files cleaned up
-    """
-    import time
-
-    logger = get_logger(__name__)
-
-    if not debug_config.log_to_file:
-        return 0
-
-    log_dir = debug_config.log_file_path.parent
-
-    cleaned_count = 0
-    current_time = time.time()
-    max_age_seconds = max_age_days * 24 * 60 * 60
-
-    # Find all log files matching pattern
-    for log_file in log_dir.glob(
-        f"{debug_config.log_file_path.stem}*{debug_config.log_file_path.suffix}"
-    ):
-        if log_file.is_file():
-            # Check file age
-            file_age = current_time - log_file.stat().st_mtime
-            if file_age > max_age_seconds:
-                try:
-                    log_file.unlink()
-                    cleaned_count += 1
-                    logger.info(
-                        "old_log_file_cleaned",
-                        file_path=str(log_file),
-                        age_days=file_age / (24 * 60 * 60),
-                    )
-                except OSError as e:
-                    logger.warning(
-                        "failed_to_clean_log_file",
-                        file_path=str(log_file),
-                        error=str(e),
-                    )
-
-    return cleaned_count
 
 
 def get_dynamic_logger(

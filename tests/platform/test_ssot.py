@@ -28,11 +28,9 @@ def test_package_version_settings_ssot() -> None:
 @pytest.mark.skipif(not available_extras().get("ai"), reason="ai extra not installed")
 def test_ai_subpackage_versions_reexport_package() -> None:
     from openfatture.ai import __version__ as ai_version
-    from openfatture.ai.orchestration import __version__ as orch_version
     from openfatture.ai.streaming import __version__ as stream_version
 
     assert ai_version == pkg_version
-    assert orch_version == pkg_version
     assert stream_version == pkg_version
 
 

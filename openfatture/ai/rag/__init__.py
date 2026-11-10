@@ -179,28 +179,6 @@ class RAGSystem:
             top_k=top_k,
         )
 
-    async def get_client_invoices(
-        self,
-        client_id: int,
-        query: str | None = None,
-        top_k: int = 5,
-    ) -> list[RetrievalResult]:
-        """Get invoices for a specific client.
-
-        Args:
-            client_id: Client ID
-            query: Optional search query
-            top_k: Number of results
-
-        Returns:
-            List of client invoices
-        """
-        return await self.retriever.retrieve_by_client(
-            client_id=client_id,
-            query=query,
-            top_k=top_k,
-        )
-
     def get_stats(self) -> dict:
         """Get RAG system statistics.
 

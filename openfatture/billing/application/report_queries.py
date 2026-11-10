@@ -14,8 +14,8 @@ from openfatture.payment.application.services.payment_overview import (
 )
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -46,105 +46,105 @@ def generate_vat_report(
     else:
         anno = datetime.now().year
 
-    db = get_session()
-    try:
-        # Determine quarter range
-        if trimestre:
-            quarter_months = {
-                "Q1": (1, 3),
-                "Q2": (4, 6),
-                "Q3": (7, 9),
-                "Q4": (10, 12),
-            }
+    with db_session() as db:
+        try:
+            # Determine quarter range
+            if trimestre:
+                quarter_months = {
+                    "Q1": (1, 3),
+                    "Q2": (4, 6),
+                    "Q3": (7, 9),
+                    "Q4": (10, 12),
+                }
 
-            trimestre_upper = trimestre.upper()
-            if trimestre_upper not in quarter_months:
-                return {"error": f"Invalid quarter: {trimestre}. Valid options: Q1, Q2, Q3, Q4"}
+                trimestre_upper = trimestre.upper()
+                if trimestre_upper not in quarter_months:
+                    return {"error": f"Invalid quarter: {trimestre}. Valid options: Q1, Q2, Q3, Q4"}
 
-            mese_inizio, mese_fine = quarter_months[trimestre_upper]
-            period = f"{trimestre_upper} ({mese_inizio}-{mese_fine})"
-        else:
-            mese_inizio, mese_fine = 1, 12
-            period = "Full year"
+                mese_inizio, mese_fine = quarter_months[trimestre_upper]
+                period = f"{trimestre_upper} ({mese_inizio}-{mese_fine})"
+            else:
+                mese_inizio, mese_fine = 1, 12
+                period = "Full year"
 
-        # Query invoices (exclude BOZZA)
-        query = (
-            db.query(Fattura)
-            .filter(Fattura.anno == anno)
-            .filter(or_(Fattura.stato != StatoFattura.BOZZA, Fattura.issued_elsewhere.is_(True)))
-        )
-
-        # Filter by quarter if specified
-        if trimestre:
-            query = query.filter(
-                extract("month", Fattura.data_emissione) >= mese_inizio,
-                extract("month", Fattura.data_emissione) <= mese_fine,
+            # Query invoices (exclude BOZZA)
+            query = (
+                db.query(Fattura)
+                .filter(Fattura.anno == anno)
+                .filter(
+                    or_(Fattura.stato != StatoFattura.BOZZA, Fattura.issued_elsewhere.is_(True))
+                )
             )
 
-        fatture = query.all()
+            # Filter by quarter if specified
+            if trimestre:
+                query = query.filter(
+                    extract("month", Fattura.data_emissione) >= mese_inizio,
+                    extract("month", Fattura.data_emissione) <= mese_fine,
+                )
 
-        if not fatture:
+            fatture = query.all()
+
+            if not fatture:
+                return {
+                    "year": anno,
+                    "period": period,
+                    "invoices_count": 0,
+                    "total_imponibile": 0.0,
+                    "total_iva": 0.0,
+                    "total_revenue": 0.0,
+                    "by_vat_rate": [],
+                    "message": "No invoices found for the selected period",
+                }
+
+            # Calculate totals
+            totale_imponibile = sum(f.imponibile for f in fatture)
+            totale_iva = sum(f.iva for f in fatture)
+            totale_fatturato = sum(f.totale for f in fatture)
+
+            # Breakdown by VAT rate
+            by_aliquota: dict[Decimal, dict[str, Decimal]] = defaultdict(
+                lambda: {"imponibile": Decimal("0"), "iva": Decimal("0")}
+            )
+
+            for f in fatture:
+                for riga in f.righe:
+                    aliquota = riga.aliquota_iva
+                    by_aliquota[aliquota]["imponibile"] += riga.imponibile
+                    by_aliquota[aliquota]["iva"] += riga.iva
+
+            # Format breakdown
+            vat_breakdown = []
+            for aliquota in sorted(by_aliquota.keys()):
+                data = by_aliquota[aliquota]
+                vat_breakdown.append(
+                    {
+                        "vat_rate": float(aliquota),
+                        "imponibile": float(data["imponibile"]),
+                        "iva": float(data["iva"]),
+                    }
+                )
+
+            logger.info(
+                "vat_report_generated",
+                year=anno,
+                period=period,
+                invoices_count=len(fatture),
+            )
+
             return {
                 "year": anno,
                 "period": period,
-                "invoices_count": 0,
-                "total_imponibile": 0.0,
-                "total_iva": 0.0,
-                "total_revenue": 0.0,
-                "by_vat_rate": [],
-                "message": "No invoices found for the selected period",
+                "invoices_count": len(fatture),
+                "total_imponibile": float(totale_imponibile),
+                "total_iva": float(totale_iva),
+                "total_revenue": float(totale_fatturato),
+                "by_vat_rate": vat_breakdown,
             }
 
-        # Calculate totals
-        totale_imponibile = sum(f.imponibile for f in fatture)
-        totale_iva = sum(f.iva for f in fatture)
-        totale_fatturato = sum(f.totale for f in fatture)
-
-        # Breakdown by VAT rate
-        by_aliquota: dict[Decimal, dict[str, Decimal]] = defaultdict(
-            lambda: {"imponibile": Decimal("0"), "iva": Decimal("0")}
-        )
-
-        for f in fatture:
-            for riga in f.righe:
-                aliquota = riga.aliquota_iva
-                by_aliquota[aliquota]["imponibile"] += riga.imponibile
-                by_aliquota[aliquota]["iva"] += riga.iva
-
-        # Format breakdown
-        vat_breakdown = []
-        for aliquota in sorted(by_aliquota.keys()):
-            data = by_aliquota[aliquota]
-            vat_breakdown.append(
-                {
-                    "vat_rate": float(aliquota),
-                    "imponibile": float(data["imponibile"]),
-                    "iva": float(data["iva"]),
-                }
-            )
-
-        logger.info(
-            "vat_report_generated",
-            year=anno,
-            period=period,
-            invoices_count=len(fatture),
-        )
-
-        return {
-            "year": anno,
-            "period": period,
-            "invoices_count": len(fatture),
-            "total_imponibile": float(totale_imponibile),
-            "total_iva": float(totale_iva),
-            "total_revenue": float(totale_fatturato),
-            "by_vat_rate": vat_breakdown,
-        }
-
-    except Exception as e:
-        logger.error("generate_vat_report_failed", error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("generate_vat_report_failed", error=str(e))
+            return {"error": str(e)}
 
 
 @validate_call
@@ -167,71 +167,71 @@ def generate_client_report(anno: int | None = None, limit: int = 20) -> dict[str
 
     limit = validate_integer_input(limit, min_value=1, max_value=100)
 
-    db = get_session()
-    try:
-        # Query with aggregation
-        results = (
-            db.query(
-                Fattura.cliente_id,
-                func.count(Fattura.id).label("num_fatture"),
-                func.sum(Fattura.totale).label("totale_fatturato"),
+    with db_session() as db:
+        try:
+            # Query with aggregation
+            results = (
+                db.query(
+                    Fattura.cliente_id,
+                    func.count(Fattura.id).label("num_fatture"),
+                    func.sum(Fattura.totale).label("totale_fatturato"),
+                )
+                .filter(Fattura.anno == anno)
+                .filter(
+                    or_(Fattura.stato != StatoFattura.BOZZA, Fattura.issued_elsewhere.is_(True))
+                )
+                .group_by(Fattura.cliente_id)
+                .order_by(func.sum(Fattura.totale).desc())
+                .limit(limit)
+                .all()
             )
-            .filter(Fattura.anno == anno)
-            .filter(or_(Fattura.stato != StatoFattura.BOZZA, Fattura.issued_elsewhere.is_(True)))
-            .group_by(Fattura.cliente_id)
-            .order_by(func.sum(Fattura.totale).desc())
-            .limit(limit)
-            .all()
-        )
 
-        if not results:
+            if not results:
+                return {
+                    "year": anno,
+                    "clients_count": 0,
+                    "total_revenue": 0.0,
+                    "clients": [],
+                    "message": "No invoices found for the selected year",
+                }
+
+            # Format results
+            clients = []
+            for rank, (cliente_id, num_fatture, totale) in enumerate(results, 1):
+                cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+                if cliente is None:
+                    # Skip if client was deleted
+                    continue
+
+                clients.append(
+                    {
+                        "rank": rank,
+                        "client_id": cliente_id,
+                        "client_name": cliente.denominazione,
+                        "invoices_count": num_fatture,
+                        "total_revenue": float(totale),
+                    }
+                )
+
+            # Calculate total
+            totale_generale = float(sum((r[2] for r in results), Decimal("0.00")))
+
+            logger.info(
+                "client_report_generated",
+                year=anno,
+                clients_count=len(clients),
+            )
+
             return {
                 "year": anno,
-                "clients_count": 0,
-                "total_revenue": 0.0,
-                "clients": [],
-                "message": "No invoices found for the selected year",
+                "clients_count": len(clients),
+                "total_revenue": totale_generale,
+                "clients": clients,
             }
 
-        # Format results
-        clients = []
-        for rank, (cliente_id, num_fatture, totale) in enumerate(results, 1):
-            cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-            if cliente is None:
-                # Skip if client was deleted
-                continue
-
-            clients.append(
-                {
-                    "rank": rank,
-                    "client_id": cliente_id,
-                    "client_name": cliente.denominazione,
-                    "invoices_count": num_fatture,
-                    "total_revenue": float(totale),
-                }
-            )
-
-        # Calculate total
-        totale_generale = float(sum((r[2] for r in results), Decimal("0.00")))
-
-        logger.info(
-            "client_report_generated",
-            year=anno,
-            clients_count=len(clients),
-        )
-
-        return {
-            "year": anno,
-            "clients_count": len(clients),
-            "total_revenue": totale_generale,
-            "clients": clients,
-        }
-
-    except Exception as e:
-        logger.error("generate_client_report_failed", error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("generate_client_report_failed", error=str(e))
+            return {"error": str(e)}
 
 
 @validate_call
@@ -250,73 +250,73 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
     window_days = validate_integer_input(window_days, min_value=1, max_value=365)
     max_results = validate_integer_input(max_results, min_value=1, max_value=100)
 
-    db = get_session()
-    try:
-        summary = collect_payment_due_summary(
-            db,
-            window_days=window_days,
-            max_upcoming=max_results,
-        )
+    with db_session() as db:
+        try:
+            summary = collect_payment_due_summary(
+                db,
+                window_days=window_days,
+                max_upcoming=max_results,
+            )
 
-        has_entries = any(
-            summary.overdue or summary.due_soon or summary.upcoming or summary.without_due_date
-        )
+            has_entries = any(
+                summary.overdue or summary.due_soon or summary.upcoming or summary.without_due_date
+            )
 
-        if not has_entries:
-            return {
-                "has_outstanding": False,
-                "total_outstanding": 0.0,
-                "overdue": [],
-                "due_soon": [],
-                "upcoming": [],
-                "without_due_date": [],
-                "message": "No outstanding scheduled payments. Check invoice balances for unscheduled amounts.",
+            if not has_entries:
+                return {
+                    "has_outstanding": False,
+                    "total_outstanding": 0.0,
+                    "overdue": [],
+                    "due_soon": [],
+                    "upcoming": [],
+                    "without_due_date": [],
+                    "message": "No outstanding scheduled payments. Check invoice balances for unscheduled amounts.",
+                }
+
+            # Format entries
+            def format_entry(entry: PaymentDueEntry) -> dict[str, Any]:
+                return {
+                    "invoice_ref": entry.invoice_ref,
+                    "client_name": entry.client_name,
+                    "due_date": entry.due_date.isoformat() if entry.due_date else None,
+                    "days_delta": entry.days_delta,
+                    "residual": float(entry.residual),
+                    "paid": float(entry.paid),
+                    "total": float(entry.total),
+                    "status": entry.status.value,
+                }
+
+            result = {
+                "has_outstanding": True,
+                "total_outstanding": float(summary.total_outstanding),
+                "window_days": window_days,
+                "overdue": [format_entry(e) for e in summary.overdue],
+                "due_soon": [format_entry(e) for e in summary.due_soon],
+                "upcoming": [format_entry(e) for e in summary.upcoming],
+                "hidden_upcoming": summary.hidden_upcoming,
+                "without_due_date": [format_entry(e) for e in summary.without_due_date],
             }
 
-        # Format entries
-        def format_entry(entry: PaymentDueEntry) -> dict[str, Any]:
-            return {
-                "invoice_ref": entry.invoice_ref,
-                "client_name": entry.client_name,
-                "due_date": entry.due_date.isoformat() if entry.due_date else None,
-                "days_delta": entry.days_delta,
-                "residual": float(entry.residual),
-                "paid": float(entry.paid),
-                "total": float(entry.total),
-                "status": entry.status.value,
-            }
+            # Add totals by category
+            result["overdue_total"] = float(
+                sum((e.residual for e in summary.overdue), Decimal("0.00"))
+            )
+            result["due_soon_total"] = float(
+                sum((e.residual for e in summary.due_soon), Decimal("0.00"))
+            )
+            result["upcoming_total"] = float(
+                sum((e.residual for e in summary.upcoming), Decimal("0.00"))
+            )
 
-        result = {
-            "has_outstanding": True,
-            "total_outstanding": float(summary.total_outstanding),
-            "window_days": window_days,
-            "overdue": [format_entry(e) for e in summary.overdue],
-            "due_soon": [format_entry(e) for e in summary.due_soon],
-            "upcoming": [format_entry(e) for e in summary.upcoming],
-            "hidden_upcoming": summary.hidden_upcoming,
-            "without_due_date": [format_entry(e) for e in summary.without_due_date],
-        }
+            logger.info(
+                "due_dates_report_generated",
+                overdue_count=len(summary.overdue),
+                due_soon_count=len(summary.due_soon),
+                upcoming_count=len(summary.upcoming),
+            )
 
-        # Add totals by category
-        result["overdue_total"] = float(sum((e.residual for e in summary.overdue), Decimal("0.00")))
-        result["due_soon_total"] = float(
-            sum((e.residual for e in summary.due_soon), Decimal("0.00"))
-        )
-        result["upcoming_total"] = float(
-            sum((e.residual for e in summary.upcoming), Decimal("0.00"))
-        )
+            return result
 
-        logger.info(
-            "due_dates_report_generated",
-            overdue_count=len(summary.overdue),
-            due_soon_count=len(summary.due_soon),
-            upcoming_count=len(summary.upcoming),
-        )
-
-        return result
-
-    except Exception as e:
-        logger.error("get_due_dates_failed", error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("get_due_dates_failed", error=str(e))
+            return {"error": str(e)}

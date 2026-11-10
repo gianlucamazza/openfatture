@@ -121,29 +121,6 @@ class ToolRegistry:
             parameters_count=len(tool.parameters),
         )
 
-    def unregister(self, tool_name: str) -> bool:
-        """
-        Unregister a tool.
-
-        Args:
-            tool_name: Name of tool to remove
-
-        Returns:
-            True if removed, False if not found
-        """
-        if tool_name in self._tools:
-            tool = self._tools[tool_name]
-
-            # Remove from category index
-            if tool.category in self._categories:
-                self._categories[tool.category].remove(tool_name)
-
-            del self._tools[tool_name]
-            logger.info("tool_unregistered", name=tool_name)
-            return True
-
-        return False
-
     def get_tool(self, name: str) -> Tool | None:
         """
         Get a tool by name.
@@ -190,10 +167,6 @@ class ToolRegistry:
             ]
 
         return tools
-
-    def get_categories(self) -> list[str]:
-        """Get all tool categories."""
-        return list(self._categories.keys())
 
     def get_circuit_breaker(self, tool_name: str) -> CircuitBreaker:
         """

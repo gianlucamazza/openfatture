@@ -9,7 +9,7 @@ import pytest
 
 from openfatture.billing.batch.processor import BatchResult
 from openfatture.platform.config import Settings
-from openfatture.platform.email.models import (
+from openfatture.sdi.email.models import (
     BatchSummaryContext,
     EmailAttachment,
     EmailMessage,
@@ -17,9 +17,9 @@ from openfatture.platform.email.models import (
     InvoiceSummary,
     NotificaSDIContext,
 )
-from openfatture.platform.email.renderer import TemplateRenderer
-from openfatture.platform.email.sender import TemplatePECSender
-from openfatture.platform.email.styles import EmailBranding, EmailStyles
+from openfatture.sdi.email.renderer import TemplateRenderer
+from openfatture.sdi.email.sender import TemplatePECSender
+from openfatture.sdi.email.styles import EmailBranding, EmailStyles
 from openfatture.sdi.notifiche.parser import NotificaSDI, TipoNotifica
 from openfatture.storage.database.models import Cliente, StatoFattura
 
@@ -517,7 +517,7 @@ class TestEmailIntegration:
         from pathlib import Path
 
         templates_dir = (
-            Path(__file__).parent.parent.parent / "openfatture" / "platform" / "email" / "templates"
+            Path(__file__).parent.parent.parent / "openfatture" / "sdi" / "email" / "templates"
         )
 
         required_templates = [
@@ -551,9 +551,7 @@ class TestEmailIntegration:
         """Test that i18n files exist."""
         from pathlib import Path
 
-        i18n_dir = (
-            Path(__file__).parent.parent.parent / "openfatture" / "platform" / "email" / "i18n"
-        )
+        i18n_dir = Path(__file__).parent.parent.parent / "openfatture" / "sdi" / "email" / "i18n"
 
         assert (i18n_dir / "it.json").exists()
         assert (i18n_dir / "en.json").exists()
@@ -616,7 +614,7 @@ class TestEmailIntegration:
 
     def test_get_renderer_factory(self):
         """Test get_renderer factory function."""
-        from openfatture.platform.email.renderer import get_renderer
+        from openfatture.sdi.email.renderer import get_renderer
 
         renderer = get_renderer(locale="en")
         assert renderer.locale == "en"

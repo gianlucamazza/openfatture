@@ -37,6 +37,24 @@ Secret settings are `ai_api_key`, `pec_password` and
 its type, writes only the given key (comments and other keys in `config.toml`
 are preserved) and reports when an environment variable overrides it.
 
+## Database schema
+
+The schema is owned by the Alembic migrations shipped inside the package
+(`openfatture/storage/migrations`).
+
+- A new database is created at the current schema on first use.
+- A database behind the current release is refused until `openfatture init`
+  upgrades it; SQLite files are copied to `<name>.bak-<timestamp>` first.
+- Databases created before 2.8.0 have no migration history: they keep working,
+  and `openfatture init` verifies their columns and adopts them.
+- `openfatture status --json` reports `database_schema`
+  (`empty`, `current`, `outdated`, `unversioned` or `ahead`).
+
+The migration chain starts from the 1.x schema, so new databases are created
+from the models and stamped at head (`openfatture init` or first use); run
+`uv run alembic upgrade head` from the repository only against an existing,
+versioned database.
+
 ## Development and containers
 
 Load an env file explicitly when you need one:
@@ -69,9 +87,8 @@ public CLI (`init`, `config`, `status`). Feature stacks are opt-in:
 
 | Extra | Install | Provides |
 | --- | --- | --- |
-| `ai` | `uv sync --extra ai` | LLM providers, assistant, agents, LangGraph workflows |
+| `ai` | `uv sync --extra ai` | LLM providers, assistant runtime and tools |
 | `rag` | `uv sync --extra rag` | ChromaDB + embeddings (includes `ai`) |
-| `ml` | `uv sync --extra ml` | Cash-flow forecasting (Prophet / XGBoost; optional) |
 | `all` | `uv sync --extra all` | Union of feature extras |
 | `dev` | `uv sync --extra dev` | Tests and linters |
 

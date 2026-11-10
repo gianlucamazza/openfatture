@@ -82,7 +82,9 @@ def test_configured_fallback_has_no_missing_translation_warning(monkeypatch, cap
     monkeypatch.setattr(
         "openfatture.platform.config.get_settings", lambda: SimpleNamespace(fallback_locale="it")
     )
-    assert translate("assistant-help", "fr").startswith("Comandi")
+    assert translate("assistant-help", "fr").startswith("Commandes")
+    # An unsupported locale falls back to the configured fallback locale.
+    assert translate("assistant-help", "pt").startswith("Comandi")
     assert "Translation not found" not in caplog.text
     assert "Failed to format" not in caplog.text
 

@@ -19,15 +19,11 @@ async def search_knowledge_base(
     source: str | None = None,
     top_k: int = 5,
 ) -> dict[str, Any]:
-    # Sanitize and validate inputs
-    query = sanitize_string_input(query, max_length=500)
-
-    if source is not None:
-        source = sanitize_string_input(source, max_length=100)
-
-    top_k = validate_integer_input(top_k, min_value=1, max_value=20)
     """
     Perform semantic search over the knowledge base.
+
+    The packaged knowledge sources are indexed on first use, so the search never
+    runs against an empty collection.
 
     Args:
         query: Natural language query
@@ -37,6 +33,11 @@ async def search_knowledge_base(
     Returns:
         Dictionary with formatted results
     """
+    query = sanitize_string_input(query, max_length=500)
+    if source is not None:
+        source = sanitize_string_input(source, max_length=100)
+    top_k = validate_integer_input(top_k, min_value=1, max_value=20)
+
     config = get_rag_config()
 
     if not config.enabled:
@@ -56,6 +57,10 @@ async def search_knowledge_base(
         config=config,
         api_key=api_key,
     )
+
+    if indexer.vector_store.count() == 0:
+        indexed = await indexer.index_sources()
+        logger.info("knowledge_base_indexed_on_first_use", chunks=indexed)
 
     filters = {"type": "knowledge"}
     if source:

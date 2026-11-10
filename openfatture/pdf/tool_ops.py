@@ -9,8 +9,8 @@ from openfatture.pdf.preventivo_generator import PreventivoPDFGenerator
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Fattura, Preventivo
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -54,68 +54,66 @@ def generate_invoice_pdf(
             "error": f"Invalid template: {template}. Valid options: {', '.join(valid_templates)}",
         }
 
-    db = get_session()
-    try:
-        # Get invoice
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+    with db_session() as db:
+        try:
+            # Get invoice
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
-        if not fattura:
-            return {"success": False, "error": f"Fattura {fattura_id} not found"}
+            if not fattura:
+                return {"success": False, "error": f"Fattura {fattura_id} not found"}
 
-        # Load settings for company info
-        settings = get_settings()
+            # Load settings for company info
+            settings = get_settings()
 
-        # Create PDF configuration
-        config = PDFGeneratorConfig(
-            template=template,
-            company_name=settings.cedente_denominazione,
-            company_vat=settings.cedente_partita_iva or settings.cedente_codice_fiscale,
-            company_cf=settings.cedente_codice_fiscale,
-            company_address=settings.cedente_indirizzo,
-            company_city=f"{settings.cedente_cap} {settings.cedente_comune} ({settings.cedente_provincia})",
-            regime_fiscale=settings.cedente_regime_fiscale,
-            logo_path=logo_path
-            or (settings.email_logo_url if hasattr(settings, "email_logo_url") else None),
-            primary_color=(
-                settings.email_primary_color
-                if hasattr(settings, "email_primary_color")
-                else "#2C3E50"
-            ),
-            enable_qr_code=enable_qr_code,
-            qr_code_type="sepa",
-            enable_pdfa=True,
-            watermark_text=watermark_text,
-        )
+            # Create PDF configuration
+            config = PDFGeneratorConfig(
+                template=template,
+                company_name=settings.cedente_denominazione,
+                company_vat=settings.cedente_partita_iva or settings.cedente_codice_fiscale,
+                company_cf=settings.cedente_codice_fiscale,
+                company_address=settings.cedente_indirizzo,
+                company_city=f"{settings.cedente_cap} {settings.cedente_comune} ({settings.cedente_provincia})",
+                regime_fiscale=settings.cedente_regime_fiscale,
+                logo_path=logo_path
+                or (settings.email_logo_url if hasattr(settings, "email_logo_url") else None),
+                primary_color=(
+                    settings.email_primary_color
+                    if hasattr(settings, "email_primary_color")
+                    else "#2C3E50"
+                ),
+                enable_qr_code=enable_qr_code,
+                qr_code_type="sepa",
+                enable_pdfa=True,
+                watermark_text=watermark_text,
+            )
 
-        # Create generator
-        generator = PDFGenerator(config)
+            # Create generator
+            generator = PDFGenerator(config)
 
-        # Generate PDF
-        pdf_path = generator.generate(fattura, output_path=output_path)
+            # Generate PDF
+            pdf_path = generator.generate(fattura, output_path=output_path)
 
-        logger.info(
-            "invoice_pdf_generated",
-            fattura_id=fattura_id,
-            numero=f"{fattura.numero}/{fattura.anno}",
-            pdf_path=str(pdf_path),
-            template=template,
-        )
+            logger.info(
+                "invoice_pdf_generated",
+                fattura_id=fattura_id,
+                numero=f"{fattura.numero}/{fattura.anno}",
+                pdf_path=str(pdf_path),
+                template=template,
+            )
 
-        return {
-            "success": True,
-            "fattura_id": fattura_id,
-            "numero": f"{fattura.numero}/{fattura.anno}",
-            "pdf_path": str(pdf_path.absolute()),
-            "file_size": pdf_path.stat().st_size,
-            "template": template,
-            "message": f"PDF generato: {pdf_path.name}",
-        }
+            return {
+                "success": True,
+                "fattura_id": fattura_id,
+                "numero": f"{fattura.numero}/{fattura.anno}",
+                "pdf_path": str(pdf_path.absolute()),
+                "file_size": pdf_path.stat().st_size,
+                "template": template,
+                "message": f"PDF generato: {pdf_path.name}",
+            }
 
-    except Exception as e:
-        logger.error("generate_invoice_pdf_failed", fattura_id=fattura_id, error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("generate_invoice_pdf_failed", fattura_id=fattura_id, error=str(e))
+            return {"success": False, "error": str(e)}
 
 
 @validate_call
@@ -138,69 +136,69 @@ def generate_preventivo_pdf(
     # Validate input
     preventivo_id = validate_integer_input(preventivo_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get preventivo
-        preventivo = db.query(Preventivo).filter(Preventivo.id == preventivo_id).first()
+    with db_session() as db:
+        try:
+            # Get preventivo
+            preventivo = db.query(Preventivo).filter(Preventivo.id == preventivo_id).first()
 
-        if not preventivo:
-            return {"success": False, "error": f"Preventivo {preventivo_id} not found"}
+            if not preventivo:
+                return {"success": False, "error": f"Preventivo {preventivo_id} not found"}
 
-        # Load settings for company info
-        settings = get_settings()
+            # Load settings for company info
+            settings = get_settings()
 
-        # Auto-watermark for draft quotes
-        if preventivo.stato.value == "bozza" and not watermark_text:
-            watermark_text = "BOZZA"
+            # Auto-watermark for draft quotes
+            if preventivo.stato.value == "bozza" and not watermark_text:
+                watermark_text = "BOZZA"
 
-        # Create PDF configuration
-        config = PDFGeneratorConfig(
-            company_name=settings.cedente_denominazione,
-            company_vat=settings.cedente_partita_iva or settings.cedente_codice_fiscale,
-            company_cf=settings.cedente_codice_fiscale,
-            company_address=settings.cedente_indirizzo,
-            company_city=f"{settings.cedente_cap} {settings.cedente_comune} ({settings.cedente_provincia})",
-            regime_fiscale=settings.cedente_regime_fiscale,
-            logo_path=settings.email_logo_url if hasattr(settings, "email_logo_url") else None,
-            primary_color=(
-                settings.email_primary_color
-                if hasattr(settings, "email_primary_color")
-                else "#2C3E50"
-            ),
-            watermark_text=watermark_text,
-            footer_text="Questo preventivo non costituisce fattura",
-        )
+            # Create PDF configuration
+            config = PDFGeneratorConfig(
+                company_name=settings.cedente_denominazione,
+                company_vat=settings.cedente_partita_iva or settings.cedente_codice_fiscale,
+                company_cf=settings.cedente_codice_fiscale,
+                company_address=settings.cedente_indirizzo,
+                company_city=f"{settings.cedente_cap} {settings.cedente_comune} ({settings.cedente_provincia})",
+                regime_fiscale=settings.cedente_regime_fiscale,
+                logo_path=settings.email_logo_url if hasattr(settings, "email_logo_url") else None,
+                primary_color=(
+                    settings.email_primary_color
+                    if hasattr(settings, "email_primary_color")
+                    else "#2C3E50"
+                ),
+                watermark_text=watermark_text,
+                footer_text="Questo preventivo non costituisce fattura",
+            )
 
-        # Create generator
-        generator = PreventivoPDFGenerator(config)
+            # Create generator
+            generator = PreventivoPDFGenerator(config)
 
-        # Generate PDF
-        pdf_path = generator.generate(preventivo, output_path=output_path)
+            # Generate PDF
+            pdf_path = generator.generate(preventivo, output_path=output_path)
 
-        logger.info(
-            "preventivo_pdf_generated",
-            preventivo_id=preventivo_id,
-            numero=f"{preventivo.numero}/{preventivo.anno}",
-            pdf_path=str(pdf_path),
-            stato=preventivo.stato.value,
-        )
+            logger.info(
+                "preventivo_pdf_generated",
+                preventivo_id=preventivo_id,
+                numero=f"{preventivo.numero}/{preventivo.anno}",
+                pdf_path=str(pdf_path),
+                stato=preventivo.stato.value,
+            )
 
-        return {
-            "success": True,
-            "preventivo_id": preventivo_id,
-            "numero": f"{preventivo.numero}/{preventivo.anno}",
-            "pdf_path": str(pdf_path.absolute()),
-            "file_size": pdf_path.stat().st_size,
-            "stato": preventivo.stato.value,
-            "has_watermark": bool(watermark_text),
-            "message": f"PDF generato: {pdf_path.name}",
-        }
+            return {
+                "success": True,
+                "preventivo_id": preventivo_id,
+                "numero": f"{preventivo.numero}/{preventivo.anno}",
+                "pdf_path": str(pdf_path.absolute()),
+                "file_size": pdf_path.stat().st_size,
+                "stato": preventivo.stato.value,
+                "has_watermark": bool(watermark_text),
+                "message": f"PDF generato: {pdf_path.name}",
+            }
 
-    except Exception as e:
-        logger.error("generate_preventivo_pdf_failed", preventivo_id=preventivo_id, error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error(
+                "generate_preventivo_pdf_failed", preventivo_id=preventivo_id, error=str(e)
+            )
+            return {"success": False, "error": str(e)}
 
 
 @validate_call

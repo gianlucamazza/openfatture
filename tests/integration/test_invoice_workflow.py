@@ -11,11 +11,10 @@ import pytest
 from sqlalchemy.orm import Session
 
 from openfatture.billing.fatture.service import InvoiceService
-from openfatture.sdi.pec_sender.sender import PECSender
+from openfatture.sdi.email.sender import TemplatePECSender
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
-    LogSDI,
     RigaFattura,
     StatoFattura,
     TipoDocumento,
@@ -95,8 +94,8 @@ class TestInvoiceWorkflowE2E:
         xml_path.write_text(xml_content, encoding="utf-8")
 
         # Step 6: Send via PEC (mocked)
-        sender = PECSender(test_settings)
-        success, send_error = sender.send_invoice(fattura, xml_path, signed=False)
+        sender = TemplatePECSender(test_settings)
+        success, send_error = sender.send_invoice_to_sdi(fattura, xml_path, signed=False)
 
         assert success is True
         assert send_error is None
@@ -271,8 +270,8 @@ class TestInvoiceStateTransitions:
         xml_path = tmp_path / "invoice.xml"
         xml_path.write_text(xml_content, encoding="utf-8")
 
-        sender = PECSender(test_settings)
-        success, _ = sender.send_invoice(sample_fattura, xml_path)
+        sender = TemplatePECSender(test_settings)
+        success, _ = sender.send_invoice_to_sdi(sample_fattura, xml_path)
 
         assert success
         assert sample_fattura.stato == StatoFattura.INVIATA
@@ -291,40 +290,6 @@ class TestInvoiceStateTransitions:
         # (This would be implemented in service layer)
         # For now, just verify state is already INVIATA
         assert sample_fattura.stato == StatoFattura.INVIATA
-
-
-class TestInvoiceLogging:
-    """Test logging throughout invoice workflow."""
-
-    def test_log_creation_on_send(
-        self, db_session: Session, test_settings, sample_fattura, mock_pec_server, tmp_path
-    ):
-        """Test that log entries are created when sending invoices."""
-        # Generate and send
-        service = InvoiceService(test_settings)
-        xml_content, _ = service.generate_xml(sample_fattura, validate=False)
-
-        xml_path = tmp_path / "invoice.xml"
-        xml_path.write_text(xml_content, encoding="utf-8")
-
-        sender = PECSender(test_settings)
-        sender.send_invoice(sample_fattura, xml_path)
-
-        # Create log entry
-        from openfatture.sdi.pec_sender.sender import create_log_entry
-
-        log = create_log_entry(
-            sample_fattura,
-            tipo="TX",
-            descrizione="Fattura inviata a SDI",
-        )
-        db_session.add(log)
-        db_session.commit()
-
-        # Verify log exists
-        logs = db_session.query(LogSDI).filter_by(fattura_id=sample_fattura.id).all()
-        assert len(logs) == 1
-        assert logs[0].tipo_notifica == "TX"
 
 
 class TestInvoiceArchiving:

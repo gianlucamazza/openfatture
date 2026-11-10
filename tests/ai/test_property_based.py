@@ -12,7 +12,6 @@ from hypothesis import strategies as st
 from openfatture.ai.domain.agent import AgentConfig
 from openfatture.ai.domain.context import AgentContext, InvoiceContext
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
-from openfatture.ai.domain.prompt import PromptTemplate
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 
 
@@ -196,56 +195,6 @@ class TestMessageProperties:
         assert isinstance(data, dict)
         assert data["role"] == role.value  # Enum values are serialized
         assert data["content"] == content
-
-
-class TestPromptTemplateProperties:
-    """Property-based tests for PromptTemplate."""
-
-    @given(
-        name=st.text(min_size=1, max_size=100),
-        system_prompt=st.text(min_size=1, max_size=5000),
-        user_template=st.text(min_size=1, max_size=5000),
-        description=st.text(min_size=0, max_size=500),
-        required_variables=st.lists(st.text(min_size=1, max_size=50), min_size=0, max_size=10),
-    )
-    def test_prompt_template_creation(
-        self, name, system_prompt, user_template, description, required_variables
-    ):
-        """Test that PromptTemplate can be created with various inputs."""
-        prompt = PromptTemplate(
-            name=name,
-            system_prompt=system_prompt,
-            user_template=user_template,
-            description=description,
-            required_variables=required_variables,
-        )
-
-        assert prompt.name == name
-        assert prompt.system_prompt == system_prompt
-        assert prompt.user_template == user_template
-        assert prompt.description == description
-        assert prompt.required_variables == required_variables
-
-    # Removed rendering test as PromptTemplate doesn't have render method
-
-    @given(
-        name=st.text(min_size=1, max_size=100),
-        system_prompt=st.text(min_size=1, max_size=1000),
-        user_template=st.text(min_size=1, max_size=1000),
-        description=st.text(min_size=0, max_size=500),
-    )
-    def test_prompt_template_validation(self, name, system_prompt, user_template, description):
-        """Test that PromptTemplate validates inputs."""
-        prompt = PromptTemplate(
-            name=name,
-            system_prompt=system_prompt,
-            user_template=user_template,
-            description=description,
-        )
-        assert prompt.name == name
-        assert prompt.system_prompt == system_prompt
-        assert prompt.user_template == user_template
-        assert prompt.description == description
 
 
 class TestAgentResponseProperties:

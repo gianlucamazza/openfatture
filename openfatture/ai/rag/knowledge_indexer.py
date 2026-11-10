@@ -44,10 +44,12 @@ class KnowledgeIndexer:
     ) -> None:
         self.config = config
         self.vector_store = vector_store
-        self.base_path = base_path or Path(".").resolve()
-        self.manifest_path = (
-            Path(manifest_path) if manifest_path else config.knowledge_manifest_path
-        )
+        self.manifest_path = Path(
+            manifest_path if manifest_path else config.knowledge_manifest_path
+        ).resolve()
+        # Source paths are relative to the manifest, so a packaged manifest works
+        # from any working directory.
+        self.base_path = base_path or self.manifest_path.parent
         self.sources = self._load_manifest()
 
         logger.info(
@@ -202,11 +204,7 @@ class KnowledgeIndexer:
 
     def _load_manifest(self) -> list[KnowledgeSource]:
         """Load manifest JSON file and build KnowledgeSource objects."""
-        manifest_file = (
-            self.manifest_path
-            if self.manifest_path.is_absolute()
-            else (self.base_path / self.manifest_path).resolve()
-        )
+        manifest_file = self.manifest_path
 
         if not manifest_file.exists():
             raise FileNotFoundError(f"Knowledge base manifest not found at {manifest_file}")

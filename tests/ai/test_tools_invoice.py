@@ -4,6 +4,7 @@ Tests focus on individual tool functions in isolation using mocks
 to avoid external database and network dependencies.
 """
 
+from contextlib import nullcontext
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -21,12 +22,12 @@ from openfatture.storage.database.models import Fattura, StatoFattura
 class TestSearchInvoices:
     """Test search_invoices tool function."""
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_search_invoices_basic(self, mock_get_session):
         """Test basic invoice search without filters."""
         # Mock database session
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query results
         mock_fattura = MagicMock(spec=Fattura)
@@ -67,13 +68,12 @@ class TestSearchInvoices:
 
         # Verify database calls
         mock_session.query.assert_called_once_with(Fattura)
-        mock_session.close.assert_called_once()
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_search_invoices_with_query(self, mock_get_session):
         """Test invoice search with text query."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock empty results
         mock_query = MagicMock()
@@ -91,11 +91,11 @@ class TestSearchInvoices:
         assert mock_query.filter.call_count >= 1
         assert result["count"] == 0
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_search_invoices_with_year_filter(self, mock_get_session):
         """Test invoice search filtered by year."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         mock_query = MagicMock()
         mock_session.query.return_value = mock_query
@@ -111,11 +111,11 @@ class TestSearchInvoices:
         assert mock_query.filter.call_count >= 1
         assert result["count"] == 0
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_search_invoices_with_status_filter(self, mock_get_session):
         """Test invoice search filtered by status."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         mock_query = MagicMock()
         mock_session.query.return_value = mock_query
@@ -131,12 +131,12 @@ class TestSearchInvoices:
         assert mock_query.filter.call_count >= 1
         assert result["count"] == 0
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_search_invoices_database_error(self, mock_get_session):
         """Test invoice search with database error."""
         mock_session = MagicMock(spec=Session)
         mock_session.query.side_effect = Exception("Database connection failed")
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         result = search_invoices()
 
@@ -144,8 +144,6 @@ class TestSearchInvoices:
         assert "error" in result
         assert result["error"] == "Database connection failed"
         assert result["count"] == 0
-
-        mock_session.close.assert_called_once()
 
     def test_search_invoices_input_validation(self):
         """Test input validation for search parameters."""
@@ -169,12 +167,12 @@ class TestSearchInvoices:
 class TestGetInvoiceDetails:
     """Test get_invoice_details tool function."""
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_get_invoice_details_success(self, mock_get_session):
         """Test successful invoice details retrieval."""
         # Mock database session
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock invoice with relationships
         mock_fattura = MagicMock(spec=Fattura)
@@ -228,13 +226,11 @@ class TestGetInvoiceDetails:
         assert result["importi"]["totale"] == 1000.0
         assert len(result["righe"]) == 1
 
-        mock_session.close.assert_called_once()
-
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_get_invoice_details_not_found(self, mock_get_session):
         """Test invoice details for non-existent invoice."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query returning None
         mock_query = MagicMock()
@@ -248,11 +244,11 @@ class TestGetInvoiceDetails:
         assert "error" in result
         assert "Fattura 999 non trovata" in result["error"]
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_get_invoice_details_no_client(self, mock_get_session):
         """Test invoice details when invoice has no associated client."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock invoice without client
         mock_fattura = MagicMock(spec=Fattura)
@@ -288,11 +284,11 @@ class TestGetInvoiceDetails:
 class TestGetInvoiceStats:
     """Test get_invoice_stats tool function."""
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_get_invoice_stats_success(self, mock_get_session):
         """Test successful invoice statistics retrieval."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query chain - need separate mocks for different filter calls
         mock_query = MagicMock()
@@ -358,11 +354,11 @@ class TestGetInvoiceStats:
         assert result["per_stato"]["da_inviare"] == 3
         assert result["importo_totale"] == 3000.0
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_get_invoice_stats_current_year(self, mock_get_session):
         """Test invoice stats for current year when no year specified."""
         mock_session = MagicMock(spec=Session)
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         # Mock query chain - need separate mocks for different filter calls
         mock_query = MagicMock()
@@ -398,12 +394,12 @@ class TestGetInvoiceStats:
         assert "anno" in result
         # Should use current year (mocked datetime would be needed for full test)
 
-    @patch("openfatture.billing.application.invoice_queries.get_session")
+    @patch("openfatture.billing.application.invoice_queries.session_scope")
     def test_get_invoice_stats_database_error(self, mock_get_session):
         """Test invoice stats with database error."""
         mock_session = MagicMock(spec=Session)
         mock_session.query.side_effect = Exception("Database error")
-        mock_get_session.return_value = mock_session
+        mock_get_session.side_effect = lambda *args, **kwargs: nullcontext(mock_session)
 
         result = get_invoice_stats()
 

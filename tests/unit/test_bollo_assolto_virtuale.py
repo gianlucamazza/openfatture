@@ -5,14 +5,12 @@ Tests that when bollo_assolto_virtuale=True:
 - Bollo is NOT added to client's payable total
 - Bollo is shown in PDF footer with MEF ART.6 wording
 - Bollo is NOT shown in PDF summary box
-- Compliance validation passes
 """
 
 from decimal import Decimal
 
 from lxml import etree
 
-from openfatture.ai.agents.compliance.rules import ComplianceRulesEngine
 from openfatture.billing.fatture.service import InvoiceService
 from openfatture.pdf.generator import PDFGenerator, PDFGeneratorConfig
 from openfatture.sdi.xml_builder.fatturapa import FatturaPABuilder
@@ -65,30 +63,6 @@ class TestBolloAssoltoVirtuale:
         assert fattura.importo_bollo == Decimal("2.00"), "Bollo should be 2.00"
         assert fattura.bollo_assolto_virtuale is False, "Bollo should be charged to client"
         assert fattura.totale == Decimal("102.00"), "Total should include bollo"
-
-    def test_bollo_assolto_compliance_validation(
-        self, test_settings, sample_fattura_with_bollo_assolto
-    ):
-        """Test that compliance validation passes for bollo assolto."""
-        fattura = sample_fattura_with_bollo_assolto
-        engine = ComplianceRulesEngine()
-
-        result = engine.validate_invoice(fattura)
-
-        # Should have no errors
-        errors = [issue for issue in result.issues if issue.severity.value == "error"]
-        assert len(errors) == 0, f"Should have no validation errors, got: {errors}"
-
-    def test_bollo_charged_compliance_validation(self, test_settings, sample_fattura_with_bollo):
-        """Test that compliance validation passes when bollo is charged to client."""
-        fattura = sample_fattura_with_bollo
-        engine = ComplianceRulesEngine()
-
-        result = engine.validate_invoice(fattura)
-
-        # Should have no errors
-        errors = [issue for issue in result.issues if issue.severity.value == "error"]
-        assert len(errors) == 0, f"Should have no validation errors, got: {errors}"
 
     def test_bollo_assolto_pdf_generation(
         self, test_settings, sample_fattura_with_bollo_assolto, tmp_path

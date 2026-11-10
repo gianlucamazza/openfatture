@@ -165,12 +165,6 @@ class AISettings(BaseSettings):
         description="Embedding vector dimensions",
     )
 
-    # Prompts
-    prompts_directory: Path = Field(
-        default=Path("openfatture/ai/prompts"),
-        description="Directory containing prompt templates",
-    )
-
     # Timeouts
     request_timeout_seconds: int = Field(
         default=30,
@@ -213,41 +207,7 @@ class AISettings(BaseSettings):
         description="Maximum cache size in MB",
     )
 
-    # Agent-Specific Settings
-    invoice_assistant_enabled: bool = Field(
-        default=True,
-        description="Enable Invoice Assistant agent",
-    )
-
-    tax_advisor_enabled: bool = Field(
-        default=True,
-        description="Enable Tax Advisor agent",
-    )
-
-    cash_flow_predictor_enabled: bool = Field(
-        default=True,
-        description="Enable Cash Flow Predictor agent",
-    )
-
-    compliance_checker_enabled: bool = Field(
-        default=True,
-        description="Enable Compliance Checker agent",
-    )
-
-    # Orchestration
-    multi_agent_enabled: bool = Field(
-        default=False,  # Experimental
-        description="Enable multi-agent orchestration (experimental)",
-    )
-
-    max_workflow_steps: int = Field(
-        default=10,
-        ge=1,
-        le=100,
-        description="Maximum steps in multi-agent workflow",
-    )
-
-    @field_validator("chromadb_persist_directory", "prompts_directory")
+    @field_validator("chromadb_persist_directory")
     @classmethod
     def validate_path_exists(cls, v: Path) -> Path:
         """Ensure path exists or can be created."""
@@ -273,14 +233,6 @@ class AISettings(BaseSettings):
 
         key = key_map.get(self.provider)
         return key.get_secret_value() if key else None
-
-    def is_provider_configured(self) -> bool:
-        """Check if current provider is properly configured."""
-        if self.provider == "ollama":
-            return True  # Ollama only needs base URL
-
-        api_key = self.get_api_key_for_provider()
-        return api_key is not None and len(api_key) > 0
 
     def to_dict(self, include_secrets: bool = False) -> dict:
         """

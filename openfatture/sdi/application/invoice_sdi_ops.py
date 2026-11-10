@@ -6,11 +6,11 @@ from pydantic import validate_call
 
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import (
     Fattura,
     StatoFattura,
 )
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -32,65 +32,63 @@ def validate_invoice_xml(fattura_id: int) -> dict[str, Any]:
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice {fattura_id} not found"}
+    with db_session() as db:
+        try:
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice {fattura_id} not found"}
 
-        # Check if invoice was issued elsewhere
-        if getattr(fattura, "issued_elsewhere", False):
-            logger.warning(
-                "xml_validation_blocked_issued_elsewhere",
-                fattura_id=fattura_id,
-                numero=fattura.numero,
-                anno=fattura.anno,
-            )
-            return {
-                "error": (
-                    f"Cannot validate XML for invoice {fattura.numero}/{fattura.anno}: "
-                    "This invoice was issued elsewhere and is stored for reference only."
+            # Check if invoice was issued elsewhere
+            if getattr(fattura, "issued_elsewhere", False):
+                logger.warning(
+                    "xml_validation_blocked_issued_elsewhere",
+                    fattura_id=fattura_id,
+                    numero=fattura.numero,
+                    anno=fattura.anno,
                 )
-            }
+                return {
+                    "error": (
+                        f"Cannot validate XML for invoice {fattura.numero}/{fattura.anno}: "
+                        "This invoice was issued elsewhere and is stored for reference only."
+                    )
+                }
 
-        # Check has righe
-        if not fattura.righe:
-            return {"error": "Invoice has no line items. Add at least one riga first."}
+            # Check has righe
+            if not fattura.righe:
+                return {"error": "Invoice has no line items. Add at least one riga first."}
 
-        settings = get_settings()
-        service = InvoiceService(settings)
+            settings = get_settings()
+            service = InvoiceService(settings)
 
-        # Generate and validate XML
-        xml_content, error = service.generate_xml(fattura, validate=True)
+            # Generate and validate XML
+            xml_content, error = service.generate_xml(fattura, validate=True)
 
-        if error:
-            logger.warning("invoice_xml_validation_failed", fattura_id=fattura_id, error=error)
+            if error:
+                logger.warning("invoice_xml_validation_failed", fattura_id=fattura_id, error=error)
+                return {
+                    "success": False,
+                    "valid": False,
+                    "error": error,
+                    "invoice_number": f"{fattura.numero}/{fattura.anno}",
+                }
+
+            # Update database with xml_path
+            db.commit()
+
+            logger.info("invoice_xml_validated", fattura_id=fattura_id)
+
             return {
-                "success": False,
-                "valid": False,
-                "error": error,
+                "success": True,
+                "valid": True,
+                "invoice_id": fattura_id,
                 "invoice_number": f"{fattura.numero}/{fattura.anno}",
+                "xml_path": fattura.xml_path,
+                "message": f"XML validated successfully for invoice {fattura.numero}/{fattura.anno}",
             }
 
-        # Update database with xml_path
-        db.commit()
-
-        logger.info("invoice_xml_validated", fattura_id=fattura_id)
-
-        return {
-            "success": True,
-            "valid": True,
-            "invoice_id": fattura_id,
-            "invoice_number": f"{fattura.numero}/{fattura.anno}",
-            "xml_path": fattura.xml_path,
-            "message": f"XML validated successfully for invoice {fattura.numero}/{fattura.anno}",
-        }
-
-    except Exception as e:
-        logger.error("validate_invoice_xml_failed", fattura_id=fattura_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("validate_invoice_xml_failed", fattura_id=fattura_id, error=str(e))
+            return {"error": str(e)}
 
 
 @validate_call
@@ -110,96 +108,97 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
     from openfatture.billing.fatture.service import InvoiceService
     from openfatture.events import InvoiceSentEvent, get_global_event_bus
     from openfatture.platform.config import get_settings
-    from openfatture.platform.email.sender import TemplatePECSender
+    from openfatture.sdi.email.sender import TemplatePECSender
 
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice {fattura_id} not found"}
+    with db_session() as db:
+        try:
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice {fattura_id} not found"}
 
-        # Check if invoice was issued elsewhere
-        if getattr(fattura, "issued_elsewhere", False):
-            logger.warning(
-                "sdi_send_blocked_issued_elsewhere",
-                fattura_id=fattura_id,
-                numero=fattura.numero,
-                anno=fattura.anno,
-            )
-            return {
-                "error": (
-                    f"Cannot send invoice {fattura.numero}/{fattura.anno} to SDI: "
-                    "This invoice was issued elsewhere and is stored for reference only. "
-                    "SDI submission is blocked to prevent duplicate submissions."
+            # Check if invoice was issued elsewhere
+            if getattr(fattura, "issued_elsewhere", False):
+                logger.warning(
+                    "sdi_send_blocked_issued_elsewhere",
+                    fattura_id=fattura_id,
+                    numero=fattura.numero,
+                    anno=fattura.anno,
                 )
-            }
-
-        # Check invoice is ready to send
-        if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
-            return {
-                "error": f"Invoice in status '{fattura.stato.value}' cannot be sent. Must be BOZZA or DA_INVIARE."
-            }
-
-        if not fattura.righe:
-            return {"error": "Invoice has no line items"}
-
-        settings = get_settings()
-        service = InvoiceService(settings)
-
-        # Step 1: Generate/validate XML if not exists
-        if not fattura.xml_path:
-            xml_content, error = service.generate_xml(fattura, validate=True)
-            if error:
-                return {"error": f"XML validation failed: {error}"}
-
-        # Step 2: Send via PEC
-        xml_path = service.get_xml_path(fattura)
-        sender = TemplatePECSender(settings=settings, locale=settings.locale)
-
-        success, error = sender.send_invoice_to_sdi(fattura, xml_path, signed=signed)
-
-        if not success:
-            return {"error": f"Failed to send invoice: {error}"}
-
-        # Publish event
-        event_bus = get_global_event_bus()
-        if event_bus:
-            try:
-                event_bus.publish(
-                    InvoiceSentEvent(
-                        invoice_id=fattura.id,
-                        invoice_number=f"{fattura.numero}/{fattura.anno}",
-                        recipient=fattura.cliente.codice_destinatario or settings.sdi_pec_address,
-                        pec_address=settings.sdi_pec_address,
-                        xml_path=str(xml_path),
-                        signed=signed,
+                return {
+                    "error": (
+                        f"Cannot send invoice {fattura.numero}/{fattura.anno} to SDI: "
+                        "This invoice was issued elsewhere and is stored for reference only. "
+                        "SDI submission is blocked to prevent duplicate submissions."
                     )
-                )
+                }
 
-            except Exception as exc:
-                logger.warning("sdi_post_commit_event_failed", error=str(exc))
+            # Check invoice is ready to send
+            if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
+                return {
+                    "error": f"Invoice in status '{fattura.stato.value}' cannot be sent. Must be BOZZA or DA_INVIARE."
+                }
 
-        logger.info("invoice_sent_to_sdi", fattura_id=fattura_id, signed=signed)
+            if not fattura.righe:
+                return {"error": "Invoice has no line items"}
 
-        return {
-            "success": True,
-            "invoice_id": fattura_id,
-            "invoice_number": f"{fattura.numero}/{fattura.anno}",
-            "stato": fattura.stato.value,
-            "data_invio": fattura.data_invio_sdi.isoformat() if fattura.data_invio_sdi else None,
-            "sdi_address": settings.sdi_pec_address,
-            "message": f"Invoice {fattura.numero}/{fattura.anno} sent to SDI successfully via PEC",
-        }
+            settings = get_settings()
+            service = InvoiceService(settings)
 
-    except Exception as e:
-        db.rollback()
-        logger.error("send_invoice_to_sdi_failed", fattura_id=fattura_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+            # Step 1: Generate/validate XML if not exists
+            if not fattura.xml_path:
+                xml_content, error = service.generate_xml(fattura, validate=True)
+                if error:
+                    return {"error": f"XML validation failed: {error}"}
+
+            # Step 2: Send via PEC
+            xml_path = service.get_xml_path(fattura)
+            sender = TemplatePECSender(settings=settings, locale=settings.locale)
+
+            success, error = sender.send_invoice_to_sdi(fattura, xml_path, signed=signed)
+
+            if not success:
+                return {"error": f"Failed to send invoice: {error}"}
+
+            # Publish event
+            event_bus = get_global_event_bus()
+            if event_bus:
+                try:
+                    event_bus.publish(
+                        InvoiceSentEvent(
+                            invoice_id=fattura.id,
+                            invoice_number=f"{fattura.numero}/{fattura.anno}",
+                            recipient=fattura.cliente.codice_destinatario
+                            or settings.sdi_pec_address,
+                            pec_address=settings.sdi_pec_address,
+                            xml_path=str(xml_path),
+                            signed=signed,
+                        )
+                    )
+
+                except Exception as exc:
+                    logger.warning("sdi_post_commit_event_failed", error=str(exc))
+
+            logger.info("invoice_sent_to_sdi", fattura_id=fattura_id, signed=signed)
+
+            return {
+                "success": True,
+                "invoice_id": fattura_id,
+                "invoice_number": f"{fattura.numero}/{fattura.anno}",
+                "stato": fattura.stato.value,
+                "data_invio": fattura.data_invio_sdi.isoformat()
+                if fattura.data_invio_sdi
+                else None,
+                "sdi_address": settings.sdi_pec_address,
+                "message": f"Invoice {fattura.numero}/{fattura.anno} sent to SDI successfully via PEC",
+            }
+
+        except Exception as e:
+            db.rollback()
+            logger.error("send_invoice_to_sdi_failed", fattura_id=fattura_id, error=str(e))
+            return {"error": str(e)}
 
 
 def generate_invoice_xml(
@@ -218,8 +217,7 @@ def generate_invoice_xml(
     from openfatture.platform.config import get_settings
 
     fattura_id = validate_integer_input(fattura_id, min_value=1)
-    db = get_session()
-    try:
+    with db_session() as db:
         fattura = db.get(Fattura, fattura_id)
         if fattura is None:
             return {"error": f"Invoice {fattura_id} not found"}
@@ -243,5 +241,3 @@ def generate_invoice_xml(
             "xml_path": str(xml_path),
             "file_size": xml_path.stat().st_size,
         }
-    finally:
-        db.close()

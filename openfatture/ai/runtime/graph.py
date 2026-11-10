@@ -52,22 +52,6 @@ class ToolLoopState(TypedDict, total=False):
     tool_results: list[dict[str, Any]]
 
 
-def _message_to_dict(msg: Message | dict[str, Any]) -> dict[str, Any]:
-    if isinstance(msg, dict):
-        return msg
-    data: dict[str, Any] = {
-        "role": msg.role.value,
-        "content": msg.content or "",
-    }
-    if msg.tool_calls:
-        data["tool_calls"] = msg.tool_calls
-    if msg.tool_call_id:
-        data["tool_call_id"] = msg.tool_call_id
-    if msg.name:
-        data["name"] = msg.name
-    return data
-
-
 def _dict_to_message(data: dict[str, Any]) -> Message:
     role_raw = data.get("role", "user")
     role = Role(role_raw) if isinstance(role_raw, str) else role_raw

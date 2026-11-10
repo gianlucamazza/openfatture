@@ -165,11 +165,6 @@ class LifespanManager:
         except Exception as e:
             logger.error(f"Error shutting down self-learning systems: {e}", exc_info=True)
 
-    def add_shutdown_handler(self, coro: Any) -> None:
-        """Add a coroutine to run during shutdown."""
-        task = asyncio.create_task(coro)
-        self._shutdown_handlers.append(task)
-
     def signal_handler(self, signum: int, frame: Any) -> None:
         """Handle shutdown signals (SIGTERM, SIGINT)."""
         signal_name = signal.Signals(signum).name
@@ -179,11 +174,6 @@ class LifespanManager:
 
 # Global lifespan manager instance
 _lifespan_manager = LifespanManager()
-
-
-def get_lifespan_manager() -> LifespanManager:
-    """Get the global lifespan manager instance."""
-    return _lifespan_manager
 
 
 @asynccontextmanager

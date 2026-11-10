@@ -10,8 +10,8 @@ from pathlib import Path
 
 from openfatture.billing.batch.processor import BatchResult
 from openfatture.platform.config import get_settings
-from openfatture.platform.email.renderer import TemplateRenderer
-from openfatture.platform.email.sender import TemplatePECSender
+from openfatture.sdi.email.renderer import TemplateRenderer
+from openfatture.sdi.email.sender import TemplatePECSender
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
 
 
@@ -61,7 +61,7 @@ def example_2_preview_template():
     renderer = TemplateRenderer(settings=settings, locale="it")
 
     # Create context
-    from openfatture.platform.email.models import FatturaInvioContext
+    from openfatture.sdi.email.models import FatturaInvioContext
 
     cliente = Cliente(denominazione="Test Client")
     fattura = Fattura(
@@ -163,7 +163,7 @@ def example_5_custom_branding():
     """Example 5: Use custom branding."""
     print("\n=== Example 5: Custom Branding ===\n")
 
-    from openfatture.platform.email.styles import EmailBranding
+    from openfatture.sdi.email.styles import EmailBranding
 
     settings = get_settings()
 

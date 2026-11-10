@@ -2,9 +2,8 @@
 
 Feature stacks live behind PEP 621 extras declared in ``pyproject.toml``:
 
-- ``ai`` — LLM providers, agents, tools, LangGraph workflows
+- ``ai`` — LLM providers, assistant runtime and tools
 - ``rag`` — ChromaDB + embeddings (includes ``ai``)
-- ``ml`` — Prophet / XGBoost forecasting stack (optional; not on default path)
 - ``all`` — union of the above
 
 Core install (no extras) supports billing, SDI, payment, PDF, config, and status.
@@ -22,7 +21,6 @@ from typing import Final
 _EXTRA_MARKERS: Final[dict[str, str]] = {
     "ai": "openai",
     "rag": "chromadb",
-    "ml": "prophet",
 }
 
 _INSTALL_HINT: Final[str] = (

@@ -1,7 +1,6 @@
 """Database base configuration, session management, and ORM mixins."""
 
 import uuid
-from collections.abc import Generator
 from datetime import datetime
 from typing import Any
 
@@ -64,7 +63,7 @@ engine: Engine | None = None
 SessionLocal: sessionmaker[Session] | None = None
 
 
-def init_db(database_url: str = "sqlite:///./openfatture.db") -> None:
+def init_db(database_url: str) -> None:
     """Initialize database engine and session factory."""
     global engine, SessionLocal
 
@@ -76,21 +75,11 @@ def init_db(database_url: str = "sqlite:///./openfatture.db") -> None:
 
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
+    # New databases get the current schema stamped at the Alembic head; an
+    # outdated schema is refused until `openfatture init` upgrades it.
+    from openfatture.storage.schema import prepare_schema
 
-
-def get_db() -> Generator[Session, None, None]:
-    """Dependency for getting database sessions."""
-    if SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
-
-    assert SessionLocal is not None
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    prepare_schema(engine)
 
 
 def get_session() -> Session:

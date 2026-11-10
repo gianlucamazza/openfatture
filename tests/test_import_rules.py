@@ -15,7 +15,14 @@ FORBIDDEN = {
     "storage": ("openfatture.cli", "openfatture.ai"),
     "events": ("openfatture.cli", "openfatture.ai"),
     "hooks": ("openfatture.cli", "openfatture.ai"),
-    "platform": ("openfatture.cli", "openfatture.ai"),
+    "platform": (
+        "openfatture.cli",
+        "openfatture.ai",
+        "openfatture.billing",
+        "openfatture.payment",
+        "openfatture.sdi",
+        "openfatture.pdf",
+    ),
     "ai": ("openfatture.cli",),
 }
 

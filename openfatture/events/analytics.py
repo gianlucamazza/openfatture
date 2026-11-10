@@ -356,7 +356,3 @@ class EventAnalytics:
             "most_recent_event": stats["most_recent_event"],
             "oldest_event": stats["oldest_event"],
         }
-
-    def close(self) -> None:
-        """Close repository connection if owned."""
-        self.repo.close()

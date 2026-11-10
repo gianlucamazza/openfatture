@@ -137,6 +137,18 @@ def _build_status() -> dict[str, Any]:
             p.name for p in hooks_dir.iterdir() if p.is_file() and not p.name.startswith(".")
         )
     readiness = _readiness(settings, extras)
+    from openfatture.storage.schema import database_schema_state
+
+    database_schema = database_schema_state(str(settings.database_url))
+    readiness["checks"]["database_schema"] = database_schema in ("current", "unversioned")
+    if database_schema in ("outdated", "ahead"):
+        readiness["core_ready"] = readiness["invoice_ready"] = False
+    if database_schema in ("outdated", "unversioned"):
+        readiness["next_steps"].insert(0, "Upgrade the database schema: openfatture init")
+    elif database_schema == "ahead":
+        readiness["next_steps"].insert(
+            0, "The database is newer than this release: upgrade OpenFatture"
+        )
     configuration = _configuration()
     if configuration["plaintext_secrets"]:
         readiness["next_steps"].insert(
@@ -166,6 +178,7 @@ def _build_status() -> dict[str, Any]:
     return {
         "version": __version__,
         "database": str(settings.database_url),
+        "database_schema": database_schema,
         "data_dir": str(settings.data_dir),
         "archive_dir": str(settings.archivio_dir),
         "ai_provider": settings.ai_provider,

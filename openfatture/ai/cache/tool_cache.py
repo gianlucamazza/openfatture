@@ -6,7 +6,6 @@ and reduce database load for read-heavy operations.
 
 import hashlib
 import json
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 from openfatture.ai.cache.memory import LRUCache
@@ -180,64 +179,6 @@ class ToolResultCache:
             cache_key=cache_key,
             ttl=ttl,
         )
-
-    async def invalidate_tool_cache(self, tool_name: str) -> int:
-        """
-        Invalidate all cached results for a specific tool.
-
-        Useful when data has been modified and cache needs to be cleared.
-
-        Args:
-            tool_name: Name of the tool to invalidate
-
-        Returns:
-            Number of entries invalidated
-        """
-        # This is a simplified implementation - in a real system,
-        # we'd need to track which keys belong to which tools
-        # For now, we'll clear the entire cache when any write operation occurs
-        stats_before = self.cache.get_stats()
-        await self.cache.clear()
-
-        invalidated = int(stats_before["size"])
-        logger.info(
-            "tool_cache_invalidated",
-            tool_name=tool_name,
-            entries_invalidated=invalidated,
-        )
-
-        return invalidated
-
-    async def get_or_execute(
-        self,
-        tool_name: str,
-        parameters: dict[str, Any],
-        execute_func: Callable[[], Awaitable[ToolResult]],
-    ) -> ToolResult:
-        """
-        Get cached result or execute the tool function.
-
-        Args:
-            tool_name: Name of the tool
-            parameters: Tool parameters
-            execute_func: Function to execute if not cached
-
-        Returns:
-            ToolResult (cached or freshly executed)
-        """
-        # Try to get from cache first
-        cached_result = await self.get_cached_result(tool_name, parameters)
-        if cached_result:
-            return cached_result
-
-        # Execute the function
-        result = await execute_func()
-
-        # Cache successful results
-        if result.success:
-            await self.cache_result(tool_name, parameters, result)
-
-        return result
 
     def get_stats(self) -> dict[str, Any]:
         """

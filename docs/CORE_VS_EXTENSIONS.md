@@ -13,7 +13,7 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md), [CONFIGURATION.md](CONFIGURATION.md
 | Layer | Meaning | How you get it | Examples |
 |-------|---------|----------------|----------|
 | **Core** | Required for Italian electronic invoicing and the public CLI | `uv sync` / `pip install openfatture` | billing, SDI, payment, PDF, storage, events, hooks, platform, CLI |
-| **Feature extras** | In-tree modules with heavy or niche deps; same repo, optional install | `uv sync --extra ai` (etc.) | `ai`, `rag`, `ml` |
+| **Feature extras** | In-tree modules with heavy or niche deps; same repo, optional install | `uv sync --extra ai` (etc.) | `ai`, `rag` |
 | **Extensions** | User or third-party automation **outside** the core package API | hooks scripts; future MCP/tools | `~/.openfatture/hooks/*` |
 
 There is **no in-process plugin product API**. User extensions use **hooks**
@@ -33,7 +33,7 @@ There is **no in-process plugin product API**. User extensions use **hooks**
    │  billing    │        │  EXTRAS      │        │  hooks scripts │
    │  sdi        │        │  [ai]        │        │  (~/.openfatture│
    │  payment    │        │  [rag]       │        │   /hooks)      │
-   │  pdf        │        │  [ml]        │        │                │
+   │  pdf        │        │              │        │                │
    │  storage    │        │              │        │  no in-process │
    │  events     │        │              │        │  plugin API    │
    │  hooks eng. │        │  same monorepo│        │                │
@@ -47,7 +47,7 @@ There is **no in-process plugin product API**. User extensions use **hooks**
 
 ## 2. What is **core**
 
-Must remain installable and useful **without** AI, RAG, or ML.
+Must remain installable and useful **without** AI or RAG.
 
 | Package | Role |
 |---------|------|
@@ -76,7 +76,6 @@ plugins: they are **first-party optional product modules**.
 |-------|--------------|------------------|
 | `ai` | `openfatture.ai` (assistant, tools, providers, orchestration) | Yes — use domain code only; no assistant |
 | `rag` | `openfatture.ai.rag` (+ embeddings stack) | Yes |
-| `ml` | `openfatture.ai.ml`, cash-flow forecasting | Yes |
 
 **Criteria for staying as an extra (not core):**
 
@@ -183,6 +182,6 @@ When adding a module, ask:
 | User hook scripts | Extension | drop-in files |
 | Assistant + domain tools | Feature extra | `--extra ai` |
 | RAG | Feature extra | `--extra rag` |
-| Cash-flow ML | Feature extra | `--extra ml` |
+| Cash-flow ML | Removed (2.8.0) | — |
 | In-process plugins API | Not product | **removed** |
 | Voice / web scraper / Lightning LN | Removed | historical under `docs/history/` |
