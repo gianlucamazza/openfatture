@@ -70,10 +70,10 @@ balances for unscheduled amounts.
 
 ## Assistant and CLI output
 
-The assistant exposes `get_collections` by default. Enable specific write tools in
-`ai_enabled_tools` to use them: `record_collection`, `allocate_collection`,
-`allocate_collection_batch`, `reverse_collection`, `declare_collection_status`, and
-`record_bank_collection`. Existing explicit allowlists are respected. Write tools
+The assistant exposes `get_collections` by default. The write tools
+(`record_collection`, `allocate_collection`, `allocate_collection_batch`,
+`reverse_collection`, `declare_collection_status`, `record_bank_collection`) need
+`ai_tool_access = "full"`, or each name listed in `ai_enabled_tools`. Write tools
 require the configured human confirmation gate; the model cannot approve itself.
 SDI transmission remains a separate explicit opt-in.
 

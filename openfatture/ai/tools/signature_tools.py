@@ -1,6 +1,6 @@
 """AI tool adapters over `openfatture.sdi.application.signature_ops`."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.sdi.application.signature_ops import (
     check_certificate_status,
     sign_invoice_xml,
@@ -18,6 +18,7 @@ def get_signature_tools() -> list[Tool]:
     return [
         Tool(
             name="sign_invoice_xml",
+            risk=ToolRisk.MUTATE,
             description="Digitally sign invoice XML with PKCS#12 certificate (creates .p7m file for SDI)",
             category="signature",
             parameters=[
@@ -62,6 +63,7 @@ def get_signature_tools() -> list[Tool]:
         ),
         Tool(
             name="verify_signature",
+            risk=ToolRisk.READ,
             description="Verify digital signature on .p7m file (PKCS#7 validation)",
             category="signature",
             parameters=[
@@ -80,6 +82,7 @@ def get_signature_tools() -> list[Tool]:
         ),
         Tool(
             name="check_certificate_status",
+            risk=ToolRisk.READ,
             description="Check PKCS#12 certificate status, validity, and expiration info",
             category="signature",
             parameters=[

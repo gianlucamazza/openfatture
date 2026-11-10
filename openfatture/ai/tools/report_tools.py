@@ -1,6 +1,6 @@
 """AI tool adapters over `openfatture.billing.application.report_queries`."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application.report_queries import (
     generate_client_report,
     generate_vat_report,
@@ -18,6 +18,7 @@ def get_report_tools() -> list[Tool]:
     return [
         Tool(
             name="generate_vat_report",
+            risk=ToolRisk.READ,
             description="Generate VAT (IVA) report for a year or quarter. Returns imponibile, IVA, revenue totals and breakdown by VAT rate.",
             category="reports",
             parameters=[
@@ -45,6 +46,7 @@ def get_report_tools() -> list[Tool]:
         ),
         Tool(
             name="generate_client_report",
+            risk=ToolRisk.READ,
             description="Generate client revenue report (top clients by revenue for a year)",
             category="reports",
             parameters=[
@@ -72,6 +74,7 @@ def get_report_tools() -> list[Tool]:
         ),
         Tool(
             name="get_due_dates",
+            risk=ToolRisk.READ,
             description="Get overdue and upcoming payment due dates. Returns overdue, due soon (within window), and upcoming payments.",
             category="reports",
             parameters=[

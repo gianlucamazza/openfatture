@@ -1,6 +1,6 @@
 """AI tool adapters over `openfatture.payment.application.tool_ops`."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.payment.application.tool_ops import (
     create_manual_payment,
     delete_payment,
@@ -24,6 +24,7 @@ def get_payment_tools() -> list[Tool]:
     return [
         Tool(
             name="get_payment_status",
+            risk=ToolRisk.READ,
             description="Get payment status and details for an invoice",
             category="payments",
             parameters=[
@@ -40,6 +41,7 @@ def get_payment_tools() -> list[Tool]:
         ),
         Tool(
             name="search_payments",
+            risk=ToolRisk.READ,
             description="Search for payments with optional status filter",
             category="payments",
             parameters=[
@@ -67,6 +69,7 @@ def get_payment_tools() -> list[Tool]:
         ),
         Tool(
             name="search_bank_transactions",
+            risk=ToolRisk.READ,
             description="Search bank transactions by description or status",
             category="payments",
             parameters=[
@@ -100,6 +103,7 @@ def get_payment_tools() -> list[Tool]:
         ),
         Tool(
             name="get_payment_stats",
+            risk=ToolRisk.READ,
             description="Get payment statistics (counts, amounts by status, overdue)",
             category="payments",
             parameters=[],
@@ -109,6 +113,7 @@ def get_payment_tools() -> list[Tool]:
         ),
         Tool(
             name="reconcile_payment",
+            risk=ToolRisk.MUTATE,
             description="Manually reconcile a bank transaction to a payment. Requires transaction_id (UUID) and payment_id.",
             category="payments",
             parameters=[
@@ -149,6 +154,7 @@ def get_payment_tools() -> list[Tool]:
         ),
         Tool(
             name="create_manual_payment",
+            risk=ToolRisk.MUTATE,
             description="Manually create a payment record for an invoice. Used for manual payment tracking.",
             category="payments",
             parameters=[
@@ -201,6 +207,7 @@ def get_payment_tools() -> list[Tool]:
         ),
         Tool(
             name="update_payment",
+            risk=ToolRisk.MUTATE,
             description="Update payment record details (amount, dates, payment method). Automatically recalculates status.",
             category="payments",
             parameters=[
@@ -251,6 +258,7 @@ def get_payment_tools() -> list[Tool]:
         ),
         Tool(
             name="delete_payment",
+            risk=ToolRisk.MUTATE,
             description="CRITICAL: Delete payment record from database. Cannot delete if linked to bank transactions.",
             category="payments",
             parameters=[
@@ -268,6 +276,7 @@ def get_payment_tools() -> list[Tool]:
         ),
         Tool(
             name="import_bank_transactions",
+            risk=ToolRisk.MUTATE,
             description="Import bank transactions from OFX/QFX bank statement file for payment reconciliation.",
             category="payments",
             parameters=[

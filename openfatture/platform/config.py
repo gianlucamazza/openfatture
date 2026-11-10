@@ -22,6 +22,8 @@ from openfatture.platform.assistant_backends import DEFAULT_ASSISTANT_BACKEND
 # domain — changing it would silently orphan existing config/data/keys.
 dirs = PlatformDirs("openfatture", "venerelabs")
 
+AiToolAccess = Literal["read", "standard", "full"]
+
 
 def _default_app_version() -> str:
     """Resolve package version without duplicating the string in Settings."""
@@ -192,6 +194,12 @@ class Settings(BaseSettings):
     # Paths
     data_dir: Path = Field(default=Path(dirs.user_data_dir))
     archivio_dir: Path = Field(default=Path(dirs.user_data_dir) / "archivio")
+
+    @property
+    def exports_dir(self) -> Path:
+        """Where generated files (PDF, CSV exports) are written."""
+        return self.data_dir / "exports"
+
     certificates_dir: Path = Field(default=Path(dirs.user_config_dir) / "certificates")
 
     # Cedente Prestatore (Your company data)
@@ -325,12 +333,21 @@ class Settings(BaseSettings):
         default=True,
         description="Enable AI tool/function calling",
     )
-    ai_enabled_tools: str = Field(
-        default="search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats,get_collections",
+    ai_tool_access: AiToolAccess = Field(
+        default="standard",
         description=(
-            "Comma-separated allowlist of AI tools. Transmit tools such as "
-            "send_invoice_to_sdi stay off unless named here; the value 'all' "
-            "does not enable transmit tools."
+            "Which AI tools the assistant may use, by risk: 'read' (lookups), "
+            "'standard' (lookups plus local PDF/CSV files in the exports "
+            "directory) or 'full' (also creates, changes and deletes records, "
+            "each behind a human confirmation). No level enables SDI/PEC send."
+        ),
+    )
+    ai_enabled_tools: str = Field(
+        default="",
+        description=(
+            "Comma-separated tool names enabled on top of ai_tool_access. "
+            "This is the only way to enable a transmit tool such as "
+            "send_invoice_to_sdi."
         ),
     )
     ai_tools_require_confirmation: bool = Field(

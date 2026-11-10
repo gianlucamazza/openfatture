@@ -1,6 +1,6 @@
 """AI tool adapters over `openfatture.sdi.application.tool_ops`."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.sdi.application.tool_ops import (
     check_invoice_sdi_status,
     get_sdi_notification_details,
@@ -19,6 +19,7 @@ def get_sdi_tools() -> list[Tool]:
     return [
         Tool(
             name="list_sdi_notifications",
+            risk=ToolRisk.READ,
             description="List SDI notifications with optional filters (invoice, type)",
             category="sdi",
             parameters=[
@@ -53,6 +54,7 @@ def get_sdi_tools() -> list[Tool]:
         ),
         Tool(
             name="get_sdi_notification_details",
+            risk=ToolRisk.READ,
             description="Get detailed information about a specific SDI notification including XML content",
             category="sdi",
             parameters=[
@@ -69,6 +71,7 @@ def get_sdi_tools() -> list[Tool]:
         ),
         Tool(
             name="check_invoice_sdi_status",
+            risk=ToolRisk.READ,
             description="Check SDI status for an invoice with complete notification timeline",
             category="sdi",
             parameters=[
@@ -85,6 +88,7 @@ def get_sdi_tools() -> list[Tool]:
         ),
         Tool(
             name="process_sdi_notification_file",
+            risk=ToolRisk.MUTATE,
             description="Process SDI notification XML file and update invoice status (WRITE operation)",
             category="sdi",
             parameters=[

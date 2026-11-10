@@ -243,9 +243,7 @@ def build_tool_loop_graph(
 
                 tool = tool_registry.get_tool(name)
                 if isinstance(tool, Tool) and confirmation_required(
-                    name,
-                    tool_requires_confirmation=tool.requires_confirmation,
-                    require_confirmation=get_settings().ai_tools_require_confirmation,
+                    tool, require_confirmation=get_settings().ai_tools_require_confirmation
                 ):
                     approved = interrupt(
                         {

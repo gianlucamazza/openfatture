@@ -1,6 +1,6 @@
 """Nota di credito tools — thin adapter over billing.application.nota_credito_ops."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application.nota_credito_ops import (
     create_nota_credito_from_fattura,
 )
@@ -15,6 +15,7 @@ def tools() -> list[Tool]:
     return [
         Tool(
             name="create_nota_credito_from_fattura",
+            risk=ToolRisk.MUTATE,
             description="Create a nota di credito (TD04 credit note) from an existing invoice. Links to source invoice with FatturaPA DatiFattureCollegate. Supports full or partial refund.",
             category="invoices",
             parameters=[

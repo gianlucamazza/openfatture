@@ -26,10 +26,6 @@ _AI_KEY_PAGES = {
     "anthropic": ("Anthropic Claude", "https://console.anthropic.com/settings/keys"),
     "openai": ("OpenAI", "https://platform.openai.com/api-keys"),
 }
-_DEFAULT_AI_TOOLS = (
-    "search_invoices,get_invoice_details,get_invoice_stats,"
-    "search_clients,get_client_details,get_client_stats"
-)
 
 
 @app.command()
@@ -221,7 +217,6 @@ def _ask_ai() -> tuple[dict[str, object], str]:
         "ai_chat_auto_save": True,
         "ai_tools_enabled": True,
         "ai_tools_require_confirmation": True,
-        "ai_enabled_tools": _DEFAULT_AI_TOOLS,
     }
     if ai_provider == "ollama":
         ai_values["ai_base_url"] = "http://localhost:11434"

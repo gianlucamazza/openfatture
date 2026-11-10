@@ -21,6 +21,7 @@ from reportlab.pdfgen.canvas import Canvas
 
 from openfatture.billing.application.totals import amount_due, vat_summary
 from openfatture.pdf.components import (
+    COURTESY_COPY_NOTE,
     draw_footer,
     draw_header,
     draw_invoice_table,
@@ -37,6 +38,9 @@ from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
+TEMPLATES = ("minimalist", "professional", "branded")
+DEFAULT_TEMPLATE = "professional"
+
 
 class PDFGeneratorConfig(BaseModel):
     """PDF Generator configuration.
@@ -48,7 +52,7 @@ class PDFGeneratorConfig(BaseModel):
     """
 
     # Template
-    template: str = Field(default="professional", description="Template name")
+    template: str = Field(default=DEFAULT_TEMPLATE, description="Template name")
 
     # Company info (for header)
     company_name: str = Field(default="", description="Company name")
@@ -147,20 +151,19 @@ class PDFGenerator:
 
         else:
             raise ValueError(
-                f"Invalid template: {template_name}. "
-                f"Valid options: minimalist, professional, branded"
+                f"Invalid template: {template_name}. Valid options: {', '.join(TEMPLATES)}"
             )
 
     def generate(
         self,
         fattura: Any,  # Fattura model instance
-        output_path: str | None = None,
+        output_path: str,
     ) -> Path:
         """Generate PDF for invoice.
 
         Args:
             fattura: Fattura model instance (from database)
-            output_path: Output file path (auto-generates if None)
+            output_path: Output file path; the caller picks the location
 
         Returns:
             Path to generated PDF
@@ -170,10 +173,6 @@ class PDFGenerator:
         """
         # Convert model to dict
         fattura_data = self._fattura_to_dict(fattura)
-
-        # Auto-generate filename if not provided
-        if output_path is None:
-            output_path = f"fattura_{fattura.numero}_{fattura.anno}.pdf"
 
         output_file = Path(output_path)
 
@@ -429,13 +428,13 @@ class _FooterCanvas(Canvas):
             self,
             page_number=self.getPageNumber(),
             total_pages=self._total_pages,
-            show_digital_signature_note=True,
+            legal_note=COURTESY_COPY_NOTE,
             footer_text=self._footer_text,
         )
         super().showPage()
 
 
-def create_pdf_generator(template: str = "professional", **kwargs: Any) -> PDFGenerator:
+def create_pdf_generator(template: str = DEFAULT_TEMPLATE, **kwargs: Any) -> PDFGenerator:
     """Factory function to create PDF generator.
 
     Args:

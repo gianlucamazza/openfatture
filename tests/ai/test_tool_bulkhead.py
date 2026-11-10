@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from openfatture.ai.orchestration.resilience import BulkheadConfig
-from openfatture.ai.tools.models import Tool
+from openfatture.ai.tools.models import Tool, ToolRisk
 from openfatture.ai.tools.registry import ToolRegistry
 from openfatture.ai.tools.registry.resilience import Bulkhead, bulkhead_config_for
 
@@ -102,6 +102,7 @@ async def test_rejected_call_reports_waiters(monkeypatch):
 
 
 def test_bulkhead_config_by_tool_kind():
-    assert bulkhead_config_for("search_invoices").max_concurrent_executions == 10
-    assert bulkhead_config_for("create_invoice").max_concurrent_executions == 2
-    assert bulkhead_config_for("validate_invoice_xml") == BulkheadConfig()
+    assert bulkhead_config_for(ToolRisk.READ).max_concurrent_executions == 10
+    assert bulkhead_config_for(ToolRisk.MUTATE).max_concurrent_executions == 2
+    assert bulkhead_config_for(ToolRisk.LOCAL_ARTIFACT).max_concurrent_executions == 2
+    assert bulkhead_config_for(None) == BulkheadConfig()

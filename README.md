@@ -121,11 +121,11 @@ for business operations. Model responses are not proof that an operation ran:
 inspect tool outcomes and the resulting records or files. Review fiscal inputs
 and results yourself.
 
-Tool access is controlled by `AI_ENABLED_TOOLS`, which defaults to read-only
-invoice/client lookups. Creation, reconciliation, and export requests need their
-respective tools enabled. `AI_ENABLED_TOOLS=all` enables non-transmit tools;
-**it does not enable SDI/PEC send**. Sending requires explicit opt-in for
-`send_invoice_to_sdi`.
+Tool access is controlled by `AI_TOOL_ACCESS`: `read` (lookups), `standard`
+(default: lookups plus PDF and CSV files in `data_dir/exports`) or `full` (also
+creation, reconciliation and other record changes, each confirmed by a person).
+**No level enables SDI/PEC send**: sending requires naming `send_invoice_to_sdi`
+in `AI_ENABLED_TOOLS`.
 
 `AI_TOOLS_REQUIRE_CONFIRMATION=true` is the default. Tools marked as requiring
 confirmation need human approval: a terminal can prompt, while noninteractive

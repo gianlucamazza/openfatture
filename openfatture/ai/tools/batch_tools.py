@@ -1,6 +1,6 @@
 """AI tool adapters over `openfatture.billing.application.batch_ops`."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.ai.tools.output_paths import confined_output
 from openfatture.billing.application.batch_ops import (
     bulk_update_invoices_status,
@@ -21,6 +21,7 @@ def get_batch_tools() -> list[Tool]:
     return [
         Tool(
             name="export_invoices_to_csv",
+            risk=ToolRisk.LOCAL_ARTIFACT,
             description="Export invoices to CSV file with optional filters (year, client)",
             category="batch",
             parameters=[
@@ -59,6 +60,7 @@ def get_batch_tools() -> list[Tool]:
         ),
         Tool(
             name="export_clients_to_csv",
+            risk=ToolRisk.LOCAL_ARTIFACT,
             description="Export all clients to CSV file",
             category="batch",
             parameters=[
@@ -75,6 +77,7 @@ def get_batch_tools() -> list[Tool]:
         ),
         Tool(
             name="import_invoices_from_csv",
+            risk=ToolRisk.MUTATE,
             description="Import invoices from CSV file (creates new invoices as drafts)",
             category="batch",
             parameters=[
@@ -98,6 +101,7 @@ def get_batch_tools() -> list[Tool]:
         ),
         Tool(
             name="import_clients_from_csv",
+            risk=ToolRisk.MUTATE,
             description="Import clients from CSV file (creates new clients)",
             category="batch",
             parameters=[
@@ -115,6 +119,7 @@ def get_batch_tools() -> list[Tool]:
         ),
         Tool(
             name="bulk_update_invoices_status",
+            risk=ToolRisk.MUTATE,
             description="Bulk update invoice status for multiple invoices at once",
             category="batch",
             parameters=[

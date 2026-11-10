@@ -1,9 +1,13 @@
 """Enablement and human-confirmation policy for AI tools.
 
-Fail-closed defaults:
+Access is decided by each tool's :class:`ToolRisk`, not by a list of names:
 
-- Transmit tools (SDI/PEC send) are off unless their name is listed in
-  ``ai_enabled_tools``. The value ``all`` does **not** enable them.
+- ``ai_tool_access`` picks which risk classes the agent sees:
+  ``read`` (lookups only), ``standard`` (lookups plus local files in the
+  exports directory: PDF, CSV export) or ``full`` (also creates, changes and
+  deletes records, each behind a human confirmation).
+- ``ai_enabled_tools`` adds single tools by name on top of that level. It is
+  the only way to enable a transmit tool (SDI/PEC send); no access level does.
 - ``ai_tools_require_confirmation`` defaults to True. When True, tools that
   require confirmation (including every transmit tool) refuse unless a human
   has approved. When False, confirmation is skipped, but transmit tools still
@@ -17,9 +21,13 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-TRANSMIT_TOOL_NAMES = frozenset({"send_invoice_to_sdi"})
+from openfatture.ai.tools.models import Tool, ToolRisk
+from openfatture.platform.config import AiToolAccess
+
+if TYPE_CHECKING:
+    from openfatture.platform.config import Settings
 
 # Confirm-like keys only. ``source`` is a real tool parameter (knowledge search)
 # and a separate keyword-only argument to ``execute_tool``.
@@ -32,53 +40,63 @@ _CLIENT_KEYS = ("cliente", "cliente_nome", "client", "client_name", "denominazio
 _TOTAL_KEYS = ("totale", "total", "importo")
 
 ToolSource = Literal["ai", "human"]
+ACCESS_RISKS: dict[AiToolAccess, frozenset[ToolRisk]] = {
+    "read": frozenset({ToolRisk.READ}),
+    "standard": frozenset({ToolRisk.READ, ToolRisk.LOCAL_ARTIFACT}),
+    "full": frozenset({ToolRisk.READ, ToolRisk.LOCAL_ARTIFACT, ToolRisk.MUTATE}),
+}
 
 
-def parse_enabled_tools(raw: str) -> frozenset[str] | None:
-    """Parse ``ai_enabled_tools``.
-
-    Returns a set of tool names, or ``None`` when the value means every
-    non-transmit tool (empty string or ``all``).
-    """
-    text = (raw or "").strip()
-    if not text or text.lower() == "all":
-        return None
-    return frozenset(part.strip() for part in text.split(",") if part.strip())
+def parse_enabled_tools(raw: str) -> frozenset[str]:
+    """Parse ``ai_enabled_tools`` into the set of extra tool names."""
+    return frozenset(part.strip() for part in (raw or "").split(",") if part.strip())
 
 
-def is_transmit_tool(tool_name: str) -> bool:
+def is_transmit_tool(tool: Tool) -> bool:
     """Return True when the tool transmits to SDI/PEC or another network."""
-    return tool_name in TRANSMIT_TOOL_NAMES
+    return tool.risk is ToolRisk.TRANSMIT
 
 
-def is_tool_enabled_for_agent(
-    tool_name: str,
-    enabled_tools: str,
-    *,
-    apply_allowlist: bool,
-    tool_enabled: bool,
-) -> bool:
-    """Return whether the AI agent may see or execute ``tool_name``."""
-    allowlist = parse_enabled_tools(enabled_tools)
-    if is_transmit_tool(tool_name):
-        return allowlist is not None and tool_name in allowlist
-    if apply_allowlist:
-        if allowlist is None:
-            return tool_enabled
-        return tool_enabled and tool_name in allowlist
-    return tool_enabled
+def minimum_access_for(risk: ToolRisk) -> AiToolAccess | None:
+    """Lowest ``ai_tool_access`` that exposes ``risk``; None for transmit."""
+    return next((level for level, risks in ACCESS_RISKS.items() if risk in risks), None)
 
 
-def confirmation_required(
-    tool_name: str,
-    *,
-    tool_requires_confirmation: bool,
-    require_confirmation: bool,
-) -> bool:
+def is_tool_enabled_for_agent(tool: Tool, settings: Settings, *, apply_access: bool) -> bool:
+    """Return whether the AI agent may see or execute ``tool``.
+
+    ``apply_access`` is False for registries that do not serve the assistant
+    (tests, human callers): they honour only the tool flag. Transmit tools need
+    an explicit name in ``ai_enabled_tools`` in every case.
+    """
+    extra = parse_enabled_tools(settings.ai_enabled_tools)
+    if is_transmit_tool(tool):
+        return tool.name in extra
+    if not apply_access:
+        return tool.enabled
+    return tool.enabled and (
+        tool.risk in ACCESS_RISKS[settings.ai_tool_access] or tool.name in extra
+    )
+
+
+def access_command(level: AiToolAccess) -> str:
+    """The command that sets ``ai_tool_access`` to ``level``."""
+    return f"openfatture config set ai_tool_access {level}"
+
+
+def disabled_remediation(tool: Tool) -> str:
+    """The configuration command that would expose ``tool`` to the assistant."""
+    level = minimum_access_for(tool.risk)
+    if level is None:
+        return f"openfatture config set ai_enabled_tools {tool.name}"
+    return access_command(level)
+
+
+def confirmation_required(tool: Tool, *, require_confirmation: bool) -> bool:
     """Return whether a human yes is required before execution."""
-    if is_transmit_tool(tool_name):
+    if is_transmit_tool(tool):
         return require_confirmation
-    return tool_requires_confirmation and require_confirmation
+    return tool.requires_confirmation and require_confirmation
 
 
 def strip_reserved_parameters(parameters: dict[str, Any]) -> dict[str, Any]:

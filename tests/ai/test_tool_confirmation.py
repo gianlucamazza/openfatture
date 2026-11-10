@@ -14,30 +14,28 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from openfatture.ai.tools.invoice_tools import get_invoice_tools
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.ai.tools.registry import ToolRegistry
 from openfatture.ai.tools.registry.defaults import _register_default_tools
 from openfatture.ai.tools.registry.policy import (
     build_confirmation_prompt,
     confirmation_required,
+    disabled_remediation,
     is_tool_enabled_for_agent,
     parse_enabled_tools,
     strip_reserved_parameters,
 )
 from openfatture.platform.config import Settings
 
-DEFAULT_READONLY_TOOLS = (
-    "search_invoices,get_invoice_details,get_invoice_stats,"
-    "search_clients,get_client_details,get_client_stats"
-)
-
 
 def _settings(
     *,
-    enabled_tools: str = DEFAULT_READONLY_TOOLS,
+    enabled_tools: str = "",
+    access: str = "standard",
     require_confirmation: bool = True,
 ) -> Settings:
     return Settings(
+        ai_tool_access=access,
         ai_enabled_tools=enabled_tools,
         ai_tools_require_confirmation=require_confirmation,
     )
@@ -46,6 +44,7 @@ def _settings(
 def _send_tool(func: MagicMock) -> Tool:
     return Tool(
         name="send_invoice_to_sdi",
+        risk=ToolRisk.TRANSMIT,
         description="Send invoice to SDI via PEC",
         category="invoices",
         parameters=[
@@ -70,48 +69,65 @@ def _registry_with_send(func: MagicMock, *, apply_ai_settings: bool = False) -> 
 
 
 class TestParseEnabledTools:
-    def test_default_list_excludes_send(self) -> None:
-        names = parse_enabled_tools(DEFAULT_READONLY_TOOLS)
-        assert names is not None
-        assert "send_invoice_to_sdi" not in names
-        assert "search_invoices" in names
+    def test_empty_means_no_extra_tools(self) -> None:
+        assert parse_enabled_tools("") == frozenset()
 
-    def test_all_means_non_transmit_allow_all(self) -> None:
-        assert parse_enabled_tools("all") is None
-        assert parse_enabled_tools("") is None
+    def test_names_are_parsed_and_trimmed(self) -> None:
+        names = parse_enabled_tools(" search_invoices , send_invoice_to_sdi ")
+        assert names == {"search_invoices", "send_invoice_to_sdi"}
 
-    def test_explicit_send_is_parsed(self) -> None:
-        names = parse_enabled_tools("search_invoices,send_invoice_to_sdi")
-        assert names is not None
-        assert "send_invoice_to_sdi" in names
+
+def _tool(risk: ToolRisk, *, name: str = "probe", enabled: bool = True) -> Tool:
+    return Tool(name=name, description="probe", func=lambda: None, risk=risk, enabled=enabled)
 
 
 class TestPolicyHelpers:
-    def test_transmit_requires_explicit_name_not_all(self) -> None:
-        assert not is_tool_enabled_for_agent(
-            "send_invoice_to_sdi",
-            "all",
-            apply_allowlist=True,
-            tool_enabled=True,
-        )
+    @pytest.mark.parametrize(
+        ("access", "visible"),
+        [
+            ("read", {ToolRisk.READ}),
+            ("standard", {ToolRisk.READ, ToolRisk.LOCAL_ARTIFACT}),
+            ("full", {ToolRisk.READ, ToolRisk.LOCAL_ARTIFACT, ToolRisk.MUTATE}),
+        ],
+    )
+    def test_access_level_exposes_risk_classes(self, access: str, visible: set[ToolRisk]) -> None:
+        settings = _settings(access=access)
+        for risk in ToolRisk:
+            enabled = is_tool_enabled_for_agent(_tool(risk), settings, apply_access=True)
+            assert enabled is (risk in visible), (access, risk)
+
+    def test_transmit_requires_explicit_name_at_every_level(self) -> None:
+        send = _tool(ToolRisk.TRANSMIT, name="send_invoice_to_sdi", enabled=False)
+        for access in ("read", "standard", "full"):
+            assert not is_tool_enabled_for_agent(send, _settings(access=access), apply_access=True)
+            assert not is_tool_enabled_for_agent(send, _settings(access=access), apply_access=False)
+        opted_in = _settings(access="read", enabled_tools="send_invoice_to_sdi")
+        assert is_tool_enabled_for_agent(send, opted_in, apply_access=True)
+
+    def test_named_extra_tool_is_added_on_top_of_level(self) -> None:
+        create = _tool(ToolRisk.MUTATE, name="create_invoice")
+        assert not is_tool_enabled_for_agent(create, _settings(), apply_access=True)
         assert is_tool_enabled_for_agent(
-            "send_invoice_to_sdi",
-            "send_invoice_to_sdi",
-            apply_allowlist=True,
-            tool_enabled=False,
+            create, _settings(enabled_tools="create_invoice"), apply_access=True
+        )
+
+    def test_tool_flag_off_is_never_enabled_by_level(self) -> None:
+        off = _tool(ToolRisk.READ, enabled=False)
+        assert not is_tool_enabled_for_agent(off, _settings(access="full"), apply_access=True)
+
+    def test_remediation_names_lowest_level(self) -> None:
+        assert disabled_remediation(_tool(ToolRisk.LOCAL_ARTIFACT)).endswith(
+            "ai_tool_access standard"
+        )
+        assert disabled_remediation(_tool(ToolRisk.MUTATE)).endswith("ai_tool_access full")
+        assert disabled_remediation(_tool(ToolRisk.TRANSMIT, name="send_invoice_to_sdi")) == (
+            "openfatture config set ai_enabled_tools send_invoice_to_sdi"
         )
 
     def test_confirmation_honours_setting_for_transmit(self) -> None:
-        assert confirmation_required(
-            "send_invoice_to_sdi",
-            tool_requires_confirmation=True,
-            require_confirmation=True,
-        )
-        assert not confirmation_required(
-            "send_invoice_to_sdi",
-            tool_requires_confirmation=True,
-            require_confirmation=False,
-        )
+        send = _tool(ToolRisk.TRANSMIT, name="send_invoice_to_sdi")
+        assert confirmation_required(send, require_confirmation=True)
+        assert not confirmation_required(send, require_confirmation=False)
 
     def test_reserved_parameters_are_stripped(self) -> None:
         cleaned = strip_reserved_parameters(

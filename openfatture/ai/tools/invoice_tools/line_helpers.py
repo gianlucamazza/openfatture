@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application.line_commands import create_riga
 
 
@@ -112,6 +112,7 @@ def tools() -> list[Tool]:
     return [
         Tool(
             name="create_course_line",
+            risk=ToolRisk.MUTATE,
             description="Create a lump-sum line for a course with formatted FT-style description (title, dates, location).",
             category="invoices",
             parameters=[

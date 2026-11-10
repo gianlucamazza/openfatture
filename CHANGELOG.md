@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Assistant tool access is decided by risk class.** Every tool declares a `ToolRisk`
+  (`read`, `local_artifact`, `mutate`, `transmit`). The new `ai_tool_access` setting picks the
+  level: `read`, `standard` (default: adds invoice/quote PDFs and CSV exports) or `full` (adds
+  record changes, each confirmed by a person). The assistant can now generate PDFs out of the
+  box; before, it answered that no export existed.
+- **Breaking:** `ai_enabled_tools` now *adds* tools on top of `ai_tool_access` and defaults to
+  empty; `all` is no longer special. Replace `ai_enabled_tools = "all"` with
+  `ai_tool_access = "full"`. Transmit tools still need their explicit name.
+- The system prompt lists capabilities hidden by the current level with the command that
+  enables them, instead of a fixed description of the tools.
+- Bulkhead and circuit-breaker limits follow the risk class; ten tools (collections, cassa,
+  credit notes) that were missing from the per-name lists now get write limits.
+- `openfatture init` no longer writes a tool allowlist to `config.toml`.
+
+### Fixed
+
+- PDFs generated without `--output` are written to `data_dir/exports/fatture/` (or
+  `preventivi/`) instead of the current working directory, also when the assistant omits the
+  path.
+- The invoice PDF footer states it is a courtesy copy without fiscal value (the original is
+  the FatturaPA XML sent through SDI), replacing the misleading digital-preservation note.
+- CLI and assistant share one default PDF template (`professional`).
+
 ## [2.9.0] - 2026-11-10
 
 Consistency of invoice amounts across totals, XML and PDF, and burn-down of all open

@@ -1,6 +1,6 @@
 """Invoice write tools — adapters over billing.application.invoice_commands."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application.invoice_commands import (
     create_invoice,
     delete_invoice,
@@ -21,6 +21,7 @@ def tools() -> list[Tool]:
     return [
         Tool(
             name="create_invoice",
+            risk=ToolRisk.MUTATE,
             description="Create a new invoice for a client. Returns invoice_id to add line items.",
             category="invoices",
             parameters=[
@@ -73,6 +74,7 @@ def tools() -> list[Tool]:
         ),
         Tool(
             name="update_invoice",
+            risk=ToolRisk.MUTATE,
             description="Update invoice information (only BOZZA status). Modify date, document type, or notes.",
             category="invoices",
             parameters=[
@@ -112,6 +114,7 @@ def tools() -> list[Tool]:
         ),
         Tool(
             name="delete_invoice",
+            risk=ToolRisk.MUTATE,
             description="CRITICAL: Delete invoice from database (only BOZZA status). Irreversible operation!",
             category="invoices",
             parameters=[
@@ -139,6 +142,7 @@ def tools() -> list[Tool]:
         ),
         Tool(
             name="update_invoice_status",
+            risk=ToolRisk.MUTATE,
             description="Update invoice status (workflow: BOZZA DA_INVIARE). Validates invoice completeness.",
             category="invoices",
             parameters=[

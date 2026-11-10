@@ -92,6 +92,7 @@ class GraphAssistantBackend:
         """Ensure ``available_tools`` is populated when tools are enabled."""
         if self.enable_tools and not context.available_tools:
             context.available_tools = [t.name for t in self.tool_registry.list_tools()]
+            context.disabled_capabilities = self.tool_registry.disabled_capabilities()
         return context
 
     def _use_native_tools(self, context: ChatContext) -> bool:

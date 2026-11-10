@@ -1,7 +1,8 @@
 """AI tool adapters over `openfatture.pdf.tool_ops`."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.ai.tools.output_paths import confined_output
+from openfatture.pdf.generator import DEFAULT_TEMPLATE, TEMPLATES
 from openfatture.pdf.tool_ops import (
     generate_invoice_pdf,
     generate_preventivo_pdf,
@@ -19,7 +20,11 @@ def get_pdf_tools() -> list[Tool]:
     return [
         Tool(
             name="generate_invoice_pdf",
-            description="Generate PDF for an invoice with customizable template and options",
+            risk=ToolRisk.LOCAL_ARTIFACT,
+            description=(
+                "Generate the courtesy-copy PDF of an invoice (also for invoices issued "
+                "elsewhere) in the exports directory; returns the file path"
+            ),
             category="pdf",
             parameters=[
                 ToolParameter(
@@ -37,10 +42,10 @@ def get_pdf_tools() -> list[Tool]:
                 ToolParameter(
                     name="template",
                     type=ToolParameterType.STRING,
-                    description="Template name (minimalist/professional/branded)",
+                    description="Template name",
                     required=False,
-                    default="minimalist",
-                    enum=["minimalist", "professional", "branded"],
+                    default=DEFAULT_TEMPLATE,
+                    enum=list(TEMPLATES),
                 ),
                 ToolParameter(
                     name="enable_qr_code",
@@ -66,6 +71,7 @@ def get_pdf_tools() -> list[Tool]:
         ),
         Tool(
             name="generate_preventivo_pdf",
+            risk=ToolRisk.LOCAL_ARTIFACT,
             description="Generate PDF for a preventivo (quote/estimate) with auto-watermark for drafts",
             category="pdf",
             parameters=[
@@ -97,6 +103,7 @@ def get_pdf_tools() -> list[Tool]:
         ),
         Tool(
             name="get_pdf_configuration",
+            risk=ToolRisk.READ,
             description="Get available PDF templates, configuration options, and current defaults",
             category="pdf",
             parameters=[],

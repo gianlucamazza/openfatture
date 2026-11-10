@@ -64,6 +64,13 @@ Rollback: `ASSISTANT_BACKEND=chat`. Inspect with `openfatture status --json`
 
 - Provider selection and credentials come from configuration.
 - Domain validation stays deterministic outside the model.
+- Every tool declares a risk class (`ToolRisk`: `read`, `local_artifact`,
+  `mutate`, `transmit`; unclassified tools count as `mutate`). The access
+  policy in `ai/tools/registry/policy.py` decides by class through
+  `ai_tool_access`; resilience limits (bulkheads, circuit breakers) also
+  follow the class. The system prompt lists the capabilities the current
+  level hides, with the command that enables them, so the model neither
+  denies an existing feature nor invents one.
 - Mutating tools keep confirmation boundaries. Transmit tools
   (`send_invoice_to_sdi`) are off unless named in `ai_enabled_tools`, and
   the registry refuses to send without an explicit human yes when

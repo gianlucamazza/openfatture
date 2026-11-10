@@ -46,6 +46,8 @@ class TestShowConfigCommand:
         """Test that config show displays all configuration."""
         # Setup settings mock
         mock_settings_instance = Mock()
+        mock_settings_instance.ai_tool_access = "standard"
+        mock_settings_instance.ai_enabled_tools = ""
         mock_settings_instance.app_version = "1.0.0"
         mock_settings_instance.debug = False
         mock_settings_instance.database_url = "sqlite:///test.db"
@@ -79,6 +81,8 @@ class TestShowConfigCommand:
         """Test that config show displays 'Not set' for missing values."""
         # Setup settings mock with missing values
         mock_settings_instance = Mock()
+        mock_settings_instance.ai_tool_access = "standard"
+        mock_settings_instance.ai_enabled_tools = ""
         mock_settings_instance.app_version = "1.0.0"
         mock_settings_instance.debug = False
         mock_settings_instance.database_url = "sqlite:///test.db"
@@ -107,6 +111,8 @@ class TestShowConfigCommand:
         """Test that config show masks AI API key."""
         # Setup settings mock
         mock_settings_instance = Mock()
+        mock_settings_instance.ai_tool_access = "standard"
+        mock_settings_instance.ai_enabled_tools = ""
         mock_settings_instance.app_version = "1.0.0"
         mock_settings_instance.debug = False
         mock_settings_instance.database_url = "sqlite:///test.db"
@@ -137,6 +143,8 @@ class TestShowConfigCommand:
         """Test that config show displays debug mode status."""
         # Setup settings mock with debug enabled
         mock_settings_instance = Mock()
+        mock_settings_instance.ai_tool_access = "standard"
+        mock_settings_instance.ai_enabled_tools = ""
         mock_settings_instance.app_version = "1.0.0"
         mock_settings_instance.debug = True
         mock_settings_instance.database_url = "sqlite:///test.db"

@@ -338,8 +338,11 @@ def add_line_item(
 def generate_pdf(
     fattura_id: int = typer.Argument(..., help="Invoice ID"),
     output: str = typer.Option(None, "--output", "-o", help="Output PDF file path"),
-    template: str = typer.Option(
-        "professional", "--template", "-t", help="Template (professional/minimalist/branded)"
+    template: str | None = typer.Option(
+        None,
+        "--template",
+        "-t",
+        help="Template (minimalist/professional/branded; default professional)",
     ),
     logo: str = typer.Option(None, "--logo", help="Path to company logo"),
 ) -> None:

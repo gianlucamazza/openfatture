@@ -244,22 +244,10 @@ def show_config() -> None:
         _("cli-config-yes") if tools_enabled else _("cli-config-no"),
     )
 
-    enabled_tools = getattr(settings, "ai_enabled_tools", "all")
-    if isinstance(enabled_tools, str):
-        if enabled_tools.lower() == "all":
-            add(_("cli-config-label-enabled-tools"), _("cli-config-all-tools"))
-        else:
-            tool_names = [tool.strip() for tool in enabled_tools.split(",") if tool.strip()]
-            if tool_names:
-                add(
-                    _("cli-config-label-enabled-tools"),
-                    _("cli-config-tools-count", count=len(tool_names)),
-                )
-    elif isinstance(enabled_tools, list | tuple | set):
-        add(
-            _("cli-config-label-enabled-tools"),
-            _("cli-config-tools-count", count=len(enabled_tools)),
-        )
+    add(_("cli-config-label-tool-access"), settings.ai_tool_access, "ai_tool_access")
+    extra_tools = [name.strip() for name in settings.ai_enabled_tools.split(",") if name.strip()]
+    if extra_tools:
+        add(_("cli-config-label-extra-tools"), ", ".join(extra_tools), "ai_enabled_tools")
 
     console.print(table)
     console.print(_("cli-config-file-path", path=str(config_file_path())))
