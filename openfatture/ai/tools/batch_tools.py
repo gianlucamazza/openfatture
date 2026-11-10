@@ -1,6 +1,7 @@
 """AI tool adapters over `openfatture.billing.application.batch_ops`."""
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.output_paths import confined_output
 from openfatture.billing.application.batch_ops import (
     bulk_update_invoices_status,
     export_clients_to_csv,
@@ -26,7 +27,7 @@ def get_batch_tools() -> list[Tool]:
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="Path to output CSV file",
+                    description="CSV file path relative to the exports directory",
                     required=True,
                 ),
                 ToolParameter(
@@ -49,7 +50,7 @@ def get_batch_tools() -> list[Tool]:
                     default=False,
                 ),
             ],
-            func=export_invoices_to_csv,
+            func=confined_output(export_invoices_to_csv),
             examples=[
                 "export_invoices_to_csv(output_path='invoices_2025.csv', anno=2025)",
                 "export_invoices_to_csv(output_path='exports/all.csv', include_lines=True)",
@@ -64,11 +65,11 @@ def get_batch_tools() -> list[Tool]:
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="Path to output CSV file",
+                    description="CSV file path relative to the exports directory",
                     required=True,
                 ),
             ],
-            func=export_clients_to_csv,
+            func=confined_output(export_clients_to_csv),
             examples=["export_clients_to_csv(output_path='clients.csv')"],
             tags=["export", "csv", "batch", "client"],
         ),

@@ -1,6 +1,7 @@
 """AI tool adapters over `openfatture.pdf.tool_ops`."""
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.output_paths import confined_output
 from openfatture.pdf.tool_ops import (
     generate_invoice_pdf,
     generate_preventivo_pdf,
@@ -30,7 +31,7 @@ def get_pdf_tools() -> list[Tool]:
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="Output file path (auto-generates if None)",
+                    description="PDF file path relative to the exports directory (auto-generated if omitted)",
                     required=False,
                 ),
                 ToolParameter(
@@ -55,7 +56,7 @@ def get_pdf_tools() -> list[Tool]:
                     required=False,
                 ),
             ],
-            func=generate_invoice_pdf,
+            func=confined_output(generate_invoice_pdf),
             examples=[
                 "generate_invoice_pdf(fattura_id=123)",
                 "generate_invoice_pdf(fattura_id=456, template='professional', enable_qr_code=True)",
@@ -77,7 +78,7 @@ def get_pdf_tools() -> list[Tool]:
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="Output file path (auto-generates if None)",
+                    description="PDF file path relative to the exports directory (auto-generated if omitted)",
                     required=False,
                 ),
                 ToolParameter(
@@ -87,7 +88,7 @@ def get_pdf_tools() -> list[Tool]:
                     required=False,
                 ),
             ],
-            func=generate_preventivo_pdf,
+            func=confined_output(generate_preventivo_pdf),
             examples=[
                 "generate_preventivo_pdf(preventivo_id=10)",
                 'generate_preventivo_pdf(preventivo_id=20, watermark_text="CONFIDENTIAL")',
