@@ -90,7 +90,7 @@ def get_preventivo_tools() -> list[Tool]:
                 ToolParameter(
                     name="righe",
                     type=ToolParameterType.ARRAY,
-                    description="List of line items (each with descrizione, quantita, prezzo_unitario, aliquota_iva, unita_misura)",
+                    description="List of line items (each with descrizione, quantita, prezzo_unitario, aliquota_iva, natura, unita_misura)",
                     required=True,
                     items={
                         "type": "object",
@@ -109,7 +109,11 @@ def get_preventivo_tools() -> list[Tool]:
                             },
                             "aliquota_iva": {
                                 "type": "number",
-                                "description": "VAT rate percentage (default 22.0)",
+                                "description": "VAT rate percentage (cedente default when omitted)",
+                            },
+                            "natura": {
+                                "type": "string",
+                                "description": "VAT natura, only with a 0% rate (default N2.2 for forfettario)",
                             },
                             "unita_misura": {
                                 "type": "string",

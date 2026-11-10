@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **XML, PDF and stored totals now agree** on every amount (`billing.application.totals`):
+  - social security contributions (`DatiCassaPrevidenziale`, e.g. INPS TC22 4%) are part of
+    `DatiRiepilogo` and of the totals; editing a line no longer drops them, and SDI no longer
+    receives a summary that excludes them;
+  - the PDF riepilogo uses the same per-rate VAT as the XML instead of summing line VAT;
+  - the PDF totals box ends with the amount due (net of withholding tax) and no longer lists
+    the stamp duty as an extra amount; the SEPA QR requests the amount due;
+  - `ImportoTotaleDocumento` is emitted; empty `UnitaMisura` is omitted (it failed XSD).
+- **VAT natura**: a 0% line requires a natura and a taxed line forbids it (FatturaPA rule,
+  checked at creation and before building the XML). Lines, quote lines and contributions
+  default to 0% `N2.2` in the forfettario regime; quotes keep the natura when converted.
+- **Stamp duty** (`importo_bollo`) is computed automatically: EUR 2.00 when amounts outside VAT
+  exceed EUR 77.47. Charging it to the customer is an `N1` line.
+- Credit notes copy the social security contribution of the source invoice.
+- PDF: sections that do not fit move to a new page instead of running under the footer or off
+  the page; the footer shows the real page count.
+
+### Added
+
+- `set_cassa_previdenziale` assistant tool and `natura` on line tools; `fattura add-line --natura`.
+
+### Removed
+
+- `create_lump_line` and `create_rate_line` tools (duplicates of `create_riga`).
+- The unimplemented pagoPA QR option (pagoPA notices are issued by public creditors).
+- `fatture.bollo_assolto_virtuale` (electronic invoices always pay the stamp duty virtually)
+  and the unused `user_feedback` / `model_prediction_feedback` tables; run `openfatture init`
+  to upgrade the database.
+
 ## [2.8.2] - 2026-11-10
 
 Findings of the technical debt analysis ([report](docs/reports/technical-debt-analysis-2026-11.md)).

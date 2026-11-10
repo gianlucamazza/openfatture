@@ -10,6 +10,7 @@ Public tool functions re-export those use-cases for the ToolRegistry.
 """
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.billing.application.cassa_ops import set_cassa_previdenziale
 
 from .invoices import (
     create_invoice,
@@ -19,8 +20,6 @@ from .invoices import (
 )
 from .line_helpers import (
     create_course_line,
-    create_lump_line,
-    create_rate_line,
     format_course_description,
 )
 from .nota_credito import (
@@ -48,8 +47,6 @@ __all__ = [
     "create_invoice",
     "create_nota_credito_from_fattura",
     "create_riga",
-    "create_lump_line",
-    "create_rate_line",
     "create_course_line",
     "format_course_description",
     "update_riga",
@@ -59,6 +56,7 @@ __all__ = [
     "update_invoice",
     "delete_invoice",
     "update_invoice_status",
+    "set_cassa_previdenziale",
     "get_invoice_tools",
 ]
 
@@ -242,9 +240,11 @@ def get_invoice_tools() -> list[Tool]:
                 ToolParameter(
                     name="aliquota_iva",
                     type=ToolParameterType.NUMBER,
-                    description="VAT rate percentage (default 22%)",
+                    description=(
+                        "VAT rate percentage; omit for the cedente default "
+                        "(0% with natura N2.2 in the forfettario regime, else 22%)"
+                    ),
                     required=False,
-                    default=22.0,
                 ),
                 ToolParameter(
                     name="unita_misura",
@@ -252,6 +252,15 @@ def get_invoice_tools() -> list[Tool]:
                     description="Unit of measure (default 'ore')",
                     required=False,
                     default="ore",
+                ),
+                ToolParameter(
+                    name="natura",
+                    type=ToolParameterType.STRING,
+                    description=(
+                        "VAT natura, only with a 0% rate: N2.2 forfettario (default), "
+                        "N1 for the stamp duty charged to the customer, N4 exempt, ..."
+                    ),
+                    required=False,
                 ),
             ],
             func=create_riga,
@@ -295,6 +304,12 @@ def get_invoice_tools() -> list[Tool]:
                     name="aliquota_iva",
                     type=ToolParameterType.NUMBER,
                     description="VAT rate percentage",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="natura",
+                    type=ToolParameterType.STRING,
+                    description="VAT natura, only with a 0% rate (e.g. N2.2, N1, N4)",
                     required=False,
                 ),
                 ToolParameter(
@@ -499,105 +514,56 @@ def get_invoice_tools() -> list[Tool]:
             ],
             tags=["write", "create", "credit_note", "storno"],
         ),
+        Tool(
+            name="set_cassa_previdenziale",
+            description=(
+                "Set or remove the invoice's social security contribution (rivalsa, "
+                "DatiCassaPrevidenziale), e.g. INPS gestione separata TC22 at 4%. "
+                "The amount is computed on the lines (excluding N1) and added to the totals."
+            ),
+            category="invoices",
+            parameters=[
+                ToolParameter(
+                    name="fattura_id",
+                    type=ToolParameterType.INTEGER,
+                    description="Invoice ID",
+                    required=True,
+                ),
+                ToolParameter(
+                    name="tipo_cassa",
+                    type=ToolParameterType.STRING,
+                    description="TC01..TC22 (TC22 = INPS gestione separata); omit to remove",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="al_cassa",
+                    type=ToolParameterType.NUMBER,
+                    description="Contribution rate percentage (e.g. 4)",
+                    required=False,
+                    default=0,
+                ),
+                ToolParameter(
+                    name="aliquota_iva",
+                    type=ToolParameterType.NUMBER,
+                    description="VAT rate on the contribution; omit for the cedente default",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="natura",
+                    type=ToolParameterType.STRING,
+                    description="VAT natura of the contribution with a 0% rate (default N2.2 for forfettario)",
+                    required=False,
+                ),
+            ],
+            func=set_cassa_previdenziale,
+            requires_confirmation=True,
+            examples=[
+                "set_cassa_previdenziale(fattura_id=12, tipo_cassa='TC22', al_cassa=4)",
+                "set_cassa_previdenziale(fattura_id=12)",
+            ],
+            tags=["write", "update"],
+        ),
         # Line helper tools
-        Tool(
-            name="create_lump_line",
-            description="Create a lump-sum line item (1 × imponibile). Suitable for services or project-based fees.",
-            category="invoices",
-            parameters=[
-                ToolParameter(
-                    name="fattura_id",
-                    type=ToolParameterType.INTEGER,
-                    description="Invoice ID",
-                    required=True,
-                ),
-                ToolParameter(
-                    name="descrizione",
-                    type=ToolParameterType.STRING,
-                    description="Item description",
-                    required=True,
-                ),
-                ToolParameter(
-                    name="imponibile",
-                    type=ToolParameterType.NUMBER,
-                    description="Total taxable amount in euros",
-                    required=True,
-                ),
-                ToolParameter(
-                    name="aliquota_iva",
-                    type=ToolParameterType.NUMBER,
-                    description="VAT rate percentage (default 22%)",
-                    required=False,
-                    default=22.0,
-                ),
-                ToolParameter(
-                    name="unita_misura",
-                    type=ToolParameterType.STRING,
-                    description="Unit of measure (default 'servizio')",
-                    required=False,
-                    default="servizio",
-                ),
-            ],
-            func=create_lump_line,
-            requires_confirmation=True,
-            examples=[
-                "create_lump_line(fattura_id=123, descrizione='Consulting project', imponibile=1500.00)",
-                "create_lump_line(fattura_id=456, descrizione='Course fee', imponibile=960.00, aliquota_iva=0.0)",
-            ],
-            tags=["write", "create", "line"],
-        ),
-        Tool(
-            name="create_rate_line",
-            description="Create a rate-based line item (quantità × prezzo_unitario). Suitable for hourly work or goods.",
-            category="invoices",
-            parameters=[
-                ToolParameter(
-                    name="fattura_id",
-                    type=ToolParameterType.INTEGER,
-                    description="Invoice ID",
-                    required=True,
-                ),
-                ToolParameter(
-                    name="descrizione",
-                    type=ToolParameterType.STRING,
-                    description="Item description",
-                    required=True,
-                ),
-                ToolParameter(
-                    name="quantita",
-                    type=ToolParameterType.NUMBER,
-                    description="Quantity",
-                    required=True,
-                ),
-                ToolParameter(
-                    name="prezzo_unitario",
-                    type=ToolParameterType.NUMBER,
-                    description="Unit price in euros",
-                    required=True,
-                ),
-                ToolParameter(
-                    name="aliquota_iva",
-                    type=ToolParameterType.NUMBER,
-                    description="VAT rate percentage (default 22%)",
-                    required=False,
-                    default=22.0,
-                ),
-                ToolParameter(
-                    name="unita_misura",
-                    type=ToolParameterType.STRING,
-                    description="Unit of measure (default 'ore')",
-                    required=False,
-                    default="ore",
-                ),
-            ],
-            func=create_rate_line,
-            requires_confirmation=True,
-            examples=[
-                "create_rate_line(fattura_id=123, descrizione='Web development', quantita=8, prezzo_unitario=100.00)",
-                "create_rate_line(fattura_id=456, descrizione='Consulting hours', quantita=3.5, prezzo_unitario=150.00, aliquota_iva=22.0)",
-            ],
-            tags=["write", "create", "line"],
-        ),
         Tool(
             name="create_course_line",
             description="Create a lump-sum line for a course with formatted FT-style description (title, dates, location).",
@@ -648,9 +614,14 @@ def get_invoice_tools() -> list[Tool]:
                 ToolParameter(
                     name="aliquota_iva",
                     type=ToolParameterType.NUMBER,
-                    description="VAT rate percentage (default 0% for courses)",
+                    description="VAT rate percentage; omit for the cedente default",
                     required=False,
-                    default=0.0,
+                ),
+                ToolParameter(
+                    name="natura",
+                    type=ToolParameterType.STRING,
+                    description="VAT natura, only with a 0% rate (default N2.2 for forfettario)",
+                    required=False,
                 ),
             ],
             func=create_course_line,

@@ -83,7 +83,6 @@ def generate_invoice_pdf(
                     else "#2C3E50"
                 ),
                 enable_qr_code=enable_qr_code,
-                qr_code_type="sepa",
                 enable_pdfa=True,
                 watermark_text=watermark_text,
             )
@@ -247,8 +246,8 @@ def get_pdf_configuration() -> dict[str, Any]:
                 "secondary_color": "#95A5A6",
             },
             "qr_code_options": {
-                "types": ["sepa", "pagopa"],
-                "description": "QR code for instant payment (SEPA or PagoPa)",
+                "types": ["sepa"],
+                "description": "SEPA credit transfer (EPC) QR code for the amount due",
                 "supported": True,
             },
             "pdf_features": {

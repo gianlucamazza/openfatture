@@ -82,7 +82,7 @@ openfatture cliente create --name NAME --piva PIVA
 | Command | Purpose |
 | --- | --- |
 | `list`, `show ID` | Search and inspect invoices |
-| `create --client ID`, `add-line --invoice ID ...` | Build a draft invoice |
+| `create --client ID`, `add-line --invoice ID ... [--iva RATE] [--natura CODE]` | Build a draft invoice; rate and natura default from the cedente regime (forfettario: 0% `N2.2`), the stamp duty is computed automatically |
 | `generate-pdf ID [--output PATH] [--template T] [--logo PATH]` | Render the human-readable PDF |
 | `generate-xml ID [--output PATH] [--dry-run]` | Build FatturaPA XML (no XSD validation, no transmission) |
 | `set-status ID STATUS` | Manual transitions allowed by the lifecycle rules |

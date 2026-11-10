@@ -6,7 +6,8 @@ from decimal import Decimal
 from typing import Any
 
 from openfatture.billing.application.numbering import next_numero
-from openfatture.billing.application.totals import recompute_totals
+from openfatture.billing.application.totals import recompute_invoice, resolve_vat
+from openfatture.platform.config import get_settings
 from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
@@ -391,8 +392,9 @@ def create_riga(
     descrizione: str,
     quantita: float,
     prezzo_unitario: float,
-    aliquota_iva: float = 22.0,
+    aliquota_iva: float | None = None,
     unita_misura: str = "ore",
+    natura: str | None = None,
 ) -> dict[str, Any]:
     """
     Add line item to invoice.
@@ -402,14 +404,23 @@ def create_riga(
         descrizione: Item description
         quantita: Quantity
         prezzo_unitario: Unit price (€)
-        aliquota_iva: VAT rate (%) - default 22%
+        aliquota_iva: VAT rate (%); default 0% (N2.2) for the forfettario
+            regime, 22% otherwise
         unita_misura: Unit of measure - default "ore"
+        natura: VAT natura, required with a 0% rate (N2.2 by default for
+            the forfettario regime, N1 for the re-charged stamp duty)
 
     Returns:
         Dictionary with result or error
     """
     # Validate inputs
     fattura_id = validate_integer_input(fattura_id, min_value=1)
+    try:
+        aliquota_dec, natura = resolve_vat(
+            aliquota_iva, natura, get_settings().cedente_regime_fiscale
+        )
+    except ValueError as e:
+        return {"error": str(e)}
 
     with db_session() as db:
         try:
@@ -435,9 +446,8 @@ def create_riga(
             # Calculate totals
             quantita_dec = Decimal(str(quantita))
             prezzo_dec = Decimal(str(prezzo_unitario))
-            aliquota_dec = Decimal(str(aliquota_iva))
 
-            # Create riga (amounts set by recompute_totals)
+            # Create riga (amounts set by recompute_invoice)
             riga = RigaFattura(
                 fattura_id=fattura_id,
                 numero_riga=numero_riga,
@@ -445,6 +455,7 @@ def create_riga(
                 quantita=quantita_dec,
                 prezzo_unitario=prezzo_dec,
                 aliquota_iva=aliquota_dec,
+                natura=natura,
                 unita_misura=unita_misura,
                 imponibile=Decimal("0"),
                 iva=Decimal("0"),
@@ -453,7 +464,7 @@ def create_riga(
 
             db.add(riga)
             fattura.righe.append(riga)
-            recompute_totals(fattura, fattura.righe)
+            recompute_invoice(fattura)
             imponibile, iva, totale = riga.imponibile, riga.iva, riga.totale
 
             db.commit()
@@ -491,6 +502,7 @@ def update_riga(
     prezzo_unitario: float | None = None,
     aliquota_iva: float | None = None,
     unita_misura: str | None = None,
+    natura: str | None = None,
 ) -> dict[str, Any]:
     """
     Update line item in invoice.
@@ -502,6 +514,7 @@ def update_riga(
         prezzo_unitario: Unit price (€)
         aliquota_iva: VAT rate (%)
         unita_misura: Unit of measure
+        natura: VAT natura (required with a 0% rate)
 
     Returns:
         Dictionary with result or error
@@ -546,9 +559,27 @@ def update_riga(
                 riga.prezzo_unitario = Decimal(str(prezzo_unitario))
                 changes.append("prezzo_unitario")
 
-            if aliquota_iva is not None and Decimal(str(aliquota_iva)) != riga.aliquota_iva:
-                riga.aliquota_iva = Decimal(str(aliquota_iva))
-                changes.append("aliquota_iva")
+            if aliquota_iva is not None or natura is not None:
+                new_rate = riga.aliquota_iva if aliquota_iva is None else aliquota_iva
+                new_natura = natura
+                if (
+                    new_natura is None
+                    and aliquota_iva is not None
+                    and Decimal(str(aliquota_iva)) == 0
+                ):
+                    new_natura = riga.natura
+                try:
+                    rate, resolved = resolve_vat(
+                        new_rate, new_natura, get_settings().cedente_regime_fiscale
+                    )
+                except ValueError as e:
+                    return {"error": str(e)}
+                if rate != riga.aliquota_iva:
+                    riga.aliquota_iva = rate
+                    changes.append("aliquota_iva")
+                if resolved != riga.natura:
+                    riga.natura = resolved
+                    changes.append("natura")
 
             if unita_misura is not None and unita_misura != riga.unita_misura:
                 riga.unita_misura = unita_misura
@@ -562,8 +593,8 @@ def update_riga(
                 }
 
             # Recalculate totals if numeric fields changed
-            if any(f in changes for f in ["quantita", "prezzo_unitario", "aliquota_iva"]):
-                recompute_totals(fattura, fattura.righe)
+            if any(f in changes for f in ["quantita", "prezzo_unitario", "aliquota_iva", "natura"]):
+                recompute_invoice(fattura)
 
             db.commit()
             db.refresh(riga)
@@ -638,7 +669,7 @@ def delete_riga(
 
             # Update invoice totals (subtract this riga)
             fattura.righe.remove(riga)
-            recompute_totals(fattura, fattura.righe)
+            recompute_invoice(fattura)
 
             # Delete riga
             db.delete(riga)

@@ -135,6 +135,7 @@ def get_preventivo_details(preventivo_id: int) -> dict[str, Any]:
                         "prezzo_unitario": float(riga.prezzo_unitario),
                         "unita_misura": riga.unita_misura,
                         "aliquota_iva": float(riga.aliquota_iva),
+                        "natura": riga.natura,
                         "imponibile": float(riga.imponibile),
                         "iva": float(riga.iva),
                         "totale": float(riga.totale),
@@ -196,7 +197,8 @@ def create_preventivo(
                - descrizione (str, required)
                - quantita (float, required)
                - prezzo_unitario (float, required)
-               - aliquota_iva (float, default 22.0)
+               - aliquota_iva (float, cedente default: 0% for forfettario, else 22%)
+               - natura (str, required with a 0% rate; N2.2 by default for forfettario)
                - unita_misura (str, default "ore")
         validita_giorni: Validity period in days (default 30)
         note: Optional notes

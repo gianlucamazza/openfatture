@@ -1,98 +1,34 @@
-"""Tests for line helper tools (Issue #69).
+"""Course line helper: formatted description, cedente VAT defaults."""
 
-Tests that line items can be created in different styles:
-- "lump" style: 1 × imponibile
-- "rate" style: qty × unit_price
-- "course" style: formatted descriptions for training courses
+from decimal import Decimal
 
-NOTE: This test file imports directly from the line_helpers module to avoid
-triggering the AI tools import chain (which includes pandas, an optional dependency).
-"""
-
-import importlib.util
-import inspect
-import sys
-from pathlib import Path
-
-# Import line_helpers module directly without going through ai.tools.__init__
-# This avoids triggering the import of pandas (optional dependency)
-module_path = (
-    Path(__file__).parent.parent.parent
-    / "openfatture"
-    / "ai"
-    / "tools"
-    / "invoice_tools"
-    / "line_helpers.py"
+from openfatture.ai.tools.invoice_tools.line_helpers import (
+    create_course_line,
+    format_course_description,
 )
-spec = importlib.util.spec_from_file_location("line_helpers", module_path)
-line_helpers = importlib.util.module_from_spec(spec)
-
-# Mock the invoice_commands dependency before loading
-from unittest.mock import MagicMock
-
-sys.modules["openfatture.billing.application.invoice_commands"] = MagicMock()
-
-# Now load the module
-spec.loader.exec_module(line_helpers)
-
-# Extract the functions we want to test
-create_lump_line = line_helpers.create_lump_line
-create_rate_line = line_helpers.create_rate_line
-create_course_line = line_helpers.create_course_line
-format_course_description = line_helpers.format_course_description
+from openfatture.billing.application import invoice_commands
+from openfatture.storage.database.models import RigaFattura
 
 
-class TestLineHelpers:
-    """Test line creation helper tools."""
+def test_course_line_uses_one_service_and_forfettario_natura(runtime_session, seed_cliente):
+    # The test cedente is in the forfettario regime (RF19).
+    invoice_id = invoice_commands.create_invoice(cliente_id=seed_cliente.id, anno=2026)[
+        "invoice_id"
+    ]
+    result = create_course_line(
+        fattura_id=invoice_id,
+        course_title="Python",
+        imponibile=960,
+        start_date="14.09.2026",
+    )
+    assert result.get("success"), result
+    riga = runtime_session.get(RigaFattura, result["riga_id"])
+    assert (riga.quantita, riga.unita_misura) == (Decimal("1.00"), "servizio")
+    assert (riga.aliquota_iva, riga.natura) == (Decimal("0.00"), "N2.2")
+    assert riga.descrizione.startswith('Corso di formazione: "Python"')
 
-    def test_create_lump_line_signature(self):
-        """Test that create_lump_line has the expected signature."""
-        sig = inspect.signature(create_lump_line)
-        params = list(sig.parameters.keys())
 
-        assert "fattura_id" in params
-        assert "descrizione" in params
-        assert "imponibile" in params
-        assert "aliquota_iva" in params
-        assert "unita_misura" in params
-
-        # Check defaults
-        assert sig.parameters["aliquota_iva"].default == 22.0
-        assert sig.parameters["unita_misura"].default == "servizio"
-
-    def test_create_rate_line_signature(self):
-        """Test that create_rate_line has the expected signature."""
-        sig = inspect.signature(create_rate_line)
-        params = list(sig.parameters.keys())
-
-        assert "fattura_id" in params
-        assert "descrizione" in params
-        assert "quantita" in params
-        assert "prezzo_unitario" in params
-        assert "aliquota_iva" in params
-        assert "unita_misura" in params
-
-        # Check defaults
-        assert sig.parameters["aliquota_iva"].default == 22.0
-        assert sig.parameters["unita_misura"].default == "ore"
-
-    def test_create_course_line_signature(self):
-        """Test that create_course_line has the expected signature."""
-        sig = inspect.signature(create_course_line)
-        params = list(sig.parameters.keys())
-
-        assert "fattura_id" in params
-        assert "course_title" in params
-        assert "imponibile" in params
-        assert "start_date" in params
-        assert "end_date" in params
-        assert "location" in params
-        assert "additional_notes" in params
-        assert "aliquota_iva" in params
-
-        # Check defaults
-        assert sig.parameters["aliquota_iva"].default == 0.0
-
+class TestCourseDescription:
     def test_format_course_description(self):
         """Test formatting course descriptions."""
         # Single-day course

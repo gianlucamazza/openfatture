@@ -7,7 +7,11 @@ from sqlalchemy import Integer, cast
 from sqlalchemy.orm import Session
 
 from openfatture.billing.application.numbering import next_numero
-from openfatture.billing.application.totals import recompute_totals
+from openfatture.billing.application.totals import (
+    recompute_invoice,
+    recompute_totals,
+    resolve_vat,
+)
 from openfatture.platform.config import Settings
 from openfatture.storage.database.models import (
     Cliente,
@@ -84,25 +88,28 @@ class PreventivoService:
             # Add righe (line items)
 
             for idx, riga_data in enumerate(righe, start=1):
-                quantita = Decimal(str(riga_data["quantita"]))
-                prezzo_unitario = Decimal(str(riga_data["prezzo_unitario"]))
-                aliquota_iva = Decimal(str(riga_data["aliquota_iva"]))
-
-                imponibile = quantita * prezzo_unitario
-                iva = imponibile * aliquota_iva / Decimal("100")
-                totale = imponibile + iva
+                try:
+                    aliquota_iva, natura = resolve_vat(
+                        riga_data.get("aliquota_iva"),
+                        riga_data.get("natura"),
+                        self.settings.cedente_regime_fiscale,
+                    )
+                except ValueError as e:
+                    db.rollback()
+                    return None, f"Riga {idx}: {e}"
 
                 riga = RigaPreventivo(
                     preventivo_id=preventivo.id,
                     numero_riga=idx,
                     descrizione=riga_data["descrizione"],
-                    quantita=quantita,
-                    prezzo_unitario=prezzo_unitario,
+                    quantita=Decimal(str(riga_data["quantita"])),
+                    prezzo_unitario=Decimal(str(riga_data["prezzo_unitario"])),
                     unita_misura=riga_data.get("unita_misura", "ore"),
                     aliquota_iva=aliquota_iva,
-                    imponibile=imponibile,
-                    iva=iva,
-                    totale=totale,
+                    natura=natura,
+                    imponibile=Decimal("0"),
+                    iva=Decimal("0"),
+                    totale=Decimal("0"),
                 )
 
                 db.add(riga)
@@ -319,6 +326,7 @@ class PreventivoService:
                     prezzo_unitario=riga_prev.prezzo_unitario,
                     unita_misura=riga_prev.unita_misura,
                     aliquota_iva=riga_prev.aliquota_iva,
+                    natura=riga_prev.natura,
                     imponibile=riga_prev.imponibile,
                     iva=riga_prev.iva,
                     totale=riga_prev.totale,
@@ -326,7 +334,8 @@ class PreventivoService:
                 db.add(riga_fatt)
 
             db.flush()
-            recompute_totals(fattura, db.query(RigaFattura).filter_by(fattura_id=fattura.id).all())
+            db.refresh(fattura)
+            recompute_invoice(fattura)
 
             # Update preventivo status
             preventivo.stato = StatoPreventivo.CONVERTITO

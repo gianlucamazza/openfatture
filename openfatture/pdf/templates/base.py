@@ -10,6 +10,24 @@ from reportlab.lib.units import cm
 from reportlab.pdfgen.canvas import Canvas
 
 
+def summary_rows(fattura_data: dict[str, Any]) -> list[tuple[str, Decimal]]:
+    """Rows of the totals box; the last one is what the customer pays.
+
+    The stamp duty is not a row: it is paid virtually, and when it is charged
+    to the customer it is already an N1 line in the totals.
+    """
+    rows: list[tuple[str, Decimal]] = [
+        ("Imponibile", fattura_data["imponibile"]),
+        ("IVA", fattura_data["iva"]),
+        ("Totale documento", fattura_data["totale"]),
+    ]
+    ritenuta = fattura_data.get("ritenuta_acconto") or Decimal(0)
+    if ritenuta > 0:
+        rows.append(("Ritenuta d'acconto", -ritenuta))
+        rows.append(("Netto a pagare", fattura_data["importo_da_pagare"]))
+    return rows
+
+
 class BaseTemplate(ABC):
     """Abstract base class for PDF templates.
 
@@ -153,79 +171,20 @@ class BaseTemplate(ABC):
         """
         primary_color = HexColor(self.get_primary_color())
 
-        # Aggregate lines by (aliquota_iva, natura)
-        from collections import defaultdict
-        from collections.abc import Iterable
-
-        riepilogo: dict[tuple[Decimal, str | None], dict[str, Decimal]] = defaultdict(
-            lambda: {"imponibile": Decimal(0), "iva": Decimal(0)}
-        )
-
-        # Safely get righe (handle Mock objects in tests)
-        righe = fattura_data.get("righe", [])
-        if isinstance(righe, Iterable) and not isinstance(righe, (str, bytes)):
-            for riga in righe:
-                # Handle both dict and object attribute access
-                if isinstance(riga, dict):
-                    aliquota_raw = riga.get("aliquota_iva")
-                    natura = riga.get("natura")
-                    imponibile = riga.get("imponibile", Decimal(0))
-                    iva = riga.get("iva", Decimal(0))
-                else:
-                    # Object (ORM model or Mock)
-                    aliquota_raw = getattr(riga, "aliquota_iva", None)
-                    natura_raw = getattr(riga, "natura", None)
-                    # Ensure natura is a string or None (not a Mock)
-                    natura = natura_raw if isinstance(natura_raw, (str, type(None))) else None
-                    imponibile = getattr(riga, "imponibile", Decimal(0))
-                    iva = getattr(riga, "iva", Decimal(0))
-
-                # Ensure aliquota is Decimal for type safety
-                aliquota: Decimal = (
-                    Decimal(str(aliquota_raw)) if aliquota_raw is not None else Decimal(0)
-                )
-                key: tuple[Decimal, str | None] = (aliquota, natura)
-                riepilogo[key]["imponibile"] += imponibile
-                riepilogo[key]["iva"] += iva
-
-        # Include cassa previdenziale if present (handle Mock objects)
-        cassa_list = fattura_data.get("cassa_previdenziale", [])
-        if isinstance(cassa_list, Iterable) and not isinstance(cassa_list, (str, bytes)):
-            for cassa in cassa_list:
-                # Handle both dict and object attribute access
-                if isinstance(cassa, dict):
-                    aliquota_cassa_raw = cassa.get("aliquota_iva")
-                    natura_cassa = cassa.get("natura")
-                    imponibile_cassa = cassa.get("imponibile_cassa", Decimal(0))
-                else:
-                    # Object (ORM model or Mock)
-                    aliquota_cassa_raw = getattr(cassa, "aliquota_iva", None)
-                    natura_cassa_raw = getattr(cassa, "natura", None)
-                    # Ensure natura is a string or None (not a Mock)
-                    natura_cassa = (
-                        natura_cassa_raw
-                        if isinstance(natura_cassa_raw, (str, type(None)))
-                        else None
-                    )
-                    imponibile_cassa = getattr(cassa, "imponibile_cassa", Decimal(0))
-
-                # Ensure aliquota is Decimal for type safety
-                aliquota_cassa_decimal = (
-                    Decimal(str(aliquota_cassa_raw))
-                    if aliquota_cassa_raw is not None
-                    else Decimal(0)
-                )
-                cassa_key: tuple[Decimal, str | None] = (aliquota_cassa_decimal, natura_cassa)
-                # Cassa is already included in totals via imponibile_cassa
-                riepilogo[cassa_key]["imponibile"] += imponibile_cassa
-                if aliquota_cassa_decimal != Decimal(0):
-                    riepilogo[cassa_key]["iva"] += imponibile_cassa * aliquota_cassa_decimal / 100
+        # Same breakdown as the XML DatiRiepilogo (billing.application.totals)
+        riepilogo: dict[tuple[Decimal, str | None], dict[str, Decimal]] = {
+            (row["aliquota_iva"], row["natura"]): {
+                "imponibile": row["imponibile"],
+                "iva": row["imposta"],
+            }
+            for row in fattura_data.get("riepilogo", [])
+        }
 
         if not riepilogo:
             return y_position
 
         # Add spacing before riepilogo
-        y_position -= 1.0 * cm
+        y_position -= 0.6 * cm
 
         # Table dimensions
         table_width = 17 * cm
@@ -300,22 +259,8 @@ class BaseTemplate(ABC):
             "N7": "IVA assolta in altro stato UE",
         }
 
-        # Sort entries by aliquota and natura
-        # Use float() to handle both Decimal and Mock objects in tests
-        def sort_key(
-            item: tuple[tuple[Decimal, str | None], dict[str, Decimal]],
-        ) -> tuple[float, str]:
-            (aliquota, natura), _ = item
-            try:
-                aliquota_val = float(aliquota) if aliquota is not None else 0.0
-            except (TypeError, ValueError):
-                aliquota_val = 0.0
-            natura_val = str(natura) if natura else ""
-            return (aliquota_val, natura_val)
-
-        for (aliquota, natura), values in sorted(riepilogo.items(), key=sort_key):
+        for row_index, ((aliquota, natura), values) in enumerate(riepilogo.items()):
             # Row background (alternating)
-            row_index = list(riepilogo.keys()).index((aliquota, natura))
             if row_index % 2 == 1:
                 canvas.setFillColor(HexColor("#FAFAFA"))
                 canvas.rect(
@@ -339,9 +284,7 @@ class BaseTemplate(ABC):
             else:
                 canvas.drawString(col_positions[0], y_text, "-")
 
-            # Natura label (ensure it's always a string)
-            natura_str = str(natura) if natura and isinstance(natura, str) else "-"
-            natura_label = natura_labels.get(natura_str, natura_str)
+            natura_label = natura_labels.get(natura, natura) if natura else "-"
             canvas.drawString(col_positions[1], y_text, natura_label)
 
             # Imponibile
@@ -374,25 +317,15 @@ class BaseTemplate(ABC):
         primary_color = HexColor(self.get_primary_color())
 
         # Add spacing before summary to prevent overlap with table
-        y_position -= 1.0 * cm
+        y_position -= 0.6 * cm
 
         # Summary box (right-aligned)
         box_width = 7 * cm
         box_x = 19 * cm - box_width
 
-        # Calculate box height based on content
         line_height = 0.6 * cm
-        num_lines = 3  # Imponibile, IVA, Total
-
-        # Add lines for optional fields
-        if fattura_data.get("ritenuta_acconto", Decimal(0)) > 0:
-            num_lines += 1
-        if fattura_data.get("importo_bollo", Decimal(0)) > 0 and not fattura_data.get(
-            "bollo_assolto_virtuale", False
-        ):
-            num_lines += 1
-
-        box_height = (num_lines * line_height) + 1.4 * cm
+        rows = summary_rows(fattura_data)
+        box_height = (len(rows) * line_height) + 1.4 * cm
         box_y = y_position - box_height
 
         # Background
@@ -404,48 +337,20 @@ class BaseTemplate(ABC):
         canvas.setLineWidth(1)
         canvas.rect(box_x, box_y, box_width, box_height, fill=False, stroke=True)
 
-        # Summary items
-        canvas.setFont("Helvetica", 10)
-        canvas.setFillColor(HexColor("#333333"))
-
         y = y_position - 0.7 * cm
-
-        # Imponibile
-        canvas.drawString(box_x + 0.3 * cm, y, "Imponibile:")
-        canvas.drawRightString(
-            box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['imponibile']:.2f}"
-        )
-        y -= line_height
-
-        # IVA
-        canvas.drawString(box_x + 0.3 * cm, y, "IVA:")
-        canvas.drawRightString(box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['iva']:.2f}")
-        y -= line_height
-
-        # Ritenuta (if present)
-        if fattura_data.get("ritenuta_acconto", Decimal(0)) > 0:
-            canvas.drawString(box_x + 0.3 * cm, y, "Ritenuta d'acconto:")
-            canvas.drawRightString(
-                box_x + box_width - 0.3 * cm, y, f"- € {fattura_data['ritenuta_acconto']:.2f}"
-            )
+        for index, (label, amount) in enumerate(rows):
+            last = index == len(rows) - 1
+            if last:
+                canvas.setFont("Helvetica-Bold", 12)
+                canvas.setFillColor(primary_color)
+                y -= 0.2 * cm
+            else:
+                canvas.setFont("Helvetica", 10)
+                canvas.setFillColor(HexColor("#333333"))
+            canvas.drawString(box_x + 0.3 * cm, y, f"{label}:")
+            sign = "- " if amount < 0 else ""
+            canvas.drawRightString(box_x + box_width - 0.3 * cm, y, f"{sign}€ {abs(amount):.2f}")
             y -= line_height
-
-        # Bollo (if present and charged to client - not assolto virtuale)
-        if fattura_data.get("importo_bollo", Decimal(0)) > 0 and not fattura_data.get(
-            "bollo_assolto_virtuale", False
-        ):
-            canvas.drawString(box_x + 0.3 * cm, y, "Bollo:")
-            canvas.drawRightString(
-                box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['importo_bollo']:.2f}"
-            )
-            y -= line_height
-
-        # Total (bold)
-        canvas.setFont("Helvetica-Bold", 12)
-        canvas.setFillColor(primary_color)
-        y -= 0.2 * cm
-        canvas.drawString(box_x + 0.3 * cm, y, "TOTAL:")
-        canvas.drawRightString(box_x + box_width - 0.3 * cm, y, f"€ {fattura_data['totale']:.2f}")
 
         return box_y - 0.5 * cm
 
@@ -466,7 +371,7 @@ class BaseTemplate(ABC):
             return y_position
 
         # Add spacing before payment info
-        y_position -= 0.8 * cm
+        y_position -= 0.5 * cm
 
         primary_color = HexColor(self.get_primary_color())
 
@@ -711,15 +616,13 @@ class BaseTemplate(ABC):
         self,
         canvas: Canvas,
         importo_bollo: Decimal,
-        bollo_assolto_virtuale: bool,
         y_position: float,
     ) -> float:
         """Draw bollo (stamp duty) MEF footer text.
 
         Args:
             canvas: ReportLab canvas
-            importo_bollo: Stamp duty amount
-            bollo_assolto_virtuale: Whether bollo is paid by provider (not charged to client)
+            importo_bollo: Stamp duty amount (always paid virtually)
             y_position: Current Y position
 
         Returns:

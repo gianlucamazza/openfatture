@@ -269,8 +269,13 @@ def add_line_item(
     descrizione: str = typer.Option(..., "--desc", "-d", help="Item description"),
     quantita: float = typer.Option(..., "--qty", "-q", help="Quantity"),
     prezzo: float = typer.Option(..., "--price", "-p", help="Unit price (€)"),
-    iva: float = typer.Option(22.0, "--iva", help="VAT rate (%, default: 22)"),
+    iva: float = typer.Option(
+        None, "--iva", help="VAT rate (%; default 0 with N2.2 for forfettario, else 22)"
+    ),
     unita: str = typer.Option("ore", "--unit", "-u", help="Unit of measure (default: ore)"),
+    natura: str = typer.Option(
+        None, "--natura", help="VAT natura for a 0% rate (e.g. N2.2, N1 for the stamp duty)"
+    ),
 ) -> None:
     """Add line item to an invoice."""
     result = create_riga(
@@ -280,6 +285,7 @@ def add_line_item(
         prezzo_unitario=prezzo,
         aliquota_iva=iva,
         unita_misura=unita,
+        natura=natura,
     )
     remember_result(result)
 

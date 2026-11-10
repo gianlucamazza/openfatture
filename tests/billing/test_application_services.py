@@ -23,6 +23,7 @@ def _invoice_with_lines(cliente_id: int, lines: list[tuple[str, float, float]]) 
             descrizione=descrizione,
             quantita=quantita,
             prezzo_unitario=prezzo,
+            aliquota_iva=22,
         )
         assert result.get("success"), result
     return invoice_id

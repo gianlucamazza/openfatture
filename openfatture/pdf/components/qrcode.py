@@ -38,32 +38,6 @@ def draw_qr_code(
     renderPDF.draw(drawing, canvas, x_position, y_position)
 
 
-def generate_pagopa_qr_data(
-    creditor_fiscal_code: str,
-    notice_number: str,
-    amount: float,
-) -> str:
-    """Generate pagoPa QR code data.
-
-    Args:
-        creditor_fiscal_code: Creditor's fiscal code
-        notice_number: Payment notice number (18 digits)
-        amount: Amount in EUR (cents)
-
-    Returns:
-        pagoPa QR code string
-
-    Example:
-        >>> data = generate_pagopa_qr_data("12345678901", "123456789012345678", 10050)
-        >>> # data = "PAGOPA|002|123456789012345678|12345678901|10050"
-    """
-    # pagoPa QR format: PAGOPA|version|notice_number|fiscal_code|amount_cents
-    version = "002"
-    amount_cents = int(amount * 100)
-
-    return f"PAGOPA|{version}|{notice_number}|{creditor_fiscal_code}|{amount_cents}"
-
-
 def generate_sepa_qr_data(
     beneficiary_name: str,
     iban: str,

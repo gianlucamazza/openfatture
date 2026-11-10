@@ -6,11 +6,12 @@ from decimal import Decimal
 from typing import Any
 
 from openfatture.billing.application.numbering import next_numero
-from openfatture.billing.application.totals import recompute_totals
+from openfatture.billing.application.totals import recompute_invoice
 from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import (
+    DatiCassaPrevidenziale,
     Fattura,
     RigaFattura,
     StatoFattura,
@@ -168,11 +169,24 @@ def create_nota_credito_from_fattura(
                     )
                     db.add(riga)
 
+            # Same social security contributions, recomputed on the credited lines
+            for source_cassa in source_fattura.cassa_previdenziale:
+                nota_credito.cassa_previdenziale.append(
+                    DatiCassaPrevidenziale(
+                        tipo_cassa=source_cassa.tipo_cassa,
+                        al_cassa=source_cassa.al_cassa,
+                        importo_contributo_cassa=Decimal("0"),
+                        aliquota_iva=source_cassa.aliquota_iva,
+                        ritenuta=source_cassa.ritenuta,
+                        natura=source_cassa.natura,
+                        riferimento_amministrazione=source_cassa.riferimento_amministrazione,
+                    )
+                )
+
             # Update nota di credito totals
             db.flush()
-            recompute_totals(
-                nota_credito, db.query(RigaFattura).filter_by(fattura_id=nota_credito.id).all()
-            )
+            db.refresh(nota_credito)
+            recompute_invoice(nota_credito)
 
             db.commit()
             db.refresh(nota_credito)
