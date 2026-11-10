@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from openfatture.platform.config import get_settings
+from openfatture.platform.errors import describe_error
 
 
 def exports_dir() -> Path:
@@ -42,7 +43,7 @@ def confined_output(func: Callable[..., dict[str, Any]]) -> Callable[..., dict[s
         try:
             safe = confine_output_path(output_path)
         except ValueError as exc:
-            return {"error": str(exc)}
+            return {"error": describe_error(exc)}
         return func(*args, output_path=safe, **kwargs)
 
     return wrapper

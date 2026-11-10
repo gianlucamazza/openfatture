@@ -6,6 +6,7 @@ from pydantic import validate_call
 
 from openfatture.billing.preventivi.service import PreventivoService
 from openfatture.platform.config import get_settings
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import Preventivo, StatoPreventivo
@@ -99,7 +100,7 @@ def search_preventivi(
 
         except Exception as e:
             logger.error("search_preventivi_failed", error=str(e))
-            return {"error": str(e), "count": 0, "preventivi": []}
+            return {"error": describe_error(e), "count": 0, "preventivi": []}
 
 
 @validate_call
@@ -170,7 +171,7 @@ def get_preventivo_details(preventivo_id: int) -> dict[str, Any]:
 
         except Exception as e:
             logger.error("get_preventivo_details_failed", preventivo_id=preventivo_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 # =============================================================================
@@ -265,7 +266,7 @@ def create_preventivo(
 
         except Exception as e:
             logger.error("create_preventivo_failed", error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -324,7 +325,7 @@ def update_preventivo_status(
 
         except Exception as e:
             logger.error("update_preventivo_status_failed", error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -412,7 +413,7 @@ def update_preventivo(
         except Exception as e:
             db.rollback()
             logger.error("update_preventivo_failed", preventivo_id=preventivo_id, error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -479,7 +480,7 @@ def delete_preventivo(
         except Exception as e:
             db.rollback()
             logger.error("delete_preventivo_failed", preventivo_id=preventivo_id, error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -535,4 +536,4 @@ def convert_preventivo_to_invoice(
 
         except Exception as e:
             logger.error("convert_preventivo_to_invoice_failed", error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}

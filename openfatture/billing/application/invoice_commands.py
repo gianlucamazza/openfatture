@@ -6,6 +6,8 @@ from decimal import Decimal
 from typing import Any
 
 from openfatture.billing.application.numbering import next_numero
+from openfatture.billing.application.totals import recompute_totals
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import (
@@ -64,6 +66,13 @@ def create_invoice(
 
             if numero is None:
                 numero = next_numero(db, Fattura, anno)
+            elif (
+                db.query(Fattura.id).filter(Fattura.numero == numero, Fattura.anno == anno).first()
+            ):
+                return {
+                    "error": f"Invoice number {numero}/{anno} is already used; "
+                    f"omit the number to use the next one ({next_numero(db, Fattura, anno)})"
+                }
 
             if data_emissione is None:
                 data_emissione_date = datetime.now().date()
@@ -125,7 +134,7 @@ def create_invoice(
         except Exception as e:
             db.rollback()
             logger.error("create_invoice_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def update_invoice(
@@ -214,7 +223,7 @@ def update_invoice(
         except Exception as e:
             db.rollback()
             logger.error("update_invoice_failed", fattura_id=fattura_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def delete_invoice(
@@ -292,7 +301,7 @@ def delete_invoice(
         except Exception as e:
             db.rollback()
             logger.error("delete_invoice_failed", fattura_id=fattura_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def update_invoice_status(
@@ -370,7 +379,7 @@ def update_invoice_status(
             db.rollback()
             logger.error("update_invoice_status_failed", fattura_id=fattura_id, error=str(e))
             return {
-                "error": str(e),
+                "error": describe_error(e),
                 "error_code": "state_conflict"
                 if type(e).__name__ == "InvoiceStateConflict"
                 else "invalid_transition",
@@ -428,11 +437,7 @@ def create_riga(
             prezzo_dec = Decimal(str(prezzo_unitario))
             aliquota_dec = Decimal(str(aliquota_iva))
 
-            imponibile = quantita_dec * prezzo_dec
-            iva = imponibile * aliquota_dec / Decimal("100")
-            totale = imponibile + iva
-
-            # Create riga
+            # Create riga (amounts set by recompute_totals)
             riga = RigaFattura(
                 fattura_id=fattura_id,
                 numero_riga=numero_riga,
@@ -441,17 +446,15 @@ def create_riga(
                 prezzo_unitario=prezzo_dec,
                 aliquota_iva=aliquota_dec,
                 unita_misura=unita_misura,
-                imponibile=imponibile,
-                iva=iva,
-                totale=totale,
+                imponibile=Decimal("0"),
+                iva=Decimal("0"),
+                totale=Decimal("0"),
             )
 
             db.add(riga)
-
-            # Update invoice totals
-            fattura.imponibile += imponibile
-            fattura.iva += iva
-            fattura.totale += totale
+            fattura.righe.append(riga)
+            recompute_totals(fattura, fattura.righe)
+            imponibile, iva, totale = riga.imponibile, riga.iva, riga.totale
 
             db.commit()
             db.refresh(riga)
@@ -478,7 +481,7 @@ def create_riga(
         except Exception as e:
             db.rollback()
             logger.error("create_riga_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def update_riga(
@@ -524,11 +527,6 @@ def update_riga(
                     "error": f"Cannot modify line item in invoice with status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
                 }
 
-            # Store old totals to subtract from invoice
-            old_imponibile = riga.imponibile
-            old_iva = riga.iva
-            old_totale = riga.totale
-
             # Track changes
             changes = []
 
@@ -565,14 +563,7 @@ def update_riga(
 
             # Recalculate totals if numeric fields changed
             if any(f in changes for f in ["quantita", "prezzo_unitario", "aliquota_iva"]):
-                riga.imponibile = riga.quantita * riga.prezzo_unitario
-                riga.iva = riga.imponibile * riga.aliquota_iva / Decimal("100")
-                riga.totale = riga.imponibile + riga.iva
-
-                # Update invoice totals (subtract old, add new)
-                fattura.imponibile = fattura.imponibile - old_imponibile + riga.imponibile
-                fattura.iva = fattura.iva - old_iva + riga.iva
-                fattura.totale = fattura.totale - old_totale + riga.totale
+                recompute_totals(fattura, fattura.righe)
 
             db.commit()
             db.refresh(riga)
@@ -602,7 +593,7 @@ def update_riga(
         except Exception as e:
             db.rollback()
             logger.error("update_riga_failed", riga_id=riga_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def delete_riga(
@@ -646,9 +637,8 @@ def delete_riga(
             riga_totale = riga.totale
 
             # Update invoice totals (subtract this riga)
-            fattura.imponibile -= riga.imponibile
-            fattura.iva -= riga.iva
-            fattura.totale -= riga.totale
+            fattura.righe.remove(riga)
+            recompute_totals(fattura, fattura.righe)
 
             # Delete riga
             db.delete(riga)
@@ -676,4 +666,4 @@ def delete_riga(
         except Exception as e:
             db.rollback()
             logger.error("delete_riga_failed", riga_id=riga_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}

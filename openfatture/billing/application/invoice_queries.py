@@ -13,6 +13,7 @@ from typing import Any, TypedDict
 from sqlalchemy import Integer, cast
 from sqlalchemy.orm import Session, selectinload
 
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import sanitize_sql_like_input, validate_integer_input
 from openfatture.storage.database.models import Fattura, StatoFattura
@@ -160,7 +161,7 @@ def search_invoices(
             }
         except Exception as e:
             logger.error("search_invoices_failed", error=str(e))
-            return {"error": str(e), "count": 0, "fatture": []}
+            return {"error": describe_error(e), "count": 0, "fatture": []}
 
 
 def get_invoice_details(
@@ -239,7 +240,7 @@ def get_invoice_details(
             return details
         except Exception as e:
             logger.error("get_invoice_details_failed", fattura_id=fattura_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def get_invoice_stats(
@@ -323,4 +324,4 @@ def get_invoice_stats(
             return result
         except Exception as e:
             logger.error("get_invoice_stats_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}

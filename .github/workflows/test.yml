@@ -98,7 +98,7 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          uv run --extra dev pytest --cov=openfatture --cov-report=xml --cov-report=term-missing --cov-fail-under=49
+          uv run --extra dev pytest --cov=openfatture --cov-report=xml --cov-report=term-missing --cov-fail-under=78
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
@@ -138,6 +138,9 @@ jobs:
 
       - name: Run Ruff format
         run: .venv/bin/ruff format --check .
+
+      - name: Check declared vs imported dependencies (deptry)
+        run: uv run --frozen --with deptry deptry .
 
       - name: Run Ruff check
         run: .venv/bin/ruff check .
@@ -181,12 +184,11 @@ jobs:
         continue-on-error: true
 
       - name: Run Bandit (Python SAST)
-        # Advisory for now: the codebase has pre-existing findings (3 High,
-        # 6 Medium). Results are surfaced in the Security tab via SARIF; triage
-        # and tighten to a failing gate once the backlog is addressed.
+        # Blocking for medium/high findings; accepted rules are documented in
+        # [tool.bandit] in pyproject.toml.
         run: |
-          uvx bandit -r openfatture/ -ll -f sarif -o bandit-results.sarif || true
-          uvx bandit -r openfatture/ -ll || true
+          uvx bandit -c pyproject.toml -r openfatture/ -ll -f sarif -o bandit-results.sarif || true
+          uvx bandit -c pyproject.toml -r openfatture/ -ll
 
       - name: Upload Bandit results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
@@ -196,8 +198,14 @@ jobs:
         continue-on-error: true
 
       - name: Run pip-audit (dependency vulnerabilities)
-        run: uvx pip-audit --strict || true
-        continue-on-error: true
+        # Audits the locked dependency set. Ignored IDs are the chromadb
+        # server-side advisories documented in .trivyignore: OpenFatture only uses
+        # chromadb.PersistentClient and never runs the chroma HTTP server.
+        run: |
+          uv export --frozen --all-extras --no-hashes --no-emit-project -o requirements-audit.txt
+          uvx pip-audit -r requirements-audit.txt --progress-spinner off \
+            --ignore-vuln PYSEC-2026-311 --ignore-vuln PYSEC-2026-3813 \
+            --ignore-vuln PYSEC-2026-3814 --ignore-vuln PYSEC-2026-3815
 
 permissions:
   contents: read

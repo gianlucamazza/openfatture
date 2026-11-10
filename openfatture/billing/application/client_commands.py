@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import Cliente, Fattura
@@ -117,7 +118,7 @@ def create_client(
         except Exception as e:
             db.rollback()
             logger.error("create_client_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def update_client(
@@ -262,7 +263,7 @@ def update_client(
         except Exception as e:
             db.rollback()
             logger.error("update_client_failed", cliente_id=cliente_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def delete_client(
@@ -336,4 +337,4 @@ def delete_client(
         except Exception as e:
             db.rollback()
             logger.error("delete_client_failed", cliente_id=cliente_id, error=str(e))
-            return {"error": str(e), "success": False}
+            return {"error": describe_error(e), "success": False}

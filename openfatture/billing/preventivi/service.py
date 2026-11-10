@@ -7,6 +7,7 @@ from sqlalchemy import Integer, cast
 from sqlalchemy.orm import Session
 
 from openfatture.billing.application.numbering import next_numero
+from openfatture.billing.application.totals import recompute_totals
 from openfatture.platform.config import Settings
 from openfatture.storage.database.models import (
     Cliente,
@@ -81,8 +82,6 @@ class PreventivoService:
             db.flush()  # Get ID without committing
 
             # Add righe (line items)
-            totale_imponibile = Decimal("0")
-            totale_iva = Decimal("0")
 
             for idx, riga_data in enumerate(righe, start=1):
                 quantita = Decimal(str(riga_data["quantita"]))
@@ -108,13 +107,12 @@ class PreventivoService:
 
                 db.add(riga)
 
-                totale_imponibile += imponibile
-                totale_iva += iva
-
-            # Update preventivo totals
-            preventivo.imponibile = totale_imponibile
-            preventivo.iva = totale_iva
-            preventivo.totale = totale_imponibile + totale_iva
+            # Totals with FatturaPA rounding (same rules as invoices)
+            db.flush()
+            recompute_totals(
+                preventivo,
+                db.query(RigaPreventivo).filter_by(preventivo_id=preventivo.id).all(),
+            )
 
             db.commit()
             db.refresh(preventivo)
@@ -326,6 +324,9 @@ class PreventivoService:
                     totale=riga_prev.totale,
                 )
                 db.add(riga_fatt)
+
+            db.flush()
+            recompute_totals(fattura, db.query(RigaFattura).filter_by(fattura_id=fattura.id).all())
 
             # Update preventivo status
             preventivo.stato = StatoPreventivo.CONVERTITO

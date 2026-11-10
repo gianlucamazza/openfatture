@@ -12,9 +12,11 @@ Parses XML notifications received from Sistema di Interscambio (SDI):
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from xml.etree import ElementTree as ET
 
+from lxml import etree
 from pydantic import BaseModel, ConfigDict, Field
+
+from openfatture.sdi.safe_xml import ParseError, parse_untrusted
 
 
 class TipoNotifica(StrEnum):
@@ -95,7 +97,7 @@ class SDINotificationParser:
             Tuple[bool, Optional[str], Optional[NotificaSDI]]: (success, error, notification)
         """
         try:
-            root = ET.fromstring(xml_content)
+            root = parse_untrusted(xml_content)
 
             # Determine notification type from root tag
             root_tag = root.tag.split("}")[-1] if "}" in root.tag else root.tag
@@ -113,13 +115,13 @@ class SDINotificationParser:
             else:
                 return False, f"Unknown notification type: {root_tag}", None
 
-        except ET.ParseError as e:
+        except ParseError as e:
             return False, f"XML parsing error: {e}", None
         except Exception as e:
             return False, f"Parsing failed: {e}", None
 
     def _parse_ricevuta_consegna(
-        self, root: ET.Element
+        self, root: etree._Element
     ) -> tuple[bool, str | None, NotificaSDI | None]:
         """Parse RicevutaConsegna (RC) notification."""
         try:
@@ -145,7 +147,7 @@ class SDINotificationParser:
             return False, f"Failed to parse RicevutaConsegna: {e}", None
 
     def _parse_notifica_scarto(
-        self, root: ET.Element
+        self, root: etree._Element
     ) -> tuple[bool, str | None, NotificaSDI | None]:
         """Parse NotificaScarto (NS) notification."""
         try:
@@ -178,7 +180,7 @@ class SDINotificationParser:
             return False, f"Failed to parse NotificaScarto: {e}", None
 
     def _parse_mancata_consegna(
-        self, root: ET.Element
+        self, root: etree._Element
     ) -> tuple[bool, str | None, NotificaSDI | None]:
         """Parse NotificaMancataConsegna (MC) notification."""
         try:
@@ -204,7 +206,7 @@ class SDINotificationParser:
             return False, f"Failed to parse NotificaMancataConsegna: {e}", None
 
     def _parse_notifica_esito(
-        self, root: ET.Element
+        self, root: etree._Element
     ) -> tuple[bool, str | None, NotificaSDI | None]:
         """Parse NotificaEsito (NE) notification."""
         try:
@@ -234,7 +236,7 @@ class SDINotificationParser:
             return False, f"Failed to parse NotificaEsito: {e}", None
 
     def _parse_attestazione_trasmissione(
-        self, root: ET.Element
+        self, root: etree._Element
     ) -> tuple[bool, str | None, NotificaSDI | None]:
         """Parse AttestazioneTrasmissioneFattura (AT) notification."""
         try:
@@ -258,7 +260,7 @@ class SDINotificationParser:
         except Exception as e:
             return False, f"Failed to parse AttestazioneTrasmissioneFattura: {e}", None
 
-    def _get_text(self, element: ET.Element, path: str) -> str:
+    def _get_text(self, element: etree._Element, path: str) -> str:
         """
         Extract text from XML element.
 

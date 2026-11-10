@@ -1,6 +1,6 @@
 # OpenFatture project status
 
-**Current version:** 2.8.1  
+**Current version:** 2.8.2  
 **Product posture:** CLI-first; `openfatture` starts the interactive assistant  
 **Runtime:** Python 3.12+ and `uv`
 
@@ -61,7 +61,7 @@ See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) and [ARCHITECTURE.md](ARCHITECTURE.md
 
 | Suite | Floor | Source of truth |
 |-------|-------|-----------------|
-| Full package | 49% | `[tool.coverage.report] fail_under` in `pyproject.toml` (+ `test.yml`) |
+| Full package | 78% | `[tool.coverage.report] fail_under` in `pyproject.toml` (+ `test.yml`) |
 | Payment module | 75% | `payment-tests.yml` (measured ~78%) |
 
 Local default pytest runs **without** coverage (faster). Pass `--cov=openfatture`

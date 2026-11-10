@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.2] - 2026-11-10
+
+Findings of the technical debt analysis ([report](docs/reports/technical-debt-analysis-2026-11.md)).
+
+### Fixed
+
+- **Invoice totals**: line VAT is rounded half-up to the cent and VAT is computed per rate and
+  natura like `DatiRiepilogo`; `totale` always equals `imponibile + iva` (it could drift by a
+  cent and the XML asked for that amount). Applies to invoices, credit notes, quotes and
+  conversions; XML amounts use half-up rounding.
+- **SDI transmission**: unsigned sends always regenerate and validate the XML; signed sends use
+  the stored `.p7m` only if the signed XML still validates and matches the invoice. Signing
+  records the `.p7m` path and defaults to the invoice's archived XML (it always failed without an
+  explicit path).
+- **CSV import**: a rejected row (e.g. duplicate number) no longer discards the whole batch
+  while reporting success.
+- Duplicate explicit invoice numbers return a clear error instead of SQL.
+- SDI notification XML is parsed without entity expansion, DTDs or network access.
+- Errors returned to the assistant and CLI no longer include SQL statements.
+- Assistant recovery messages are localized.
+
+### Changed
+
+- Coverage floor 78%; `deptry`, `pip-audit` (locked dependencies) and `bandit` are blocking in CI.
+- Declared `prompt-toolkit`; removed unused `pyyaml`, `xmlschema`, `asn1crypto`, `langgraph-sdk`.
+
+### Removed
+
+- `download_xsd_schema` (the schema ships with the package) and 27 unused exception classes.
+
 ## [2.8.1] - 2026-11-10
 
 ### Fixed

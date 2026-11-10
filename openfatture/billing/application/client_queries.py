@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session, selectinload
 
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import sanitize_sql_like_input, validate_integer_input
 from openfatture.storage.database.models import Cliente
@@ -55,7 +56,7 @@ def search_clients(
             }
         except Exception as e:
             logger.error("search_clients_failed", error=str(e))
-            return {"error": str(e), "count": 0, "clienti": []}
+            return {"error": describe_error(e), "count": 0, "clienti": []}
 
 
 def get_client_details(
@@ -114,7 +115,7 @@ def get_client_details(
             return details
         except Exception as e:
             logger.error("get_client_details_failed", cliente_id=cliente_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 def get_client_stats(*, session: Session | None = None) -> dict[str, Any]:
@@ -131,4 +132,4 @@ def get_client_stats(*, session: Session | None = None) -> dict[str, Any]:
             }
         except Exception as e:
             logger.error("get_client_stats_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}

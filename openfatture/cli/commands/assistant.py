@@ -61,16 +61,14 @@ def _handle_slash_command(user_input: str, *, runtime: AssistantRuntime) -> str 
         try:
             payload = json.loads(user_input.split(maxsplit=1)[1])
             runtime.reconcile_tool(payload["call_id"], payload["result"], payload["evidence"])
-            console.print(Text("Esito verificato registrato. Usa /resume per continuare."))
+            console.print(Text(_text("assistant-reconciled")))
         except (ValueError, KeyError, IndexError, TypeError):
-            console.print(Text("Riconciliazione non valida: servono call_id, result ed evidence."))
+            console.print(Text(_text("assistant-reconcile-invalid")))
     elif cmd == "/clear":
         try:
             cleared = runtime.clear_session()
         except ValueError:
-            console.print(
-                Text("Risolvi il turno pendente con /resume prima di cancellare lo storico.")
-            )
+            console.print(Text(_text("assistant-resolve-pending-first")))
         else:
             console.print(Text(_text("assistant-cleared" if cleared else "assistant-no-session")))
     else:
@@ -183,7 +181,7 @@ async def _run_assistant(
         pending = runtime.pending_user_input
         if isinstance(pending, str):
             if not machine:
-                console.print(Text("Ripresa del turno interrotto…"))
+                console.print(Text(ui.text("assistant-resuming")))
             from openfatture.ai.runtime.durability import UncertainToolOutcome
 
             try:
@@ -191,9 +189,7 @@ async def _run_assistant(
             except UncertainToolOutcome:
                 if machine or message is not None:
                     raise
-                console.print(
-                    Text("Esito tool incerto: usa /pending e /reconcile prima di /resume.")
-                )
+                console.print(Text(ui.text("assistant-uncertain-tool")))
                 success = False
             if not success and (machine or message is not None):
                 raise typer.Exit(1)
@@ -228,7 +224,7 @@ async def _run_assistant(
                 if runtime.pending_user_input:
                     user_input = runtime.pending_user_input
                 else:
-                    console.print(Text("Nessun turno pendente."))
+                    console.print(Text(ui.text("assistant-no-pending")))
                     continue
             slash = _handle_slash_command(user_input, runtime=runtime)
             if slash == "exit":

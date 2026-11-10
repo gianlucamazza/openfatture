@@ -9,6 +9,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from openfatture.billing.batch.processor import BatchResult
@@ -165,6 +166,13 @@ def import_invoices_csv(
                     cliente = db_session.query(Cliente).filter(Cliente.id == cliente_id).first()
                     if not cliente:
                         raise ValueError(f"Client {cliente_id} not found")
+                    duplicate = (
+                        db_session.query(Fattura.id)
+                        .filter(Fattura.numero == numero, Fattura.anno == anno)
+                        .first()
+                    )
+                    if duplicate:
+                        raise ValueError(f"Invoice {numero}/{anno} already exists")
 
                     # Create invoice
                     fattura = Fattura(
@@ -179,11 +187,15 @@ def import_invoices_csv(
                         stato=StatoFattura.BOZZA,
                     )
 
-                    db_session.add(fattura)
-                    db_session.flush()
+                    # A savepoint per row: a failing row never poisons the batch.
+                    with db_session.begin_nested():
+                        db_session.add(fattura)
+                        db_session.flush()
 
                     result.add_success(fattura.id)
 
+                except IntegrityError as e:
+                    result.add_failure(f"Row {result.total}: rejected by the database ({e.orig})")
                 except Exception as e:
                     result.add_failure(f"Row {result.total}: {str(e)}")
 

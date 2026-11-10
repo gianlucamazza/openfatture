@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import validate_call
 
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.sdi.notifiche.processor import NotificationProcessor
@@ -92,7 +93,7 @@ def list_sdi_notifications(
 
         except Exception as e:
             logger.error("list_sdi_notifications_failed", error=str(e))
-            return {"error": str(e), "count": 0, "notifications": []}
+            return {"error": describe_error(e), "count": 0, "notifications": []}
 
 
 @validate_call
@@ -156,7 +157,7 @@ def get_sdi_notification_details(notification_id: int) -> dict[str, Any]:
             logger.error(
                 "get_sdi_notification_details_failed", notification_id=notification_id, error=str(e)
             )
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 @validate_call
@@ -217,7 +218,7 @@ def check_invoice_sdi_status(fattura_id: int) -> dict[str, Any]:
 
         except Exception as e:
             logger.error("check_invoice_sdi_status_failed", fattura_id=fattura_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 # =============================================================================
@@ -311,7 +312,7 @@ def process_sdi_notification_file(
             logger.error(
                 "process_sdi_notification_file_failed", xml_path=str(xml_file), error=str(e)
             )
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 # =============================================================================

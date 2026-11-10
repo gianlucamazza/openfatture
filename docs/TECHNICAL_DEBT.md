@@ -5,7 +5,7 @@ the **2.1.0** LangGraph default flip, post-2.1 hygiene (#31–#34) and the
 **2.6.0–2.8.0** architecture review.
 
 **Last updated:** 2026-11-10  
-**Version baseline:** 2.8.0 (`v2.8.0`)
+**Version baseline:** 2.8.2 (`v2.8.2`) · analysis: [docs/reports/technical-debt-analysis-2026-11.md](reports/technical-debt-analysis-2026-11.md)
 
 Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), [releases/v2.1.0.md](releases/v2.1.0.md).
@@ -61,7 +61,7 @@ firefighting. Do not invent new public domain CLI commands to “finish” debt.
 | RAG auto-update | Low | Real `reindex_callback` required; default auto-update off |
 | Tooling / types | Low | Zero in-code `noqa` / `type: ignore` / `pragma: no cover` |
 | Tests | Low | Skips are for extras, external services, or intentional env limits |
-| Coverage floors | Acceptable | Package 49%; payment 75% (measured ~78%) |
+| Coverage floors | Acceptable | Package 78% (measured 81%); payment 75% |
 
 ---
 
@@ -104,6 +104,12 @@ Keep this ledger so old debt is not rediscovered as open.
 | D-I18N orphan keys, incomplete locales | 2.8.0 | Only referenced ids; all locales complete; enforced by tests |
 | Knowledge base never indexed, CWD-relative paths | 2.8.0 | Packaged KB, indexed on first use; vector store in data_dir |
 | Correlation IDs never set | 2.8.0 | One per CLI invocation |
+| Unrounded VAT and drifting totals | 2.8.2 | `billing.application.totals`, half-up, per-rate VAT |
+| Unvalidated/stale XML on send; signed send attached unsigned XML | 2.8.2 | Always validated; `.p7m` stored and checked against current data |
+| CSV import lost all rows after one failure | 2.8.2 | Savepoint per row |
+| Unsafe XML parsing of SDI notifications | 2.8.2 | `sdi.safe_xml` |
+| Raw exceptions returned to the assistant | 2.8.2 | `platform.errors.describe_error` |
+| Unused deps, advisory-only security CI, 49% coverage floor | 2.8.2 | deptry/pip-audit/bandit blocking; floor 78% |
 
 ---
 
@@ -134,6 +140,26 @@ standalone “LOC reduction” PRs.
 **Done nearby:** `chat_agent.py` slimmed (structured + graph delegation);
 `ai.tools.registry` is already a package.
 
+### D-CLI-I18N — Hard-coded CLI strings
+
+**Location:** `cli/commands/fattura.py` (69), `init.py` (26), `cliente.py` (19).  
+**Impact:** Mixed Italian/English output; non-Italian locales see untranslated text.  
+**Trigger:** Next change to these commands; move strings to `cli.ftl` (the i18n
+test then enforces every locale).
+
+### D-ERRORS — Three error contracts
+
+**Behavior:** Application services return `{"error": ...}`, the XML path raises
+`XMLValidationError`, tools wrap results in `ToolResult`. 54 broad `except`
+blocks only log; the reviewed ones isolate post-commit side effects
+(events, notification emails).  
+**Trigger:** A new caller that needs typed errors; unify at the tool boundary.
+
+### D-XML-TOTAL — `ImportoTotaleDocumento` not emitted
+
+Optional in FatturaPA; some customer tools expect it. Add when the bollo and
+cassa contributions are folded into the document total rules.
+
 ### D-OBS — Bulkhead queue length is approximate
 
 **GitHub:** [#40](https://github.com/gianlucamazza/openfatture/issues/40)  
@@ -161,7 +187,7 @@ standalone “LOC reduction” PRs.
 
 | Suite | Floor | Source |
 |-------|-------|--------|
-| Full package | 49% | `[tool.coverage.report] fail_under` + `test.yml` |
+| Full package | 78% | `[tool.coverage.report] fail_under` + `test.yml` |
 | Payment | 75% | `payment-tests.yml` (~78% measured) |
 
 **Impact:** Prevents large regressions; does not drive quality by itself.  

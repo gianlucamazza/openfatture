@@ -5,6 +5,8 @@ from pathlib import Path
 
 from lxml import etree
 
+from openfatture.sdi.safe_xml import parse_untrusted
+
 
 class FatturaPAValidator:
     """
@@ -79,7 +81,7 @@ class FatturaPAValidator:
 
         # Parse XML
         try:
-            xml_doc = etree.fromstring(xml_content.encode("utf-8"))
+            xml_doc = parse_untrusted(xml_content)
         except etree.XMLSyntaxError as e:
             return False, f"XML syntax error: {e}"
 
@@ -105,78 +107,3 @@ class FatturaPAValidator:
 
         xml_content = xml_path.read_text(encoding="utf-8")
         return self.validate(xml_content)
-
-
-def download_xsd_schema(auto_download: bool = False) -> Path:
-    """
-    Download official FatturaPA XSD schema to data directory.
-
-    Note: FatturaPAValidator now uses bundled schemas by default (no download needed).
-    This function is retained for backward compatibility and custom workflows that
-    need schemas in the data directory.
-
-    Args:
-        auto_download: If True, automatically downloads the schema if missing.
-                      If False, raises FileNotFoundError with instructions.
-
-    Returns:
-        Path: Path to downloaded schema
-
-    Raises:
-        FileNotFoundError: If schema not found and auto_download is False
-        urllib.error.URLError: If download fails (network error, timeout)
-        IOError: If file write fails
-    """
-    import urllib.request
-
-    from openfatture.platform.config import get_settings
-
-    settings = get_settings()
-    schema_dir = settings.data_dir / "schemas"
-    schema_dir.mkdir(parents=True, exist_ok=True)
-
-    schema_path = schema_dir / "FatturaPA_v1.2.2.xsd"
-
-    # If schema already exists, return it
-    if schema_path.exists():
-        return schema_path
-
-    # If auto_download is disabled, provide manual instructions
-    if not auto_download:
-        raise FileNotFoundError(
-            f"XSD schema not found at: {schema_path}\n\n"
-            "Please download manually from:\n"
-            "https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.2.2/"
-            "Schema_del_file_xml_FatturaPA_v1.2.2.xsd\n\n"
-            f"And save it to: {schema_path}\n\n"
-            "Or call download_xsd_schema(auto_download=True) to download automatically."
-        )
-
-    # Download the schema
-    schema_url = (
-        "https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.2.2/"
-        "Schema_del_file_xml_FatturaPA_v1.2.2.xsd"
-    )
-
-    try:
-        # Download with timeout
-        with urllib.request.urlopen(schema_url, timeout=30) as response:
-            schema_content = response.read()
-
-        # Write to file
-        schema_path.write_bytes(schema_content)
-
-        return schema_path
-
-    except urllib.error.URLError as e:
-        raise urllib.error.URLError(
-            f"Failed to download XSD schema from {schema_url}\n"
-            f"Error: {e}\n"
-            "Please check your internet connection or download manually."
-        ) from e
-    except OSError as e:
-        raise OSError(
-            f"Failed to write XSD schema to {schema_path}\n"
-            f"Error: {e}\n"
-            "Please check file permissions."
-        ) from e

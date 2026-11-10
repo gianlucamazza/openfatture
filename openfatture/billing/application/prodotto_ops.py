@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import validate_call
 
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import Prodotto
@@ -86,7 +87,7 @@ def search_prodotti(
 
         except Exception as e:
             logger.error("search_prodotti_failed", error=str(e))
-            return {"error": str(e), "count": 0, "prodotti": []}
+            return {"error": describe_error(e), "count": 0, "prodotti": []}
 
 
 @validate_call
@@ -154,7 +155,7 @@ def get_prodotto_details(prodotto_id: int) -> dict[str, Any]:
 
         except Exception as e:
             logger.error("get_prodotto_details_failed", prodotto_id=prodotto_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 # =============================================================================
@@ -254,7 +255,7 @@ def create_prodotto(
         except Exception as e:
             db.rollback()
             logger.error("create_prodotto_failed", error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -368,7 +369,7 @@ def update_prodotto(
         except Exception as e:
             db.rollback()
             logger.error("update_prodotto_failed", prodotto_id=prodotto_id, error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}
 
 
 @validate_call
@@ -443,4 +444,4 @@ def delete_prodotto(
         except Exception as e:
             db.rollback()
             logger.error("delete_prodotto_failed", prodotto_id=prodotto_id, error=str(e))
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": describe_error(e)}

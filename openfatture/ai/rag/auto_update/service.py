@@ -22,6 +22,7 @@ from openfatture.ai.rag.auto_update.queue import ReindexQueue
 from openfatture.ai.rag.auto_update.tracker import ChangeType, EntityChange, get_change_tracker
 from openfatture.ai.rag.indexing import InvoiceIndexer
 from openfatture.ai.rag.vector_store import VectorStore
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
@@ -262,7 +263,7 @@ class AutoIndexingService:
                     entity_id=entity_id,
                     error=str(e),
                 )
-                failed.append({"entity_id": entity_id, "error": str(e)})
+                failed.append({"entity_id": entity_id, "error": describe_error(e)})
 
         # Update final counts in results dict
         results["successful"] = successful

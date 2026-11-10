@@ -12,6 +12,7 @@ from openfatture.payment.application.services.payment_overview import (
     PaymentDueEntry,
     collect_payment_due_summary,
 )
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
@@ -144,7 +145,7 @@ def generate_vat_report(
 
         except Exception as e:
             logger.error("generate_vat_report_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 @validate_call
@@ -231,7 +232,7 @@ def generate_client_report(anno: int | None = None, limit: int = 20) -> dict[str
 
         except Exception as e:
             logger.error("generate_client_report_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 @validate_call
@@ -319,4 +320,4 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
 
         except Exception as e:
             logger.error("get_due_dates_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}

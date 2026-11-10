@@ -11,16 +11,7 @@ pytestmark = pytest.mark.unit
 
 
 class TestXSDValidation:
-    """Tests for XSD validation of generated XML."""
-
-    @pytest.fixture(autouse=True)
-    def setup_xsd_path(self, test_settings):
-        """Ensure XSD schema is available."""
-        xsd_path = test_settings.data_dir / "schemas" / "FatturaPA_v1.2.2.xsd"
-        if not xsd_path.exists():
-            pytest.skip(
-                "XSD schema not available - download it with `uv run python -c 'from openfatture.sdi.validator.xsd_validator import download_xsd_schema; download_xsd_schema(auto_download=True)'`"
-            )
+    """Generated XML validates against the bundled FatturaPA schema (offline)."""
 
     def test_basic_invoice_validates(self, test_settings, sample_fattura):
         """Test basic invoice XML validates against XSD."""

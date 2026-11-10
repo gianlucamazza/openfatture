@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import validate_call
 
 from openfatture.payment.domain.enums import TransactionStatus
+from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import Pagamento, StatoPagamento
@@ -118,7 +119,7 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
 
         except Exception as e:
             logger.error("get_payment_status_failed", fattura_id=fattura_id, error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}
 
 
 @validate_call
@@ -197,7 +198,7 @@ def search_payments(
 
         except Exception as e:
             logger.error("search_payments_failed", error=str(e))
-            return {"error": str(e), "count": 0, "payments": []}
+            return {"error": describe_error(e), "count": 0, "payments": []}
 
 
 @validate_call
@@ -271,7 +272,7 @@ def search_bank_transactions(
 
         except Exception as e:
             logger.error("search_bank_transactions_failed", error=str(e))
-            return {"error": str(e), "count": 0, "transactions": []}
+            return {"error": describe_error(e), "count": 0, "transactions": []}
 
 
 @validate_call
@@ -323,4 +324,4 @@ def get_payment_stats() -> dict[str, Any]:
 
         except Exception as e:
             logger.error("get_payment_stats_failed", error=str(e))
-            return {"error": str(e)}
+            return {"error": describe_error(e)}

@@ -236,15 +236,6 @@ wheels = [
 ]
 
 [[package]]
-name = "asn1crypto"
-version = "1.5.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/de/cf/d547feed25b5244fcb9392e288ff9fdc3280b10260362fc45d37a798a6ee/asn1crypto-1.5.1.tar.gz", hash = "sha256:13ae38502be632115abf8a24cbe5f4da52e3b5231990aff31123c805306ccb9c", size = 121080, upload-time = "2022-03-15T14:46:52.889Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/7f/09065fd9e27da0eda08b4d6897f1c13535066174cc023af248fc2a8d5e5a/asn1crypto-1.5.1-py2.py3-none-any.whl", hash = "sha256:db4e40728b728508912cbb3d44f19ce188f218e9eba635821bb4b68564f8fd67", size = 105045, upload-time = "2022-03-15T14:46:51.055Z" },
-]
-
-[[package]]
 name = "attrs"
 version = "25.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -824,15 +815,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9d/a4/e44218c2b394e31a6dd0d6b095c4e1f32d0be54c2a4b250032d717647bab/durationpy-0.10.tar.gz", hash = "sha256:1fa6893409a6e739c9c72334fc65cca1f355dbdd93405d30f726deb5bde42fba", size = 3335, upload-time = "2025-05-17T13:52:37.26Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/0d/9feae160378a3553fa9a339b0e9c1a048e147a4127210e286ef18b730f03/durationpy-0.10-py3-none-any.whl", hash = "sha256:3b41e1b601234296b4fb368338fdcd3e13e0b4fb5b67345948f4f2bf9868b286", size = 3922, upload-time = "2025-05-17T13:52:36.463Z" },
-]
-
-[[package]]
-name = "elementpath"
-version = "5.0.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e7/bc/ccadb197f8ed565c0e39f5ee4302ffe96c81abb1f20a0979798a6271b668/elementpath-5.0.4.tar.gz", hash = "sha256:85ed93565d6e94aefa160b12f36b12cbe4be6bf9bbde06b80f2c5c94829a25fb", size = 365851, upload-time = "2025-08-16T18:19:55.717Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a9/b6/f85666707b9f9ff94ada851cbaa6f1c91a0f5802aa5e498772251e1e7772/elementpath-5.0.4-py3-none-any.whl", hash = "sha256:75d6f31c614d57e50eb749fc50806e3102880cd1f6552da3f2265f8eb8d3bbc6", size = 245512, upload-time = "2025-08-16T18:19:52.903Z" },
 ]
 
 [[package]]
@@ -2333,7 +2315,6 @@ name = "openfatture"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
-    { name = "asn1crypto" },
     { name = "babel" },
     { name = "click" },
     { name = "cryptography" },
@@ -2344,13 +2325,13 @@ dependencies = [
     { name = "lxml" },
     { name = "ofxparse" },
     { name = "platformdirs" },
+    { name = "prompt-toolkit" },
     { name = "pyasn1" },
     { name = "pyasn1-modules" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dateutil" },
     { name = "python-dotenv" },
-    { name = "pyyaml" },
     { name = "questionary" },
     { name = "rapidfuzz" },
     { name = "reportlab" },
@@ -2361,7 +2342,6 @@ dependencies = [
     { name = "tomlkit" },
     { name = "typer" },
     { name = "urllib3" },
-    { name = "xmlschema" },
 ]
 
 [package.optional-dependencies]
@@ -2369,7 +2349,6 @@ ai = [
     { name = "anthropic" },
     { name = "langgraph" },
     { name = "langgraph-checkpoint-sqlite" },
-    { name = "langgraph-sdk" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
@@ -2378,7 +2357,6 @@ all = [
     { name = "chromadb" },
     { name = "langgraph" },
     { name = "langgraph-checkpoint-sqlite" },
-    { name = "langgraph-sdk" },
     { name = "openai" },
     { name = "sentence-transformers" },
     { name = "tiktoken" },
@@ -2399,7 +2377,6 @@ dev = [
     { name = "ruff" },
     { name = "types-pyasn1" },
     { name = "types-python-dateutil" },
-    { name = "types-pyyaml" },
     { name = "types-reportlab" },
     { name = "types-requests" },
 ]
@@ -2408,7 +2385,6 @@ rag = [
     { name = "chromadb" },
     { name = "langgraph" },
     { name = "langgraph-checkpoint-sqlite" },
-    { name = "langgraph-sdk" },
     { name = "openai" },
     { name = "sentence-transformers" },
     { name = "tiktoken" },
@@ -2421,7 +2397,6 @@ requires-dist = [
     { name = "anthropic", marker = "extra == 'ai'", specifier = ">=0.71.0" },
     { name = "anthropic", marker = "extra == 'all'", specifier = ">=0.71.0" },
     { name = "anthropic", marker = "extra == 'rag'", specifier = ">=0.71.0" },
-    { name = "asn1crypto", specifier = ">=1.5.1" },
     { name = "babel", specifier = ">=2.14.0" },
     { name = "bump-my-version", marker = "extra == 'dev'", specifier = ">=0.18.0" },
     { name = "chromadb", marker = "extra == 'all'", specifier = ">=1.1.1" },
@@ -2439,9 +2414,6 @@ requires-dist = [
     { name = "langgraph-checkpoint-sqlite", marker = "extra == 'ai'", specifier = ">=3.0.1" },
     { name = "langgraph-checkpoint-sqlite", marker = "extra == 'all'", specifier = ">=3.0.1" },
     { name = "langgraph-checkpoint-sqlite", marker = "extra == 'rag'", specifier = ">=3.0.1" },
-    { name = "langgraph-sdk", marker = "extra == 'ai'", specifier = ">=0.4.6" },
-    { name = "langgraph-sdk", marker = "extra == 'all'", specifier = ">=0.4.6" },
-    { name = "langgraph-sdk", marker = "extra == 'rag'", specifier = ">=0.4.6" },
     { name = "lxml", specifier = ">=5.1.0" },
     { name = "lxml-stubs", marker = "extra == 'dev'", specifier = ">=0.5.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
@@ -2451,6 +2423,7 @@ requires-dist = [
     { name = "openai", marker = "extra == 'rag'", specifier = ">=2.4.0" },
     { name = "platformdirs", specifier = ">=4.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.6.0" },
+    { name = "prompt-toolkit", specifier = ">=3.0.43" },
     { name = "pyasn1", specifier = ">=0.5.0" },
     { name = "pyasn1-modules", specifier = ">=0.3.0" },
     { name = "pydantic", specifier = ">=2.6.0" },
@@ -2463,7 +2436,6 @@ requires-dist = [
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.12.0" },
     { name = "python-dateutil", specifier = ">=2.8.2" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "questionary", specifier = ">=2.0.0" },
     { name = "rapidfuzz", specifier = ">=3.0.0" },
     { name = "reportlab", specifier = ">=4.0.9" },
@@ -2483,11 +2455,9 @@ requires-dist = [
     { name = "typer", specifier = ">=0.12.0" },
     { name = "types-pyasn1", marker = "extra == 'dev'", specifier = ">=0.5.0" },
     { name = "types-python-dateutil", marker = "extra == 'dev'", specifier = ">=2.9.0" },
-    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "types-reportlab", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.31.0" },
     { name = "urllib3", specifier = ">=2.8.0" },
-    { name = "xmlschema", specifier = ">=3.0.1" },
 ]
 provides-extras = ["ai", "all", "dev", "rag"]
 
@@ -4237,15 +4207,6 @@ wheels = [
 ]
 
 [[package]]
-name = "types-pyyaml"
-version = "6.0.12.20250915"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7e/69/3c51b36d04da19b92f9e815be12753125bd8bc247ba0470a982e6979e71c/types_pyyaml-6.0.12.20250915.tar.gz", hash = "sha256:0f8b54a528c303f0e6f7165687dd33fafa81c807fcac23f632b63aa624ced1d3", size = 17522, upload-time = "2025-09-15T03:01:00.728Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/e0/1eed384f02555dde685fff1a1ac805c1c7dcb6dd019c916fe659b1c1f9ec/types_pyyaml-6.0.12.20250915-py3-none-any.whl", hash = "sha256:e7d4d9e064e89a3b3cae120b4990cd370874d2bf12fa5f46c97018dd5d3c9ab6", size = 20338, upload-time = "2025-09-15T03:00:59.218Z" },
-]
-
-[[package]]
 name = "types-reportlab"
 version = "4.4.4.20250926"
 source = { registry = "https://pypi.org/simple" }
@@ -4563,18 +4524,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/86/eb/20b6cdf273913d0ad05a6a14aed4b9a85591c18a987a3d47f20fa13dcc47/websockets-15.0.1-cp313-cp313-win32.whl", hash = "sha256:ba9e56e8ceeeedb2e080147ba85ffcd5cd0711b89576b83784d8605a7df455fa", size = 176393, upload-time = "2025-03-05T20:02:53.814Z" },
     { url = "https://files.pythonhosted.org/packages/1b/6c/c65773d6cab416a64d191d6ee8a8b1c68a09970ea6909d16965d26bfed1e/websockets-15.0.1-cp313-cp313-win_amd64.whl", hash = "sha256:e09473f095a819042ecb2ab9465aee615bd9c2028e4ef7d933600a8401c79561", size = 176837, upload-time = "2025-03-05T20:02:55.237Z" },
     { url = "https://files.pythonhosted.org/packages/fa/a8/5b41e0da817d64113292ab1f8247140aac61cbf6cfd085d6a0fa77f4984f/websockets-15.0.1-py3-none-any.whl", hash = "sha256:f7a866fbc1e97b5c617ee4116daaa09b722101d4a3c170c787450ba409f9736f", size = 169743, upload-time = "2025-03-05T20:03:39.41Z" },
-]
-
-[[package]]
-name = "xmlschema"
-version = "4.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "elementpath" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/84/f8/33b43a53503d0892e7555d16c593cf001d5aaa5b0ad7d53c68098235805b/xmlschema-4.2.0.tar.gz", hash = "sha256:b1f88c53493b2e75471977cbf218d939b872d0c7046bb63d48cc219fa7e241b9", size = 643756, upload-time = "2025-10-14T09:19:32.253Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/1a/81ac398d35be848f3655893b6260f227b29ca6acf5c2674dc5ed9af63027/xmlschema-4.2.0-py3-none-any.whl", hash = "sha256:82d24a50eea5e7f2d603312813848cd66fddf8fa2b6730839c6aa3d66312e3b6", size = 467246, upload-time = "2025-10-14T09:19:28.359Z" },
 ]
 
 [[package]]
