@@ -114,6 +114,7 @@ def test_status_text_exposes_blocking_fields(tmp_path, monkeypatch):
     data = {
         "readiness": _readiness(settings, {"ai": True}),
         "extras": {"ai": True},
+        "configuration": {"config_file": str(tmp_path / "config.toml"), "secret_backend": "file"},
         "extensions": {
             "hooks_dir": str(tmp_path),
             "hooks_scripts": [],
@@ -140,3 +141,31 @@ def test_status_text_exposes_blocking_fields(tmp_path, monkeypatch):
     assert "cedente_regime_fiscale" in result.stdout
     assert "Da completare" in result.stdout
     assert "openfatture --help" not in result.stdout
+
+
+def test_status_reports_configuration_sources(tmp_path, monkeypatch):
+    import json
+
+    from typer.testing import CliRunner
+
+    from openfatture.cli.main import app
+
+    config_dir = tmp_path / "profile"
+    config_dir.mkdir()
+    (config_dir / "config.toml").write_text('ai_api_key = "plaintext"\n')
+    monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(config_dir))
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("AI_PROVIDER=ollama\n")
+
+    result = CliRunner().invoke(app, ["status", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    configuration = payload["configuration"]
+    assert configuration["config_file"] == str(config_dir / "config.toml")
+    assert configuration["secret_backend"] == "file"
+    assert configuration["plaintext_secrets"] == ["ai_api_key"]
+    assert configuration["ignored_dotenv"] is True
+    steps = " ".join(payload["readiness"]["next_steps"])
+    assert "openfatture config migrate" in steps
+    assert "--env-file .env" in steps

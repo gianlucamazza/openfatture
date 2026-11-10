@@ -2,7 +2,6 @@
 
 import logging
 from io import StringIO
-from types import SimpleNamespace
 
 from typer.testing import CliRunner
 
@@ -10,14 +9,16 @@ from openfatture.cli.commands import config
 from openfatture.platform.logging import SensitiveLogFilter, register_sensitive_values
 
 
-def test_config_set_does_not_echo_credential(monkeypatch):
+def test_config_set_does_not_echo_credential(tmp_path, monkeypatch):
     key = "synthetic-secret-for-cli-test"
-    monkeypatch.setattr(config, "get_settings", lambda: SimpleNamespace(ai_api_key=""))
-    monkeypatch.setattr(config, "save_config", lambda settings, path: None)
+    monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path))
     result = CliRunner().invoke(config.app, ["set", "ai_api_key", key])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.stdout
     assert key not in result.stdout
-    assert "REDACTED" in result.stdout
+    assert (
+        not (tmp_path / "config.toml").exists() or key not in (tmp_path / "config.toml").read_text()
+    )
+    assert key in (tmp_path / "credentials.toml").read_text()
 
 
 def test_standard_logging_masks_credentials_and_exception_text():

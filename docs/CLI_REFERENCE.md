@@ -43,19 +43,24 @@ continue that session).
 
 ## `openfatture config`
 
-Reads or updates local configuration.
+Reads or updates the user configuration (`config.toml`) and secrets (OS
+keychain). See [configuration sources](CONFIGURATION.md#sources-and-precedence).
 
 ```bash
-openfatture config show
-openfatture config set ai_provider ollama
+openfatture config show                       # values and their source
+openfatture config set ai_provider openai     # validated, writes only this key
+openfatture config set ai_api_key sk-...      # secret: stored in the keychain
+openfatture config unset ai_base_url          # back to the default
+openfatture config migrate [--env-file .env]  # move plaintext secrets / import a .env
 openfatture config reload
 ```
 
 ## `openfatture status`
 
-Reports version, storage paths, optional extras, and **readiness**
-(`core_ready` / `assistant_ready` plus `next_steps`) without changing local
-state. Use `--json` for machine-readable output.
+Reports version, storage paths, optional extras, **readiness**
+(`core_ready` / `assistant_ready` plus `next_steps`) and **configuration**
+(`config_file`, `secret_backend`, `plaintext_secrets`, `ignored_dotenv`)
+without changing local state. Use `--json` for machine-readable output.
 
 ```bash
 openfatture status

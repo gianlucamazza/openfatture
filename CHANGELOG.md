@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-11-10
+
+### Changed
+
+- **`.env` is no longer read implicitly** from the working directory, so a command
+  behaves the same everywhere. Precedence is now: environment variables > secrets >
+  `~/.config/openfatture/config.toml` > defaults. Load an env file explicitly with
+  `uv run --env-file .env` or `docker compose` `env_file:`; import an old one with
+  `openfatture config migrate --env-file .env`.
+- Secrets (`ai_api_key`, `pec_password`, `signature_certificate_password`) are stored
+  in the OS keychain through `keyring`, or in `credentials.toml` (0600) when no keychain
+  is available. `OPENFATTURE_SECRET_BACKEND=keyring|file` forces the backend.
+- `config show` reports where each value comes from; `status --json` adds a
+  `configuration` block (config file, secret backend, plaintext secrets, ignored `.env`).
+- `init` stores secrets in the keychain and proposes the default model of each provider
+  (`qwen3:8b` for Ollama).
+- `docker-compose.yml` passes `.env` via `env_file:` instead of mounting it.
+
+### Added
+
+- `openfatture config unset KEY` and `openfatture config migrate [--env-file PATH]`.
+- `OPENFATTURE_CONFIG_DIR` selects another configuration directory.
+
+### Fixed
+
+- `config set` wrote every effective setting to `config.toml`, including values from the
+  environment or `.env` (secrets too) and all defaults, and dropped comments. It now
+  validates the value and writes only the given key, atomically and with 0600 permissions.
+- Test runs could read the developer's real `config.toml`; they are now isolated.
+- Release assets no longer include `dist/.gitignore`.
+
+### Removed
+
+- Unused `platform.security` secrets helpers (`SecretsManager`, `SecureConfig`,
+  `DataEncryption`, `validate_env_vars`, `mask_sensitive_value`, `check_secrets_in_code`).
+- `docs/QUICKSTART.md` (superseded by `QUICKSTART.md`; archived in `docs/history/`).
+
 ## [2.6.0] - 2026-11-10
 
 ### Added

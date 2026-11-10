@@ -379,7 +379,7 @@ config = PDFGeneratorConfig(
 
 ### Environment Variables
 
-Set defaults via `.env`:
+Set defaults as environment variables (for example through `uv run --env-file .env`):
 
 ```bash
 # PDF Generation
@@ -956,7 +956,7 @@ for fattura in invoices:  #
 
 ## Related Documentation
 
-- [Quick Start Guide](QUICKSTART.md) - Get started with OpenFatture
+- [Quick Start Guide](../QUICKSTART.md) - Get started with OpenFatture
 - [CLI Reference](CLI_REFERENCE.md) - Full CLI commands
 - [Configuration](CONFIGURATION.md) - System configuration
 

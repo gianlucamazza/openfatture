@@ -66,7 +66,7 @@ def sign_invoice_xml(
         if not cert_path_str:
             return {
                 "success": False,
-                "error": "Certificate path not provided. Set SIGNATURE_CERTIFICATE_PATH in .env or provide certificate_path parameter.",
+                "error": "Certificate path not provided. Run `openfatture config set signature_certificate_path <path>` or provide the certificate_path parameter.",
             }
 
         cert_path = Path(cert_path_str)
@@ -240,7 +240,7 @@ def check_certificate_status(
         if not cert_path_str:
             return {
                 "success": False,
-                "error": "Certificate path not provided. Set SIGNATURE_CERTIFICATE_PATH in .env or provide certificate_path parameter.",
+                "error": "Certificate path not provided. Run `openfatture config set signature_certificate_path <path>` or provide the certificate_path parameter.",
             }
 
         cert_path = Path(cert_path_str)

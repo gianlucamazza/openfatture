@@ -69,6 +69,8 @@ dependencies = [
   # Internationalization
   "fluent-runtime>=0.4.0",
   "babel>=2.14.0",
+  # Credentials in the OS keychain (Secret Service, Keychain, Credential Locker)
+  "keyring>=25.0.0",
 ]
 
 [project.optional-dependencies]

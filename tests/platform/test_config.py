@@ -66,28 +66,48 @@ def test_platformdirs_usage():
 
 
 def test_profile_precedence_and_read_only_paths(tmp_path, monkeypatch):
+    """explicit > environment > secret store > config.toml > default; ./.env is ignored."""
     import tomlkit
 
     import openfatture.platform.config as module
+    from openfatture.platform.secrets import SecretStore
 
-    profile = tmp_path / "profile.toml"
-    profile.write_text(tomlkit.dumps({"cedente_denominazione": "Profile"}))
-    dotenv = tmp_path / ".env"
-    dotenv.write_text("CEDENTE_DENOMINAZIONE=Dotenv\n")
-    monkeypatch.setitem(module.Settings.model_config, "toml_file", profile)
-    monkeypatch.delenv("CEDENTE_DENOMINAZIONE", raising=False)
+    profile = tmp_path / "profile"
+    profile.mkdir()
+    (profile / "config.toml").write_text(
+        tomlkit.dumps({"cedente_denominazione": "Profile", "pec_password": "toml-secret"})
+    )
+    monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(profile))
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("CEDENTE_DENOMINAZIONE=Dotenv\nAI_PROVIDER=ollama\n")
+    for name in ("CEDENTE_DENOMINAZIONE", "PEC_PASSWORD", "AI_PROVIDER"):
+        monkeypatch.delenv(name, raising=False)
     paths = {
         "data_dir": tmp_path / "data",
         "archivio_dir": tmp_path / "archive",
         "certificates_dir": tmp_path / "certificates",
     }
-    assert module.Settings(_env_file=dotenv, **paths).cedente_denominazione == "Dotenv"
+
+    settings = module.Settings(**paths)
+    assert settings.cedente_denominazione == "Profile"
+    assert settings.ai_provider == module.Settings.model_fields["ai_provider"].default
+    assert settings.pec_password == "toml-secret"
+
+    SecretStore().set("pec_password", "store-secret")
+    assert module.Settings(**paths).pec_password == "store-secret"
+
     monkeypatch.setenv("CEDENTE_DENOMINAZIONE", "Environment")
-    assert module.Settings(_env_file=dotenv, **paths).cedente_denominazione == "Environment"
+    monkeypatch.setenv("PEC_PASSWORD", "env-secret")
+    settings = module.Settings(**paths)
+    assert settings.cedente_denominazione == "Environment"
+    assert settings.pec_password == "env-secret"
     assert (
-        module.Settings(
-            cedente_denominazione="Explicit", _env_file=dotenv, **paths
-        ).cedente_denominazione
+        module.Settings(cedente_denominazione="Explicit", **paths).cedente_denominazione
         == "Explicit"
     )
+
+    sources = module.config_sources()
+    assert sources["cedente_denominazione"] == "env"
+    assert sources["ai_provider"] == "default"
+    assert module.plaintext_secrets() == ["pec_password"]
     assert all(not path.exists() for path in paths.values())

@@ -33,6 +33,9 @@ Use `uv run python -m pytest`, not an unrelated global pytest executable.
 
 - Prefer explicit, typed interfaces and small modules.
 - Keep startup read-only; setup happens only through `init`.
+- Configuration precedence is environment > secrets (OS keychain or
+  `credentials.toml`) > `config.toml` > defaults. Never read `.env` implicitly
+  and never write secrets to `config.toml`.
 - Keep `status` read-only and machine-readable with `--json`.
 - Route business actions through the assistant and domain tools.
 - Respect the package import rules in `docs/ARCHITECTURE.md`; they are

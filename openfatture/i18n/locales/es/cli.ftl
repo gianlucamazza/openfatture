@@ -1015,6 +1015,24 @@ cli-config-set-success = [green]Configurado { $key } = { $value }[/green]
 cli-config-saved-to = [dim]Guardado en { $path }[/dim]
 cli-config-invalid-key = [red]Clave de configuración inválida: { $key }[/red]
 cli-config-error = [red]Error: { $error }[/red]
+cli-config-column-source = Origen
+cli-config-source-env = entorno
+cli-config-source-keyring = llavero
+cli-config-source-file = archivo de credenciales
+cli-config-source-config = config.toml
+cli-config-source-default = predeterminado
+cli-config-file-path = [dim]Archivo de configuración: { $path }[/dim]
+cli-config-secret-backend = [dim]Secretos: { $backend }[/dim]
+cli-config-secret-saved = [green]{ $key } guardado en: { $backend }[/green]
+cli-config-env-override = [yellow]{ $key } está definido por una variable de entorno: el valor guardado se ignora mientras siga definida.[/yellow]
+cli-config-unset-success = [green]{ $key } eliminado[/green]
+cli-config-unset-missing = [yellow]{ $key } no estaba definido[/yellow]
+cli-config-invalid-value = [red]Valor no válido para { $key }: { $error }[/red]
+cli-config-migrate-moved = [green]Movidos a { $backend }: { $keys }[/green]
+cli-config-migrate-imported = [green]Importados en config.toml: { $keys }[/green]
+cli-config-migrate-conflicts = [yellow]Ya definidos, no sobrescritos: { $keys }[/yellow]
+cli-config-migrate-nothing = Nada que migrar.
+cli-config-migrate-source-kept = [dim]{ $path } no se ha modificado: elimínalo tras comprobarlo.[/dim]
 
 # Added: chat labels / DB-error messages
 cli-ai-chat-assistant-title = [bold cyan]Asistente IA[/bold cyan]

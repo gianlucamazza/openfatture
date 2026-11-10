@@ -141,7 +141,7 @@ def load_custom_listeners(
         Number of listeners successfully loaded
 
     Example:
-        # In .env file:
+        # Environment variable (or `openfatture config set event_listeners ...`):
         OPENFATTURE_EVENT_LISTENERS=myapp.listeners.slack_notifier,myapp.listeners.metrics_tracker
 
         # Then:

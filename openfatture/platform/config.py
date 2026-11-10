@@ -1,10 +1,13 @@
 """Configuration management for OpenFatture."""
 
+import os
+import tomllib
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from platformdirs import PlatformDirs
 from pydantic import Field, field_validator
+from pydantic.fields import FieldInfo
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -30,12 +33,7 @@ def _default_app_version() -> str:
 class DebugConfig(BaseSettings):
     """Dynamic debug configuration controls."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
-    )
+    model_config = SettingsConfigDict(case_sensitive=False, extra="ignore")
 
     # Global debug settings
     enable_debug_logging: bool = Field(
@@ -128,16 +126,34 @@ class DebugConfig(BaseSettings):
         return str(level) if level is not None else None
 
 
-class Settings(BaseSettings):
-    """Application settings."""
+class SecretStoreSource(PydanticBaseSettingsSource):
+    """Secret settings from the OS keychain or the private credentials file."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
-        toml_file=Path(dirs.user_config_dir) / "config.toml",
-    )
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
+        return None, field_name, False
+
+    def __call__(self) -> dict[str, Any]:
+        from openfatture.platform.secrets import SecretStore
+
+        try:
+            return dict(SecretStore().values())
+        except Exception as exc:  # keychain locked or unreachable: fall back to other sources
+            import structlog
+
+            structlog.get_logger(__name__).debug("secret_store_unavailable", error=str(exc))
+            return {}
+
+
+class Settings(BaseSettings):
+    """Application settings.
+
+    Sources, highest precedence first: environment variables, the secret store
+    (keychain or ``credentials.toml``), ``config.toml`` in the user config
+    directory, field defaults. No ``.env`` file is read implicitly; load one
+    explicitly with ``uv run --env-file .env`` or ``docker compose`` ``env_file``.
+    """
+
+    model_config = SettingsConfigDict(case_sensitive=False, extra="ignore")
 
     @classmethod
     def settings_customise_sources(
@@ -148,11 +164,13 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
+        from openfatture.platform.secrets import config_file_path
+
         return (
             init_settings,
             env_settings,
-            dotenv_settings,
-            TomlConfigSettingsSource(settings_cls),
+            SecretStoreSource(settings_cls),
+            TomlConfigSettingsSource(settings_cls, toml_file=config_file_path()),
             file_secret_settings,
         )
 
@@ -372,3 +390,47 @@ def reload_settings() -> Settings:
         _settings.ai_api_key, _settings.pec_password, _settings.signature_certificate_password
     )
     return _settings
+
+
+SourceName = Literal["env", "secret", "config", "default"]
+
+
+def read_config_file() -> dict[str, Any]:
+    """Raw contents of ``config.toml`` (empty when missing)."""
+    from openfatture.platform.secrets import config_file_path
+
+    path = config_file_path()
+    if not path.exists():
+        return {}
+    return tomllib.loads(path.read_text(encoding="utf-8"))
+
+
+def config_sources() -> dict[str, SourceName]:
+    """Where each top-level setting comes from, by precedence."""
+    from openfatture.platform.secrets import SecretStore
+
+    environment = {key.lower() for key in os.environ}
+    stored = read_config_file()
+    try:
+        secrets = set(SecretStore().values())
+    except Exception:
+        secrets = set()
+    sources: dict[str, SourceName] = {}
+    for name in Settings.model_fields:
+        if name in environment:
+            sources[name] = "env"
+        elif name in secrets:
+            sources[name] = "secret"
+        elif name in stored:
+            sources[name] = "config"
+        else:
+            sources[name] = "default"
+    return sources
+
+
+def plaintext_secrets() -> list[str]:
+    """Secret settings still stored in clear text in ``config.toml``."""
+    from openfatture.platform.secrets import SECRET_FIELDS
+
+    stored = read_config_file()
+    return [name for name in SECRET_FIELDS if stored.get(name)]

@@ -11,7 +11,6 @@ validated against ``get_settings()``, type-converted from the current value, and
 persisted via ``save_config``.
 """
 
-from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -189,115 +188,142 @@ class TestReloadConfigCommand:
 
 
 class TestSetConfigCommand:
-    """Test 'config set' command.
+    """``config set`` writes only the given key; secrets go to the secret store."""
 
-    ``config set`` validates the key against the live settings object, type-coerces
-    the value from the current attribute, and persists via ``save_config`` to a TOML
-    file. ``dirs`` and ``save_config`` are patched at their definition modules because
-    the command imports them locally inside the function body.
-    """
+    @pytest.fixture(autouse=True)
+    def _isolated(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path))
+        monkeypatch.setenv("OPENFATTURE_SECRET_BACKEND", "file")
+        for name in ("AI_PROVIDER", "AI_API_KEY", "PEC_PASSWORD", "AI_CHAT_MAX_TOKENS"):
+            monkeypatch.delenv(name, raising=False)
+        self.config = tmp_path / "config.toml"
+        self.credentials = tmp_path / "credentials.toml"
 
-    @patch("openfatture.cli.commands.config.save_config")
-    @patch("openfatture.platform.config.dirs")
-    def test_set_config_success(self, mock_dirs, mock_save_config, tmp_path):
-        """Test successful configuration setting for a valid string key."""
-        mock_dirs.user_config_dir = tmp_path
+    def test_set_writes_only_the_key_and_keeps_comments(self):
+        self.config.write_text('# personal note\nai_model = "kept"\n')
 
         result = runner.invoke(app, ["set", "ai_provider", "anthropic"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.stdout
         assert "Set ai_provider = anthropic" in result.stdout
-        assert "Saved to" in result.stdout
+        assert self.config.read_text() == (
+            '# personal note\nai_model = "kept"\nai_provider = "anthropic"\n'
+        )
+        assert oct(self.config.stat().st_mode & 0o777) == "0o600"
 
-        # The updated settings object is persisted to the config file.
-        mock_save_config.assert_called_once()
-        saved_settings, saved_path = mock_save_config.call_args[0]
-        assert saved_settings.ai_provider == "anthropic"
-        assert Path(saved_path) == tmp_path / "config.toml"
+    def test_set_keeps_spaces_and_coerces_types(self):
+        assert runner.invoke(app, ["set", "cedente_indirizzo", "Via Roma 123"]).exit_code == 0
+        assert runner.invoke(app, ["set", "ai_chat_max_tokens", "465"]).exit_code == 0
+        assert runner.invoke(app, ["set", "ai_chat_enabled", "false"]).exit_code == 0
 
-    @patch("openfatture.cli.commands.config.save_config")
-    @patch("openfatture.platform.config.dirs")
-    def test_set_config_updates_string_attribute(self, mock_dirs, mock_save_config, tmp_path):
-        """Test that config set updates a flat string attribute on settings."""
-        mock_dirs.user_config_dir = tmp_path
+        import tomllib
 
-        result = runner.invoke(app, ["set", "cedente_denominazione", "New Company"])
+        stored = tomllib.loads(self.config.read_text())
+        assert stored == {
+            "cedente_indirizzo": "Via Roma 123",
+            "ai_chat_max_tokens": 465,
+            "ai_chat_enabled": False,
+        }
 
-        assert result.exit_code == 0
-        assert "Set cedente_denominazione = New Company" in result.stdout
-
-        # The new value is applied to the settings object before saving.
-        saved_settings = mock_save_config.call_args[0][0]
-        assert saved_settings.cedente_denominazione == "New Company"
-
-    @patch("openfatture.cli.commands.config.save_config")
-    @patch("openfatture.platform.config.dirs")
-    def test_set_config_with_spaces_in_value(self, mock_dirs, mock_save_config, tmp_path):
-        """Test setting config with spaces in value."""
-        mock_dirs.user_config_dir = tmp_path
-
-        result = runner.invoke(app, ["set", "cedente_indirizzo", "Via Roma 123"])
-
-        assert result.exit_code == 0
-        assert "Via Roma 123" in result.stdout
-
-        saved_settings = mock_save_config.call_args[0][0]
-        assert saved_settings.cedente_indirizzo == "Via Roma 123"
-
-    @patch(
-        "openfatture.cli.commands.config.save_config",
-        side_effect=PermissionError("Permission denied"),
-    )
-    @patch("openfatture.platform.config.dirs")
-    def test_set_config_permission_error(self, mock_dirs, mock_save_config, tmp_path):
-        """Test config set when persistence fails with a permission error."""
-        mock_dirs.user_config_dir = tmp_path
-
-        result = runner.invoke(app, ["set", "ai_provider", "anthropic"])
+    def test_set_rejects_invalid_values(self):
+        result = runner.invoke(app, ["set", "ai_chat_max_tokens", "many"])
 
         assert result.exit_code == 1
-        assert "Error" in result.stdout
+        assert "Invalid value for ai_chat_max_tokens" in result.stdout
+        assert not self.config.exists()
 
-    @patch("openfatture.cli.commands.config.save_config", side_effect=OSError("File not found"))
-    @patch("openfatture.platform.config.dirs")
-    def test_set_config_file_error(self, mock_dirs, mock_save_config, tmp_path):
-        """Test config set when persistence fails with a file error."""
-        mock_dirs.user_config_dir = tmp_path
+    def test_secret_goes_to_store_not_config(self):
+        self.config.write_text('ai_api_key = "old-plaintext"\n')
 
+        result = runner.invoke(app, ["set", "ai_api_key", "sk-new-secret"])
+
+        assert result.exit_code == 0, result.stdout
+        assert "sk-new-secret" not in result.stdout
+        assert "credentials file" in result.stdout
+        assert "ai_api_key" not in self.config.read_text()
+        assert "sk-new-secret" in self.credentials.read_text()
+        assert oct(self.credentials.stat().st_mode & 0o777) == "0o600"
+
+    def test_environment_override_is_reported(self, monkeypatch):
+        monkeypatch.setenv("AI_PROVIDER", "ollama")
+
+        result = runner.invoke(app, ["set", "ai_provider", "anthropic"])
+
+        assert result.exit_code == 0
+        assert "environment variable" in result.stdout
+
+    def test_set_reports_write_errors(self, monkeypatch):
+        def fail(*args, **kwargs):
+            raise PermissionError("Permission denied")
+
+        monkeypatch.setattr("openfatture.cli.commands.config.update_config", fail)
         result = runner.invoke(app, ["set", "ai_provider", "anthropic"])
 
         assert result.exit_code == 1
         assert "Error" in result.stdout
 
     def test_set_config_invalid_key(self):
-        """Test that config set rejects keys that do not exist on settings."""
         result = runner.invoke(app, ["set", "nonexistent_key", "value"])
 
         assert result.exit_code == 1
         assert "Invalid configuration key" in result.stdout
 
     def test_set_config_requires_key_and_value(self):
-        """Test that config set requires both key and value arguments."""
-        # Missing both arguments
-        result = runner.invoke(app, ["set"])
-        assert result.exit_code != 0
+        assert runner.invoke(app, ["set"]).exit_code != 0
+        assert runner.invoke(app, ["set", "ai_provider"]).exit_code != 0
 
-        # Missing value argument
-        result = runner.invoke(app, ["set", "ai_provider"])
-        assert result.exit_code != 0
+    def test_unset_removes_value_and_secret(self):
+        runner.invoke(app, ["set", "ai_provider", "anthropic"])
+        runner.invoke(app, ["set", "pec_password", "pw"])
 
-    @patch("openfatture.cli.commands.config.save_config")
-    @patch("openfatture.platform.config.dirs")
-    def test_set_config_with_numeric_value(self, mock_dirs, mock_save_config, tmp_path):
-        """Test setting config with numeric value coerces from the int attribute."""
-        mock_dirs.user_config_dir = tmp_path
+        assert "Removed ai_provider" in runner.invoke(app, ["unset", "ai_provider"]).stdout
+        assert "Removed pec_password" in runner.invoke(app, ["unset", "pec_password"]).stdout
+        assert "was not set" in runner.invoke(app, ["unset", "pec_password"]).stdout
+        assert "ai_provider" not in self.config.read_text()
+        assert "pec_password" not in self.credentials.read_text()
 
-        result = runner.invoke(app, ["set", "ai_chat_max_tokens", "465"])
+
+class TestMigrateConfigCommand:
+    @pytest.fixture(autouse=True)
+    def _isolated(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path / "profile"))
+        monkeypatch.setenv("OPENFATTURE_SECRET_BACKEND", "file")
+        self.profile = tmp_path / "profile"
+        self.profile.mkdir()
+        self.config = self.profile / "config.toml"
+        self.dotenv = tmp_path / ".env"
+
+    def test_moves_plaintext_secrets_out_of_config(self):
+        self.config.write_text('ai_model = "m"\nai_api_key = "sk-plain"\n')
+
+        result = runner.invoke(app, ["migrate"])
+
+        assert result.exit_code == 0, result.stdout
+        assert "Moved to credentials file: ai_api_key" in result.stdout
+        assert self.config.read_text() == 'ai_model = "m"\n'
+        assert "sk-plain" in (self.profile / "credentials.toml").read_text()
+
+    def test_imports_env_file_without_overwriting(self):
+        self.config.write_text('ai_model = "deepseek"\n')
+        self.dotenv.write_text(
+            "AI_PROVIDER=ollama\nAI_MODEL=llama3.2\nPEC_PASSWORD=pw\n"
+            "CEDENTE_CAP=25128\nPEC_SMTP_PORT=abc\nUNRELATED=1\n"
+        )
+
+        result = runner.invoke(app, ["migrate", "--env-file", str(self.dotenv)])
+
+        assert result.exit_code == 0, result.stdout
+        import tomllib
+
+        stored = tomllib.loads(self.config.read_text())
+        assert stored == {"ai_model": "deepseek", "ai_provider": "ollama", "cedente_cap": "25128"}
+        assert "Already set, not overwritten: ai_model" in result.stdout
+        assert "Invalid value for PEC_SMTP_PORT" in result.stdout
+        assert "pw" in (self.profile / "credentials.toml").read_text()
+        assert self.dotenv.exists()
+
+    def test_nothing_to_migrate(self):
+        result = runner.invoke(app, ["migrate"])
 
         assert result.exit_code == 0
-        assert "465" in result.stdout
-
-        # An integer-typed setting is coerced to int before saving.
-        saved_settings = mock_save_config.call_args[0][0]
-        assert saved_settings.ai_chat_max_tokens == 465
-        assert isinstance(saved_settings.ai_chat_max_tokens, int)
+        assert "Nothing to migrate." in result.stdout

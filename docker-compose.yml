@@ -7,15 +7,18 @@ services:
       dockerfile: Dockerfile
     image: openfatture:latest
     container_name: openfatture
+    # Compose loads .env into the container environment; the app itself never reads .env.
+    env_file:
+      - .env
     volumes:
-      # Mount .env for configuration
-      - ./.env:/app/.env:ro
       # Mount data directories for persistence
       - openfatture_data:/root/.openfatture/data
       - openfatture_archivio:/root/.openfatture/archivio
       - openfatture_certs:/root/.openfatture/certificates
     environment:
       - DATABASE_URL=sqlite:////root/.openfatture/data/openfatture.db
+      # No OS keychain in the container: secrets come from the environment.
+      - OPENFATTURE_SECRET_BACKEND=file
     stdin_open: true
     tty: true
     networks:
