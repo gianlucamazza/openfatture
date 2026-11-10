@@ -751,7 +751,14 @@ def mock_pec_server(monkeypatch):
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _ROOT_ENTRIES_AT_START = {path.name for path in _REPO_ROOT.iterdir()}
-_TOOL_CACHES = {".pytest_cache", ".coverage", ".hypothesis", ".ruff_cache", ".mypy_cache"}
+_TOOL_CACHES = {
+    ".benchmarks",
+    ".coverage",
+    ".hypothesis",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+}
 
 
 @pytest.fixture(scope="session", autouse=True)
