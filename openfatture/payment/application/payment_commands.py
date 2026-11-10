@@ -48,7 +48,7 @@ def reconcile_payment(
     Returns:
         Dictionary with reconciliation result
     """
-    from openfatture.cli.lifespan import get_event_bus
+    from openfatture.events import get_global_event_bus
     from openfatture.payment.application.services.reconciliation_service import (
         ReconciliationService,
     )
@@ -81,7 +81,7 @@ def reconcile_payment(
         # Initialize repos and service
         tx_repo = BankTransactionRepository(db)
         payment_repo = PaymentRepository(db)
-        event_bus = get_event_bus()
+        event_bus = get_global_event_bus()
 
         # Create service with minimal matching service (not used for manual reconciliation)
         from openfatture.payment.application.services.matching_service import MatchingService
@@ -93,20 +93,12 @@ def reconcile_payment(
             strategies=[ExactAmountMatcher(), FuzzyDescriptionMatcher()],
         )
 
-        # Note: GlobalEventBus and payment.EventBus have compatible interfaces at runtime
-        # (both have publish() and subscribe() methods), but MyPy sees them as distinct
-        # protocols due to different event type hierarchies (BaseEvent vs PaymentEvent).
-        # This is safe because PaymentEvent inherits from BaseEvent.
-        from typing import cast
-
-        from openfatture.payment.application.events import EventBus as PaymentEventBus
-
         reconciliation_service = ReconciliationService(
             tx_repo=tx_repo,
             payment_repo=payment_repo,
             matching_service=matching_service,
             session=db,
-            event_bus=cast(PaymentEventBus, event_bus) if event_bus else None,
+            event_bus=event_bus,
         )
 
         # Perform reconciliation

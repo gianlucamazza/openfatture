@@ -4,19 +4,19 @@ Implements the Saga pattern to orchestrate complex, multi-step reconciliation pr
 with proper state transitions and event handling.
 """
 
-import inspect
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import structlog
 from sqlalchemy.orm import Session
 
+from ....events.base import EventBus
 from ...domain.enums import MatchType, TransactionStatus
 from ...domain.models import BankTransaction
 from ...domain.value_objects import MatchResult, ReconciliationResult
-from ..events import EventBus, TransactionMatchedEvent, TransactionUnmatchedEvent
+from ..events import TransactionMatchedEvent, TransactionUnmatchedEvent
 
 if TYPE_CHECKING:
     from ....storage.database.models import Pagamento
@@ -448,14 +448,7 @@ class ReconciliationService:
             return
 
         try:
-            result = cast(Any, self.event_bus.publish(event))
-            if inspect.isawaitable(result):
-                from openfatture.platform.async_bridge import run_async
-
-                async def deliver() -> None:
-                    await result
-
-                run_async(deliver())
+            self.event_bus.publish(event)
         except Exception as exc:
             logger.error(
                 "event_publish_failed",

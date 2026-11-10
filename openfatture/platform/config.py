@@ -327,12 +327,6 @@ class Settings(BaseSettings):
     # Vector Store (for AI)
     vector_store_path: Path = Field(default=Path(dirs.user_data_dir) / "vector_store")
 
-    # Payment module
-    payment_event_listeners: str | None = Field(
-        default=None,
-        description="Comma-separated dotted paths to custom payment event listeners",
-    )
-
     # Global event system
     event_listeners: str | None = Field(
         default=None,
