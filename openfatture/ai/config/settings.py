@@ -1,9 +1,8 @@
 """AI module configuration settings."""
 
-from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -130,29 +129,6 @@ class AISettings(BaseSettings):
         description="Warning threshold for cost per request in USD",
     )
 
-    # Vector Store (ChromaDB)
-    chromadb_host: str = Field(
-        default="localhost",
-        description="ChromaDB host",
-    )
-
-    chromadb_port: int = Field(
-        default=8000,
-        ge=1,
-        le=65535,
-        description="ChromaDB port",
-    )
-
-    chromadb_persist_directory: Path = Field(
-        default=Path(".chromadb"),
-        description="ChromaDB persistence directory",
-    )
-
-    chromadb_collection_name: str = Field(
-        default="openfatture_invoices",
-        description="ChromaDB collection name",
-    )
-
     # Embeddings
     embedding_model: str = Field(
         default="text-embedding-3-small",
@@ -206,14 +182,6 @@ class AISettings(BaseSettings):
         ge=1,
         description="Maximum cache size in MB",
     )
-
-    @field_validator("chromadb_persist_directory")
-    @classmethod
-    def validate_path_exists(cls, v: Path) -> Path:
-        """Ensure path exists or can be created."""
-        if not v.exists():
-            v.mkdir(parents=True, exist_ok=True)
-        return v
 
     def get_model_for_provider(self) -> str:
         """Get the model name for the current provider."""

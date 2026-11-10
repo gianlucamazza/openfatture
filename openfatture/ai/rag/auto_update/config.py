@@ -20,6 +20,12 @@ from openfatture.platform.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _default_queue_path() -> Path:
+    from openfatture.platform.config import get_settings
+
+    return get_settings().data_dir / "rag_update_queue.json"
+
+
 class AutoUpdateConfig(BaseSettings):
     """RAG auto-update configuration.
 
@@ -114,8 +120,8 @@ class AutoUpdateConfig(BaseSettings):
 
     # Persistence
     queue_persist_path: Path = Field(
-        default=Path(".cache/rag_update_queue.json"),
-        description="Path to persist pending updates queue",
+        default_factory=lambda: _default_queue_path(),
+        description="Path to persist pending updates queue (defaults to data_dir)",
     )
 
     persist_queue_on_shutdown: bool = Field(
