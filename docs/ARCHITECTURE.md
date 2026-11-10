@@ -25,20 +25,21 @@ openfatture/
   storage/       # SQLAlchemy models and sessions
   events/        # domain events bus and persistence
   hooks/         # hook registry and executor
-  billing/       # clienti, fatture, preventivi, prodotti, batch, fiscale
-  sdi/           # FatturaPA XML, PEC, notifications, signature
+  billing/       # fatture, preventivi, batch, application services
+  sdi/           # FatturaPA XML, PEC + email templates, notifications, signature
   payment/       # reconciliation and bank import (DDD layers)
   pdf/           # human-readable invoice PDFs
-  ai/            # assistant, tools, providers, RAG, ML (feature extras)
+  ai/            # assistant runtime, tools, providers, RAG (feature extras)
   i18n/
 ```
 
 Removed from the product: browser `web`, `web_scraper`, `ai.voice`, orphan
-analytics agents, and the experimental in-process `plugins` package. See
+analytics agents, the experimental in-process `plugins` package and (2.8.0)
+the ML forecasting stack and the multi-agent workflows. See
 [ARCHITECTURE_REDESIGN.md](history/ARCHITECTURE_REDESIGN.md) and
 [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md).
 
-**Core vs extras vs extensions:** billing/SDI/payment/PDF are core; AI/RAG/ML/
+**Core vs extras vs extensions:** billing/SDI/payment/PDF are core; AI/RAG
 are feature extras; user automation uses **hooks**.
 
 ### Import rules
@@ -51,9 +52,17 @@ are feature extras; user automation uses **hooks**.
    `events.get_global_event_bus()`.
 4. Optional features fail with an explicit install hint when extras are missing.
 
-Rule 3 is enforced by `tests/test_import_rules.py`. Known remaining coupling:
-`platform/email` depends on `billing` and `sdi`, and `storage` models
-reference payment ORM models lazily.
+Rule 3 is enforced by `tests/test_import_rules.py`, which also forbids
+`platform` from importing `billing`, `payment`, `sdi` or `pdf`. Known remaining
+coupling: `storage` models reference payment ORM models lazily.
+
+### Persistence
+
+- Application services open sessions with `storage.session.db_session()` or
+  `session_scope(session)`; nothing manages `close()` by hand.
+- The schema is owned by the migrations in `storage/migrations` (shipped in the
+  wheel) through `storage.schema`; see
+  [CONFIGURATION.md](CONFIGURATION.md#database-schema).
 
 ### Optional extras
 
@@ -62,7 +71,6 @@ reference payment ORM models lazily.
 | *(core)* | Billing, SDI, payment, PDF, storage, platform, CLI, hooks engine |
 | `ai` | LLM providers, assistant, tools, orchestration |
 | `rag` | Vector store and embeddings |
-| `ml` | Forecasting models (frozen: not started by the CLI, no assistant tool uses them) |
 | `dev` | Tests and linters |
 | `all` | Union of feature extras |
 

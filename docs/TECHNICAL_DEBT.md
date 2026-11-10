@@ -2,10 +2,10 @@
 
 Honest inventory of **open** and **closed** debt after modernization **2.0**,
 the **2.1.0** LangGraph default flip, post-2.1 hygiene (#31–#34) and the
-**2.6.0** architecture review.
+**2.6.0–2.8.0** architecture review.
 
 **Last updated:** 2026-11-10  
-**Version baseline:** 2.6.0 (`v2.6.0`)
+**Version baseline:** 2.8.0 (`v2.8.0`)
 
 Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), [releases/v2.1.0.md](releases/v2.1.0.md).
@@ -21,8 +21,6 @@ Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
 | ID | Issue | Priority |
 |----|-------|----------|
 | D-SIZE | [#37](https://github.com/gianlucamazza/openfatture/issues/37) | P1 |
-| D-WF | [#38](https://github.com/gianlucamazza/openfatture/issues/38) | P2 + product |
-| D-ML-DRIFT | [#39](https://github.com/gianlucamazza/openfatture/issues/39) | P2 |
 | D-OBS | [#40](https://github.com/gianlucamazza/openfatture/issues/40) | P3 |
 | D-PDF-PAGOPA | [#41](https://github.com/gianlucamazza/openfatture/issues/41) | P2 |
 | D-TYPES-TESTS | [#42](https://github.com/gianlucamazza/openfatture/issues/42) | P3 |
@@ -41,7 +39,7 @@ Close the matching issue and move the row to the closed ledger when debt is burn
 | Structural modernization (2.0) | **Done** |
 | AI product backend (LangGraph default) | **Done** (2.1.0) |
 | Packaging / CLI surface / suppressions | **Clean** |
-| Real remaining debt | **Oversized modules** + **experimental workflows** (not on CLI) |
+| Real remaining debt | **Oversized modules** (split when touched) |
 | Blocking release debt | **None** |
 
 Remaining work is **maintenance when touched** or **product decisions**, not
@@ -58,7 +56,6 @@ firefighting. Do not invent new public domain CLI commands to “finish” debt.
 | Package layout | Low | Bounded packages; no empty placeholders; extras explicit |
 | Config / SSOT | Low | Version, backends, AI credentials hydrated consistently (#32) |
 | AI runtime (product path) | Low | Default `langgraph_tool_loop`; single tool-loop; ChatAgent slim rollback |
-| Multi-agent workflows | Medium | Present under `ai.orchestration.workflows.*`; **not** on public CLI |
 | Module size / cohesion | Medium | A few files >700 LOC; split only when editing them |
 | Lightning | **Removed** | Incomplete LND gRPC; archive under `docs/history/lightning/` |
 | RAG auto-update | Low | Real `reindex_callback` required; default auto-update off |
@@ -76,7 +73,7 @@ Keep this ledger so old debt is not rediscovered as open.
 |------|-------------|--------|
 | Repo hygiene + living docs | 2.0 | Canonical docs; history under `docs/history/` |
 | Ruff-only tooling | 2.0 | No flake8/black/isort dual stack |
-| Optional dependency extras | 2.0 | `ai` / `rag` / `ml` / `all` |
+| Optional dependency extras | 2.0 | `ai` / `rag` / `all` (`ml` removed in 2.8.0) |
 | D0 non-core cut | 2.0 | Voice, scraper, orphan agents out of product path |
 | D1 package reorg | 2.0 | `billing` / `events` / `hooks` / `platform` / `pdf` |
 | Experimental `plugins` package | 2.0 | Removed; hooks + future MCP contracts |
@@ -99,6 +96,14 @@ Keep this ledger so old debt is not rediscovered as open.
 | Model-chosen export paths | 2.6.0 | Confined to `data_dir/exports` |
 | CLI data commands querying ORM | 2.6.0 | Routed through application services |
 | Unused payment AI insight chain, `ai.context`, `InvoiceBatchProcessor` | 2.6.0 | Removed |
+| D-WF experimental multi-agent workflows (#38), incl. direct DB writes | 2.8.0 | Removed with their agents and states |
+| D-ML-DRIFT / ML stack (#39) | 2.8.0 | `ai.ml`, cash-flow predictor, feedback and the `ml` extra removed |
+| D-SCHEMA Alembic not shipped, `create_all` drift | 2.8.0 | Packaged migrations; `storage.schema` creates, refuses, upgrades, adopts |
+| D-PEC two PEC senders | 2.8.0 | Only `sdi.email.TemplatePECSender`; `platform` no longer imports domains |
+| D-SESSION hand-managed sessions | 2.8.0 | `db_session()` / `session_scope()` everywhere |
+| D-I18N orphan keys, incomplete locales | 2.8.0 | Only referenced ids; all locales complete; enforced by tests |
+| Knowledge base never indexed, CWD-relative paths | 2.8.0 | Packaged KB, indexed on first use; vector store in data_dir |
+| Correlation IDs never set | 2.8.0 | One per CLI invocation |
 
 ---
 
@@ -117,51 +122,17 @@ standalone “LOC reduction” PRs.
 
 | Module | ~LOC | Suggested split direction | Priority |
 |--------|------|---------------------------|----------|
-| `ai/agents/cash_flow_predictor.py` | ~1091 | Predictor vs features vs report/IO | P1 |
-| `ai/orchestration/workflows/invoice_creation.py` | ~921 | Nodes / gates / IO (only if productized) | P2* |
-| `ai/providers/openai.py` | ~855 | Client vs streaming vs tool-call mapping | P2 |
-| `ai/tools/registry/core.py` | ~718 | Already a package; further extract bulkhead/metrics if grows | P3 |
-| `billing/application/invoice_commands.py` | ~714 | Commands vs validation vs side-effects; **nota credito extracted (2.x branch)** | P2 |
-| `storage/database/models.py` | ~672 | Models by bounded context (billing / payment / events) | P2 |
-| `ai/orchestration/react.py` | ~633 | Keep unless ReAct path expands | P3 |
-| `ai/domain/agent.py` | ~623 | Base agent vs helpers | P3 |
-| `ai/orchestration/workflows/cash_flow_analysis.py` | ~615 | Experimental workflow | P2* |
-| `ai/orchestration/workflows/compliance_check.py` | ~592 | Experimental workflow | P2* |
-| `payment/application/services/reconciliation_service.py` | ~579 | Matching strategies vs orchestration | P3 |
-| `ai/ml/features.py` | ~565 | Feature groups by domain | P3 |
-| `billing/application/preventivo_ops.py` | ~550 | Ops vs PDF/email side paths | P2 |
-| `payment/application/payment_commands.py` | ~541 | Commands vs importers glue | P3 |
-
-\*P2 only if workflows move toward product; otherwise leave experimental.
+| `storage/database/models.py` | ~840 | Models by bounded context (billing / payment / events / SDI) | P2 |
+| `ai/tools/registry/core.py` | ~810 | Extract bulkhead/circuit-breaker and metrics | P3 |
+| `pdf/templates/base.py` | ~770 | Summary/table drawing helpers | P3 |
+| `billing/application/invoice_commands.py` | ~680 | Invoice vs line commands | P2 |
+| `ai/tools/invoice_tools/__init__.py` | ~660 | One module per tool group | P3 |
+| `ai/orchestration/react.py` | ~630 | Keep unless ReAct path expands | P3 |
+| `ai/providers/openai.py` | ~630 | Client vs streaming vs tool-call mapping | P3 |
+| `billing/application/preventivo_ops.py` | ~540 | Ops vs PDF/email side paths | P2 |
 
 **Done nearby:** `chat_agent.py` slimmed (structured + graph delegation);
 `ai.tools.registry` is already a package.
-
-### D-WF — Experimental multi-agent workflows
-
-**GitHub:** [#38](https://github.com/gianlucamazza/openfatture/issues/38)  
-**Location:** `openfatture/ai/orchestration/workflows/`  
-(`invoice_creation`, `compliance_check`, `cash_flow_analysis`)
-
-| Aspect | Status |
-|--------|--------|
-| Public CLI exposure | **No** — intentional |
-| Config flag | `enable multi-agent orchestration (experimental)` in AI settings |
-| Human interrupt | Confidence auto-gates or honest `awaiting_approval`; **no** invented human decisions |
-| Product path | Tool-loop via `GraphAssistantBackend` only |
-
-**Impact:** Code weight and maintenance cost if left half-productized.  
-**Trigger:** Explicit product decision to ship multi-agent UX (still assistant-first).  
-**Non-goal:** Do not add Typer subcommands for each workflow.
-
-### D-ML-DRIFT — Accuracy-drift signal not implemented
-
-**GitHub:** [#39](https://github.com/gianlucamazza/openfatture/issues/39)  
-**Location:** `ai/ml/retraining/triggers.py` (`_check_accuracy_drift`)  
-**Behavior:** Logs `status: not_implemented`; does **not** claim success.  
-**Impact:** Retraining will not fire on accuracy drift until implemented.  
-**Trigger:** When production ML monitoring is required.  
-**Honesty rule:** Keep the explicit unavailable signal; never fake a metric.
 
 ### D-OBS — Bulkhead queue length is approximate
 
@@ -205,46 +176,6 @@ primary path `asyncio.run`).
 **Impact:** Edge cases in nested loops / notebook-like hosts.  
 **Trigger:** Only if interactive/assistant hosts hit real nested-loop failures.
 
-### D-SCHEMA — Alembic cannot build a database from scratch
-
-**Location:** `alembic/versions/` base revision, `storage/database/base.py` (`create_all`)  
-**Behavior:** The base revision only adds indexes; tables come from
-`Base.metadata.create_all` on every process, which never adds columns to
-existing tables. Recent migrations call live ORM `__table__.create()`.  
-**Impact:** Silent schema drift on upgraded databases; old migrations change
-when models change.  
-**Trigger:** Next schema change that adds a column to an existing table.  
-**Direction:** Baseline revision from the current schema; runtime checks the
-Alembic head instead of `create_all`.
-
-### D-WF-WRITES — Invoice workflow writes the database directly
-
-**Location:** `ai/orchestration/workflows/invoice_creation.py`  
-**Behavior:** `db.add` / `db.commit` of invoices, lines and payments, bypassing
-application services, lifecycle rules and tool confirmation. Not reachable
-from the CLI.  
-**Trigger:** Part of the D-WF decision: rebuild on application services or delete.
-
-### D-PEC — Two PEC senders
-
-**Location:** `sdi/pec_sender/sender.py`, `platform/email/sender.py`  
-**Impact:** Duplicate SMTP / retry / rate-limit code; batch and single sends use
-different implementations. `platform/email` also depends on `billing` / `sdi`.  
-**Trigger:** Next change to PEC delivery.
-
-### D-SESSION — Mixed session handling
-
-**Behavior:** ~80 manual `get_session()` try/commit/close blocks versus
-`storage.session.db_session()`; some services commit sessions they receive.  
-**Trigger:** Convert per module when touched; no drive-by sweep.
-
-### D-I18N — Orphan and drifting translation keys
-
-**Behavior:** `it/cli.ftl` holds ~890 keys, ~190 referenced; `de` / `es` / `fr`
-lag behind `it`.  
-**Trigger:** Next i18n change; prune with a reference scan that accounts for
-dynamic keys.
-
 ---
 
 ## Product decisions (not code debt yet)
@@ -254,13 +185,11 @@ Documenting them here prevents them from being treated as silent backlog bugs.
 
 | Decision | Default stance | Notes |
 |----------|----------------|--------|
-| Multi-agent workflows on product path | Off / experimental | [D-WF #38](https://github.com/gianlucamazza/openfatture/issues/38) |
 | Textual (or other) TUI | Non-goal | [#44](https://github.com/gianlucamazza/openfatture/issues/44); interactive terminal exists |
 | MCP server / external tool bus | Non-goal until designed | [#44](https://github.com/gianlucamazza/openfatture/issues/44); hooks + tool contracts today |
 | Browser / web app surface | Explicit non-goal | [#44](https://github.com/gianlucamazza/openfatture/issues/44); see STATUS |
 | Domain CLI command tree growth | Forbidden | Only `cliente` / `fattura` / `pagamento` exist, as adapters over application services |
 | Lightning / LND payments | Removed | Archive only; reintroduce only as greenfield design |
-| ML forecasting | Frozen | Not started by the CLI since 2.6.0; no assistant tool consumes forecasts. Productize or remove |
 
 ---
 
@@ -282,12 +211,9 @@ Documenting them here prevents them from being treated as silent backlog bugs.
 
 Act only with a real trigger. Order is **cost/benefit**, not a sprint backlog.
 
-1. **D-SIZE P1** — split `cash_flow_predictor` when forecasting is next touched  
-2. **D-SIZE P2** — `invoice_commands` / `models.py` / `preventivo_ops` when billing storage changes  
-3. **D-WF** — productize or delete experimental workflows after an explicit decision  
-4. **D-ML-DRIFT** — only with real monitoring requirements  
-5. **D-OBS / D-PDF-PAGOPA / D-TYPES-TESTS** — opportunistic  
-6. **Product decisions** (TUI / MCP / web) — separate design + release, not drive-by PRs  
+1. **D-SIZE P2** — `models.py` / `invoice_commands` / `preventivo_ops` when billing storage changes  
+2. **D-OBS / D-PDF-PAGOPA / D-TYPES-TESTS / D-ASYNC** — opportunistic  
+3. **Product decisions** (TUI / MCP / web) — separate design + release, not drive-by PRs  
 
 ---
 

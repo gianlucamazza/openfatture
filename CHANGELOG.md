@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-11-10
+
+### Changed
+
+- **Database schema is owned by packaged Alembic migrations** (`openfatture/storage/migrations`,
+  now shipped in the wheel). New databases are created and stamped at head; a database behind
+  the release is refused until `openfatture init` upgrades it (SQLite files are backed up first);
+  databases created before 2.8.0 keep working and are adopted by `init` after a column check.
+  `status --json` reports `database_schema`.
+- One PEC sender: `sdi.email.TemplatePECSender` (formerly `platform.email`). The `platform` layer
+  no longer imports domain packages, enforced by `tests/test_import_rules.py`.
+- Application services use `db_session()` / `session_scope()` instead of hand-managed sessions.
+- The tax knowledge base ships with the package and is indexed on first use; the vector store
+  defaults to `data_dir/vector_store` instead of `./.chroma`.
+- Every CLI invocation sets a correlation ID for its logs and events.
+- Translations: only referenced messages remain, and de/es/fr now include all assistant and
+  status messages.
+
+### Removed
+
+- The ML forecasting stack (`ai.ml`, cash-flow predictor, feedback) and the `ml` extra.
+- The experimental multi-agent workflows (invoice creation, compliance, cash flow), their
+  agents, states and approval layer, `native_tools`, `PromptManager` and its prompts.
+- `sdi.pec_sender.PECSender`, `billing.batch.send_batch` / `validate_batch`, re-export shims
+  (`billing.clienti`, `billing.fiscale`, `billing.prodotti`), unused i18n formatters and context,
+  `common.ftl` / `email.ftl`, and about 60 functions without callers.
+
+### Fixed
+
+- Event repository sessions leaked when a query failed.
+- `init_db` no longer defaults to a database in the current directory.
+
 ## [2.7.0] - 2026-11-10
 
 ### Changed

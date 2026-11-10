@@ -87,9 +87,8 @@ public CLI (`init`, `config`, `status`). Feature stacks are opt-in:
 
 | Extra | Install | Provides |
 | --- | --- | --- |
-| `ai` | `uv sync --extra ai` | LLM providers, assistant, agents, LangGraph workflows |
+| `ai` | `uv sync --extra ai` | LLM providers, assistant runtime and tools |
 | `rag` | `uv sync --extra rag` | ChromaDB + embeddings (includes `ai`) |
-| `ml` | `uv sync --extra ml` | Cash-flow forecasting (Prophet / XGBoost; optional) |
 | `all` | `uv sync --extra all` | Union of feature extras |
 | `dev` | `uv sync --extra dev` | Tests and linters |
 

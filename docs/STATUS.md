@@ -1,6 +1,6 @@
 # OpenFatture project status
 
-**Current version:** 2.7.0  
+**Current version:** 2.8.0  
 **Product posture:** CLI-first; `openfatture` starts the interactive assistant  
 **Runtime:** Python 3.12+ and `uv`
 
@@ -10,7 +10,7 @@
 - PEC/SDI delivery and notification processing
 - Client, invoice, quote, payment, and batch workflows
 - Event audit trail, reports, hooks
-- Optional AI assistance and RAG (feature extras); ML forecasting is frozen
+- Optional AI assistance and RAG (feature extras)
 
 ## Quality expectations
 
@@ -36,6 +36,14 @@ fix the root cause instead.
 10. ~~2.0.0 release notes and version bump~~
 
 ## Current focus (post-2.2)
+
+**Shipped in 2.8.0:** packaged Alembic migrations own the schema (create, refuse,
+upgrade with backup, adopt pre-2.8 databases); ML stack and multi-agent workflows
+removed; single PEC sender; uniform session handling; complete translations;
+packaged knowledge base.
+
+**Shipped in 2.7.0:** user configuration in `config.toml`, secrets in the OS
+keychain, no implicit `.env`.
 
 **Shipped in 2.6.0:** durable collection ledger; durable assistant turns
 (checkpoints, tool receipts, resumable pending turns); bare `openfatture`
