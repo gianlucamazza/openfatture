@@ -253,6 +253,10 @@ class Fattura(IntPKMixin, Base):
     """Invoice model."""
 
     __tablename__ = "fatture"
+    __table_args__ = (
+        # Progressive numbering is unique per year (art. 21 DPR 633/72)
+        Index("uq_fatture_numero_anno", "numero", "anno", unique=True),
+    )
 
     # Numero fattura (progressivo annuale)
     numero: Mapped[str] = mapped_column(String(20), nullable=False, index=True)

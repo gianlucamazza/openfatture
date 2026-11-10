@@ -10,6 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, TypedDict
 
+from sqlalchemy import Integer, cast
 from sqlalchemy.orm import Session, selectinload
 
 from openfatture.platform.logging import get_logger
@@ -129,7 +130,9 @@ def search_invoices(
         if cliente_id:
             db_query = db_query.filter(Fattura.cliente_id == cliente_id)
 
-        db_query = db_query.order_by(Fattura.anno.desc(), Fattura.numero.desc())
+        db_query = db_query.order_by(
+            Fattura.anno.desc(), cast(Fattura.numero, Integer).desc(), Fattura.numero.desc()
+        )
         fatture = db_query.limit(limit).all()
 
         results = []

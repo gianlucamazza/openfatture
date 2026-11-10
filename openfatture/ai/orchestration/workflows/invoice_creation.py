@@ -46,6 +46,7 @@ from openfatture.ai.orchestration.states import (
     InvoiceCreationState,
 )
 from openfatture.ai.providers import BaseLLMProvider, create_provider
+from openfatture.billing.application.numbering import next_numero
 from openfatture.billing.fatture.service import InvoiceService
 from openfatture.platform.config import Settings, get_settings
 from openfatture.platform.datetime import utc_now
@@ -819,24 +820,7 @@ class InvoiceCreationWorkflow:
 
     def _generate_invoice_number(self, db: Session, year: int) -> str:
         """Generate progressive invoice number for the given year."""
-        last_invoice = (
-            db.query(Fattura).filter(Fattura.anno == year).order_by(Fattura.numero.desc()).first()
-        )
-
-        if last_invoice is None:
-            return "1"
-
-        try:
-            next_number = int(last_invoice.numero) + 1
-            return str(next_number)
-        except (TypeError, ValueError):
-            # Fallback if previous number not numeric
-            logger.warning(
-                "invoice_number_non_numeric",
-                numero=last_invoice.numero,
-                anno=year,
-            )
-            return f"{last_invoice.numero}-1"
+        return next_numero(db, Fattura, year)
 
     async def execute(
         self,

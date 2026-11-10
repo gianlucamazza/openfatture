@@ -5,6 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any
 
+from openfatture.billing.application.numbering import next_numero
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.base import get_session
@@ -77,16 +78,7 @@ def create_nota_credito_from_fattura(
 
         # Generate numero for nota di credito (next available in current year)
         anno = datetime.now().year
-        ultimo = (
-            db.query(Fattura).filter(Fattura.anno == anno).order_by(Fattura.numero.desc()).first()
-        )
-        if ultimo:
-            try:
-                numero = str(int(ultimo.numero) + 1)
-            except ValueError:
-                numero = "1"
-        else:
-            numero = "1"
+        numero = next_numero(db, Fattura, anno)
 
         # Create nota di credito (TD04)
         nota_credito = Fattura(
