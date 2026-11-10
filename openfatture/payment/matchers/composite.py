@@ -5,7 +5,6 @@ window, fuzzy description, IBAN detection, etc.) and produces a single deduplica
 list of matches by weighting each strategy's confidence score.
 
 Key features:
-    • Strategies can be synchronous or asynchronous.
     • Weights are normalised automatically if not provided.
     • Results are deduplicated per payment and confidence is a weighted average.
     • Matched fields and reasons are merged to aid explainability.
@@ -13,8 +12,6 @@ Key features:
 
 from __future__ import annotations
 
-import asyncio
-import inspect
 from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
@@ -64,44 +61,28 @@ class CompositeMatcher(IMatcherStrategy):
         self.weights: list[Decimal] = self._normalise_weights(weights)
         self.min_confidence = self._to_decimal(min_confidence)
 
-    async def match(
-        self, transaction: BankTransaction, payments: list[Pagamento]
-    ) -> list[MatchResult]:
-        """Execute configured strategies in parallel and merge their outputs.
+    def match(self, transaction: BankTransaction, payments: list[Pagamento]) -> list[MatchResult]:
+        """Run every strategy and merge their weighted outputs.
 
-        Performance: Strategies are executed concurrently using asyncio.gather(),
-        providing 2-4x speedup over sequential execution on typical workloads.
-
-        Exception Handling: Individual strategy failures are isolated and logged,
-        allowing other strategies to complete successfully.
-
-        Backward Compatibility: Supports both sync and async matcher strategies.
+        A failing strategy is logged and skipped; the others still contribute.
         """
         if not self.strategies:
             return []
 
         aggregated: dict[int, dict] = {}
-
-        # Wrap strategy execution to handle both sync and async strategies
-        async def _execute_strategy(strat: IMatcherStrategy) -> list[MatchResult]:
-            """Execute strategy, wrapping sync calls as coroutines."""
-            result = strat.match(transaction, payments)
-            # Handle async strategies (coroutines)
-            if inspect.isawaitable(result):
-                return await result
-            # Handle sync strategies (direct results)
-            return result
-
-        # Execute all strategies in parallel with exception isolation
-        tasks = [_execute_strategy(strategy) for strategy in self.strategies]
-        all_raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+        all_raw_results: list[list[MatchResult] | Exception] = []
+        for strategy in self.strategies:
+            try:
+                all_raw_results.append(strategy.match(transaction, payments))
+            except Exception as exc:
+                all_raw_results.append(exc)
 
         # Process results with corresponding weights
         for weight, strategy, raw_results in zip(
             self.weights, self.strategies, all_raw_results, strict=True
         ):
             # Handle exceptions from individual strategies
-            if isinstance(raw_results, BaseException):
+            if isinstance(raw_results, Exception):
                 logger.warning(
                     "composite_matcher_strategy_failed",
                     strategy=strategy.__class__.__name__,

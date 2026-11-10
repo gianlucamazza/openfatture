@@ -18,7 +18,7 @@ from rapidfuzz import fuzz
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy, as_match_results, payment_amount_for_matching
+from .base import IMatcherStrategy, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -150,7 +150,7 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         # Sort by confidence descending
         results.sort(key=lambda r: r.confidence, reverse=True)
 
-        return as_match_results(results)
+        return results
 
     def _prefilter_candidates(
         self, transaction: "BankTransaction", payments: list["Pagamento"]

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.enums import MatchType
 from ..domain.value_objects import MatchResult
-from .base import IMatcherStrategy, as_match_results, payment_amount_for_matching
+from .base import IMatcherStrategy, payment_amount_for_matching
 
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
@@ -138,7 +138,7 @@ class DateWindowMatcher(IMatcherStrategy):
             )
         )
 
-        return as_match_results(results)
+        return results
 
     def _calculate_confidence(self, date_diff_days: int, amount_diff: Decimal) -> float:
         """Calculate confidence based on date proximity and amount accuracy.

@@ -7,7 +7,6 @@ to be used interchangeably.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Generator, Iterable
 from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING, Any
 
@@ -16,10 +15,6 @@ from ..domain.value_objects import MatchResult
 if TYPE_CHECKING:
     from ...storage.database.models import Pagamento
     from ..domain.models import BankTransaction
-
-
-MatchResultListType = list[MatchResult]
-MatchResults = MatchResultListType | Awaitable[MatchResultListType]
 
 
 class IMatcherStrategy(ABC):
@@ -56,7 +51,7 @@ class IMatcherStrategy(ABC):
     """
 
     @abstractmethod
-    def match(self, transaction: BankTransaction, payments: list[Pagamento]) -> MatchResults:
+    def match(self, transaction: BankTransaction, payments: list[Pagamento]) -> list[MatchResult]:
         """Match a bank transaction to potential payments.
 
         Args:
@@ -94,21 +89,6 @@ class IMatcherStrategy(ABC):
     def __repr__(self) -> str:
         """Human-readable string representation."""
         return f"<{self.__class__.__name__}>"
-
-
-class MatchResultList(list[MatchResult]):
-    """List-like container that can also be awaited."""
-
-    def __await__(self) -> Generator[MatchResultListType, None, MatchResultListType]:
-        async def _coro() -> MatchResultListType:
-            return self
-
-        return _coro().__await__()
-
-
-def as_match_results(results: Iterable[MatchResult]) -> MatchResultList:
-    """Wrap iterable of MatchResult into an awaitable list."""
-    return MatchResultList(results)
 
 
 def _to_decimal_or_none(value: Any) -> Decimal | None:
