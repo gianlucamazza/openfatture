@@ -112,7 +112,7 @@ class SessionManager:
             file_path = self._get_session_path(session_id)
 
             if not file_path.exists():
-                logger.warning("session_not_found", session_id=session_id)
+                logger.debug("session_not_found", session_id=session_id)
                 return None
 
             # Load JSON

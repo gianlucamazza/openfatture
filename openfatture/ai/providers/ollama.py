@@ -64,6 +64,10 @@ class OllamaProvider(BaseLLMProvider):
         self._timeout = timeout
         self._http_client = http_client
 
+    def _url(self, path: str) -> str:
+        """Absolute endpoint URL; a shared lifespan client has no base URL."""
+        return f"{self._base_url.rstrip('/')}{path}"
+
     def _get_http_client(self) -> httpx.AsyncClient:
         """Get HTTP client, using shared client if available."""
         if self._http_client is not None:
@@ -95,7 +99,7 @@ class OllamaProvider(BaseLLMProvider):
             # Use shared HTTP client for connection reuse and proper cleanup
             client = self._get_http_client()
             response = await client.post(
-                "/api/generate",
+                self._url("/api/generate"),
                 json={
                     "model": self.model,
                     "prompt": prompt,
@@ -208,7 +212,7 @@ class OllamaProvider(BaseLLMProvider):
             client = self._get_http_client()
             async with client.stream(
                 "POST",
-                "/api/generate",
+                self._url("/api/generate"),
                 json={
                     "model": self.model,
                     "prompt": prompt,
@@ -263,7 +267,7 @@ class OllamaProvider(BaseLLMProvider):
         """Check if Ollama server is accessible."""
         try:
             client = self._get_http_client()
-            response = await client.get("/api/tags")
+            response = await client.get(self._url("/api/tags"))
             return response.status_code == 200
 
         except Exception as e:
@@ -338,7 +342,7 @@ class OllamaProvider(BaseLLMProvider):
         """
         try:
             client = self._get_http_client()
-            response = await client.get("/api/tags")
+            response = await client.get(self._url("/api/tags"))
             response.raise_for_status()
 
             data = response.json()
