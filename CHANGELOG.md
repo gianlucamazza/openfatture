@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.1] - 2026-11-10
+
+### Fixed
+
+- The assistant failed with `PermissionError` when started from a directory without write
+  access (for example `/`): AI settings created `./.chromadb` and the RAG auto-update queue
+  defaulted to `./.cache/`. The unused `chromadb_*` AI settings are removed and the queue lives
+  in `data_dir`. A test asserts that building settings never writes to the working directory.
+
 ## [2.8.0] - 2026-11-10
 
 ### Changed
