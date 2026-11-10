@@ -6,13 +6,13 @@ from rich.table import Table
 
 from openfatture.billing.application.invoice_commands import (
     create_invoice,
-    create_riga,
     update_invoice_status,
 )
 from openfatture.billing.application.invoice_queries import (
     get_invoice_details,
     search_invoices,
 )
+from openfatture.billing.application.line_commands import create_riga
 from openfatture.cli.output import format_eur, remember_result
 from openfatture.i18n import _
 

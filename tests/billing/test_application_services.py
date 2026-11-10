@@ -6,8 +6,9 @@ from decimal import Decimal
 from openfatture.billing.application import (
     client_commands,
     invoice_commands,
+    line_commands,
     nota_credito_ops,
-    preventivo_ops,
+    preventivo_commands,
     prodotto_ops,
 )
 from openfatture.platform.config import get_settings
@@ -20,7 +21,7 @@ def _invoice_with_lines(cliente_id: int, lines: list[tuple[str, float, float]]) 
         "invoice_id"
     ]
     for descrizione, quantita, prezzo in lines:
-        result = invoice_commands.create_riga(
+        result = line_commands.create_riga(
             fattura_id=invoice_id,
             descrizione=descrizione,
             quantita=quantita,
@@ -45,8 +46,8 @@ def test_invoice_totals_stay_consistent_through_edits(runtime_session, seed_clie
         seed_cliente.id, [("A", 3, 33.33), ("B", 1, 0.25), ("C", 7, 1.15), ("D", 1, 10.05)]
     )
     righe = sorted(runtime_session.get(Fattura, invoice_id).righe, key=lambda r: r.numero_riga)
-    invoice_commands.update_riga(riga_id=righe[2].id, quantita=9)
-    invoice_commands.delete_riga(riga_id=righe[3].id)
+    line_commands.update_riga(riga_id=righe[2].id, quantita=9)
+    line_commands.delete_riga(riga_id=righe[3].id)
 
     runtime_session.expire_all()
     fattura = runtime_session.get(Fattura, invoice_id)
@@ -100,7 +101,7 @@ def test_credit_note_matches_source_totals(runtime_session, seed_cliente):
 
 
 def test_quote_lifecycle_and_conversion(runtime_session, seed_cliente):
-    created = preventivo_ops.create_preventivo(
+    created = preventivo_commands.create_preventivo(
         cliente_id=seed_cliente.id,
         righe=[
             {"descrizione": "Analisi", "quantita": 3, "prezzo_unitario": 33.33, "aliquota_iva": 22},
@@ -114,15 +115,15 @@ def test_quote_lifecycle_and_conversion(runtime_session, seed_cliente):
     quote = runtime_session.get(Preventivo, quote_id)
     _consistent(quote)
 
-    assert preventivo_ops.update_preventivo_status(quote_id, "accettato").get("success")
-    converted = preventivo_ops.convert_preventivo_to_invoice(quote_id)
+    assert preventivo_commands.update_preventivo_status(quote_id, "accettato").get("success")
+    converted = preventivo_commands.convert_preventivo_to_invoice(quote_id)
     assert converted.get("success"), converted
 
     runtime_session.expire_all()
     invoice = runtime_session.get(Fattura, converted["fattura_id"])
     _consistent(invoice)
     assert invoice.totale == runtime_session.get(Preventivo, quote_id).totale
-    assert "error" in preventivo_ops.delete_preventivo(quote_id)
+    assert "error" in preventivo_commands.delete_preventivo(quote_id)
 
 
 # --- Products and clients -------------------------------------------------

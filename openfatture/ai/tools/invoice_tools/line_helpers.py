@@ -2,7 +2,8 @@
 
 from typing import Any
 
-from openfatture.billing.application.invoice_commands import create_riga
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.billing.application.line_commands import create_riga
 
 
 def format_course_description(
@@ -104,3 +105,77 @@ def create_course_line(
 
 
 __all__ = ["create_course_line", "format_course_description"]
+
+
+def tools() -> list[Tool]:
+    """Assistant tool definitions for the line helpers."""
+    return [
+        Tool(
+            name="create_course_line",
+            description="Create a lump-sum line for a course with formatted FT-style description (title, dates, location).",
+            category="invoices",
+            parameters=[
+                ToolParameter(
+                    name="fattura_id",
+                    type=ToolParameterType.INTEGER,
+                    description="Invoice ID",
+                    required=True,
+                ),
+                ToolParameter(
+                    name="course_title",
+                    type=ToolParameterType.STRING,
+                    description="Course title",
+                    required=True,
+                ),
+                ToolParameter(
+                    name="imponibile",
+                    type=ToolParameterType.NUMBER,
+                    description="Total course fee in euros",
+                    required=True,
+                ),
+                ToolParameter(
+                    name="start_date",
+                    type=ToolParameterType.STRING,
+                    description="Course start date (DD.MM.YYYY)",
+                    required=True,
+                ),
+                ToolParameter(
+                    name="end_date",
+                    type=ToolParameterType.STRING,
+                    description="Course end date (DD.MM.YYYY, optional)",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="location",
+                    type=ToolParameterType.STRING,
+                    description="Course location (optional)",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="additional_notes",
+                    type=ToolParameterType.STRING,
+                    description="Additional notes (optional)",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="aliquota_iva",
+                    type=ToolParameterType.NUMBER,
+                    description="VAT rate percentage; omit for the cedente default",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="natura",
+                    type=ToolParameterType.STRING,
+                    description="VAT natura, only with a 0% rate (default N2.2 for forfettario)",
+                    required=False,
+                ),
+            ],
+            func=create_course_line,
+            requires_confirmation=True,
+            examples=[
+                "create_course_line(fattura_id=123, course_title='Corso RES', imponibile=960.00, start_date='09.09.2026', end_date='10.09.2026', location='Limolane 12/Roma')",
+                "create_course_line(fattura_id=456, course_title='Training session', imponibile=500.00, start_date='15.01.2026')",
+            ],
+            tags=["write", "create", "line", "course"],
+        ),
+    ]

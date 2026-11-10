@@ -13,8 +13,10 @@ import pytest
 from openfatture.billing.application import (
     cassa_ops,
     invoice_commands,
+    line_commands,
     nota_credito_ops,
-    preventivo_ops,
+    preventivo_commands,
+    preventivo_queries,
 )
 from openfatture.billing.application.totals import (
     amount_due,
@@ -56,11 +58,11 @@ def forfettario_invoice(runtime_session, seed_cliente) -> int:
     invoice_id = invoice_commands.create_invoice(cliente_id=seed_cliente.id, anno=2026)[
         "invoice_id"
     ]
-    assert invoice_commands.create_riga(
+    assert line_commands.create_riga(
         fattura_id=invoice_id, descrizione="Consulenza", quantita=1, prezzo_unitario=2000
     ).get("success")
     assert cassa_ops.set_cassa_previdenziale(invoice_id, "TC22", 4).get("success")
-    assert invoice_commands.create_riga(
+    assert line_commands.create_riga(
         fattura_id=invoice_id,
         descrizione="Rivalsa imposta di bollo",
         quantita=1,
@@ -119,7 +121,7 @@ def test_pdf_shows_the_xml_amounts(runtime_session, forfettario_invoice):
 def test_editing_a_line_keeps_the_contribution(runtime_session, forfettario_invoice):
     fattura = runtime_session.get(Fattura, forfettario_invoice)
     first = min(fattura.righe, key=lambda r: r.numero_riga)
-    assert invoice_commands.update_riga(riga_id=first.id, prezzo_unitario=300).get("success")
+    assert line_commands.update_riga(riga_id=first.id, prezzo_unitario=300).get("success")
 
     runtime_session.expire_all()
     fattura = runtime_session.get(Fattura, forfettario_invoice)
@@ -146,12 +148,12 @@ def test_stamp_duty_threshold(runtime_session, seed_cliente):
     invoice_id = invoice_commands.create_invoice(cliente_id=seed_cliente.id, anno=2026)[
         "invoice_id"
     ]
-    invoice_commands.create_riga(
+    line_commands.create_riga(
         fattura_id=invoice_id, descrizione="A", quantita=1, prezzo_unitario=77.47
     )
     assert runtime_session.get(Fattura, invoice_id).importo_bollo == 0
 
-    invoice_commands.create_riga(
+    line_commands.create_riga(
         fattura_id=invoice_id, descrizione="B", quantita=1, prezzo_unitario=0.01
     )
     runtime_session.expire_all()
@@ -173,7 +175,7 @@ def test_vat_and_natura_rules(runtime_session, seed_cliente):
     invoice_id = invoice_commands.create_invoice(cliente_id=seed_cliente.id, anno=2026)[
         "invoice_id"
     ]
-    refused = invoice_commands.create_riga(
+    refused = line_commands.create_riga(
         fattura_id=invoice_id,
         descrizione="A",
         quantita=1,
@@ -183,32 +185,32 @@ def test_vat_and_natura_rules(runtime_session, seed_cliente):
     )
     assert "only allowed with a 0% VAT rate" in refused["error"]
 
-    created = invoice_commands.create_riga(
+    created = line_commands.create_riga(
         fattura_id=invoice_id, descrizione="A", quantita=1, prezzo_unitario=10, aliquota_iva=22
     )
     # Switching to 0% picks the forfettario natura; back to 22% clears it.
-    assert invoice_commands.update_riga(riga_id=created["riga_id"], aliquota_iva=0).get("success")
+    assert line_commands.update_riga(riga_id=created["riga_id"], aliquota_iva=0).get("success")
     runtime_session.expire_all()
     assert runtime_session.get(RigaFattura, created["riga_id"]).natura == "N2.2"
-    assert invoice_commands.update_riga(riga_id=created["riga_id"], aliquota_iva=22).get("success")
+    assert line_commands.update_riga(riga_id=created["riga_id"], aliquota_iva=22).get("success")
     runtime_session.expire_all()
     assert runtime_session.get(RigaFattura, created["riga_id"]).natura is None
 
 
 def test_quote_conversion_keeps_natura(runtime_session, seed_cliente):
-    quote = preventivo_ops.create_preventivo(
+    quote = preventivo_commands.create_preventivo(
         cliente_id=seed_cliente.id,
         righe=[{"descrizione": "Corso", "quantita": 1, "prezzo_unitario": 960}],
     )
     assert quote.get("success"), quote
     assert (
-        preventivo_ops.get_preventivo_details(quote["preventivo_id"])["righe"][0]["natura"]
+        preventivo_queries.get_preventivo_details(quote["preventivo_id"])["righe"][0]["natura"]
         == "N2.2"
     )
-    assert preventivo_ops.update_preventivo_status(quote["preventivo_id"], "accettato").get(
+    assert preventivo_commands.update_preventivo_status(quote["preventivo_id"], "accettato").get(
         "success"
     )
-    converted = preventivo_ops.convert_preventivo_to_invoice(quote["preventivo_id"])
+    converted = preventivo_commands.convert_preventivo_to_invoice(quote["preventivo_id"])
     assert converted.get("success"), converted
 
     runtime_session.expire_all()

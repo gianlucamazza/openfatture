@@ -1,14 +1,16 @@
-"""AI tool adapters over `openfatture.billing.application.preventivo_ops`."""
+"""AI tool adapters over the preventivo application services."""
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
-from openfatture.billing.application.preventivo_ops import (
+from openfatture.billing.application.preventivo_commands import (
     convert_preventivo_to_invoice,
     create_preventivo,
     delete_preventivo,
-    get_preventivo_details,
-    search_preventivi,
     update_preventivo,
     update_preventivo_status,
+)
+from openfatture.billing.application.preventivo_queries import (
+    get_preventivo_details,
+    search_preventivi,
 )
 
 
