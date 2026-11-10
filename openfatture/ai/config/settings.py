@@ -1,9 +1,12 @@
 """AI module configuration settings."""
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+if TYPE_CHECKING:
+    from openfatture.platform.config import Settings
 
 
 class AISettings(BaseSettings):
@@ -252,49 +255,50 @@ def hydrate_ai_settings_from_platform(ai: AISettings) -> AISettings:
 
     plat = get_settings()
     updates: dict[str, object] = {}
-
-    if not _env_has("OPENFATTURE_AI_PROVIDER") and plat.ai_provider:
-        provider_candidate = (plat.ai_provider or "").strip().lower()
-        if provider_candidate in ("openai", "anthropic", "ollama"):
-            updates["provider"] = provider_candidate
-
+    platform_provider = _platform_provider(plat.ai_provider)
+    if platform_provider is not None:
+        updates["provider"] = platform_provider
     provider = str(updates.get("provider") or ai.provider)
-    model_env = {
-        "openai": "OPENFATTURE_AI_OPENAI_MODEL",
-        "anthropic": "OPENFATTURE_AI_ANTHROPIC_MODEL",
-        "ollama": "OPENFATTURE_AI_OLLAMA_MODEL",
-    }.get(provider, "")
-
-    if plat.ai_model and not _env_has(model_env):
-        if provider == "openai":
-            updates["openai_model"] = plat.ai_model
-        elif provider == "anthropic":
-            updates["anthropic_model"] = plat.ai_model
-        elif provider == "ollama":
-            updates["ollama_model"] = plat.ai_model
-
-    if plat.ai_api_key:
-        from pydantic import SecretStr
-
-        secret = SecretStr(plat.ai_api_key)
-        if provider == "openai" and not _env_has("OPENFATTURE_AI_OPENAI_API_KEY"):
-            updates["openai_api_key"] = secret
-        elif provider == "anthropic" and not _env_has("OPENFATTURE_AI_ANTHROPIC_API_KEY"):
-            updates["anthropic_api_key"] = secret
-
-    if plat.ai_base_url and provider == "ollama" and not _env_has("OPENFATTURE_AI_OLLAMA_BASE_URL"):
-        updates["ollama_base_url"] = plat.ai_base_url
-
-    if not _env_has("OPENFATTURE_AI_TEMPERATURE"):
-        updates["temperature"] = plat.ai_temperature
-    if not _env_has("OPENFATTURE_AI_MAX_TOKENS"):
-        updates["max_tokens"] = plat.ai_max_tokens
-    if not _env_has("OPENFATTURE_AI_TOOLS_ENABLED"):
-        updates["tools_enabled"] = plat.ai_tools_enabled
+    updates.update(_platform_credentials(plat, provider))
+    for field, attribute in _PLATFORM_TUNING:
+        if not _env_has(f"OPENFATTURE_AI_{field.upper()}"):
+            updates[field] = getattr(plat, attribute)
 
     if not updates:
         return ai
     return ai.model_copy(update=updates)
+
+
+_HYDRATED_PROVIDERS = ("openai", "anthropic", "ollama")
+_API_KEY_PROVIDERS = ("openai", "anthropic")
+_PLATFORM_TUNING = (
+    ("temperature", "ai_temperature"),
+    ("max_tokens", "ai_max_tokens"),
+    ("tools_enabled", "ai_tools_enabled"),
+)
+
+
+def _platform_provider(value: str | None) -> str | None:
+    """The platform ``AI_PROVIDER`` when supported and not overridden by env."""
+    if _env_has("OPENFATTURE_AI_PROVIDER") or not value:
+        return None
+    candidate = value.strip().lower()
+    return candidate if candidate in _HYDRATED_PROVIDERS else None
+
+
+def _platform_credentials(plat: "Settings", provider: str) -> dict[str, object]:
+    """Model, API key and base URL of ``provider`` from platform settings."""
+    updates: dict[str, object] = {}
+    if provider not in _HYDRATED_PROVIDERS:
+        return updates
+    prefix = f"OPENFATTURE_AI_{provider.upper()}"
+    if plat.ai_model and not _env_has(f"{prefix}_MODEL"):
+        updates[f"{provider}_model"] = plat.ai_model
+    if plat.ai_api_key and provider in _API_KEY_PROVIDERS and not _env_has(f"{prefix}_API_KEY"):
+        updates[f"{provider}_api_key"] = SecretStr(plat.ai_api_key)
+    if plat.ai_base_url and provider == "ollama" and not _env_has(f"{prefix}_BASE_URL"):
+        updates["ollama_base_url"] = plat.ai_base_url
+    return updates
 
 
 def get_ai_settings() -> AISettings:

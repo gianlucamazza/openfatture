@@ -309,6 +309,22 @@ class TestMigrateConfigCommand:
         assert "pw" in (self.profile / "credentials.toml").read_text()
         assert self.dotenv.exists()
 
+    def test_env_file_keeps_stored_secrets_and_equal_values(self):
+        self.config.write_text('ai_model = "same"\n')
+        assert runner.invoke(app, ["set", "pec_password", "old"]).exit_code == 0
+        self.dotenv.write_text("AI_MODEL=same\nPEC_PASSWORD=new\nAI_API_KEY=\n")
+
+        result = runner.invoke(app, ["migrate", "--env-file", str(self.dotenv)])
+
+        assert result.exit_code == 0, result.stdout
+        assert "Already set, not overwritten: pec_password" in result.stdout
+        assert "ai_model" not in result.stdout
+        assert self.config.read_text() == 'ai_model = "same"\n'
+        credentials = (self.profile / "credentials.toml").read_text()
+        assert "old" in credentials
+        assert "new" not in credentials
+        assert "ai_api_key" not in credentials
+
     def test_nothing_to_migrate(self):
         result = runner.invoke(app, ["migrate"])
 

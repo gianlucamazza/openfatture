@@ -445,3 +445,145 @@ def test_wizard_saves_user_profile_without_assuming_regime(monkeypatch, tmp_path
     assert saved["pec_password"] == "synthetic-existing-password"
     assert not (tmp_path / ".env").exists()
     assert os.stat(profile).st_mode & 0o777 == 0o600
+
+
+def _wizard_settings(tmp_path):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        data_dir=tmp_path / "data",
+        archivio_dir=tmp_path / "archive",
+        certificates_dir=tmp_path / "certs",
+        database_url=f"sqlite:///{tmp_path}/test.db",
+        cedente_regime_fiscale="",
+    )
+
+
+def test_schema_error_aborts_init(monkeypatch, tmp_path):
+    from openfatture.cli.commands import init
+    from openfatture.storage import schema
+
+    def broken(url):
+        raise schema.SchemaError("schema is unusable")
+
+    monkeypatch.setattr(init, "get_settings", lambda: _wizard_settings(tmp_path))
+    monkeypatch.setattr(schema, "upgrade_database", broken)
+    result = runner.invoke(app, ["--no-interactive"])
+    assert result.exit_code == 1
+    assert "schema is unusable" in result.output
+
+
+def test_backup_path_is_reported(monkeypatch, tmp_path):
+    from openfatture.cli.commands import init
+    from openfatture.storage import schema
+
+    monkeypatch.setattr(init, "get_settings", lambda: _wizard_settings(tmp_path))
+    monkeypatch.setattr(init, "init_db", lambda url: None)
+    monkeypatch.setattr(schema, "upgrade_database", lambda url: ("legacy", tmp_path / "bak.db"))
+    result = runner.invoke(app, ["--no-interactive"])
+    assert result.exit_code == 0, result.output
+    assert "bak.db" in result.output
+
+
+AI_PROVIDERS = {"anthropic", "openai", "ollama"}
+
+
+@pytest.mark.parametrize(
+    ("provider", "backends", "hint", "backend_text"),
+    [
+        ("anthropic", ["keyring", "keyring"], "console.anthropic.com", "portachiavi"),
+        ("openai", ["file", "keyring"], "platform.openai.com", "file privato"),
+        ("ollama", ["keyring"], "ollama serve", "portachiavi"),
+        ("skip", ["file"], None, "file privato"),
+        (None, ["file"], None, "file privato"),
+    ],
+)
+def test_wizard_retries_and_configures_ai(
+    monkeypatch, tmp_path, provider, backends, hint, backend_text
+):
+    import tomlkit
+
+    from openfatture.cli import config_file
+    from openfatture.cli.commands import init
+    from openfatture.i18n import _
+
+    monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path / "fresh"))
+    monkeypatch.setattr(init, "get_settings", lambda: _wizard_settings(tmp_path))
+    monkeypatch.setattr(init, "init_db", lambda url: None)
+    answers = {
+        _("cli-init-prompt-name"): ["Test"],
+        _("cli-init-prompt-partita-iva"): ["123", "12345678903"],
+        _("cli-init-prompt-codice-fiscale"): ["BAD", "rssmra80a01h501u"],
+        _("cli-init-prompt-regime"): ["rf99", "rf01"],
+        _("cli-init-prompt-address"): ["Via Roma 1"],
+        _("cli-init-prompt-cap"): ["00100"],
+        _("cli-init-prompt-city"): ["Roma"],
+        _("cli-init-prompt-province"): ["rm"],
+        _("cli-init-prompt-pec-address"): ["test@example.it"],
+        _("cli-init-prompt-pec-password"): ["synthetic-pec"],
+        _("cli-init-prompt-pec-smtp"): ["smtp.example.it"],
+        _("cli-init-prompt-notification-email"): ["test@example.it"],
+        _("cli-init-prompt-locale"): ["it"],
+        _("cli-init-prompt-api-key"): ["synthetic-ai-key"],
+    }
+
+    def prompt(label, **kwargs):
+        queue = answers[label]
+        return queue.pop(0) if len(queue) > 1 else queue[0]
+
+    monkeypatch.setattr(init.Prompt, "ask", prompt)
+    monkeypatch.setattr(
+        init.Confirm, "ask", lambda label, **kwargs: label == _("cli-init-ai-confirm")
+    )
+    choice = _("cli-init-ai-skip") if provider == "skip" else provider
+    monkeypatch.setattr(
+        init.questionary, "select", lambda *a, **k: Mock(ask=Mock(return_value=choice))
+    )
+    stored: list[str] = []
+
+    def store(name, value):
+        stored.append(name)
+        return backends[len(stored) - 1]
+
+    monkeypatch.setattr(config_file, "store_secret", store)
+
+    result = runner.invoke(app, [])
+
+    assert result.exit_code == 0, result.output
+    assert "Partita IVA non valida" in result.output
+    assert "Codice fiscale non valido" in result.output
+    assert "regime fiscale supportato" in result.output
+    if hint:
+        assert hint in result.output
+    assert backend_text in result.output
+    saved = tomlkit.parse((tmp_path / "fresh" / "config.toml").read_text())
+    assert saved["cedente_partita_iva"] == "12345678903"
+    assert saved["cedente_codice_fiscale"] == "RSSMRA80A01H501U"
+    assert saved["cedente_regime_fiscale"] == "RF01"
+    assert saved["cedente_provincia"] == "RM"
+    assert saved.get("ai_provider") == (provider if provider in AI_PROVIDERS else None)
+    assert ("ai_base_url" in saved) == (provider == "ollama")
+    assert "synthetic" not in (tmp_path / "fresh" / "config.toml").read_text()
+    expected = ["pec_password"] + (["ai_api_key"] if provider in {"anthropic", "openai"} else [])
+    assert stored == expected
+
+
+def test_wizard_without_secrets_reports_none(monkeypatch, tmp_path):
+    from openfatture.cli import config_file
+    from openfatture.cli.commands import init
+    from openfatture.i18n import _
+
+    monkeypatch.setenv("OPENFATTURE_CONFIG_DIR", str(tmp_path / "fresh"))
+    monkeypatch.setattr(init, "get_settings", lambda: _wizard_settings(tmp_path))
+    monkeypatch.setattr(init, "init_db", lambda url: None)
+    defaults = {
+        _("cli-init-prompt-partita-iva"): "12345678903",
+        _("cli-init-prompt-codice-fiscale"): "RSSMRA80A01H501U",
+        _("cli-init-prompt-regime"): "RF01",
+    }
+    monkeypatch.setattr(init.Prompt, "ask", lambda label, **kwargs: defaults.get(label, ""))
+    monkeypatch.setattr(init.Confirm, "ask", lambda label, **kwargs: False)
+    monkeypatch.setattr(config_file, "store_secret", Mock(side_effect=AssertionError))
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0, result.output
+    assert "Segreti salvati" not in result.output

@@ -95,80 +95,53 @@ class QIFImporter(BaseImporter):
             ValueError: If QIF format is invalid or unsupported type
         """
         encoding = self.detect_encoding()
-        transactions = []
+        transactions: list[BankTransaction] = []
         current_tx: dict[str, str | list[str]] = {}
-        account_type = None
 
         with open(self.file_path, encoding=encoding, errors="replace") as f:
-            for line_num, line in enumerate(f, start=1):
-                line = line.strip()
-
-                # Skip empty lines
+            for line_num, raw_line in enumerate(f, start=1):
+                line = raw_line.strip()
                 if not line:
                     continue
-
-                # Check for account type header
                 if line.startswith("!Type:"):
-                    account_type = line[6:].strip()
-                    if account_type not in self.SUPPORTED_TYPES:
-                        logger.warning("qif_unsupported_type", account_type=account_type)
+                    self._check_account_type(line[6:].strip())
                     continue
-
-                # Parse field code
-                if len(line) < 1:
-                    continue
-
-                field_code = line[0]
-                field_value = line[1:].strip() if len(line) > 1 else ""
-
                 # End of transaction marker
-                if field_code == "^":
+                if line[0] == "^":
                     if current_tx:
-                        try:
-                            transaction = self._parse_transaction(account, current_tx)
-                            transactions.append(transaction)
-                        except Exception as e:
-                            logger.warning("qif_skip_transaction", line=line_num, error=str(e))
+                        self._collect(
+                            account, current_tx, transactions, "qif_skip_transaction", line_num
+                        )
                         current_tx = {}
                     continue
-
-                # Accumulate transaction fields
-                if field_code == "D":
-                    current_tx["date"] = field_value
-                elif field_code == "T":
-                    current_tx["amount"] = field_value
-                elif field_code == "P":
-                    current_tx["payee"] = field_value
-                elif field_code == "M":
-                    current_tx["memo"] = field_value
-                elif field_code == "N":
-                    current_tx["reference"] = field_value
-                elif field_code == "C":
-                    current_tx["cleared"] = field_value
-                elif field_code == "S":
-                    # Split category (ignore for now)
-                    pass
-                elif field_code == "E":
-                    # Split memo (ignore for now)
-                    pass
-                elif field_code == "$":
-                    # Split amount (accumulate into total)
-                    if "split_amounts" not in current_tx:
-                        current_tx["split_amounts"] = [field_value]
-                    else:
-                        split_list = current_tx["split_amounts"]
-                        if isinstance(split_list, list):
-                            split_list.append(field_value)
+                _accumulate_field(current_tx, line[0], line[1:].strip())
 
         # Handle last transaction if file doesn't end with ^
         if current_tx:
-            try:
-                transaction = self._parse_transaction(account, current_tx)
-                transactions.append(transaction)
-            except Exception as e:
-                logger.warning("qif_skip_final_transaction", error=str(e))
+            self._collect(account, current_tx, transactions, "qif_skip_final_transaction")
 
         return transactions
+
+    def _check_account_type(self, account_type: str) -> None:
+        if account_type not in self.SUPPORTED_TYPES:
+            logger.warning("qif_unsupported_type", account_type=account_type)
+
+    def _collect(
+        self,
+        account: BankAccount,
+        tx_data: dict[str, str | list[str]],
+        transactions: list[BankTransaction],
+        skip_event: str,
+        line_num: int | None = None,
+    ) -> None:
+        """Append the parsed transaction, or log ``skip_event`` when it is invalid."""
+        try:
+            transactions.append(self._parse_transaction(account, tx_data))
+        except Exception as e:
+            if line_num is None:
+                logger.warning(skip_event, error=str(e))
+            else:
+                logger.warning(skip_event, line=line_num, error=str(e))
 
     def _parse_transaction(
         self, account: BankAccount, tx_data: dict[str, str | list[str]]
@@ -256,65 +229,38 @@ class QIFImporter(BaseImporter):
 
         # Try ISO format first (YYYY-MM-DD)
         if re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-            try:
-                return datetime.strptime(date_str, "%Y-%m-%d").date()
-            except ValueError:
-                pass
+            iso = _strptime(date_str, "%Y-%m-%d")
+            if iso is not None:
+                return iso
 
-        # Detect format based on position of year
         parts = date_str.split("-")
         if len(parts) != 3:
             raise ValueError(f"Invalid date format: {date_str}")
+        _expand_two_digit_year(parts)
 
-        # Identify year position and convert 2-digit years to 4-digit
-        # Year is typically the longest part or the last/first part with value > 31
-        year_idx = None
-        for i, part in enumerate(parts):
-            if len(part) == 4:
-                year_idx = i
-                break
-            elif len(part) == 2 and int(part) > 31:
-                # Likely a 2-digit year
-                year_idx = i
-                year_int = int(part)
-                parts[i] = f"20{part}" if year_int < 50 else f"19{part}"
-                break
+        parsed = self._parse_ordered(parts)
+        if parsed is not None:
+            return parsed
+        # Final fallback: try both formats
+        for fmt in ["%m-%d-%Y", "%d-%m-%Y"]:
+            parsed = _strptime("-".join(parts), fmt)
+            if parsed is not None:
+                return parsed
+        raise ValueError(f"Could not parse date: {date_str}")
 
-        # If no year found yet, assume standard formats: US (M/D/Y) or EU (D/M/Y)
-        if year_idx is None:
-            # Check if last part looks like a 2-digit year (all parts have 2 digits)
-            if all(len(p) == 2 for p in parts):
-                year_idx = 2
-                year_int = int(parts[2])
-                parts[2] = f"20{parts[2]}" if year_int < 50 else f"19{parts[2]}"
-
-        # Try to detect format
+    def _parse_ordered(self, parts: list[str]) -> date | None:
+        """Read ``parts`` as US (M-D-Y) and/or EU (D-M-Y) per ``date_format``."""
         if self.date_format == "US" or (
             self.date_format == "auto" and len(parts[0]) <= 2 and int(parts[0]) <= 12
         ):
-            # US format: MM-DD-YYYY
-            try:
-                month, day, year = parts
-                return datetime(int(year), int(month), int(day)).date()
-            except (ValueError, IndexError):
-                pass
-
+            month, day, year = parts
+            us = _calendar_date(year, month, day)
+            if us is not None:
+                return us
         if self.date_format == "EU" or self.date_format == "auto":
-            # EU format: DD-MM-YYYY
-            try:
-                day, month, year = parts
-                return datetime(int(year), int(month), int(day)).date()
-            except (ValueError, IndexError):
-                pass
-
-        # Final fallback: try both formats
-        for fmt in ["%m-%d-%Y", "%d-%m-%Y"]:
-            try:
-                return datetime.strptime("-".join(parts), fmt).date()
-            except ValueError:
-                continue
-
-        raise ValueError(f"Could not parse date: {date_str}")
+            day, month, year = parts
+            return _calendar_date(year, month, day)
+        return None
 
     def _parse_decimal(self, amount_str: str) -> Decimal:
         """Parse QIF amount string.
@@ -388,3 +334,57 @@ class QIFImporter(BaseImporter):
     def __repr__(self) -> str:
         """Human-readable string representation."""
         return f"<QIFImporter(file='{self.file_path.name}', date_format='{self.date_format}')>"
+
+
+_FIELD_KEYS = {
+    "D": "date",
+    "T": "amount",
+    "P": "payee",
+    "M": "memo",
+    "N": "reference",
+    "C": "cleared",
+}
+
+
+def _accumulate_field(tx: dict[str, str | list[str]], code: str, value: str) -> None:
+    """Record one QIF field; split amounts ($) accumulate, S and E are ignored."""
+    if code in _FIELD_KEYS:
+        tx[_FIELD_KEYS[code]] = value
+    elif code == "$":
+        split_list = tx.setdefault("split_amounts", [])
+        if isinstance(split_list, list):
+            split_list.append(value)
+
+
+def _century(two_digits: str) -> str:
+    return f"20{two_digits}" if int(two_digits) < 50 else f"19{two_digits}"
+
+
+def _expand_two_digit_year(parts: list[str]) -> None:
+    """Widen a two-digit year in place.
+
+    The year is the first four-digit part or the first two-digit part above 31;
+    otherwise, when every part has two digits, the last one.
+    """
+    for i, part in enumerate(parts):
+        if len(part) == 4:
+            return
+        if len(part) == 2 and int(part) > 31:
+            parts[i] = _century(part)
+            return
+    if all(len(p) == 2 for p in parts):
+        parts[2] = _century(parts[2])
+
+
+def _calendar_date(year: str, month: str, day: str) -> date | None:
+    try:
+        return datetime(int(year), int(month), int(day)).date()
+    except ValueError:
+        return None
+
+
+def _strptime(value: str, fmt: str) -> date | None:
+    try:
+        return datetime.strptime(value, fmt).date()
+    except ValueError:
+        return None

@@ -69,7 +69,7 @@ The response contains:
 
 ```python
 from openfatture.ai.agents.tax_advisor import TaxAdvisorAgent
-from openfatture.ai.domain.agent import AgentConfig
+from openfatture.ai.domain.agent_contract import AgentConfig
 from openfatture.ai.domain.context import TaxAdvisorContext
 from openfatture.ai.providers import create_provider
 

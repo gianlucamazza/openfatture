@@ -28,6 +28,7 @@ from openfatture.platform.rate_limiter import RateLimiter
 if TYPE_CHECKING:
     from openfatture.ai.cache.tool_cache import ToolResultCache
     from openfatture.ai.tools.metrics import ToolMetricsCollector
+    from openfatture.platform.config import Settings
 
 logger = get_logger(__name__)
 
@@ -311,71 +312,27 @@ class ToolRegistry:
         Returns:
             ToolResult with execution outcome
         """
-        # Get tool
         tool = self.get_tool(tool_name)
         parameters = strip_reserved_parameters(parameters)
 
         if not tool:
             logger.error("tool_not_found", name=tool_name)
-            result = ToolResult(
-                success=False,
-                error=f"Tool '{tool_name}' not found",
-                tool_name=tool_name,
-            )
-            self._record(result)
-            return result
-
-        settings = get_settings()
-        if not is_tool_enabled_for_agent(
-            tool.name,
-            settings.ai_enabled_tools,
-            apply_allowlist=self._apply_ai_settings,
-            tool_enabled=tool.enabled,
-        ):
-            logger.error("tool_disabled", name=tool_name)
-            if is_transmit_tool(tool_name):
-                error = (
-                    f"Tool '{tool_name}' is disabled. Transmit tools (SDI/PEC send) "
-                    "stay off unless explicitly listed in ai_enabled_tools."
-                )
-            else:
-                error = f"Tool '{tool_name}' is disabled"
-            result = ToolResult(
-                success=False,
-                error=error,
-                error_type="tool_disabled",
-                tool_name=tool_name,
-            )
-            self._record(result)
-            return result
-
-        if confirmation_required(
-            tool_name,
-            tool_requires_confirmation=tool.requires_confirmation,
-            require_confirmation=settings.ai_tools_require_confirmation,
-        ):
-            from copy import deepcopy
-
-            if source == "human" and confirmed:
-                approved = True
-                error_type = "confirmation_denied"
-            elif self.confirmation_callback is not None:
-                approved = await self.confirmation_callback(tool_name, deepcopy(parameters))
-                error_type = "confirmation_denied"
-            else:
-                approved = await has_human_confirmation(
-                    source=source, confirmed=confirmed, tool_name=tool_name, parameters=parameters
-                )
-                error_type = "confirmation_required"
-            if not approved:
-                result = ToolResult(
+            return self._recorded(
+                ToolResult(
                     success=False,
-                    error=f"Tool '{tool_name}' requires an explicit human confirmation before execution.",
-                    error_type=error_type,
+                    error=f"Tool '{tool_name}' not found",
                     tool_name=tool_name,
                 )
-                self._record(result)
-                return result
+            )
+
+        settings = get_settings()
+        refusal = self._disabled_refusal(tool, settings)
+        if refusal is None:
+            refusal = await self._confirmation_refusal(
+                tool, settings, parameters, confirmed=confirmed, source=source
+            )
+        if refusal is not None:
+            return self._recorded(refusal)
 
         # Try cache first for read operations
         cache = self._get_cache()
@@ -383,24 +340,12 @@ class ToolRegistry:
             cached_result = await cache.get_cached_result(tool_name, parameters)
             if cached_result:
                 logger.info("tool_cache_hit", name=tool_name)
-                self._record(cached_result)
-                return cached_result
+                return self._recorded(cached_result)
 
-        # Check rate limiting (per tool)
-        if tool_name not in self._rate_limiters:
-            self._rate_limiters[tool_name] = RateLimiter(max_calls=10, period=60)
+        refusal = self._rate_limit_refusal(tool_name)
+        if refusal is not None:
+            return self._recorded(refusal)
 
-        if not self._rate_limiters[tool_name].acquire(blocking=False):
-            logger.warning("tool_rate_limited", name=tool_name)
-            result = ToolResult(
-                success=False,
-                error="Tool rate limit exceeded. Please wait before making another request.",
-                tool_name=tool_name,
-            )
-            self._record(result)
-            return result
-
-        # Check circuit breaker (Phase 3)
         circuit_breaker = self.get_circuit_breaker(tool_name)
         if not circuit_breaker.can_attempt():
             logger.warning("tool_circuit_breaker_open", name=tool_name)
@@ -410,10 +355,8 @@ class ToolRegistry:
                 tool_name=tool_name,
                 error_type="circuit_breaker_open",
             )
-            # Record circuit breaker state in result
             result.circuit_breaker_state = circuit_breaker.state.state.value
-            self._record(result)
-            return result
+            return self._recorded(result)
 
         bulkhead = self.get_bulkhead(tool_name)
         if not await bulkhead.acquire():
@@ -425,57 +368,141 @@ class ToolRegistry:
                 error_type="bulkhead_limit_exceeded",
             )
             result.bulkhead_queue_length = bulkhead.queued
-            self._record(result)
-            return result
+            return self._recorded(result)
 
         try:
-            # Execute tool
-            logger.info(
-                "tool_executing",
-                name=tool_name,
-                parameters=parameters,
-            )
-
-            activity = getattr(self, "activity_callback", None)
-            if activity:
-                await activity(tool_name)
-            result = await asyncio.wait_for(
-                tool.execute(**parameters), timeout=self.execution_timeout_seconds
-            )
-
-            # Refusals by the application ("not found", validation) are not
-            # faults of the tool and must not open the circuit.
-            if result.success or result.metadata.get("application_error"):
-                circuit_breaker.record_success()
-            else:
-                circuit_breaker.record_failure()
-
-            # Add circuit breaker state to result
-            result.circuit_breaker_state = circuit_breaker.state.state.value
-
-            result.bulkhead_queue_length = bulkhead.queued
-
-            # Cache successful results for read operations
-            if cache and cache.is_cacheable(tool_name) and result.success:
-                await cache.cache_result(tool_name, parameters, result)
-
-            logger.info(
-                "tool_executed",
-                name=tool_name,
-                success=result.success,
-                error=result.error if not result.success else None,
-                execution_time=result.execution_time,
-                retries=result.retries,
-                cache_hit=result.cache_hit,
-                circuit_breaker_state=result.circuit_breaker_state,
-                bulkhead_queue_length=result.bulkhead_queue_length,
-            )
-
-            self._record(result)
-
-            return result
+            return await self._run_admitted(tool, parameters, cache, circuit_breaker, bulkhead)
         finally:
             bulkhead.release()
+
+    def _recorded(self, result: ToolResult) -> ToolResult:
+        self._record(result)
+        return result
+
+    def _disabled_refusal(self, tool: Tool, settings: Settings) -> ToolResult | None:
+        """Refuse a tool that the allowlist or its own flag keeps off."""
+        if is_tool_enabled_for_agent(
+            tool.name,
+            settings.ai_enabled_tools,
+            apply_allowlist=self._apply_ai_settings,
+            tool_enabled=tool.enabled,
+        ):
+            return None
+        logger.error("tool_disabled", name=tool.name)
+        if is_transmit_tool(tool.name):
+            error = (
+                f"Tool '{tool.name}' is disabled. Transmit tools (SDI/PEC send) "
+                "stay off unless explicitly listed in ai_enabled_tools."
+            )
+        else:
+            error = f"Tool '{tool.name}' is disabled"
+        return ToolResult(
+            success=False,
+            error=error,
+            error_type="tool_disabled",
+            tool_name=tool.name,
+        )
+
+    async def _confirmation_refusal(
+        self,
+        tool: Tool,
+        settings: Settings,
+        parameters: dict[str, Any],
+        *,
+        confirmed: bool,
+        source: ToolSource,
+    ) -> ToolResult | None:
+        """Refuse a tool that needs a human yes it did not get."""
+        tool_name = tool.name
+        if not confirmation_required(
+            tool_name,
+            tool_requires_confirmation=tool.requires_confirmation,
+            require_confirmation=settings.ai_tools_require_confirmation,
+        ):
+            return None
+        from copy import deepcopy
+
+        if source == "human" and confirmed:
+            return None
+        if self.confirmation_callback is not None:
+            approved = await self.confirmation_callback(tool_name, deepcopy(parameters))
+            error_type = "confirmation_denied"
+        else:
+            approved = await has_human_confirmation(
+                source=source, confirmed=confirmed, tool_name=tool_name, parameters=parameters
+            )
+            error_type = "confirmation_required"
+        if approved:
+            return None
+        return ToolResult(
+            success=False,
+            error=f"Tool '{tool_name}' requires an explicit human confirmation before execution.",
+            error_type=error_type,
+            tool_name=tool_name,
+        )
+
+    def _rate_limit_refusal(self, tool_name: str) -> ToolResult | None:
+        """Apply the per-tool rate limit (10 calls per minute)."""
+        if tool_name not in self._rate_limiters:
+            self._rate_limiters[tool_name] = RateLimiter(max_calls=10, period=60)
+        if self._rate_limiters[tool_name].acquire(blocking=False):
+            return None
+        logger.warning("tool_rate_limited", name=tool_name)
+        return ToolResult(
+            success=False,
+            error="Tool rate limit exceeded. Please wait before making another request.",
+            tool_name=tool_name,
+        )
+
+    async def _run_admitted(
+        self,
+        tool: Tool,
+        parameters: dict[str, Any],
+        cache: ToolResultCache | None,
+        circuit_breaker: CircuitBreaker,
+        bulkhead: Bulkhead,
+    ) -> ToolResult:
+        """Run a tool that passed every gate and record its outcome."""
+        tool_name = tool.name
+        logger.info(
+            "tool_executing",
+            name=tool_name,
+            parameters=parameters,
+        )
+
+        activity = getattr(self, "activity_callback", None)
+        if activity:
+            await activity(tool_name)
+        result = await asyncio.wait_for(
+            tool.execute(**parameters), timeout=self.execution_timeout_seconds
+        )
+
+        # Refusals by the application ("not found", validation) are not
+        # faults of the tool and must not open the circuit.
+        if result.success or result.metadata.get("application_error"):
+            circuit_breaker.record_success()
+        else:
+            circuit_breaker.record_failure()
+
+        result.circuit_breaker_state = circuit_breaker.state.state.value
+        result.bulkhead_queue_length = bulkhead.queued
+
+        # Cache successful results for read operations
+        if cache and cache.is_cacheable(tool_name) and result.success:
+            await cache.cache_result(tool_name, parameters, result)
+
+        logger.info(
+            "tool_executed",
+            name=tool_name,
+            success=result.success,
+            error=result.error if not result.success else None,
+            execution_time=result.execution_time,
+            retries=result.retries,
+            cache_hit=result.cache_hit,
+            circuit_breaker_state=result.circuit_breaker_state,
+            bulkhead_queue_length=result.bulkhead_queue_length,
+        )
+        return self._recorded(result)
 
     def get_stats(self) -> dict[str, Any]:
         """

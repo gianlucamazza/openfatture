@@ -287,21 +287,11 @@ def update_prodotto(
     """
     # Validate inputs
     prodotto_id = validate_integer_input(prodotto_id, min_value=1)
-
-    if descrizione is not None and (not descrizione or len(descrizione) > 500):
-        return {"success": False, "error": "descrizione must be 1-500 characters"}
-
-    if prezzo_unitario is not None and prezzo_unitario <= 0:
-        return {"success": False, "error": "prezzo_unitario must be positive"}
-
-    if aliquota_iva is not None and (aliquota_iva < 0 or aliquota_iva > 100):
-        return {"success": False, "error": "aliquota_iva must be between 0 and 100"}
-
-    if unita_misura is not None and len(unita_misura) > 10:
-        return {"success": False, "error": "unita_misura must be max 10 characters"}
-
-    if categoria is not None and len(categoria) > 100:
-        return {"success": False, "error": "categoria must be max 100 characters"}
+    error = _update_validation_error(
+        descrizione, prezzo_unitario, aliquota_iva, unita_misura, categoria
+    )
+    if error:
+        return {"success": False, "error": error}
 
     with db_session() as db:
         try:
@@ -310,38 +300,18 @@ def update_prodotto(
             if not prodotto:
                 return {"success": False, "error": f"Prodotto {prodotto_id} not found"}
 
-            # Track changes
-            changes = []
-
-            # Update fields if provided
-            if descrizione is not None:
-                prodotto.descrizione = descrizione
-                changes.append("descrizione")
-
-            if prezzo_unitario is not None:
-                prodotto.prezzo_unitario = Decimal(str(prezzo_unitario))
-                changes.append("prezzo_unitario")
-
-            if aliquota_iva is not None:
-                prodotto.aliquota_iva = Decimal(str(aliquota_iva))
-                changes.append("aliquota_iva")
-
-            if unita_misura is not None:
-                prodotto.unita_misura = unita_misura
-                changes.append("unita_misura")
-
-            if categoria is not None:
-                prodotto.categoria = categoria
-                changes.append("categoria")
-
-            if is_servizio is not None:
-                prodotto.is_servizio = is_servizio
-                changes.append("is_servizio")
-
-            if note is not None:
-                prodotto.note = note
-                changes.append("note")
-
+            changes = _apply_prodotto_updates(
+                prodotto,
+                {
+                    "descrizione": descrizione,
+                    "prezzo_unitario": _decimal(prezzo_unitario),
+                    "aliquota_iva": _decimal(aliquota_iva),
+                    "unita_misura": unita_misura,
+                    "categoria": categoria,
+                    "is_servizio": is_servizio,
+                    "note": note,
+                },
+            )
             if not changes:
                 return {
                     "success": False,
@@ -370,6 +340,39 @@ def update_prodotto(
             db.rollback()
             logger.error("update_prodotto_failed", prodotto_id=prodotto_id, error=str(e))
             return {"success": False, "error": describe_error(e)}
+
+
+def _update_validation_error(
+    descrizione: str | None,
+    prezzo_unitario: float | None,
+    aliquota_iva: float | None,
+    unita_misura: str | None,
+    categoria: str | None,
+) -> str | None:
+    """The first invalid value of a selective update, if any."""
+    if descrizione is not None and (not descrizione or len(descrizione) > 500):
+        return "descrizione must be 1-500 characters"
+    if prezzo_unitario is not None and prezzo_unitario <= 0:
+        return "prezzo_unitario must be positive"
+    if aliquota_iva is not None and (aliquota_iva < 0 or aliquota_iva > 100):
+        return "aliquota_iva must be between 0 and 100"
+    if unita_misura is not None and len(unita_misura) > 10:
+        return "unita_misura must be max 10 characters"
+    if categoria is not None and len(categoria) > 100:
+        return "categoria must be max 100 characters"
+    return None
+
+
+def _decimal(value: float | None) -> Decimal | None:
+    return None if value is None else Decimal(str(value))
+
+
+def _apply_prodotto_updates(prodotto: Prodotto, updates: dict[str, object]) -> list[str]:
+    """Set every provided (non-None) field in order; return the names set."""
+    changes = [name for name, value in updates.items() if value is not None]
+    for name in changes:
+        setattr(prodotto, name, updates[name])
+    return changes
 
 
 @validate_call

@@ -1,5 +1,6 @@
 """Configuration management commands."""
 
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -367,67 +368,105 @@ def migrate_config(
     values from --env-file are added to config.toml only when not already set.
     The source file is never modified.
     """
-    from openfatture.platform.config import Settings, read_config_file
+    from openfatture.platform.config import read_config_file
 
     store = SecretStore()
     stored = read_config_file()
-    moved: list[str] = []
-    imported: list[str] = []
-    conflicts: list[str] = []
-    invalid: list[tuple[str, str]] = []
+    report = _MigrationReport()
+    _move_plaintext_secrets(store, stored, report)
+    if env_file is not None:
+        _import_env_file(env_file, store, stored, report)
+    _print_migration_report(report, store.backend, env_file)
+    reload_settings()
 
+
+@dataclass
+class _MigrationReport:
+    """What ``config migrate`` moved, imported, kept or rejected."""
+
+    moved: list[str] = field(default_factory=list)
+    imported: list[str] = field(default_factory=list)
+    conflicts: list[str] = field(default_factory=list)
+    invalid: list[tuple[str, str]] = field(default_factory=list)
+
+    def is_empty(self) -> bool:
+        return not (self.moved or self.imported or self.conflicts or self.invalid)
+
+
+def _move_plaintext_secrets(
+    store: SecretStore, stored: dict[str, Any], report: _MigrationReport
+) -> None:
     for name in SECRET_FIELDS:
         value = stored.get(name)
         if value:
             store.set(name, str(value))
-            moved.append(name)
-    if moved:
-        update_config({}, remove=tuple(moved))
+            report.moved.append(name)
+    if report.moved:
+        update_config({}, remove=tuple(report.moved))
 
-    if env_file is not None:
-        from dotenv import dotenv_values
 
-        changes: dict[str, Any] = {}
-        for raw_key, raw_value in dotenv_values(env_file).items():
-            key = raw_key.lower()
-            if raw_value is None or key not in Settings.model_fields:
-                continue
-            try:
-                value = coerce_setting(key, raw_value)
-            except ValueError as exc:
-                invalid.append((raw_key, str(exc)))
-                continue
-            if is_secret(key):
-                if not raw_value:
-                    continue
-                if store.get(key) not in (None, "", str(value)):
-                    conflicts.append(key)
-                    continue
-                store.set(key, str(value))
-                moved.append(key)
-            elif key in stored and stored[key] != value:
-                conflicts.append(key)
-            elif key not in stored:
-                changes[key] = value
-                imported.append(key)
-        if changes:
-            update_config(changes)
+def _import_env_file(
+    env_file: Path, store: SecretStore, stored: dict[str, Any], report: _MigrationReport
+) -> None:
+    """Add dotenv values that are not set yet; secrets go to the secret store."""
+    from dotenv import dotenv_values
 
+    from openfatture.platform.config import Settings
+
+    changes: dict[str, Any] = {}
+    for raw_key, raw_value in dotenv_values(env_file).items():
+        key = raw_key.lower()
+        if raw_value is None or key not in Settings.model_fields:
+            continue
+        try:
+            value = coerce_setting(key, raw_value)
+        except ValueError as exc:
+            report.invalid.append((raw_key, str(exc)))
+            continue
+        if is_secret(key):
+            _import_env_secret(store, key, raw_value, value, report)
+        elif key in stored and stored[key] != value:
+            report.conflicts.append(key)
+        elif key not in stored:
+            changes[key] = value
+            report.imported.append(key)
+    if changes:
+        update_config(changes)
+
+
+def _import_env_secret(
+    store: SecretStore, key: str, raw_value: str, value: object, report: _MigrationReport
+) -> None:
+    if not raw_value:
+        return
+    if store.get(key) not in (None, "", str(value)):
+        report.conflicts.append(key)
+        return
+    store.set(key, str(value))
+    report.moved.append(key)
+
+
+def _print_migration_report(
+    report: _MigrationReport, backend_name: str, env_file: Path | None
+) -> None:
     backend = _(
-        "cli-config-source-keyring" if store.backend == "keyring" else "cli-config-source-file"
+        "cli-config-source-keyring" if backend_name == "keyring" else "cli-config-source-file"
     )
-    if moved:
+    if report.moved:
         console.print(
-            _("cli-config-migrate-moved", backend=backend, keys=", ".join(sorted(set(moved))))
+            _(
+                "cli-config-migrate-moved",
+                backend=backend,
+                keys=", ".join(sorted(set(report.moved))),
+            )
         )
-    if imported:
-        console.print(_("cli-config-migrate-imported", keys=", ".join(sorted(imported))))
-    if conflicts:
-        console.print(_("cli-config-migrate-conflicts", keys=", ".join(sorted(conflicts))))
-    for key, error in invalid:
+    if report.imported:
+        console.print(_("cli-config-migrate-imported", keys=", ".join(sorted(report.imported))))
+    if report.conflicts:
+        console.print(_("cli-config-migrate-conflicts", keys=", ".join(sorted(report.conflicts))))
+    for key, error in report.invalid:
         console.print(_("cli-config-invalid-value", key=key, error=error))
-    if not (moved or imported or conflicts or invalid):
+    if report.is_empty():
         console.print(_("cli-config-migrate-nothing"))
     if env_file is not None:
         console.print(_("cli-config-migrate-source-kept", path=str(env_file)))
-    reload_settings()

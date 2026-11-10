@@ -1,5 +1,7 @@
 """Fattura (invoice) management CLI commands."""
 
+from typing import Any
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -54,50 +56,64 @@ def list_invoices(
         return
 
     if console.width < 120:
-        console.print(_("cli-fattura-list-title", count=result["count"]))
-        for invoice in result["fatture"]:
-            console.print(
-                f"{invoice['numero']}/{invoice['anno']} · {invoice['cliente']}", markup=False
-            )
-            for field, key in (
-                ("importo", "total"),
-                ("amount_paid", "collected"),
-                ("outstanding", "residual"),
-            ):
-                value = (
-                    "—"
-                    if field == "amount_paid" and invoice["payment_status"] == "no_payment_record"
-                    else format_eur(invoice[field])
-                )
-                console.print(f"  {_('cli-invoice-' + key)}: {value}", markup=False)
-            document = (
-                _("cli-invoice-historical") if invoice["issued_elsewhere"] else invoice["stato"]
-            )
-            if invoice.get("submission_state") in {"pending", "uncertain"}:
-                document += " · " + _("cli-fattura-pec-to-verify")
-            if invoice.get("status_origin") == "sdi_receipt":
-                document += f" · SDI: {invoice['stato']}"
-            console.print(
-                f"  {invoice['data']} · {document} · {_('cli-invoice-' + invoice['payment_status'])}",
-                markup=False,
-            )
-            if invoice.get("collection_statement"):
-                statement = invoice["collection_statement"]
-                console.print(
-                    "  "
-                    + _(
-                        "cli-fattura-statement",
-                        value=statement["value"],
-                        source=statement["source"],
-                    ),
-                    markup=False,
-                )
-            console.print()
-        if result.get("has_more"):
-            console.print("… --limit")
-        return
+        _print_invoice_cards(result)
+    else:
+        _print_invoice_table(result)
 
-    # Display as table
+
+def _paid_amount(invoice: dict[str, Any], field: str) -> str:
+    """Format an amount; collected cash is unknown without any payment record."""
+    if field == "amount_paid" and invoice["payment_status"] == "no_payment_record":
+        return "—"
+    return format_eur(invoice[field])
+
+
+def _statement_text(invoice: dict[str, Any]) -> str:
+    statement = invoice["collection_statement"]
+    return _("cli-fattura-statement", value=statement["value"], source=statement["source"])
+
+
+def _print_invoice_cards(result: dict[str, Any]) -> None:
+    """Narrow terminals: one block of lines per invoice."""
+    console.print(_("cli-fattura-list-title", count=result["count"]))
+    for invoice in result["fatture"]:
+        _print_invoice_card(invoice)
+    if result.get("has_more"):
+        console.print("… --limit")
+
+
+def _print_invoice_card(invoice: dict[str, Any]) -> None:
+    console.print(f"{invoice['numero']}/{invoice['anno']} · {invoice['cliente']}", markup=False)
+    for field, key in (
+        ("importo", "total"),
+        ("amount_paid", "collected"),
+        ("outstanding", "residual"),
+    ):
+        value = _paid_amount(invoice, field)
+        console.print(f"  {_('cli-invoice-' + key)}: {value}", markup=False)
+    document = _("cli-invoice-historical") if invoice["issued_elsewhere"] else invoice["stato"]
+    if invoice.get("submission_state") in {"pending", "uncertain"}:
+        document += " · " + _("cli-fattura-pec-to-verify")
+    if invoice.get("status_origin") == "sdi_receipt":
+        document += f" · SDI: {invoice['stato']}"
+    console.print(
+        f"  {invoice['data']} · {document} · {_('cli-invoice-' + invoice['payment_status'])}",
+        markup=False,
+    )
+    if invoice.get("collection_statement"):
+        console.print("  " + _statement_text(invoice), markup=False)
+    console.print()
+
+
+def _table_document(fattura: dict[str, Any]) -> Any:
+    if not fattura["issued_elsewhere"]:
+        return fattura["stato"]
+    sdi = f" · SDI: {fattura['stato']}" if fattura.get("status_origin") == "sdi_receipt" else ""
+    return _("cli-invoice-historical") + sdi
+
+
+def _print_invoice_table(result: dict[str, Any]) -> None:
+    """Wide terminals: one table row per invoice, then the owner statements."""
     table = Table(title=_("cli-fattura-list-title", count=result["count"]))
     table.add_column("ID", style="cyan")
     table.add_column(_("cli-common-number"))
@@ -116,30 +132,17 @@ def list_invoices(
             fattura["data"],
             fattura["cliente"],
             format_eur(fattura["importo"]),
-            "—"
-            if fattura["payment_status"] == "no_payment_record"
-            else format_eur(fattura["amount_paid"]),
+            _paid_amount(fattura, "amount_paid"),
             format_eur(fattura["outstanding"]),
             _("cli-invoice-" + fattura["payment_status"]),
-            (
-                _("cli-invoice-historical")
-                + (
-                    f" · SDI: {fattura['stato']}"
-                    if fattura.get("status_origin") == "sdi_receipt"
-                    else ""
-                )
-            )
-            if fattura["issued_elsewhere"]
-            else fattura["stato"],
+            _table_document(fattura),
         )
 
     console.print(table)
     for invoice in result["fatture"]:
         if invoice.get("collection_statement"):
-            statement = invoice["collection_statement"]
             console.print(
-                f"{invoice['numero']}/{invoice['anno']} · "
-                + _("cli-fattura-statement", value=statement["value"], source=statement["source"]),
+                f"{invoice['numero']}/{invoice['anno']} · " + _statement_text(invoice),
                 markup=False,
             )
 

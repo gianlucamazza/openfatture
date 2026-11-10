@@ -1,6 +1,7 @@
 """Domain models for AI agents."""
 
-from openfatture.ai.domain.agent import AgentConfig, AgentProtocol, BaseAgent
+from openfatture.ai.domain.agent import BaseAgent
+from openfatture.ai.domain.agent_contract import AgentConfig, AgentProtocol
 from openfatture.ai.domain.context import (
     AgentContext,
     AgentResult,

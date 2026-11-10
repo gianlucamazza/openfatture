@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from openfatture.billing.application.totals import recompute_invoice, resolve_vat
 from openfatture.platform.config import get_settings
@@ -12,6 +12,9 @@ from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.storage.database.models import Fattura, RigaFattura, StatoFattura
 from openfatture.storage.session import db_session
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 logger = get_logger(__name__)
 
@@ -153,63 +156,16 @@ def update_riga(
 
     with db_session() as db:
         try:
-            # Get riga
-            riga = db.query(RigaFattura).filter(RigaFattura.id == riga_id).first()
-            if not riga:
-                return {"error": f"Line item {riga_id} not found"}
+            loaded = _load_editable_line(db, riga_id)
+            if isinstance(loaded, str):
+                return {"error": loaded}
+            riga, fattura = loaded
 
-            # Get invoice
-            fattura = db.query(Fattura).filter(Fattura.id == riga.fattura_id).first()
-            if not fattura:
-                return {"error": f"Invoice for line item {riga_id} not found"}
-
-            # Check invoice is editable
-            if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
-                return {
-                    "error": f"Cannot modify line item in invoice with status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
-                }
-
-            # Track changes
-            changes = []
-
-            # Update fields if provided
-            if descrizione is not None and descrizione != riga.descrizione:
-                riga.descrizione = descrizione
-                changes.append("descrizione")
-
-            if quantita is not None and Decimal(str(quantita)) != riga.quantita:
-                riga.quantita = Decimal(str(quantita))
-                changes.append("quantita")
-
-            if (
-                prezzo_unitario is not None
-                and Decimal(str(prezzo_unitario)) != riga.prezzo_unitario
-            ):
-                riga.prezzo_unitario = Decimal(str(prezzo_unitario))
-                changes.append("prezzo_unitario")
-
-            if aliquota_iva is not None or natura is not None:
-                new_rate = riga.aliquota_iva if aliquota_iva is None else aliquota_iva
-                new_natura = natura
-                if (
-                    new_natura is None
-                    and aliquota_iva is not None
-                    and Decimal(str(aliquota_iva)) == 0
-                ):
-                    new_natura = riga.natura
-                try:
-                    rate, resolved = resolve_vat(
-                        new_rate, new_natura, get_settings().cedente_regime_fiscale
-                    )
-                except ValueError as e:
-                    return {"error": str(e)}
-                if rate != riga.aliquota_iva:
-                    riga.aliquota_iva = rate
-                    changes.append("aliquota_iva")
-                if resolved != riga.natura:
-                    riga.natura = resolved
-                    changes.append("natura")
-
+            changes = _apply_line_fields(riga, descrizione, quantita, prezzo_unitario)
+            vat_changes = _apply_line_vat(riga, aliquota_iva, natura)
+            if isinstance(vat_changes, str):
+                return {"error": vat_changes}
+            changes += vat_changes
             if unita_misura is not None and unita_misura != riga.unita_misura:
                 riga.unita_misura = unita_misura
                 changes.append("unita_misura")
@@ -222,7 +178,7 @@ def update_riga(
                 }
 
             # Recalculate totals if numeric fields changed
-            if any(f in changes for f in ["quantita", "prezzo_unitario", "aliquota_iva", "natura"]):
+            if not _PRICE_FIELDS.isdisjoint(changes):
                 recompute_invoice(fattura)
 
             db.commit()
@@ -236,24 +192,87 @@ def update_riga(
                 numero_riga=riga.numero_riga,
                 changes=changes,
             )
-
-            return {
-                "success": True,
-                "riga_id": riga.id,
-                "numero_riga": riga.numero_riga,
-                "descrizione": riga.descrizione,
-                "changes": changes,
-                "imponibile": float(riga.imponibile),
-                "iva": float(riga.iva),
-                "totale": float(riga.totale),
-                "invoice_totale": float(fattura.totale),
-                "message": f"Line item #{riga.numero_riga} updated. Invoice total: €{fattura.totale:.2f}",
-            }
+            return _updated_line_result(riga, fattura, changes)
 
         except Exception as e:
             db.rollback()
             logger.error("update_riga_failed", riga_id=riga_id, error=str(e))
             return {"error": describe_error(e)}
+
+
+_PRICE_FIELDS = frozenset({"quantita", "prezzo_unitario", "aliquota_iva", "natura"})
+
+
+def _load_editable_line(db: Session, riga_id: int) -> tuple[RigaFattura, Fattura] | str:
+    """The line and its invoice when the invoice is still editable, else an error."""
+    riga = db.query(RigaFattura).filter(RigaFattura.id == riga_id).first()
+    if not riga:
+        return f"Line item {riga_id} not found"
+    fattura = db.query(Fattura).filter(Fattura.id == riga.fattura_id).first()
+    if not fattura:
+        return f"Invoice for line item {riga_id} not found"
+    if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
+        return f"Cannot modify line item in invoice with status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
+    return riga, fattura
+
+
+def _apply_line_fields(
+    riga: RigaFattura,
+    descrizione: str | None,
+    quantita: float | None,
+    prezzo_unitario: float | None,
+) -> list[str]:
+    """Set description, quantity and price when they differ; return what changed."""
+    changes = []
+    if descrizione is not None and descrizione != riga.descrizione:
+        riga.descrizione = descrizione
+        changes.append("descrizione")
+    if quantita is not None and Decimal(str(quantita)) != riga.quantita:
+        riga.quantita = Decimal(str(quantita))
+        changes.append("quantita")
+    if prezzo_unitario is not None and Decimal(str(prezzo_unitario)) != riga.prezzo_unitario:
+        riga.prezzo_unitario = Decimal(str(prezzo_unitario))
+        changes.append("prezzo_unitario")
+    return changes
+
+
+def _apply_line_vat(
+    riga: RigaFattura, aliquota_iva: float | None, natura: str | None
+) -> list[str] | str:
+    """Set rate and natura when requested; return what changed or the VAT error."""
+    if aliquota_iva is None and natura is None:
+        return []
+    new_rate = riga.aliquota_iva if aliquota_iva is None else aliquota_iva
+    new_natura = natura
+    if new_natura is None and aliquota_iva is not None and Decimal(str(aliquota_iva)) == 0:
+        new_natura = riga.natura
+    try:
+        rate, resolved = resolve_vat(new_rate, new_natura, get_settings().cedente_regime_fiscale)
+    except ValueError as e:
+        return str(e)
+    changes = []
+    if rate != riga.aliquota_iva:
+        riga.aliquota_iva = rate
+        changes.append("aliquota_iva")
+    if resolved != riga.natura:
+        riga.natura = resolved
+        changes.append("natura")
+    return changes
+
+
+def _updated_line_result(riga: RigaFattura, fattura: Fattura, changes: list[str]) -> dict[str, Any]:
+    return {
+        "success": True,
+        "riga_id": riga.id,
+        "numero_riga": riga.numero_riga,
+        "descrizione": riga.descrizione,
+        "changes": changes,
+        "imponibile": float(riga.imponibile),
+        "iva": float(riga.iva),
+        "totale": float(riga.totale),
+        "invoice_totale": float(fattura.totale),
+        "message": f"Line item #{riga.numero_riga} updated. Invoice total: €{fattura.totale:.2f}",
+    }
 
 
 def delete_riga(
