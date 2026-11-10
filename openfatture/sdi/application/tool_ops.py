@@ -8,8 +8,8 @@ from pydantic import validate_call
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.sdi.notifiche.processor import NotificationProcessor
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Fattura, LogSDI, StatoFattura
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -50,47 +50,49 @@ def list_sdi_notifications(
             "notifications": [],
         }
 
-    db = get_session()
-    try:
-        # Build query
-        query = db.query(LogSDI)
+    with db_session() as db:
+        try:
+            # Build query
+            query = db.query(LogSDI)
 
-        if fattura_id:
-            query = query.filter(LogSDI.fattura_id == fattura_id)
+            if fattura_id:
+                query = query.filter(LogSDI.fattura_id == fattura_id)
 
-        if tipo_notifica:
-            query = query.filter(LogSDI.tipo_notifica == tipo_notifica.upper())
+            if tipo_notifica:
+                query = query.filter(LogSDI.tipo_notifica == tipo_notifica.upper())
 
-        # Execute query with limit
-        notifications = query.order_by(LogSDI.data_ricezione.desc()).limit(limit).all()
+            # Execute query with limit
+            notifications = query.order_by(LogSDI.data_ricezione.desc()).limit(limit).all()
 
-        # Format results
-        results = []
-        for n in notifications:
-            results.append(
-                {
-                    "notification_id": n.id,
-                    "fattura_id": n.fattura_id,
-                    "fattura_numero": f"{n.fattura.numero}/{n.fattura.anno}" if n.fattura else None,
-                    "tipo_notifica": n.tipo_notifica,
-                    "tipo_descrizione": _get_notification_type_description(n.tipo_notifica),
-                    "descrizione": n.descrizione,
-                    "data_ricezione": n.data_ricezione.isoformat() if n.data_ricezione else None,
-                    "xml_path": n.xml_path,
-                }
-            )
+            # Format results
+            results = []
+            for n in notifications:
+                results.append(
+                    {
+                        "notification_id": n.id,
+                        "fattura_id": n.fattura_id,
+                        "fattura_numero": f"{n.fattura.numero}/{n.fattura.anno}"
+                        if n.fattura
+                        else None,
+                        "tipo_notifica": n.tipo_notifica,
+                        "tipo_descrizione": _get_notification_type_description(n.tipo_notifica),
+                        "descrizione": n.descrizione,
+                        "data_ricezione": n.data_ricezione.isoformat()
+                        if n.data_ricezione
+                        else None,
+                        "xml_path": n.xml_path,
+                    }
+                )
 
-        return {
-            "count": len(results),
-            "notifications": results,
-            "has_more": len(notifications) == limit,
-        }
+            return {
+                "count": len(results),
+                "notifications": results,
+                "has_more": len(notifications) == limit,
+            }
 
-    except Exception as e:
-        logger.error("list_sdi_notifications_failed", error=str(e))
-        return {"error": str(e), "count": 0, "notifications": []}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("list_sdi_notifications_failed", error=str(e))
+            return {"error": str(e), "count": 0, "notifications": []}
 
 
 @validate_call
@@ -107,56 +109,54 @@ def get_sdi_notification_details(notification_id: int) -> dict[str, Any]:
     # Validate input
     notification_id = validate_integer_input(notification_id, min_value=1)
 
-    db = get_session()
-    try:
-        notification = db.query(LogSDI).filter(LogSDI.id == notification_id).first()
+    with db_session() as db:
+        try:
+            notification = db.query(LogSDI).filter(LogSDI.id == notification_id).first()
 
-        if not notification:
-            return {"error": f"Notification {notification_id} not found"}
+            if not notification:
+                return {"error": f"Notification {notification_id} not found"}
 
-        # Get invoice details
-        fattura_data = None
-        if notification.fattura:
-            f = notification.fattura
-            fattura_data = {
-                "fattura_id": f.id,
-                "numero": f"{f.numero}/{f.anno}",
-                "data_emissione": f.data_emissione.isoformat(),
-                "stato": f.stato.value,
-                "cliente": f.cliente.denominazione if f.cliente else None,
-                "totale": float(f.totale),
+            # Get invoice details
+            fattura_data = None
+            if notification.fattura:
+                f = notification.fattura
+                fattura_data = {
+                    "fattura_id": f.id,
+                    "numero": f"{f.numero}/{f.anno}",
+                    "data_emissione": f.data_emissione.isoformat(),
+                    "stato": f.stato.value,
+                    "cliente": f.cliente.denominazione if f.cliente else None,
+                    "totale": float(f.totale),
+                }
+
+            # Read XML content if available
+            xml_content = None
+            if notification.xml_path:
+                xml_path = Path(notification.xml_path)
+                if xml_path.exists():
+                    try:
+                        xml_content = xml_path.read_text(encoding="utf-8")
+                    except Exception as e:
+                        xml_content = f"Error reading XML: {e}"
+
+            return {
+                "notification_id": notification.id,
+                "tipo_notifica": notification.tipo_notifica,
+                "tipo_descrizione": _get_notification_type_description(notification.tipo_notifica),
+                "descrizione": notification.descrizione,
+                "data_ricezione": (
+                    notification.data_ricezione.isoformat() if notification.data_ricezione else None
+                ),
+                "xml_path": notification.xml_path,
+                "xml_content": xml_content,
+                "fattura": fattura_data,
             }
 
-        # Read XML content if available
-        xml_content = None
-        if notification.xml_path:
-            xml_path = Path(notification.xml_path)
-            if xml_path.exists():
-                try:
-                    xml_content = xml_path.read_text(encoding="utf-8")
-                except Exception as e:
-                    xml_content = f"Error reading XML: {e}"
-
-        return {
-            "notification_id": notification.id,
-            "tipo_notifica": notification.tipo_notifica,
-            "tipo_descrizione": _get_notification_type_description(notification.tipo_notifica),
-            "descrizione": notification.descrizione,
-            "data_ricezione": (
-                notification.data_ricezione.isoformat() if notification.data_ricezione else None
-            ),
-            "xml_path": notification.xml_path,
-            "xml_content": xml_content,
-            "fattura": fattura_data,
-        }
-
-    except Exception as e:
-        logger.error(
-            "get_sdi_notification_details_failed", notification_id=notification_id, error=str(e)
-        )
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error(
+                "get_sdi_notification_details_failed", notification_id=notification_id, error=str(e)
+            )
+            return {"error": str(e)}
 
 
 @validate_call
@@ -173,53 +173,51 @@ def check_invoice_sdi_status(fattura_id: int) -> dict[str, Any]:
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get invoice
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+    with db_session() as db:
+        try:
+            # Get invoice
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
-        if not fattura:
-            return {"error": f"Fattura {fattura_id} not found"}
+            if not fattura:
+                return {"error": f"Fattura {fattura_id} not found"}
 
-        # Get all notifications for this invoice
-        notifications = (
-            db.query(LogSDI)
-            .filter(LogSDI.fattura_id == fattura_id)
-            .order_by(LogSDI.data_ricezione.desc())
-            .all()
-        )
-
-        # Format notification timeline
-        timeline = []
-        for n in notifications:
-            timeline.append(
-                {
-                    "data": n.data_ricezione.isoformat() if n.data_ricezione else None,
-                    "tipo": n.tipo_notifica,
-                    "descrizione": _get_notification_type_description(n.tipo_notifica),
-                    "messaggio": n.descrizione,
-                }
+            # Get all notifications for this invoice
+            notifications = (
+                db.query(LogSDI)
+                .filter(LogSDI.fattura_id == fattura_id)
+                .order_by(LogSDI.data_ricezione.desc())
+                .all()
             )
 
-        # Determine overall SDI status
-        sdi_status = _determine_sdi_status(fattura.stato, notifications)
+            # Format notification timeline
+            timeline = []
+            for n in notifications:
+                timeline.append(
+                    {
+                        "data": n.data_ricezione.isoformat() if n.data_ricezione else None,
+                        "tipo": n.tipo_notifica,
+                        "descrizione": _get_notification_type_description(n.tipo_notifica),
+                        "messaggio": n.descrizione,
+                    }
+                )
 
-        return {
-            "fattura_id": fattura.id,
-            "numero": f"{fattura.numero}/{fattura.anno}",
-            "data_emissione": fattura.data_emissione.isoformat(),
-            "stato_fattura": fattura.stato.value,
-            "sdi_status": sdi_status,
-            "notifications_count": len(notifications),
-            "timeline": timeline,
-            "latest_notification": timeline[0] if timeline else None,
-        }
+            # Determine overall SDI status
+            sdi_status = _determine_sdi_status(fattura.stato, notifications)
 
-    except Exception as e:
-        logger.error("check_invoice_sdi_status_failed", fattura_id=fattura_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+            return {
+                "fattura_id": fattura.id,
+                "numero": f"{fattura.numero}/{fattura.anno}",
+                "data_emissione": fattura.data_emissione.isoformat(),
+                "stato_fattura": fattura.stato.value,
+                "sdi_status": sdi_status,
+                "notifications_count": len(notifications),
+                "timeline": timeline,
+                "latest_notification": timeline[0] if timeline else None,
+            }
+
+        except Exception as e:
+            logger.error("check_invoice_sdi_status_failed", fattura_id=fattura_id, error=str(e))
+            return {"error": str(e)}
 
 
 # =============================================================================
@@ -255,63 +253,65 @@ def process_sdi_notification_file(
     if not xml_file.suffix.lower() == ".xml":
         return {"success": False, "error": "File must be an XML file"}
 
-    db = get_session()
-    try:
-        # Create processor
-        processor = NotificationProcessor(db_session=db, email_sender=None)
+    with db_session() as db:
+        try:
+            # Create processor
+            processor = NotificationProcessor(db_session=db, email_sender=None)
 
-        # Process file
-        success, error, notification = processor.process_file(xml_file)
+            # Process file
+            success, error, notification = processor.process_file(xml_file)
 
-        if not success:
-            return {"success": False, "error": error}
+            if not success:
+                return {"success": False, "error": error}
 
-        if notification is None:
-            return {"success": False, "error": "No notification data returned"}
+            if notification is None:
+                return {"success": False, "error": "No notification data returned"}
 
-        # Get updated invoice info
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first() if fattura_id else None
+            # Get updated invoice info
+            fattura = (
+                db.query(Fattura).filter(Fattura.id == fattura_id).first() if fattura_id else None
+            )
 
-        if not fattura and notification:
-            # Try to find invoice from notification
-            fattura = processor._find_invoice(notification)
+            if not fattura and notification:
+                # Try to find invoice from notification
+                fattura = processor._find_invoice(notification)
 
-        logger.info(
-            "sdi_notification_processed",
-            xml_path=str(xml_file),
-            tipo_notifica=notification.tipo if notification else None,
-            fattura_id=fattura.id if fattura else None,
-        )
+            logger.info(
+                "sdi_notification_processed",
+                xml_path=str(xml_file),
+                tipo_notifica=notification.tipo if notification else None,
+                fattura_id=fattura.id if fattura else None,
+            )
 
-        return {
-            "success": True,
-            "notification": {
-                "tipo": notification.tipo if notification else None,
-                "messaggio": notification.messaggio if notification else None,
-                "data_ricezione": (
-                    notification.data_ricezione.isoformat()
-                    if notification and notification.data_ricezione
+            return {
+                "success": True,
+                "notification": {
+                    "tipo": notification.tipo if notification else None,
+                    "messaggio": notification.messaggio if notification else None,
+                    "data_ricezione": (
+                        notification.data_ricezione.isoformat()
+                        if notification and notification.data_ricezione
+                        else None
+                    ),
+                },
+                "fattura": (
+                    {
+                        "id": fattura.id,
+                        "numero": f"{fattura.numero}/{fattura.anno}",
+                        "stato": fattura.stato.value,
+                    }
+                    if fattura
                     else None
                 ),
-            },
-            "fattura": (
-                {
-                    "id": fattura.id,
-                    "numero": f"{fattura.numero}/{fattura.anno}",
-                    "stato": fattura.stato.value,
-                }
-                if fattura
-                else None
-            ),
-            "message": f"Notification processed: {notification.tipo if notification else 'unknown'}",
-        }
+                "message": f"Notification processed: {notification.tipo if notification else 'unknown'}",
+            }
 
-    except Exception as e:
-        db.rollback()
-        logger.error("process_sdi_notification_file_failed", xml_path=str(xml_file), error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error(
+                "process_sdi_notification_file_failed", xml_path=str(xml_file), error=str(e)
+            )
+            return {"success": False, "error": str(e)}
 
 
 # =============================================================================

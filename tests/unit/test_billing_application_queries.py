@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from openfatture.billing.application import client_queries, invoice_queries
 
 
-@patch("openfatture.billing.application.invoice_queries.get_session")
+@patch("openfatture.billing.application.invoice_queries.session_scope")
 def test_search_invoices_empty(mock_session: MagicMock) -> None:
     session = MagicMock()
     mock_session.return_value = session
@@ -21,7 +21,7 @@ def test_search_invoices_empty(mock_session: MagicMock) -> None:
     assert result["fatture"] == []
 
 
-@patch("openfatture.billing.application.client_queries.get_session")
+@patch("openfatture.billing.application.client_queries.session_scope")
 def test_get_client_stats(mock_session: MagicMock) -> None:
     session = MagicMock()
     mock_session.return_value = session

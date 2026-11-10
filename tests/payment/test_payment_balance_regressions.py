@@ -1,5 +1,6 @@
 """Regression coverage for invoice balances and manual payment validation."""
 
+from contextlib import nullcontext
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
@@ -26,7 +27,7 @@ def test_paid_installment_does_not_settle_invoice(monkeypatch):
     session = MagicMock()
     session.query.return_value.filter.return_value.first.return_value = invoice
     session.query.return_value.filter.return_value.all.return_value = [payment]
-    monkeypatch.setattr(payment_queries, "get_session", lambda: session)
+    monkeypatch.setattr(payment_queries, "db_session", lambda: nullcontext(session))
     result = payment_queries.get_payment_status(1)
     assert result["payment_status"] == "partially_paid"
     assert result["outstanding"] == 1582
@@ -42,7 +43,7 @@ def test_reject_invalid_amounts_without_commit(monkeypatch, due, paid, operation
     session.query.return_value.filter.return_value.first.return_value = SimpleNamespace(
         importo=Decimal("100"), importo_pagato=Decimal("0")
     )
-    monkeypatch.setattr(payment_commands, "get_session", lambda: session)
+    monkeypatch.setattr(payment_commands, "db_session", lambda: nullcontext(session))
     if operation == "create":
         result = payment_commands.create_manual_payment(1, due, "2026-08-07", paid)
     else:

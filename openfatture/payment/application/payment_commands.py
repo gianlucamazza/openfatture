@@ -17,7 +17,7 @@ from openfatture.payment.application.collection_api import (
 from openfatture.payment.domain.enums import MatchType
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
+from openfatture.storage.session import db_session
 
 create_manual_payment = create_payment
 
@@ -76,70 +76,68 @@ def reconcile_payment(
     if confidence is not None and not (0.0 <= confidence <= 1.0):
         return {"error": f"Confidence must be between 0.0 and 1.0, got {confidence}"}
 
-    db = get_session()
-    try:
-        # Initialize repos and service
-        tx_repo = BankTransactionRepository(db)
-        payment_repo = PaymentRepository(db)
-        event_bus = get_global_event_bus()
+    with db_session() as db:
+        try:
+            # Initialize repos and service
+            tx_repo = BankTransactionRepository(db)
+            payment_repo = PaymentRepository(db)
+            event_bus = get_global_event_bus()
 
-        # Create service with minimal matching service (not used for manual reconciliation)
-        from openfatture.payment.application.services.matching_service import MatchingService
-        from openfatture.payment.matchers import ExactAmountMatcher, FuzzyDescriptionMatcher
+            # Create service with minimal matching service (not used for manual reconciliation)
+            from openfatture.payment.application.services.matching_service import MatchingService
+            from openfatture.payment.matchers import ExactAmountMatcher, FuzzyDescriptionMatcher
 
-        matching_service = MatchingService(
-            tx_repo=tx_repo,
-            payment_repo=payment_repo,
-            strategies=[ExactAmountMatcher(), FuzzyDescriptionMatcher()],
-        )
-
-        reconciliation_service = ReconciliationService(
-            tx_repo=tx_repo,
-            payment_repo=payment_repo,
-            matching_service=matching_service,
-            session=db,
-            event_bus=event_bus,
-        )
-
-        # Perform reconciliation
-        transaction = run_async(
-            reconciliation_service.reconcile(
-                transaction_id=tx_uuid,
-                payment_id=payment_id,
-                match_type=match_type_enum,
-                confidence=confidence,
+            matching_service = MatchingService(
+                tx_repo=tx_repo,
+                payment_repo=payment_repo,
+                strategies=[ExactAmountMatcher(), FuzzyDescriptionMatcher()],
             )
-        )
 
-        db.commit()
+            reconciliation_service = ReconciliationService(
+                tx_repo=tx_repo,
+                payment_repo=payment_repo,
+                matching_service=matching_service,
+                session=db,
+                event_bus=event_bus,
+            )
 
-        logger.info(
-            "payment_reconciled",
-            transaction_id=transaction_id,
-            payment_id=payment_id,
-            match_type=match_type,
-        )
+            # Perform reconciliation
+            transaction = run_async(
+                reconciliation_service.reconcile(
+                    transaction_id=tx_uuid,
+                    payment_id=payment_id,
+                    match_type=match_type_enum,
+                    confidence=confidence,
+                )
+            )
 
-        return {
-            "success": True,
-            "transaction_id": str(transaction.id),
-            "payment_id": payment_id,
-            "status": transaction.status.value,
-            "match_type": transaction.match_type.value if transaction.match_type else None,
-            "match_confidence": transaction.match_confidence,
-            "message": f"Transaction {transaction_id[:8]}... reconciled to payment {payment_id}",
-        }
+            db.commit()
 
-    except ValueError as e:
-        return {"error": str(e)}
-    except RuntimeError as e:
-        return {"error": str(e)}
-    except Exception as e:
-        db.rollback()
-        logger.error("reconcile_payment_failed", error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+            logger.info(
+                "payment_reconciled",
+                transaction_id=transaction_id,
+                payment_id=payment_id,
+                match_type=match_type,
+            )
+
+            return {
+                "success": True,
+                "transaction_id": str(transaction.id),
+                "payment_id": payment_id,
+                "status": transaction.status.value,
+                "match_type": transaction.match_type.value if transaction.match_type else None,
+                "match_confidence": transaction.match_confidence,
+                "message": f"Transaction {transaction_id[:8]}... reconciled to payment {payment_id}",
+            }
+
+        except ValueError as e:
+            return {"error": str(e)}
+        except RuntimeError as e:
+            return {"error": str(e)}
+        except Exception as e:
+            db.rollback()
+            logger.error("reconcile_payment_failed", error=str(e))
+            return {"error": str(e)}
 
 
 # Backwards-compatible names route to the single collection application service.
@@ -166,87 +164,85 @@ def import_bank_transactions(
     from openfatture.payment.infrastructure.importers.ofx_importer import OFXImporter
     from openfatture.payment.infrastructure.repository import BankTransactionRepository
 
-    db = get_session()
-    try:
-        # Validate file exists
-        file = Path(file_path)
-        if not file.exists():
-            return {"error": f"File not found: {file_path}"}
+    with db_session() as db:
+        try:
+            # Validate file exists
+            file = Path(file_path)
+            if not file.exists():
+                return {"error": f"File not found: {file_path}"}
 
-        # Check file extension
-        if file.suffix.lower() not in [".ofx", ".qfx"]:
-            return {"error": f"Invalid file type: {file.suffix}. Must be .ofx or .qfx"}
+            # Check file extension
+            if file.suffix.lower() not in [".ofx", ".qfx"]:
+                return {"error": f"Invalid file type: {file.suffix}. Must be .ofx or .qfx"}
 
-        # Get or create account
-        account = db.query(BankAccount).filter(BankAccount.name == account_name).first()
-        if not account:
-            account = BankAccount(name=account_name, currency="EUR")
-            db.add(account)
-            db.flush()
+            # Get or create account
+            account = db.query(BankAccount).filter(BankAccount.name == account_name).first()
+            if not account:
+                account = BankAccount(name=account_name, currency="EUR")
+                db.add(account)
+                db.flush()
 
-        # Parse the statement
-        importer = OFXImporter(file)
-        importer.validate_file()
-        parsed = importer.parse(account)
+            # Parse the statement
+            importer = OFXImporter(file)
+            importer.validate_file()
+            parsed = importer.parse(account)
 
-        # Deduplicate against transactions already stored for this account,
-        # using the bank reference (FITID) as the natural key.
-        known_references = {
-            reference
-            for (reference,) in db.query(BankTransaction.reference)
-            .filter(
-                BankTransaction.account_id == account.id,
-                BankTransaction.reference.is_not(None),
+            # Deduplicate against transactions already stored for this account,
+            # using the bank reference (FITID) as the natural key.
+            known_references = {
+                reference
+                for (reference,) in db.query(BankTransaction.reference)
+                .filter(
+                    BankTransaction.account_id == account.id,
+                    BankTransaction.reference.is_not(None),
+                )
+                .all()
+            }
+
+            # OFXImporter builds every transaction against `account`, so they all
+            # sit in account.transactions already. Drop the duplicates from that
+            # collection and persist the rest in one batch: flushing per row while
+            # later rows are still pending on the relationship makes SQLAlchemy
+            # warn about cascading an append for an object not yet in the session.
+            to_import = []
+            skipped = 0
+            for transaction in parsed:
+                reference = transaction.reference
+                if reference is not None and reference in known_references:
+                    skipped += 1
+                    account.transactions.remove(transaction)
+                    continue
+                if reference is not None:
+                    known_references.add(reference)
+                to_import.append(transaction)
+
+            tx_repo = BankTransactionRepository(db)
+            if to_import:
+                tx_repo.add_batch(to_import)
+            imported = len(to_import)
+
+            db.commit()
+
+            logger.info(
+                "bank_transactions_imported",
+                file_path=file_path,
+                account_id=account.id,
+                imported=imported,
+                skipped=skipped,
             )
-            .all()
-        }
 
-        # OFXImporter builds every transaction against `account`, so they all
-        # sit in account.transactions already. Drop the duplicates from that
-        # collection and persist the rest in one batch: flushing per row while
-        # later rows are still pending on the relationship makes SQLAlchemy
-        # warn about cascading an append for an object not yet in the session.
-        to_import = []
-        skipped = 0
-        for transaction in parsed:
-            reference = transaction.reference
-            if reference is not None and reference in known_references:
-                skipped += 1
-                account.transactions.remove(transaction)
-                continue
-            if reference is not None:
-                known_references.add(reference)
-            to_import.append(transaction)
+            return {
+                "success": True,
+                "account_id": account.id,
+                "account_name": account.name,
+                "file_path": str(file),
+                "imported": imported,
+                "skipped": skipped,
+                "total_transactions": imported + skipped,
+                "message": f"Imported {imported} transactions ({skipped} skipped as duplicates)",
+            }
 
-        tx_repo = BankTransactionRepository(db)
-        if to_import:
-            tx_repo.add_batch(to_import)
-        imported = len(to_import)
-
-        db.commit()
-
-        logger.info(
-            "bank_transactions_imported",
-            file_path=file_path,
-            account_id=account.id,
-            imported=imported,
-            skipped=skipped,
-        )
-
-        return {
-            "success": True,
-            "account_id": account.id,
-            "account_name": account.name,
-            "file_path": str(file),
-            "imported": imported,
-            "skipped": skipped,
-            "total_transactions": imported + skipped,
-            "message": f"Imported {imported} transactions ({skipped} skipped as duplicates)",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("import_bank_transactions_failed", error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("import_bank_transactions_failed", error=str(e))
+            return {"error": str(e)}

@@ -7,9 +7,9 @@ from pydantic import validate_call
 
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Prodotto
 from openfatture.storage.database.models import RigaFattura as Riga
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -43,52 +43,50 @@ def search_prodotti(
     # Validate inputs
     limit = validate_integer_input(limit, min_value=1, max_value=100)
 
-    db = get_session()
-    try:
-        # Build query
-        query = db.query(Prodotto)
+    with db_session() as db:
+        try:
+            # Build query
+            query = db.query(Prodotto)
 
-        # Apply filters
-        if categoria:
-            query = query.filter(Prodotto.categoria == categoria)
-        if is_servizio is not None:
-            query = query.filter(Prodotto.is_servizio == is_servizio)
-        if codice_contains:
-            query = query.filter(Prodotto.codice.ilike(f"%{codice_contains}%"))
-        if descrizione_contains:
-            query = query.filter(Prodotto.descrizione.ilike(f"%{descrizione_contains}%"))
+            # Apply filters
+            if categoria:
+                query = query.filter(Prodotto.categoria == categoria)
+            if is_servizio is not None:
+                query = query.filter(Prodotto.is_servizio == is_servizio)
+            if codice_contains:
+                query = query.filter(Prodotto.codice.ilike(f"%{codice_contains}%"))
+            if descrizione_contains:
+                query = query.filter(Prodotto.descrizione.ilike(f"%{descrizione_contains}%"))
 
-        # Execute query
-        prodotti = query.order_by(Prodotto.codice).limit(limit).all()
+            # Execute query
+            prodotti = query.order_by(Prodotto.codice).limit(limit).all()
 
-        # Format results
-        results = []
-        for p in prodotti:
-            results.append(
-                {
-                    "prodotto_id": p.id,
-                    "codice": p.codice,
-                    "descrizione": p.descrizione,
-                    "prezzo_unitario": float(p.prezzo_unitario),
-                    "aliquota_iva": float(p.aliquota_iva),
-                    "unita_misura": p.unita_misura,
-                    "categoria": p.categoria,
-                    "is_servizio": p.is_servizio,
-                    "tipo": "Servizio" if p.is_servizio else "Prodotto",
-                }
-            )
+            # Format results
+            results = []
+            for p in prodotti:
+                results.append(
+                    {
+                        "prodotto_id": p.id,
+                        "codice": p.codice,
+                        "descrizione": p.descrizione,
+                        "prezzo_unitario": float(p.prezzo_unitario),
+                        "aliquota_iva": float(p.aliquota_iva),
+                        "unita_misura": p.unita_misura,
+                        "categoria": p.categoria,
+                        "is_servizio": p.is_servizio,
+                        "tipo": "Servizio" if p.is_servizio else "Prodotto",
+                    }
+                )
 
-        return {
-            "count": len(results),
-            "prodotti": results,
-            "has_more": len(prodotti) == limit,
-        }
+            return {
+                "count": len(results),
+                "prodotti": results,
+                "has_more": len(prodotti) == limit,
+            }
 
-    except Exception as e:
-        logger.error("search_prodotti_failed", error=str(e))
-        return {"error": str(e), "count": 0, "prodotti": []}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("search_prodotti_failed", error=str(e))
+            return {"error": str(e), "count": 0, "prodotti": []}
 
 
 @validate_call
@@ -105,60 +103,58 @@ def get_prodotto_details(prodotto_id: int) -> dict[str, Any]:
     # Validate input
     prodotto_id = validate_integer_input(prodotto_id, min_value=1)
 
-    db = get_session()
-    try:
-        prodotto = db.query(Prodotto).filter(Prodotto.id == prodotto_id).first()
+    with db_session() as db:
+        try:
+            prodotto = db.query(Prodotto).filter(Prodotto.id == prodotto_id).first()
 
-        if not prodotto:
-            return {"error": f"Prodotto {prodotto_id} not found"}
+            if not prodotto:
+                return {"error": f"Prodotto {prodotto_id} not found"}
 
-        # Calculate usage statistics
-        righe_count = db.query(Riga).filter(Riga.prodotto_id == prodotto_id).count()
+            # Calculate usage statistics
+            righe_count = db.query(Riga).filter(Riga.prodotto_id == prodotto_id).count()
 
-        # Get recent invoices using this product
-        recent_righe = (
-            db.query(Riga)
-            .filter(Riga.prodotto_id == prodotto_id)
-            .order_by(Riga.id.desc())
-            .limit(5)
-            .all()
-        )
+            # Get recent invoices using this product
+            recent_righe = (
+                db.query(Riga)
+                .filter(Riga.prodotto_id == prodotto_id)
+                .order_by(Riga.id.desc())
+                .limit(5)
+                .all()
+            )
 
-        recent_invoices = []
-        for riga in recent_righe:
-            if riga.fattura:
-                recent_invoices.append(
-                    {
-                        "fattura_id": riga.fattura.id,
-                        "numero": f"{riga.fattura.numero}/{riga.fattura.anno}",
-                        "data_emissione": riga.fattura.data_emissione.isoformat(),
-                        "quantita": float(riga.quantita),
-                        "prezzo_unitario": float(riga.prezzo_unitario),
-                    }
-                )
+            recent_invoices = []
+            for riga in recent_righe:
+                if riga.fattura:
+                    recent_invoices.append(
+                        {
+                            "fattura_id": riga.fattura.id,
+                            "numero": f"{riga.fattura.numero}/{riga.fattura.anno}",
+                            "data_emissione": riga.fattura.data_emissione.isoformat(),
+                            "quantita": float(riga.quantita),
+                            "prezzo_unitario": float(riga.prezzo_unitario),
+                        }
+                    )
 
-        return {
-            "prodotto_id": prodotto.id,
-            "codice": prodotto.codice,
-            "descrizione": prodotto.descrizione,
-            "prezzo_unitario": float(prodotto.prezzo_unitario),
-            "aliquota_iva": float(prodotto.aliquota_iva),
-            "unita_misura": prodotto.unita_misura,
-            "categoria": prodotto.categoria,
-            "is_servizio": prodotto.is_servizio,
-            "tipo": "Servizio" if prodotto.is_servizio else "Prodotto",
-            "note": prodotto.note,
-            "usage_stats": {
-                "times_used": righe_count,
-                "recent_invoices": recent_invoices,
-            },
-        }
+            return {
+                "prodotto_id": prodotto.id,
+                "codice": prodotto.codice,
+                "descrizione": prodotto.descrizione,
+                "prezzo_unitario": float(prodotto.prezzo_unitario),
+                "aliquota_iva": float(prodotto.aliquota_iva),
+                "unita_misura": prodotto.unita_misura,
+                "categoria": prodotto.categoria,
+                "is_servizio": prodotto.is_servizio,
+                "tipo": "Servizio" if prodotto.is_servizio else "Prodotto",
+                "note": prodotto.note,
+                "usage_stats": {
+                    "times_used": righe_count,
+                    "recent_invoices": recent_invoices,
+                },
+            }
 
-    except Exception as e:
-        logger.error("get_prodotto_details_failed", prodotto_id=prodotto_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("get_prodotto_details_failed", prodotto_id=prodotto_id, error=str(e))
+            return {"error": str(e)}
 
 
 # =============================================================================
@@ -212,55 +208,53 @@ def create_prodotto(
     if categoria and len(categoria) > 100:
         return {"success": False, "error": "categoria must be max 100 characters"}
 
-    db = get_session()
-    try:
-        # Check if codice already exists
-        existing = db.query(Prodotto).filter(Prodotto.codice == codice).first()
-        if existing:
+    with db_session() as db:
+        try:
+            # Check if codice already exists
+            existing = db.query(Prodotto).filter(Prodotto.codice == codice).first()
+            if existing:
+                return {
+                    "success": False,
+                    "error": f"Prodotto con codice '{codice}' già esistente (ID: {existing.id})",
+                }
+
+            # Create product
+            prodotto = Prodotto(
+                codice=codice,
+                descrizione=descrizione,
+                prezzo_unitario=Decimal(str(prezzo_unitario)),
+                aliquota_iva=Decimal(str(aliquota_iva)),
+                unita_misura=unita_misura,
+                categoria=categoria,
+                is_servizio=is_servizio,
+                note=note,
+            )
+
+            db.add(prodotto)
+            db.commit()
+            db.refresh(prodotto)
+
+            logger.info(
+                "prodotto_created",
+                prodotto_id=prodotto.id,
+                codice=codice,
+                is_servizio=is_servizio,
+            )
+
             return {
-                "success": False,
-                "error": f"Prodotto con codice '{codice}' già esistente (ID: {existing.id})",
+                "success": True,
+                "prodotto_id": prodotto.id,
+                "codice": prodotto.codice,
+                "descrizione": prodotto.descrizione,
+                "prezzo_unitario": float(prodotto.prezzo_unitario),
+                "aliquota_iva": float(prodotto.aliquota_iva),
+                "message": f"Prodotto '{codice}' creato con successo",
             }
 
-        # Create product
-        prodotto = Prodotto(
-            codice=codice,
-            descrizione=descrizione,
-            prezzo_unitario=Decimal(str(prezzo_unitario)),
-            aliquota_iva=Decimal(str(aliquota_iva)),
-            unita_misura=unita_misura,
-            categoria=categoria,
-            is_servizio=is_servizio,
-            note=note,
-        )
-
-        db.add(prodotto)
-        db.commit()
-        db.refresh(prodotto)
-
-        logger.info(
-            "prodotto_created",
-            prodotto_id=prodotto.id,
-            codice=codice,
-            is_servizio=is_servizio,
-        )
-
-        return {
-            "success": True,
-            "prodotto_id": prodotto.id,
-            "codice": prodotto.codice,
-            "descrizione": prodotto.descrizione,
-            "prezzo_unitario": float(prodotto.prezzo_unitario),
-            "aliquota_iva": float(prodotto.aliquota_iva),
-            "message": f"Prodotto '{codice}' creato con successo",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("create_prodotto_failed", error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("create_prodotto_failed", error=str(e))
+            return {"success": False, "error": str(e)}
 
 
 @validate_call
@@ -308,75 +302,73 @@ def update_prodotto(
     if categoria is not None and len(categoria) > 100:
         return {"success": False, "error": "categoria must be max 100 characters"}
 
-    db = get_session()
-    try:
-        prodotto = db.query(Prodotto).filter(Prodotto.id == prodotto_id).first()
+    with db_session() as db:
+        try:
+            prodotto = db.query(Prodotto).filter(Prodotto.id == prodotto_id).first()
 
-        if not prodotto:
-            return {"success": False, "error": f"Prodotto {prodotto_id} not found"}
+            if not prodotto:
+                return {"success": False, "error": f"Prodotto {prodotto_id} not found"}
 
-        # Track changes
-        changes = []
+            # Track changes
+            changes = []
 
-        # Update fields if provided
-        if descrizione is not None:
-            prodotto.descrizione = descrizione
-            changes.append("descrizione")
+            # Update fields if provided
+            if descrizione is not None:
+                prodotto.descrizione = descrizione
+                changes.append("descrizione")
 
-        if prezzo_unitario is not None:
-            prodotto.prezzo_unitario = Decimal(str(prezzo_unitario))
-            changes.append("prezzo_unitario")
+            if prezzo_unitario is not None:
+                prodotto.prezzo_unitario = Decimal(str(prezzo_unitario))
+                changes.append("prezzo_unitario")
 
-        if aliquota_iva is not None:
-            prodotto.aliquota_iva = Decimal(str(aliquota_iva))
-            changes.append("aliquota_iva")
+            if aliquota_iva is not None:
+                prodotto.aliquota_iva = Decimal(str(aliquota_iva))
+                changes.append("aliquota_iva")
 
-        if unita_misura is not None:
-            prodotto.unita_misura = unita_misura
-            changes.append("unita_misura")
+            if unita_misura is not None:
+                prodotto.unita_misura = unita_misura
+                changes.append("unita_misura")
 
-        if categoria is not None:
-            prodotto.categoria = categoria
-            changes.append("categoria")
+            if categoria is not None:
+                prodotto.categoria = categoria
+                changes.append("categoria")
 
-        if is_servizio is not None:
-            prodotto.is_servizio = is_servizio
-            changes.append("is_servizio")
+            if is_servizio is not None:
+                prodotto.is_servizio = is_servizio
+                changes.append("is_servizio")
 
-        if note is not None:
-            prodotto.note = note
-            changes.append("note")
+            if note is not None:
+                prodotto.note = note
+                changes.append("note")
 
-        if not changes:
+            if not changes:
+                return {
+                    "success": False,
+                    "error": "No fields to update (all parameters are None)",
+                }
+
+            db.commit()
+            db.refresh(prodotto)
+
+            logger.info(
+                "prodotto_updated",
+                prodotto_id=prodotto_id,
+                codice=prodotto.codice,
+                changes=changes,
+            )
+
             return {
-                "success": False,
-                "error": "No fields to update (all parameters are None)",
+                "success": True,
+                "prodotto_id": prodotto.id,
+                "codice": prodotto.codice,
+                "changes": changes,
+                "message": f"Prodotto '{prodotto.codice}' aggiornato ({len(changes)} campi)",
             }
 
-        db.commit()
-        db.refresh(prodotto)
-
-        logger.info(
-            "prodotto_updated",
-            prodotto_id=prodotto_id,
-            codice=prodotto.codice,
-            changes=changes,
-        )
-
-        return {
-            "success": True,
-            "prodotto_id": prodotto.id,
-            "codice": prodotto.codice,
-            "changes": changes,
-            "message": f"Prodotto '{prodotto.codice}' aggiornato ({len(changes)} campi)",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("update_prodotto_failed", prodotto_id=prodotto_id, error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("update_prodotto_failed", prodotto_id=prodotto_id, error=str(e))
+            return {"success": False, "error": str(e)}
 
 
 @validate_call
@@ -399,58 +391,56 @@ def delete_prodotto(
     # Validate input
     prodotto_id = validate_integer_input(prodotto_id, min_value=1)
 
-    db = get_session()
-    try:
-        prodotto = db.query(Prodotto).filter(Prodotto.id == prodotto_id).first()
+    with db_session() as db:
+        try:
+            prodotto = db.query(Prodotto).filter(Prodotto.id == prodotto_id).first()
 
-        if not prodotto:
-            return {"success": False, "error": f"Prodotto {prodotto_id} not found"}
+            if not prodotto:
+                return {"success": False, "error": f"Prodotto {prodotto_id} not found"}
 
-        # Check if product is used in invoices
-        usage_count = db.query(Riga).filter(Riga.prodotto_id == prodotto_id).count()
+            # Check if product is used in invoices
+            usage_count = db.query(Riga).filter(Riga.prodotto_id == prodotto_id).count()
 
-        if usage_count > 0 and not force:
+            if usage_count > 0 and not force:
+                return {
+                    "success": False,
+                    "error": f"Prodotto usato in {usage_count} righe fattura. Usa force=True per eliminare comunque.",
+                    "usage_count": usage_count,
+                }
+
+            # Store info for response
+            codice = prodotto.codice
+            descrizione = prodotto.descrizione
+
+            # If force=True and product is used, set righe.prodotto_id to NULL
+            if usage_count > 0 and force:
+                db.query(Riga).filter(Riga.prodotto_id == prodotto_id).update({"prodotto_id": None})
+
+            # Delete product
+            db.delete(prodotto)
+            db.commit()
+
+            logger.warning(
+                "prodotto_deleted",
+                prodotto_id=prodotto_id,
+                codice=codice,
+                was_used=usage_count > 0,
+                usage_count=usage_count,
+                forced=force,
+            )
+
             return {
-                "success": False,
-                "error": f"Prodotto usato in {usage_count} righe fattura. Usa force=True per eliminare comunque.",
+                "success": True,
+                "prodotto_id": prodotto_id,
+                "codice": codice,
+                "descrizione": descrizione,
+                "was_used": usage_count > 0,
                 "usage_count": usage_count,
+                "message": f"Prodotto '{codice}' eliminato"
+                + (f" ({usage_count} riferimenti rimossi)" if usage_count > 0 else ""),
             }
 
-        # Store info for response
-        codice = prodotto.codice
-        descrizione = prodotto.descrizione
-
-        # If force=True and product is used, set righe.prodotto_id to NULL
-        if usage_count > 0 and force:
-            db.query(Riga).filter(Riga.prodotto_id == prodotto_id).update({"prodotto_id": None})
-
-        # Delete product
-        db.delete(prodotto)
-        db.commit()
-
-        logger.warning(
-            "prodotto_deleted",
-            prodotto_id=prodotto_id,
-            codice=codice,
-            was_used=usage_count > 0,
-            usage_count=usage_count,
-            forced=force,
-        )
-
-        return {
-            "success": True,
-            "prodotto_id": prodotto_id,
-            "codice": codice,
-            "descrizione": descrizione,
-            "was_used": usage_count > 0,
-            "usage_count": usage_count,
-            "message": f"Prodotto '{codice}' eliminato"
-            + (f" ({usage_count} riferimenti rimossi)" if usage_count > 0 else ""),
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("delete_prodotto_failed", prodotto_id=prodotto_id, error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("delete_prodotto_failed", prodotto_id=prodotto_id, error=str(e))
+            return {"success": False, "error": str(e)}

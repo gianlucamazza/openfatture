@@ -8,7 +8,6 @@ from typing import Any
 from openfatture.billing.application.numbering import next_numero
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
@@ -16,6 +15,7 @@ from openfatture.storage.database.models import (
     StatoFattura,
     TipoDocumento,
 )
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -51,83 +51,81 @@ def create_invoice(
     if anno is not None:
         anno = validate_integer_input(anno, min_value=2000, max_value=2100)
 
-    db = get_session()
-    try:
-        # Check client exists
-        cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-        if not cliente:
-            return {"error": f"Cliente {cliente_id} non trovato"}
-
-        # Set defaults
-        if anno is None:
-            anno = datetime.now().year
-
-        if numero is None:
-            numero = next_numero(db, Fattura, anno)
-
-        if data_emissione is None:
-            data_emissione_date = datetime.now().date()
-        else:
-            try:
-                data_emissione_date = datetime.fromisoformat(data_emissione).date()
-            except ValueError:
-                return {"error": f"Invalid date format: {data_emissione}. Use YYYY-MM-DD"}
-
-        # Validate tipo_documento
+    with db_session() as db:
         try:
-            tipo_doc_enum = TipoDocumento(tipo_documento)
-        except ValueError:
-            return {"error": f"Invalid tipo_documento: {tipo_documento}"}
+            # Check client exists
+            cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+            if not cliente:
+                return {"error": f"Cliente {cliente_id} non trovato"}
 
-        # Create invoice
-        fattura = Fattura(
-            numero=numero,
-            anno=anno,
-            data_emissione=data_emissione_date,
-            cliente_id=cliente_id,
-            tipo_documento=tipo_doc_enum,
-            stato=StatoFattura.BOZZA,
-            note=note,
-            imponibile=Decimal("0"),
-            iva=Decimal("0"),
-            totale=Decimal("0"),
-        )
+            # Set defaults
+            if anno is None:
+                anno = datetime.now().year
 
-        db.add(fattura)
-        db.commit()
-        db.refresh(fattura)
+            if numero is None:
+                numero = next_numero(db, Fattura, anno)
 
-        # Publish event
-        event_bus = get_global_event_bus()
-        if event_bus:
-            event_bus.publish(
-                InvoiceCreatedEvent(
-                    invoice_id=fattura.id,
-                    invoice_number=f"{fattura.numero}/{fattura.anno}",
-                    client_id=fattura.cliente_id,
-                    client_name=cliente.denominazione,
-                    total_amount=fattura.totale,
-                )
+            if data_emissione is None:
+                data_emissione_date = datetime.now().date()
+            else:
+                try:
+                    data_emissione_date = datetime.fromisoformat(data_emissione).date()
+                except ValueError:
+                    return {"error": f"Invalid date format: {data_emissione}. Use YYYY-MM-DD"}
+
+            # Validate tipo_documento
+            try:
+                tipo_doc_enum = TipoDocumento(tipo_documento)
+            except ValueError:
+                return {"error": f"Invalid tipo_documento: {tipo_documento}"}
+
+            # Create invoice
+            fattura = Fattura(
+                numero=numero,
+                anno=anno,
+                data_emissione=data_emissione_date,
+                cliente_id=cliente_id,
+                tipo_documento=tipo_doc_enum,
+                stato=StatoFattura.BOZZA,
+                note=note,
+                imponibile=Decimal("0"),
+                iva=Decimal("0"),
+                totale=Decimal("0"),
             )
 
-        logger.info("invoice_created", invoice_id=fattura.id, numero=numero, anno=anno)
+            db.add(fattura)
+            db.commit()
+            db.refresh(fattura)
 
-        return {
-            "success": True,
-            "invoice_id": fattura.id,
-            "numero": fattura.numero,
-            "anno": fattura.anno,
-            "cliente": cliente.denominazione,
-            "stato": fattura.stato.value,
-            "message": f"Invoice {numero}/{anno} created successfully. Add line items with create_riga.",
-        }
+            # Publish event
+            event_bus = get_global_event_bus()
+            if event_bus:
+                event_bus.publish(
+                    InvoiceCreatedEvent(
+                        invoice_id=fattura.id,
+                        invoice_number=f"{fattura.numero}/{fattura.anno}",
+                        client_id=fattura.cliente_id,
+                        client_name=cliente.denominazione,
+                        total_amount=fattura.totale,
+                    )
+                )
 
-    except Exception as e:
-        db.rollback()
-        logger.error("create_invoice_failed", error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+            logger.info("invoice_created", invoice_id=fattura.id, numero=numero, anno=anno)
+
+            return {
+                "success": True,
+                "invoice_id": fattura.id,
+                "numero": fattura.numero,
+                "anno": fattura.anno,
+                "cliente": cliente.denominazione,
+                "stato": fattura.stato.value,
+                "message": f"Invoice {numero}/{anno} created successfully. Add line items with create_riga.",
+            }
+
+        except Exception as e:
+            db.rollback()
+            logger.error("create_invoice_failed", error=str(e))
+            return {"error": str(e)}
 
 
 def update_invoice(
@@ -153,72 +151,70 @@ def update_invoice(
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get invoice
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice {fattura_id} not found"}
+    with db_session() as db:
+        try:
+            # Get invoice
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice {fattura_id} not found"}
 
-        # Only BOZZA invoices can be updated
-        if fattura.stato != StatoFattura.BOZZA:
+            # Only BOZZA invoices can be updated
+            if fattura.stato != StatoFattura.BOZZA:
+                return {
+                    "error": f"Cannot update invoice in status '{fattura.stato.value}'. Only BOZZA invoices can be modified."
+                }
+
+            # Track changes
+            changes = []
+
+            # Update data_emissione if provided
+            if data_emissione is not None:
+                try:
+                    data_emissione_date = datetime.fromisoformat(data_emissione).date()
+                    fattura.data_emissione = data_emissione_date
+                    changes.append("data_emissione")
+                except ValueError:
+                    return {"error": f"Invalid date format: {data_emissione}. Use YYYY-MM-DD"}
+
+            # Update tipo_documento if provided
+            if tipo_documento is not None:
+                try:
+                    tipo_doc_enum = TipoDocumento(tipo_documento)
+                    fattura.tipo_documento = tipo_doc_enum
+                    changes.append("tipo_documento")
+                except ValueError:
+                    return {"error": f"Invalid tipo_documento: {tipo_documento}"}
+
+            # Update note if provided
+            if note is not None:
+                fattura.note = note
+                changes.append("note")
+
+            if not changes:
+                return {"error": "No fields to update (all parameters are None)"}
+
+            db.commit()
+            db.refresh(fattura)
+
+            logger.info(
+                "invoice_updated",
+                fattura_id=fattura_id,
+                numero=f"{fattura.numero}/{fattura.anno}",
+                changes=changes,
+            )
+
             return {
-                "error": f"Cannot update invoice in status '{fattura.stato.value}'. Only BOZZA invoices can be modified."
+                "success": True,
+                "invoice_id": fattura.id,
+                "numero": f"{fattura.numero}/{fattura.anno}",
+                "changes": changes,
+                "message": f"Invoice {fattura.numero}/{fattura.anno} updated ({len(changes)} fields)",
             }
 
-        # Track changes
-        changes = []
-
-        # Update data_emissione if provided
-        if data_emissione is not None:
-            try:
-                data_emissione_date = datetime.fromisoformat(data_emissione).date()
-                fattura.data_emissione = data_emissione_date
-                changes.append("data_emissione")
-            except ValueError:
-                return {"error": f"Invalid date format: {data_emissione}. Use YYYY-MM-DD"}
-
-        # Update tipo_documento if provided
-        if tipo_documento is not None:
-            try:
-                tipo_doc_enum = TipoDocumento(tipo_documento)
-                fattura.tipo_documento = tipo_doc_enum
-                changes.append("tipo_documento")
-            except ValueError:
-                return {"error": f"Invalid tipo_documento: {tipo_documento}"}
-
-        # Update note if provided
-        if note is not None:
-            fattura.note = note
-            changes.append("note")
-
-        if not changes:
-            return {"error": "No fields to update (all parameters are None)"}
-
-        db.commit()
-        db.refresh(fattura)
-
-        logger.info(
-            "invoice_updated",
-            fattura_id=fattura_id,
-            numero=f"{fattura.numero}/{fattura.anno}",
-            changes=changes,
-        )
-
-        return {
-            "success": True,
-            "invoice_id": fattura.id,
-            "numero": f"{fattura.numero}/{fattura.anno}",
-            "changes": changes,
-            "message": f"Invoice {fattura.numero}/{fattura.anno} updated ({len(changes)} fields)",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("update_invoice_failed", fattura_id=fattura_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("update_invoice_failed", fattura_id=fattura_id, error=str(e))
+            return {"error": str(e)}
 
 
 def delete_invoice(
@@ -240,65 +236,63 @@ def delete_invoice(
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get invoice
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice {fattura_id} not found"}
+    with db_session() as db:
+        try:
+            # Get invoice
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice {fattura_id} not found"}
 
-        # Only BOZZA invoices can be deleted
-        if fattura.stato != StatoFattura.BOZZA:
+            # Only BOZZA invoices can be deleted
+            if fattura.stato != StatoFattura.BOZZA:
+                return {
+                    "error": f"Cannot delete invoice in status '{fattura.stato.value}'. Only BOZZA invoices can be deleted."
+                }
+
+            # Check if invoice has line items
+            righe_count = db.query(RigaFattura).filter(RigaFattura.fattura_id == fattura_id).count()
+
+            if righe_count > 0 and not force:
+                return {
+                    "error": f"Invoice has {righe_count} line items. Use force=True to delete anyway.",
+                    "righe_count": righe_count,
+                }
+
+            # Store info for response
+            numero = fattura.numero
+            anno = fattura.anno
+            cliente_nome = fattura.cliente.denominazione if fattura.cliente else "Unknown"
+
+            # Delete line items first (cascade should handle this, but explicit is safer)
+            if righe_count > 0 and force:
+                db.query(RigaFattura).filter(RigaFattura.fattura_id == fattura_id).delete()
+
+            # Delete invoice
+            db.delete(fattura)
+            db.commit()
+
+            logger.warning(
+                "invoice_deleted",
+                fattura_id=fattura_id,
+                numero=f"{numero}/{anno}",
+                righe_count=righe_count,
+                forced=force,
+            )
+
             return {
-                "error": f"Cannot delete invoice in status '{fattura.stato.value}'. Only BOZZA invoices can be deleted."
+                "success": True,
+                "invoice_id": fattura_id,
+                "numero": f"{numero}/{anno}",
+                "cliente": cliente_nome,
+                "righe_deleted": righe_count,
+                "message": f"Invoice {numero}/{anno} deleted"
+                + (f" ({righe_count} line items removed)" if righe_count > 0 else ""),
             }
 
-        # Check if invoice has line items
-        righe_count = db.query(RigaFattura).filter(RigaFattura.fattura_id == fattura_id).count()
-
-        if righe_count > 0 and not force:
-            return {
-                "error": f"Invoice has {righe_count} line items. Use force=True to delete anyway.",
-                "righe_count": righe_count,
-            }
-
-        # Store info for response
-        numero = fattura.numero
-        anno = fattura.anno
-        cliente_nome = fattura.cliente.denominazione if fattura.cliente else "Unknown"
-
-        # Delete line items first (cascade should handle this, but explicit is safer)
-        if righe_count > 0 and force:
-            db.query(RigaFattura).filter(RigaFattura.fattura_id == fattura_id).delete()
-
-        # Delete invoice
-        db.delete(fattura)
-        db.commit()
-
-        logger.warning(
-            "invoice_deleted",
-            fattura_id=fattura_id,
-            numero=f"{numero}/{anno}",
-            righe_count=righe_count,
-            forced=force,
-        )
-
-        return {
-            "success": True,
-            "invoice_id": fattura_id,
-            "numero": f"{numero}/{anno}",
-            "cliente": cliente_nome,
-            "righe_deleted": righe_count,
-            "message": f"Invoice {numero}/{anno} deleted"
-            + (f" ({righe_count} line items removed)" if righe_count > 0 else ""),
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("delete_invoice_failed", fattura_id=fattura_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("delete_invoice_failed", fattura_id=fattura_id, error=str(e))
+            return {"error": str(e)}
 
 
 def update_invoice_status(
@@ -318,71 +312,69 @@ def update_invoice_status(
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get invoice
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice {fattura_id} not found"}
-
-        # Validate new status
+    with db_session() as db:
         try:
-            new_status_enum = StatoFattura(new_status)
-        except ValueError:
-            valid_statuses = [s.value for s in StatoFattura]
-            return {
-                "error": f"Invalid status: {new_status}. Valid values: {', '.join(valid_statuses)}"
-            }
+            # Get invoice
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice {fattura_id} not found"}
 
-        from openfatture.billing.application.invoice_status import (
-            change_status,
-            validate_manual_transition,
-        )
+            # Validate new status
+            try:
+                new_status_enum = StatoFattura(new_status)
+            except ValueError:
+                valid_statuses = [s.value for s in StatoFattura]
+                return {
+                    "error": f"Invalid status: {new_status}. Valid values: {', '.join(valid_statuses)}"
+                }
 
-        validate_manual_transition(fattura, new_status_enum)
-        if fattura.stato == new_status_enum:
+            from openfatture.billing.application.invoice_status import (
+                change_status,
+                validate_manual_transition,
+            )
+
+            validate_manual_transition(fattura, new_status_enum)
+            if fattura.stato == new_status_enum:
+                return {
+                    "success": True,
+                    "invoice_id": fattura.id,
+                    "old_status": fattura.stato.value,
+                    "new_status": new_status_enum.value,
+                    "message": "Status unchanged",
+                }
+
+            # Update status
+            old_status = fattura.stato.value
+            change_status(db, fattura, new_status_enum)
+            db.commit()
+            db.refresh(fattura)
+
+            logger.info(
+                "invoice_status_updated",
+                fattura_id=fattura_id,
+                numero=f"{fattura.numero}/{fattura.anno}",
+                old_status=old_status,
+                new_status=new_status_enum.value,
+            )
+
             return {
                 "success": True,
                 "invoice_id": fattura.id,
-                "old_status": fattura.stato.value,
+                "numero": f"{fattura.numero}/{fattura.anno}",
+                "old_status": old_status,
                 "new_status": new_status_enum.value,
-                "message": "Status unchanged",
+                "message": f"Invoice {fattura.numero}/{fattura.anno} status changed: {old_status} {new_status_enum.value}",
             }
 
-        # Update status
-        old_status = fattura.stato.value
-        change_status(db, fattura, new_status_enum)
-        db.commit()
-        db.refresh(fattura)
-
-        logger.info(
-            "invoice_status_updated",
-            fattura_id=fattura_id,
-            numero=f"{fattura.numero}/{fattura.anno}",
-            old_status=old_status,
-            new_status=new_status_enum.value,
-        )
-
-        return {
-            "success": True,
-            "invoice_id": fattura.id,
-            "numero": f"{fattura.numero}/{fattura.anno}",
-            "old_status": old_status,
-            "new_status": new_status_enum.value,
-            "message": f"Invoice {fattura.numero}/{fattura.anno} status changed: {old_status} {new_status_enum.value}",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("update_invoice_status_failed", fattura_id=fattura_id, error=str(e))
-        return {
-            "error": str(e),
-            "error_code": "state_conflict"
-            if type(e).__name__ == "InvoiceStateConflict"
-            else "invalid_transition",
-        }
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("update_invoice_status_failed", fattura_id=fattura_id, error=str(e))
+            return {
+                "error": str(e),
+                "error_code": "state_conflict"
+                if type(e).__name__ == "InvoiceStateConflict"
+                else "invalid_transition",
+            }
 
 
 def create_riga(
@@ -410,85 +402,83 @@ def create_riga(
     # Validate inputs
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Check invoice exists and is editable
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice {fattura_id} not found"}
+    with db_session() as db:
+        try:
+            # Check invoice exists and is editable
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice {fattura_id} not found"}
 
-        if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
+            if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
+                return {
+                    "error": f"Cannot modify invoice in status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
+                }
+
+            # Get next riga number
+            max_riga = (
+                db.query(RigaFattura)
+                .filter(RigaFattura.fattura_id == fattura_id)
+                .order_by(RigaFattura.numero_riga.desc())
+                .first()
+            )
+            numero_riga = (max_riga.numero_riga + 1) if max_riga else 1
+
+            # Calculate totals
+            quantita_dec = Decimal(str(quantita))
+            prezzo_dec = Decimal(str(prezzo_unitario))
+            aliquota_dec = Decimal(str(aliquota_iva))
+
+            imponibile = quantita_dec * prezzo_dec
+            iva = imponibile * aliquota_dec / Decimal("100")
+            totale = imponibile + iva
+
+            # Create riga
+            riga = RigaFattura(
+                fattura_id=fattura_id,
+                numero_riga=numero_riga,
+                descrizione=descrizione,
+                quantita=quantita_dec,
+                prezzo_unitario=prezzo_dec,
+                aliquota_iva=aliquota_dec,
+                unita_misura=unita_misura,
+                imponibile=imponibile,
+                iva=iva,
+                totale=totale,
+            )
+
+            db.add(riga)
+
+            # Update invoice totals
+            fattura.imponibile += imponibile
+            fattura.iva += iva
+            fattura.totale += totale
+
+            db.commit()
+            db.refresh(riga)
+
+            logger.info(
+                "riga_created",
+                fattura_id=fattura_id,
+                riga_id=riga.id,
+                numero_riga=numero_riga,
+            )
+
             return {
-                "error": f"Cannot modify invoice in status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
+                "success": True,
+                "riga_id": riga.id,
+                "numero_riga": numero_riga,
+                "descrizione": descrizione,
+                "imponibile": float(imponibile),
+                "iva": float(iva),
+                "totale": float(totale),
+                "invoice_totale": float(fattura.totale),
+                "message": f"Line item #{numero_riga} added. Invoice total: €{fattura.totale:.2f}",
             }
 
-        # Get next riga number
-        max_riga = (
-            db.query(RigaFattura)
-            .filter(RigaFattura.fattura_id == fattura_id)
-            .order_by(RigaFattura.numero_riga.desc())
-            .first()
-        )
-        numero_riga = (max_riga.numero_riga + 1) if max_riga else 1
-
-        # Calculate totals
-        quantita_dec = Decimal(str(quantita))
-        prezzo_dec = Decimal(str(prezzo_unitario))
-        aliquota_dec = Decimal(str(aliquota_iva))
-
-        imponibile = quantita_dec * prezzo_dec
-        iva = imponibile * aliquota_dec / Decimal("100")
-        totale = imponibile + iva
-
-        # Create riga
-        riga = RigaFattura(
-            fattura_id=fattura_id,
-            numero_riga=numero_riga,
-            descrizione=descrizione,
-            quantita=quantita_dec,
-            prezzo_unitario=prezzo_dec,
-            aliquota_iva=aliquota_dec,
-            unita_misura=unita_misura,
-            imponibile=imponibile,
-            iva=iva,
-            totale=totale,
-        )
-
-        db.add(riga)
-
-        # Update invoice totals
-        fattura.imponibile += imponibile
-        fattura.iva += iva
-        fattura.totale += totale
-
-        db.commit()
-        db.refresh(riga)
-
-        logger.info(
-            "riga_created",
-            fattura_id=fattura_id,
-            riga_id=riga.id,
-            numero_riga=numero_riga,
-        )
-
-        return {
-            "success": True,
-            "riga_id": riga.id,
-            "numero_riga": numero_riga,
-            "descrizione": descrizione,
-            "imponibile": float(imponibile),
-            "iva": float(iva),
-            "totale": float(totale),
-            "invoice_totale": float(fattura.totale),
-            "message": f"Line item #{numero_riga} added. Invoice total: €{fattura.totale:.2f}",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("create_riga_failed", error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("create_riga_failed", error=str(e))
+            return {"error": str(e)}
 
 
 def update_riga(
@@ -516,102 +506,103 @@ def update_riga(
     # Validate input
     riga_id = validate_integer_input(riga_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get riga
-        riga = db.query(RigaFattura).filter(RigaFattura.id == riga_id).first()
-        if not riga:
-            return {"error": f"Line item {riga_id} not found"}
+    with db_session() as db:
+        try:
+            # Get riga
+            riga = db.query(RigaFattura).filter(RigaFattura.id == riga_id).first()
+            if not riga:
+                return {"error": f"Line item {riga_id} not found"}
 
-        # Get invoice
-        fattura = db.query(Fattura).filter(Fattura.id == riga.fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice for line item {riga_id} not found"}
+            # Get invoice
+            fattura = db.query(Fattura).filter(Fattura.id == riga.fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice for line item {riga_id} not found"}
 
-        # Check invoice is editable
-        if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
-            return {
-                "error": f"Cannot modify line item in invoice with status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
-            }
+            # Check invoice is editable
+            if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
+                return {
+                    "error": f"Cannot modify line item in invoice with status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
+                }
 
-        # Store old totals to subtract from invoice
-        old_imponibile = riga.imponibile
-        old_iva = riga.iva
-        old_totale = riga.totale
+            # Store old totals to subtract from invoice
+            old_imponibile = riga.imponibile
+            old_iva = riga.iva
+            old_totale = riga.totale
 
-        # Track changes
-        changes = []
+            # Track changes
+            changes = []
 
-        # Update fields if provided
-        if descrizione is not None and descrizione != riga.descrizione:
-            riga.descrizione = descrizione
-            changes.append("descrizione")
+            # Update fields if provided
+            if descrizione is not None and descrizione != riga.descrizione:
+                riga.descrizione = descrizione
+                changes.append("descrizione")
 
-        if quantita is not None and Decimal(str(quantita)) != riga.quantita:
-            riga.quantita = Decimal(str(quantita))
-            changes.append("quantita")
+            if quantita is not None and Decimal(str(quantita)) != riga.quantita:
+                riga.quantita = Decimal(str(quantita))
+                changes.append("quantita")
 
-        if prezzo_unitario is not None and Decimal(str(prezzo_unitario)) != riga.prezzo_unitario:
-            riga.prezzo_unitario = Decimal(str(prezzo_unitario))
-            changes.append("prezzo_unitario")
+            if (
+                prezzo_unitario is not None
+                and Decimal(str(prezzo_unitario)) != riga.prezzo_unitario
+            ):
+                riga.prezzo_unitario = Decimal(str(prezzo_unitario))
+                changes.append("prezzo_unitario")
 
-        if aliquota_iva is not None and Decimal(str(aliquota_iva)) != riga.aliquota_iva:
-            riga.aliquota_iva = Decimal(str(aliquota_iva))
-            changes.append("aliquota_iva")
+            if aliquota_iva is not None and Decimal(str(aliquota_iva)) != riga.aliquota_iva:
+                riga.aliquota_iva = Decimal(str(aliquota_iva))
+                changes.append("aliquota_iva")
 
-        if unita_misura is not None and unita_misura != riga.unita_misura:
-            riga.unita_misura = unita_misura
-            changes.append("unita_misura")
+            if unita_misura is not None and unita_misura != riga.unita_misura:
+                riga.unita_misura = unita_misura
+                changes.append("unita_misura")
 
-        if not changes:
+            if not changes:
+                return {
+                    "success": True,
+                    "riga_id": riga_id,
+                    "message": "No changes made (all fields same as current values)",
+                }
+
+            # Recalculate totals if numeric fields changed
+            if any(f in changes for f in ["quantita", "prezzo_unitario", "aliquota_iva"]):
+                riga.imponibile = riga.quantita * riga.prezzo_unitario
+                riga.iva = riga.imponibile * riga.aliquota_iva / Decimal("100")
+                riga.totale = riga.imponibile + riga.iva
+
+                # Update invoice totals (subtract old, add new)
+                fattura.imponibile = fattura.imponibile - old_imponibile + riga.imponibile
+                fattura.iva = fattura.iva - old_iva + riga.iva
+                fattura.totale = fattura.totale - old_totale + riga.totale
+
+            db.commit()
+            db.refresh(riga)
+            db.refresh(fattura)
+
+            logger.info(
+                "riga_updated",
+                riga_id=riga_id,
+                fattura_id=fattura.id,
+                numero_riga=riga.numero_riga,
+                changes=changes,
+            )
+
             return {
                 "success": True,
-                "riga_id": riga_id,
-                "message": "No changes made (all fields same as current values)",
+                "riga_id": riga.id,
+                "numero_riga": riga.numero_riga,
+                "descrizione": riga.descrizione,
+                "changes": changes,
+                "imponibile": float(riga.imponibile),
+                "iva": float(riga.iva),
+                "totale": float(riga.totale),
+                "invoice_totale": float(fattura.totale),
+                "message": f"Line item #{riga.numero_riga} updated. Invoice total: €{fattura.totale:.2f}",
             }
 
-        # Recalculate totals if numeric fields changed
-        if any(f in changes for f in ["quantita", "prezzo_unitario", "aliquota_iva"]):
-            riga.imponibile = riga.quantita * riga.prezzo_unitario
-            riga.iva = riga.imponibile * riga.aliquota_iva / Decimal("100")
-            riga.totale = riga.imponibile + riga.iva
-
-            # Update invoice totals (subtract old, add new)
-            fattura.imponibile = fattura.imponibile - old_imponibile + riga.imponibile
-            fattura.iva = fattura.iva - old_iva + riga.iva
-            fattura.totale = fattura.totale - old_totale + riga.totale
-
-        db.commit()
-        db.refresh(riga)
-        db.refresh(fattura)
-
-        logger.info(
-            "riga_updated",
-            riga_id=riga_id,
-            fattura_id=fattura.id,
-            numero_riga=riga.numero_riga,
-            changes=changes,
-        )
-
-        return {
-            "success": True,
-            "riga_id": riga.id,
-            "numero_riga": riga.numero_riga,
-            "descrizione": riga.descrizione,
-            "changes": changes,
-            "imponibile": float(riga.imponibile),
-            "iva": float(riga.iva),
-            "totale": float(riga.totale),
-            "invoice_totale": float(fattura.totale),
-            "message": f"Line item #{riga.numero_riga} updated. Invoice total: €{fattura.totale:.2f}",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("update_riga_failed", riga_id=riga_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("update_riga_failed", riga_id=riga_id, error=str(e))
+            return {"error": str(e)}
 
 
 def delete_riga(
@@ -631,60 +622,58 @@ def delete_riga(
     # Validate input
     riga_id = validate_integer_input(riga_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get riga
-        riga = db.query(RigaFattura).filter(RigaFattura.id == riga_id).first()
-        if not riga:
-            return {"error": f"Line item {riga_id} not found"}
+    with db_session() as db:
+        try:
+            # Get riga
+            riga = db.query(RigaFattura).filter(RigaFattura.id == riga_id).first()
+            if not riga:
+                return {"error": f"Line item {riga_id} not found"}
 
-        # Get invoice
-        fattura = db.query(Fattura).filter(Fattura.id == riga.fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice for line item {riga_id} not found"}
+            # Get invoice
+            fattura = db.query(Fattura).filter(Fattura.id == riga.fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice for line item {riga_id} not found"}
 
-        # Check invoice is editable
-        if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
+            # Check invoice is editable
+            if fattura.stato not in [StatoFattura.BOZZA, StatoFattura.DA_INVIARE]:
+                return {
+                    "error": f"Cannot delete line item in invoice with status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
+                }
+
+            # Store info for response
+            numero_riga = riga.numero_riga
+            descrizione = riga.descrizione
+            riga_totale = riga.totale
+
+            # Update invoice totals (subtract this riga)
+            fattura.imponibile -= riga.imponibile
+            fattura.iva -= riga.iva
+            fattura.totale -= riga.totale
+
+            # Delete riga
+            db.delete(riga)
+            db.commit()
+            db.refresh(fattura)
+
+            logger.warning(
+                "riga_deleted",
+                riga_id=riga_id,
+                fattura_id=fattura.id,
+                numero_riga=numero_riga,
+                descrizione=descrizione,
+            )
+
             return {
-                "error": f"Cannot delete line item in invoice with status '{fattura.stato.value}'. Only BOZZA or DA_INVIARE can be edited."
+                "success": True,
+                "riga_id": riga_id,
+                "numero_riga": numero_riga,
+                "descrizione": descrizione,
+                "riga_totale": float(riga_totale),
+                "invoice_totale": float(fattura.totale),
+                "message": f"Line item #{numero_riga} deleted. Invoice total: €{fattura.totale:.2f}",
             }
 
-        # Store info for response
-        numero_riga = riga.numero_riga
-        descrizione = riga.descrizione
-        riga_totale = riga.totale
-
-        # Update invoice totals (subtract this riga)
-        fattura.imponibile -= riga.imponibile
-        fattura.iva -= riga.iva
-        fattura.totale -= riga.totale
-
-        # Delete riga
-        db.delete(riga)
-        db.commit()
-        db.refresh(fattura)
-
-        logger.warning(
-            "riga_deleted",
-            riga_id=riga_id,
-            fattura_id=fattura.id,
-            numero_riga=numero_riga,
-            descrizione=descrizione,
-        )
-
-        return {
-            "success": True,
-            "riga_id": riga_id,
-            "numero_riga": numero_riga,
-            "descrizione": descrizione,
-            "riga_totale": float(riga_totale),
-            "invoice_totale": float(fattura.totale),
-            "message": f"Line item #{numero_riga} deleted. Invoice total: €{fattura.totale:.2f}",
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("delete_riga_failed", riga_id=riga_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            db.rollback()
+            logger.error("delete_riga_failed", riga_id=riga_id, error=str(e))
+            return {"error": str(e)}

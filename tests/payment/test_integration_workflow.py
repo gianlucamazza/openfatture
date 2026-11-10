@@ -43,7 +43,7 @@ from openfatture.payment.infrastructure.repository import (
     PaymentRepository,
 )
 from openfatture.payment.matchers import CompositeMatcher, ExactAmountMatcher
-from openfatture.storage.database import get_db, init_db
+from openfatture.storage.database import get_session, init_db
 from openfatture.storage.database.models import (
     Cliente,
     Fattura,
@@ -62,7 +62,7 @@ TEST_BIC_SWIFT = "TESTBIC123"
 def db_session():
     """Create a test database session."""
     init_db("sqlite:///:memory:")
-    session = next(get_db())
+    session = get_session()
     yield session
     session.rollback()
     session.close()

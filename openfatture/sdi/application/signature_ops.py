@@ -10,8 +10,8 @@ from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
 from openfatture.sdi.digital_signature.certificate_manager import CertificateManager
 from openfatture.sdi.digital_signature.signer import DigitalSigner
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Fattura
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -47,97 +47,97 @@ def sign_invoice_xml(
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get invoice
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+    with db_session() as db:
+        try:
+            # Get invoice
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
 
-        if not fattura:
-            return {"success": False, "error": f"Fattura {fattura_id} not found"}
+            if not fattura:
+                return {"success": False, "error": f"Fattura {fattura_id} not found"}
 
-        # Load certificate configuration
-        settings = get_settings()
+            # Load certificate configuration
+            settings = get_settings()
 
-        cert_path_str = certificate_path or getattr(settings, "signature_certificate_path", None)
-        cert_password = certificate_password or getattr(
-            settings, "signature_certificate_password", None
-        )
+            cert_path_str = certificate_path or getattr(
+                settings, "signature_certificate_path", None
+            )
+            cert_password = certificate_password or getattr(
+                settings, "signature_certificate_password", None
+            )
 
-        if not cert_path_str:
-            return {
-                "success": False,
-                "error": "Certificate path not provided. Run `openfatture config set signature_certificate_path <path>` or provide the certificate_path parameter.",
-            }
-
-        cert_path = Path(cert_path_str)
-        if not cert_path.exists():
-            return {"success": False, "error": f"Certificate file not found: {cert_path}"}
-
-        # Determine XML path
-        if xml_path:
-            xml_file = Path(xml_path)
-        else:
-            # Auto-detect XML file (common locations)
-            possible_paths = [
-                Path(f"fattura_{fattura.numero}_{fattura.anno}.xml"),
-                Path(f"IT{settings.cedente_partita_iva}_{fattura.numero:05d}.xml"),
-                Path("output") / f"fattura_{fattura.numero}_{fattura.anno}.xml",
-            ]
-
-            xml_file = None
-            for p in possible_paths:
-                if p.exists():
-                    xml_file = p
-                    break
-
-            if not xml_file:
+            if not cert_path_str:
                 return {
                     "success": False,
-                    "error": f"XML file not found. Tried: {[str(p) for p in possible_paths]}. Please provide xml_path parameter.",
+                    "error": "Certificate path not provided. Run `openfatture config set signature_certificate_path <path>` or provide the certificate_path parameter.",
                 }
 
-        # At this point xml_file is guaranteed to be non-None
-        assert xml_file is not None, "xml_file should be set by now"
+            cert_path = Path(cert_path_str)
+            if not cert_path.exists():
+                return {"success": False, "error": f"Certificate file not found: {cert_path}"}
 
-        if not xml_file.exists():
-            return {"success": False, "error": f"XML file not found: {xml_file}"}
+            # Determine XML path
+            if xml_path:
+                xml_file = Path(xml_path)
+            else:
+                # Auto-detect XML file (common locations)
+                possible_paths = [
+                    Path(f"fattura_{fattura.numero}_{fattura.anno}.xml"),
+                    Path(f"IT{settings.cedente_partita_iva}_{fattura.numero:05d}.xml"),
+                    Path("output") / f"fattura_{fattura.numero}_{fattura.anno}.xml",
+                ]
 
-        # Create signer
-        try:
-            signer = DigitalSigner(certificate_path=cert_path, password=cert_password)
+                xml_file = None
+                for p in possible_paths:
+                    if p.exists():
+                        xml_file = p
+                        break
+
+                if not xml_file:
+                    return {
+                        "success": False,
+                        "error": f"XML file not found. Tried: {[str(p) for p in possible_paths]}. Please provide xml_path parameter.",
+                    }
+
+            # At this point xml_file is guaranteed to be non-None
+            assert xml_file is not None, "xml_file should be set by now"
+
+            if not xml_file.exists():
+                return {"success": False, "error": f"XML file not found: {xml_file}"}
+
+            # Create signer
+            try:
+                signer = DigitalSigner(certificate_path=cert_path, password=cert_password)
+            except Exception as e:
+                return {"success": False, "error": f"Failed to load certificate: {e}"}
+
+            # Sign file
+            output_file = Path(output_path) if output_path else None
+            success, error, signed_path = signer.sign_file(xml_file, output_file, detached=False)
+
+            if not success:
+                return {"success": False, "error": error}
+
+            logger.info(
+                "invoice_xml_signed",
+                fattura_id=fattura_id,
+                numero=f"{fattura.numero}/{fattura.anno}",
+                xml_path=str(xml_file),
+                signed_path=str(signed_path),
+            )
+
+            return {
+                "success": True,
+                "fattura_id": fattura_id,
+                "numero": f"{fattura.numero}/{fattura.anno}",
+                "xml_path": str(xml_file.absolute()),
+                "signed_path": str(signed_path.absolute()) if signed_path else None,
+                "file_size": signed_path.stat().st_size if signed_path else 0,
+                "message": f"XML firmato digitalmente: {signed_path.name if signed_path else 'unknown'}",
+            }
+
         except Exception as e:
-            return {"success": False, "error": f"Failed to load certificate: {e}"}
-
-        # Sign file
-        output_file = Path(output_path) if output_path else None
-        success, error, signed_path = signer.sign_file(xml_file, output_file, detached=False)
-
-        if not success:
-            return {"success": False, "error": error}
-
-        logger.info(
-            "invoice_xml_signed",
-            fattura_id=fattura_id,
-            numero=f"{fattura.numero}/{fattura.anno}",
-            xml_path=str(xml_file),
-            signed_path=str(signed_path),
-        )
-
-        return {
-            "success": True,
-            "fattura_id": fattura_id,
-            "numero": f"{fattura.numero}/{fattura.anno}",
-            "xml_path": str(xml_file.absolute()),
-            "signed_path": str(signed_path.absolute()) if signed_path else None,
-            "file_size": signed_path.stat().st_size if signed_path else 0,
-            "message": f"XML firmato digitalmente: {signed_path.name if signed_path else 'unknown'}",
-        }
-
-    except Exception as e:
-        logger.error("sign_invoice_xml_failed", fattura_id=fattura_id, error=str(e))
-        return {"success": False, "error": str(e)}
-    finally:
-        db.close()
+            logger.error("sign_invoice_xml_failed", fattura_id=fattura_id, error=str(e))
+            return {"success": False, "error": str(e)}
 
 
 @validate_call

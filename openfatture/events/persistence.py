@@ -13,8 +13,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import EventLog
+from openfatture.storage.session import db_session
 
 from .base import BaseEvent
 
@@ -59,8 +59,7 @@ class EventPersistenceListener:
             event_data = self._prepare_json_data(event_dict)
 
             # Create EventLog record
-            db = get_session()
-            try:
+            with db_session() as db:
                 event_log = EventLog(
                     event_id=str(event.event_id),
                     event_type=event.__class__.__name__,
@@ -78,9 +77,6 @@ class EventPersistenceListener:
                     f"Persisted event {event.__class__.__name__} "
                     f"(id={event.event_id}, entity={entity_type}:{entity_id})"
                 )
-
-            finally:
-                db.close()
 
         except Exception as e:
             logger.error(

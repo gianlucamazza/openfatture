@@ -9,8 +9,8 @@ from pydantic import validate_call
 from openfatture.payment.domain.enums import TransactionStatus
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Pagamento, StatoPagamento
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -36,83 +36,89 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
     # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Get invoice with payments
-        fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            return {"error": f"Invoice {fattura_id} not found"}
+    with db_session() as db:
+        try:
+            # Get invoice with payments
+            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
+            if not fattura:
+                return {"error": f"Invoice {fattura_id} not found"}
 
-        # Get all payments for this invoice
-        pagamenti = db.query(Pagamento).filter(Pagamento.fattura_id == fattura_id).all()
+            # Get all payments for this invoice
+            pagamenti = db.query(Pagamento).filter(Pagamento.fattura_id == fattura_id).all()
 
-        from openfatture.billing.application.invoice_queries import payment_summary
+            from openfatture.billing.application.invoice_queries import payment_summary
 
-        summary = payment_summary(fattura, pagamenti)
-        if not pagamenti and not getattr(fattura, "collection_entries", []):
+            summary = payment_summary(fattura, pagamenti)
+            if not pagamenti and not getattr(fattura, "collection_entries", []):
+                return {
+                    "invoice_id": fattura_id,
+                    "invoice_number": f"{fattura.numero}/{fattura.anno}",
+                    "total_amount": float(fattura.totale),
+                    **summary,
+                    "outstanding": float(fattura.totale),
+                    "payments_count": 0,
+                    "unscheduled_amount": float(fattura.totale),
+                    "amount_paid": 0.0,
+                    "amount_due": float(fattura.totale),
+                    "payments": [],
+                    "message": "No payment records found for this invoice",
+                }
+
+            # Aggregate payment info
+            total_paid = sum((p.importo_pagato for p in pagamenti), Decimal("0.00"))
+            scheduled = sum((p.importo for p in pagamenti), Decimal("0.00"))
+            total_due = fattura.totale
+            total_paid += sum(
+                (
+                    e.amount
+                    for e in getattr(fattura, "collection_entries", [])
+                    if e.payment_id is None
+                ),
+                Decimal("0.00"),
+            )
+            outstanding = max(total_due - total_paid, Decimal("0.00"))
+
+            payments_info = []
+            for p in pagamenti:
+                payments_info.append(
+                    {
+                        "payment_id": p.id,
+                        "importo": float(p.importo),
+                        "importo_pagato": float(p.importo_pagato),
+                        "saldo_residuo": float(p.saldo_residuo),
+                        "stato": p.stato.value,
+                        "data_scadenza": p.data_scadenza.isoformat() if p.data_scadenza else None,
+                        "data_pagamento": p.data_pagamento.isoformat()
+                        if p.data_pagamento
+                        else None,
+                        "modalita": p.modalita,
+                        "overdue": bool(
+                            p.data_scadenza
+                            and p.data_scadenza < date.today()
+                            and p.saldo_residuo > 0
+                        ),
+                    }
+                )
+
+            from openfatture.billing.application.invoice_queries import payment_summary
+
+            # Determine overall status
             return {
                 "invoice_id": fattura_id,
                 "invoice_number": f"{fattura.numero}/{fattura.anno}",
                 "total_amount": float(fattura.totale),
                 **summary,
-                "outstanding": float(fattura.totale),
-                "payments_count": 0,
-                "unscheduled_amount": float(fattura.totale),
-                "amount_paid": 0.0,
-                "amount_due": float(fattura.totale),
-                "payments": [],
-                "message": "No payment records found for this invoice",
+                "amount_paid": float(total_paid),
+                "amount_due": float(total_due),
+                "outstanding": float(outstanding),
+                "unscheduled_amount": float(max(total_due - scheduled, Decimal("0.00"))),
+                "payments_count": len(pagamenti),
+                "payments": payments_info,
             }
 
-        # Aggregate payment info
-        total_paid = sum((p.importo_pagato for p in pagamenti), Decimal("0.00"))
-        scheduled = sum((p.importo for p in pagamenti), Decimal("0.00"))
-        total_due = fattura.totale
-        total_paid += sum(
-            (e.amount for e in getattr(fattura, "collection_entries", []) if e.payment_id is None),
-            Decimal("0.00"),
-        )
-        outstanding = max(total_due - total_paid, Decimal("0.00"))
-
-        payments_info = []
-        for p in pagamenti:
-            payments_info.append(
-                {
-                    "payment_id": p.id,
-                    "importo": float(p.importo),
-                    "importo_pagato": float(p.importo_pagato),
-                    "saldo_residuo": float(p.saldo_residuo),
-                    "stato": p.stato.value,
-                    "data_scadenza": p.data_scadenza.isoformat() if p.data_scadenza else None,
-                    "data_pagamento": p.data_pagamento.isoformat() if p.data_pagamento else None,
-                    "modalita": p.modalita,
-                    "overdue": bool(
-                        p.data_scadenza and p.data_scadenza < date.today() and p.saldo_residuo > 0
-                    ),
-                }
-            )
-
-        from openfatture.billing.application.invoice_queries import payment_summary
-
-        # Determine overall status
-        return {
-            "invoice_id": fattura_id,
-            "invoice_number": f"{fattura.numero}/{fattura.anno}",
-            "total_amount": float(fattura.totale),
-            **summary,
-            "amount_paid": float(total_paid),
-            "amount_due": float(total_due),
-            "outstanding": float(outstanding),
-            "unscheduled_amount": float(max(total_due - scheduled, Decimal("0.00"))),
-            "payments_count": len(pagamenti),
-            "payments": payments_info,
-        }
-
-    except Exception as e:
-        logger.error("get_payment_status_failed", fattura_id=fattura_id, error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("get_payment_status_failed", fattura_id=fattura_id, error=str(e))
+            return {"error": str(e)}
 
 
 @validate_call
@@ -133,59 +139,65 @@ def search_payments(
     # Validate input
     limit = validate_integer_input(limit, min_value=1, max_value=100)
 
-    db = get_session()
-    try:
-        query = db.query(Pagamento)
+    with db_session() as db:
+        try:
+            query = db.query(Pagamento)
 
-        if stato:
-            try:
-                stato_enum = StatoPagamento(stato.lower())
-                query = query.filter(Pagamento.stato == stato_enum)
-            except ValueError:
-                return {
-                    "error": f"Invalid status: {stato}. Valid: da_pagare, pagato_parziale, pagato, scaduto"
-                }
+            if stato:
+                try:
+                    stato_enum = StatoPagamento(stato.lower())
+                    query = query.filter(Pagamento.stato == stato_enum)
+                except ValueError:
+                    return {
+                        "error": f"Invalid status: {stato}. Valid: da_pagare, pagato_parziale, pagato, scaduto"
+                    }
 
-        # Order by due date
-        query = query.order_by(Pagamento.data_scadenza.desc())
+            # Order by due date
+            query = query.order_by(Pagamento.data_scadenza.desc())
 
-        pagamenti = query.limit(limit).all()
+            pagamenti = query.limit(limit).all()
 
-        # Format results
-        results = []
-        for p in pagamenti:
-            results.append(
-                {
-                    "payment_id": p.id,
-                    "fattura_id": p.fattura_id,
-                    "invoice_number": f"{p.fattura.numero}/{p.fattura.anno}" if p.fattura else None,
-                    "cliente": (
-                        p.fattura.cliente.denominazione if p.fattura and p.fattura.cliente else None
-                    ),
-                    "importo": float(p.importo),
-                    "importo_pagato": float(p.importo_pagato),
-                    "saldo_residuo": float(p.saldo_residuo),
-                    "stato": p.stato.value,
-                    "data_scadenza": p.data_scadenza.isoformat() if p.data_scadenza else None,
-                    "data_pagamento": p.data_pagamento.isoformat() if p.data_pagamento else None,
-                    "modalita": p.modalita,
-                    "overdue": bool(
-                        p.data_scadenza and p.data_scadenza < date.today() and p.saldo_residuo > 0
-                    ),
-                }
-            )
+            # Format results
+            results = []
+            for p in pagamenti:
+                results.append(
+                    {
+                        "payment_id": p.id,
+                        "fattura_id": p.fattura_id,
+                        "invoice_number": f"{p.fattura.numero}/{p.fattura.anno}"
+                        if p.fattura
+                        else None,
+                        "cliente": (
+                            p.fattura.cliente.denominazione
+                            if p.fattura and p.fattura.cliente
+                            else None
+                        ),
+                        "importo": float(p.importo),
+                        "importo_pagato": float(p.importo_pagato),
+                        "saldo_residuo": float(p.saldo_residuo),
+                        "stato": p.stato.value,
+                        "data_scadenza": p.data_scadenza.isoformat() if p.data_scadenza else None,
+                        "data_pagamento": p.data_pagamento.isoformat()
+                        if p.data_pagamento
+                        else None,
+                        "modalita": p.modalita,
+                        "overdue": bool(
+                            p.data_scadenza
+                            and p.data_scadenza < date.today()
+                            and p.saldo_residuo > 0
+                        ),
+                    }
+                )
 
-        return {
-            "count": len(results),
-            "payments": results,
-            "has_more": len(pagamenti) == limit,
-        }
+            return {
+                "count": len(results),
+                "payments": results,
+                "has_more": len(pagamenti) == limit,
+            }
 
-    except Exception as e:
-        logger.error("search_payments_failed", error=str(e))
-        return {"error": str(e), "count": 0, "payments": []}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("search_payments_failed", error=str(e))
+            return {"error": str(e), "count": 0, "payments": []}
 
 
 @validate_call
@@ -210,56 +222,56 @@ def search_bank_transactions(
     # Validate input
     limit = validate_integer_input(limit, min_value=1, max_value=100)
 
-    db = get_session()
-    try:
-        query = db.query(BankTransaction)
+    with db_session() as db:
+        try:
+            query = db.query(BankTransaction)
 
-        if description:
-            query = query.filter(BankTransaction.description.ilike(f"%{description}%"))
+            if description:
+                query = query.filter(BankTransaction.description.ilike(f"%{description}%"))
 
-        if status:
-            try:
-                status_enum = TransactionStatus(status.lower())
-                query = query.filter(BankTransaction.status == status_enum)
-            except ValueError:
-                return {"error": f"Invalid status: {status}. Valid: unmatched, matched, ignored"}
+            if status:
+                try:
+                    status_enum = TransactionStatus(status.lower())
+                    query = query.filter(BankTransaction.status == status_enum)
+                except ValueError:
+                    return {
+                        "error": f"Invalid status: {status}. Valid: unmatched, matched, ignored"
+                    }
 
-        # Order by date desc
-        query = query.order_by(BankTransaction.date.desc())
+            # Order by date desc
+            query = query.order_by(BankTransaction.date.desc())
 
-        transactions = query.limit(limit).all()
+            transactions = query.limit(limit).all()
 
-        # Format results
-        results = []
-        for tx in transactions:
-            results.append(
-                {
-                    "transaction_id": str(tx.id),
-                    "account_id": tx.account_id,
-                    "account_name": tx.account.name if tx.account else None,
-                    "date": tx.date.isoformat(),
-                    "amount": float(tx.amount),
-                    "description": tx.description,
-                    "reference": tx.reference,
-                    "counterparty": tx.counterparty,
-                    "status": tx.status.value,
-                    "matched_payment_id": tx.matched_payment_id,
-                    "match_confidence": tx.match_confidence,
-                    "match_type": tx.match_type.value if tx.match_type else None,
-                }
-            )
+            # Format results
+            results = []
+            for tx in transactions:
+                results.append(
+                    {
+                        "transaction_id": str(tx.id),
+                        "account_id": tx.account_id,
+                        "account_name": tx.account.name if tx.account else None,
+                        "date": tx.date.isoformat(),
+                        "amount": float(tx.amount),
+                        "description": tx.description,
+                        "reference": tx.reference,
+                        "counterparty": tx.counterparty,
+                        "status": tx.status.value,
+                        "matched_payment_id": tx.matched_payment_id,
+                        "match_confidence": tx.match_confidence,
+                        "match_type": tx.match_type.value if tx.match_type else None,
+                    }
+                )
 
-        return {
-            "count": len(results),
-            "transactions": results,
-            "has_more": len(transactions) == limit,
-        }
+            return {
+                "count": len(results),
+                "transactions": results,
+                "has_more": len(transactions) == limit,
+            }
 
-    except Exception as e:
-        logger.error("search_bank_transactions_failed", error=str(e))
-        return {"error": str(e), "count": 0, "transactions": []}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("search_bank_transactions_failed", error=str(e))
+            return {"error": str(e), "count": 0, "transactions": []}
 
 
 @validate_call
@@ -272,45 +284,43 @@ def get_payment_stats() -> dict[str, Any]:
     """
     from datetime import datetime
 
-    db = get_session()
-    try:
-        # Count by status
-        stats: dict[str, Any] = {
-            "by_status": {},
-            "total_payments": 0,
-            "total_amount_due": 0.0,
-            "total_amount_paid": 0.0,
-            "total_outstanding": 0.0,
-        }
+    with db_session() as db:
+        try:
+            # Count by status
+            stats: dict[str, Any] = {
+                "by_status": {},
+                "total_payments": 0,
+                "total_amount_due": 0.0,
+                "total_amount_paid": 0.0,
+                "total_outstanding": 0.0,
+            }
 
-        for stato in StatoPagamento:
-            count = db.query(Pagamento).filter(Pagamento.stato == stato).count()
-            stats["by_status"][stato.value] = count
-            stats["total_payments"] += count
+            for stato in StatoPagamento:
+                count = db.query(Pagamento).filter(Pagamento.stato == stato).count()
+                stats["by_status"][stato.value] = count
+                stats["total_payments"] += count
 
-        # Get amounts
-        all_payments = db.query(Pagamento).all()
-        stats["total_amount_due"] = sum(float(p.importo) for p in all_payments)
-        stats["total_amount_paid"] = sum(float(p.importo_pagato) for p in all_payments)
-        stats["total_outstanding"] = sum(float(p.saldo_residuo) for p in all_payments)
+            # Get amounts
+            all_payments = db.query(Pagamento).all()
+            stats["total_amount_due"] = sum(float(p.importo) for p in all_payments)
+            stats["total_amount_paid"] = sum(float(p.importo_pagato) for p in all_payments)
+            stats["total_outstanding"] = sum(float(p.saldo_residuo) for p in all_payments)
 
-        # Overdue payments (past due date and not fully paid)
-        today = datetime.now().date()
-        overdue = (
-            db.query(Pagamento)
-            .filter(
-                Pagamento.data_scadenza < today,
-                Pagamento.stato != StatoPagamento.PAGATO,
+            # Overdue payments (past due date and not fully paid)
+            today = datetime.now().date()
+            overdue = (
+                db.query(Pagamento)
+                .filter(
+                    Pagamento.data_scadenza < today,
+                    Pagamento.stato != StatoPagamento.PAGATO,
+                )
+                .all()
             )
-            .all()
-        )
-        stats["overdue_count"] = len(overdue)
-        stats["overdue_amount"] = sum(float(p.saldo_residuo) for p in overdue)
+            stats["overdue_count"] = len(overdue)
+            stats["overdue_amount"] = sum(float(p.saldo_residuo) for p in overdue)
 
-        return stats
+            return stats
 
-    except Exception as e:
-        logger.error("get_payment_stats_failed", error=str(e))
-        return {"error": str(e)}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("get_payment_stats_failed", error=str(e))
+            return {"error": str(e)}

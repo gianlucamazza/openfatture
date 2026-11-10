@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 
 from openfatture.payment.application import collection_ledger as ledger
 from openfatture.payment.application.collection_migration import ensure_balances
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import (
     CollectionEntry,
     CollectionOperation,
@@ -22,6 +21,7 @@ from openfatture.storage.database.models import (
     Pagamento,
     StatoPagamento,
 )
+from openfatture.storage.session import db_session
 
 
 def run_operation(
@@ -32,7 +32,7 @@ def run_operation(
     fingerprint = hashlib.sha256(
         json.dumps([name, arguments], sort_keys=True, default=str).encode()
     ).hexdigest()
-    with get_session() as session:
+    with db_session() as session:
         try:
             previous = session.scalar(
                 select(CollectionOperation).where(CollectionOperation.request_id == request_id)
@@ -186,7 +186,7 @@ def declare_collection_status(
 
 
 def get_collections(invoice_id: int | None = None) -> dict[str, Any]:
-    with get_session() as session:
+    with db_session() as session:
         receipt_query = select(CollectionReceipt).order_by(CollectionReceipt.id)
         if invoice_id is not None:
             receipt_query = receipt_query.where(
@@ -445,7 +445,7 @@ def update_payment(
 
 
 def delete_payment(payment_id: int) -> dict[str, Any]:
-    with get_session() as session:
+    with db_session() as session:
         try:
             payment = session.get(Pagamento, payment_id)
             if payment is None:

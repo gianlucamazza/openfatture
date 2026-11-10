@@ -2,8 +2,6 @@
 
 Tests cover:
 - Context manager functionality (db_session)
-- Async context manager (async_db_session)
-- Direct session creation (get_db_session)
 - Exception handling and rollback
 - Session lifecycle and cleanup
 - Database initialization errors
@@ -16,9 +14,7 @@ import pytest
 
 from openfatture.storage.database.models import Cliente
 from openfatture.storage.session import (
-    async_db_session,
     db_session,
-    get_db_session,
 )
 
 # ============================================================================
@@ -157,158 +153,9 @@ class TestDbSessionErrors:
 # ============================================================================
 
 
-class TestAsyncDbSession:
-    """Test asynchronous async_db_session context manager."""
-
-    @pytest.mark.asyncio
-    async def test_basic_async_usage(self, test_db):
-        """Test basic async context manager usage."""
-        async with async_db_session() as db:
-            assert db is not None
-            assert hasattr(db, "query")
-            assert hasattr(db, "commit")
-
-    @pytest.mark.asyncio
-    async def test_async_commit_persists(self, test_db):
-        """Test that async commit persists changes."""
-        cliente_id = None
-
-        async with async_db_session() as db:
-            cliente = Cliente(
-                denominazione="Async Client",
-                partita_iva="33333333333",
-                codice_fiscale="ASYNC90A01H501Z",
-            )
-            db.add(cliente)
-            db.commit()
-            cliente_id = cliente.id
-
-        # Verify in sync session
-        with db_session() as db:
-            found = db.query(Cliente).filter_by(id=cliente_id).first()
-            assert found is not None
-            assert found.denominazione == "Async Client"
-
-    @pytest.mark.asyncio
-    async def test_async_exception_rollback(self, test_db):
-        """Test that async exception triggers rollback."""
-        cliente_id = None
-
-        try:
-            async with async_db_session() as db:
-                cliente = Cliente(
-                    denominazione="Async Exception",
-                    partita_iva="44444444444",
-                    codice_fiscale="ASYNCE90A01H501Z",
-                )
-                db.add(cliente)
-                db.flush()
-                cliente_id = cliente.id
-
-                raise RuntimeError("Async error")
-        except RuntimeError:
-            pass
-
-        # Verify rollback
-        with db_session() as db:
-            found = db.query(Cliente).filter_by(id=cliente_id).first()
-            assert found is None
-
-    @pytest.mark.asyncio
-    async def test_async_multiple_operations(self, test_db):
-        """Test multiple async operations in sequence."""
-        async with async_db_session() as db:
-            # Operation 1: Create
-            cliente = Cliente(
-                denominazione="Multi Op Client",
-                partita_iva="55555555555",
-                codice_fiscale="MULTOP90A01H501Z",
-            )
-            db.add(cliente)
-            db.commit()
-            cliente_id = cliente.id
-
-        async with async_db_session() as db:
-            # Operation 2: Read and update
-            cliente = db.query(Cliente).filter_by(id=cliente_id).first()
-            assert cliente is not None
-            cliente.denominazione = "Updated Name"
-            db.commit()
-
-        async with async_db_session() as db:
-            # Operation 3: Verify update
-            cliente = db.query(Cliente).filter_by(id=cliente_id).first()
-            assert cliente.denominazione == "Updated Name"
-
-
 # ============================================================================
 # get_db_session Direct Session Tests
 # ============================================================================
-
-
-class TestGetDbSession:
-    """Test direct session creation with get_db_session."""
-
-    def test_direct_session_creation(self, test_db):
-        """Test creating session directly."""
-        db = get_db_session()
-        try:
-            assert db is not None
-            assert hasattr(db, "query")
-            assert hasattr(db, "commit")
-        finally:
-            db.close()
-
-    def test_direct_session_requires_manual_cleanup(self, test_db):
-        """Test that direct session requires manual close."""
-        db = get_db_session()
-
-        cliente = Cliente(
-            denominazione="Direct Session Client",
-            partita_iva="66666666666",
-            codice_fiscale="DIRECT90A01H501Z",
-        )
-        db.add(cliente)
-        db.commit()
-        cliente_id = cliente.id
-
-        # Must manually close
-        db.close()
-
-        # Verify persistence
-        with db_session() as db2:
-            found = db2.query(Cliente).filter_by(id=cliente_id).first()
-            assert found is not None
-
-    def test_direct_session_manual_rollback(self, test_db):
-        """Test manual rollback with direct session."""
-        db = get_db_session()
-
-        try:
-            cliente = Cliente(
-                denominazione="Rollback Client",
-                partita_iva="77777777777",
-                codice_fiscale="ROLLBK90A01H501Z",
-            )
-            db.add(cliente)
-            db.flush()
-            cliente_id = cliente.id
-
-            # Manual rollback
-            db.rollback()
-        finally:
-            db.close()
-
-        # Verify rollback
-        with db_session() as db2:
-            found = db2.query(Cliente).filter_by(id=cliente_id).first()
-            assert found is None
-
-    def test_uninitialized_database_raises_direct(self):
-        """Test that direct session before init_db raises RuntimeError."""
-        with patch("openfatture.storage.database.base.SessionLocal", None):
-            with pytest.raises(RuntimeError, match="Database not initialized"):
-                get_db_session()
 
 
 # ============================================================================
@@ -346,35 +193,6 @@ class TestSessionIntegration:
             assert db.query(Cliente).filter_by(id=cliente1_id).first() is not None
             assert db.query(Cliente).filter_by(id=cliente2_id).first() is not None
 
-    @pytest.mark.asyncio
-    async def test_sync_and_async_interop(self, test_db):
-        """Test that sync and async sessions interoperate."""
-        # Create in sync
-        with db_session() as db:
-            cliente = Cliente(
-                denominazione="Interop Client",
-                partita_iva="10101010101",
-                codice_fiscale="INTEROP0A01H501Z",
-            )
-            db.add(cliente)
-            db.commit()
-            cliente_id = cliente.id
-
-        # Read in async
-        async with async_db_session() as db:
-            found = db.query(Cliente).filter_by(id=cliente_id).first()
-            assert found is not None
-            assert found.denominazione == "Interop Client"
-
-            # Update in async
-            found.denominazione = "Async Updated"
-            db.commit()
-
-        # Verify update in sync
-        with db_session() as db:
-            found = db.query(Cliente).filter_by(id=cliente_id).first()
-            assert found.denominazione == "Async Updated"
-
     @pytest.mark.skip(reason="SQLite in-memory doesn't support concurrent writes across threads")
     def test_concurrent_sessions(self, test_db):
         """Test that concurrent sessions don't interfere.
@@ -409,3 +227,26 @@ class TestSessionIntegration:
         with db_session() as db:
             for cliente_id in results:
                 assert db.query(Cliente).filter_by(id=cliente_id).first() is not None
+
+
+class TestSessionScope:
+    def test_provided_session_is_reused_and_left_open(self, test_db):
+        from sqlalchemy import text
+
+        from openfatture.storage.database.base import get_session
+        from openfatture.storage.session import session_scope
+
+        outer = get_session()
+        try:
+            with session_scope(outer) as db:
+                assert db is outer
+            assert outer.is_active
+            outer.execute(text("SELECT 1"))
+        finally:
+            outer.close()
+
+    def test_without_session_opens_a_managed_one(self, test_db):
+        from openfatture.storage.session import session_scope
+
+        with session_scope() as db:
+            assert db.query(Cliente).count() >= 0

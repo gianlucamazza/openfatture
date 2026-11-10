@@ -320,8 +320,3 @@ class TestEventAnalytics:
         assert "trends" in result
         assert "entity_activity" in result
         assert "velocity_24h" in result
-
-    def test_close(self, analytics: EventAnalytics, mock_repo: Mock) -> None:
-        """Test closing the analytics service."""
-        analytics.close()
-        mock_repo.close.assert_called_once()

@@ -256,11 +256,11 @@ def test_persistence_error_handling(event_bus, persistence_listener, monkeypatch
     """Test that persistence errors don't break event publishing."""
     from decimal import Decimal
 
-    # Mock get_session to raise an exception
-    def mock_get_session():
+    # Opening a database session fails
+    def failing_session():
         raise RuntimeError("Database connection failed")
 
-    monkeypatch.setattr("openfatture.events.persistence.get_session", mock_get_session)
+    monkeypatch.setattr("openfatture.events.persistence.db_session", failing_session)
 
     # This should not raise an exception even though persistence fails
     event = InvoiceCreatedEvent(

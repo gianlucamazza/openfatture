@@ -12,8 +12,8 @@ from openfatture.billing.batch.operations import (
 )
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.base import get_session
 from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
+from openfatture.storage.session import db_session
 
 logger = get_logger(__name__)
 
@@ -48,58 +48,56 @@ def export_invoices_to_csv(
     if cliente_id is not None:
         cliente_id = validate_integer_input(cliente_id, min_value=1)
 
-    db = get_session()
-    try:
-        # Build query
-        query = db.query(Fattura).filter(Fattura.stato != StatoFattura.BOZZA)
+    with db_session() as db:
+        try:
+            # Build query
+            query = db.query(Fattura).filter(Fattura.stato != StatoFattura.BOZZA)
 
-        if anno:
-            query = query.filter(Fattura.anno == anno)
-        if cliente_id:
-            query = query.filter(Fattura.cliente_id == cliente_id)
+            if anno:
+                query = query.filter(Fattura.anno == anno)
+            if cliente_id:
+                query = query.filter(Fattura.cliente_id == cliente_id)
 
-        fatture = query.all()
+            fatture = query.all()
 
-        if not fatture:
-            return {
-                "success": False,
-                "error": "No invoices found matching criteria",
-                "exported_count": 0,
-            }
+            if not fatture:
+                return {
+                    "success": False,
+                    "error": "No invoices found matching criteria",
+                    "exported_count": 0,
+                }
 
-        # Export to CSV
-        output_file = Path(output_path)
-        success, error = export_invoices_csv(
-            invoices=fatture,
-            output_path=output_file,
-            include_lines=include_lines,
-        )
-
-        if success:
-            logger.info(
-                "invoices_exported_to_csv",
-                count=len(fatture),
-                output_path=str(output_file),
+            # Export to CSV
+            output_file = Path(output_path)
+            success, error = export_invoices_csv(
+                invoices=fatture,
+                output_path=output_file,
+                include_lines=include_lines,
             )
 
-            return {
-                "success": True,
-                "exported_count": len(fatture),
-                "output_path": str(output_file.absolute()),
-                "include_lines": include_lines,
-            }
-        else:
-            return {
-                "success": False,
-                "error": error,
-                "exported_count": 0,
-            }
+            if success:
+                logger.info(
+                    "invoices_exported_to_csv",
+                    count=len(fatture),
+                    output_path=str(output_file),
+                )
 
-    except Exception as e:
-        logger.error("export_invoices_to_csv_failed", error=str(e))
-        return {"success": False, "error": str(e), "exported_count": 0}
-    finally:
-        db.close()
+                return {
+                    "success": True,
+                    "exported_count": len(fatture),
+                    "output_path": str(output_file.absolute()),
+                    "include_lines": include_lines,
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": error,
+                    "exported_count": 0,
+                }
+
+        except Exception as e:
+            logger.error("export_invoices_to_csv_failed", error=str(e))
+            return {"success": False, "error": str(e), "exported_count": 0}
 
 
 @validate_call
@@ -117,73 +115,71 @@ def export_clients_to_csv(
     """
     import csv
 
-    db = get_session()
-    try:
-        # Get all clients
-        clienti = db.query(Cliente).order_by(Cliente.denominazione).all()
+    with db_session() as db:
+        try:
+            # Get all clients
+            clienti = db.query(Cliente).order_by(Cliente.denominazione).all()
 
-        if not clienti:
+            if not clienti:
+                return {
+                    "success": False,
+                    "error": "No clients found",
+                    "exported_count": 0,
+                }
+
+            # Write CSV
+            output_file = Path(output_path)
+            with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
+                fieldnames = [
+                    "id",
+                    "denominazione",
+                    "partita_iva",
+                    "codice_fiscale",
+                    "email",
+                    "pec",
+                    "indirizzo",
+                    "cap",
+                    "comune",
+                    "provincia",
+                    "nazione",
+                    "codice_destinatario",
+                ]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+
+                for cliente in clienti:
+                    writer.writerow(
+                        {
+                            "id": cliente.id,
+                            "denominazione": cliente.denominazione,
+                            "partita_iva": cliente.partita_iva or "",
+                            "codice_fiscale": cliente.codice_fiscale or "",
+                            "email": cliente.email or "",
+                            "pec": cliente.pec or "",
+                            "indirizzo": cliente.indirizzo or "",
+                            "cap": cliente.cap or "",
+                            "comune": cliente.comune or "",
+                            "provincia": cliente.provincia or "",
+                            "nazione": cliente.nazione or "IT",
+                            "codice_destinatario": cliente.codice_destinatario or "0000000",
+                        }
+                    )
+
+            logger.info(
+                "clients_exported_to_csv",
+                count=len(clienti),
+                output_path=str(output_file),
+            )
+
             return {
-                "success": False,
-                "error": "No clients found",
-                "exported_count": 0,
+                "success": True,
+                "exported_count": len(clienti),
+                "output_path": str(output_file.absolute()),
             }
 
-        # Write CSV
-        output_file = Path(output_path)
-        with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
-            fieldnames = [
-                "id",
-                "denominazione",
-                "partita_iva",
-                "codice_fiscale",
-                "email",
-                "pec",
-                "indirizzo",
-                "cap",
-                "comune",
-                "provincia",
-                "nazione",
-                "codice_destinatario",
-            ]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-
-            for cliente in clienti:
-                writer.writerow(
-                    {
-                        "id": cliente.id,
-                        "denominazione": cliente.denominazione,
-                        "partita_iva": cliente.partita_iva or "",
-                        "codice_fiscale": cliente.codice_fiscale or "",
-                        "email": cliente.email or "",
-                        "pec": cliente.pec or "",
-                        "indirizzo": cliente.indirizzo or "",
-                        "cap": cliente.cap or "",
-                        "comune": cliente.comune or "",
-                        "provincia": cliente.provincia or "",
-                        "nazione": cliente.nazione or "IT",
-                        "codice_destinatario": cliente.codice_destinatario or "0000000",
-                    }
-                )
-
-        logger.info(
-            "clients_exported_to_csv",
-            count=len(clienti),
-            output_path=str(output_file),
-        )
-
-        return {
-            "success": True,
-            "exported_count": len(clienti),
-            "output_path": str(output_file.absolute()),
-        }
-
-    except Exception as e:
-        logger.error("export_clients_to_csv_failed", error=str(e))
-        return {"success": False, "error": str(e), "exported_count": 0}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("export_clients_to_csv_failed", error=str(e))
+            return {"success": False, "error": str(e), "exported_count": 0}
 
 
 # =============================================================================
@@ -213,50 +209,48 @@ def import_invoices_from_csv(
     if default_cliente_id is not None:
         default_cliente_id = validate_integer_input(default_cliente_id, min_value=1)
 
-    db = get_session()
-    try:
-        csv_file = Path(csv_path)
-        if not csv_file.exists():
+    with db_session() as db:
+        try:
+            csv_file = Path(csv_path)
+            if not csv_file.exists():
+                return {
+                    "success": False,
+                    "error": f"CSV file not found: {csv_path}",
+                    "imported_count": 0,
+                    "failed_count": 0,
+                }
+
+            # Import using batch operations
+            result = import_invoices_csv(
+                csv_path=csv_file,
+                db_session=db,
+                default_cliente_id=default_cliente_id,
+            )
+
+            logger.info(
+                "invoices_imported_from_csv",
+                succeeded=result.succeeded,
+                failed=result.failed,
+                csv_path=str(csv_file),
+            )
+
+            return {
+                "success": result.succeeded > 0,
+                "imported_count": result.succeeded,
+                "failed_count": result.failed,
+                "total_rows": result.total,
+                "errors": result.errors[:10],  # Limit errors to first 10
+                "message": f"Imported {result.succeeded}/{result.total} invoices",
+            }
+
+        except Exception as e:
+            logger.error("import_invoices_from_csv_failed", error=str(e))
             return {
                 "success": False,
-                "error": f"CSV file not found: {csv_path}",
+                "error": str(e),
                 "imported_count": 0,
                 "failed_count": 0,
             }
-
-        # Import using batch operations
-        result = import_invoices_csv(
-            csv_path=csv_file,
-            db_session=db,
-            default_cliente_id=default_cliente_id,
-        )
-
-        logger.info(
-            "invoices_imported_from_csv",
-            succeeded=result.succeeded,
-            failed=result.failed,
-            csv_path=str(csv_file),
-        )
-
-        return {
-            "success": result.succeeded > 0,
-            "imported_count": result.succeeded,
-            "failed_count": result.failed,
-            "total_rows": result.total,
-            "errors": result.errors[:10],  # Limit errors to first 10
-            "message": f"Imported {result.succeeded}/{result.total} invoices",
-        }
-
-    except Exception as e:
-        logger.error("import_invoices_from_csv_failed", error=str(e))
-        return {
-            "success": False,
-            "error": str(e),
-            "imported_count": 0,
-            "failed_count": 0,
-        }
-    finally:
-        db.close()
 
 
 @validate_call
@@ -277,104 +271,102 @@ def import_clients_from_csv(
     """
     import csv
 
-    db = get_session()
-    try:
-        csv_file = Path(csv_path)
-        if not csv_file.exists():
+    with db_session() as db:
+        try:
+            csv_file = Path(csv_path)
+            if not csv_file.exists():
+                return {
+                    "success": False,
+                    "error": f"CSV file not found: {csv_path}",
+                    "imported_count": 0,
+                    "failed_count": 0,
+                }
+
+            imported = 0
+            failed = 0
+            errors = []
+
+            with open(csv_file, encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+
+                for row_num, row in enumerate(reader, 1):
+                    try:
+                        # Validate required fields
+                        denominazione = row.get("denominazione")
+                        if not denominazione:
+                            raise ValueError("denominazione is required")
+
+                        # At least one of partita_iva or codice_fiscale required
+                        partita_iva = row.get("partita_iva") or None
+                        codice_fiscale = row.get("codice_fiscale") or None
+
+                        if not partita_iva and not codice_fiscale:
+                            raise ValueError(
+                                "At least one of partita_iva or codice_fiscale is required"
+                            )
+
+                        # Create client
+                        cliente = Cliente(
+                            denominazione=denominazione,
+                            partita_iva=partita_iva,
+                            codice_fiscale=codice_fiscale,
+                            email=row.get("email") or None,
+                            pec=row.get("pec") or None,
+                            indirizzo=row.get("indirizzo") or None,
+                            cap=row.get("cap") or None,
+                            comune=row.get("comune") or None,
+                            provincia=row.get("provincia") or None,
+                            nazione=row.get("nazione") or "IT",
+                            codice_destinatario=row.get("codice_destinatario") or "0000000",
+                        )
+
+                        db.add(cliente)
+                        db.flush()
+                        imported += 1
+
+                    except Exception as e:
+                        failed += 1
+                        errors.append(f"Row {row_num}: {str(e)}")
+                        logger.warning("client_import_row_failed", row=row_num, error=str(e))
+
+            # Commit if any succeeded
+            if imported > 0:
+                db.commit()
+
+                logger.info(
+                    "clients_imported_from_csv",
+                    succeeded=imported,
+                    failed=failed,
+                    csv_path=str(csv_file),
+                )
+
+                return {
+                    "success": True,
+                    "imported_count": imported,
+                    "failed_count": failed,
+                    "total_rows": imported + failed,
+                    "errors": errors[:10],  # Limit errors
+                    "message": f"Imported {imported}/{imported + failed} clients",
+                }
+            else:
+                db.rollback()
+                return {
+                    "success": False,
+                    "error": "No clients imported successfully",
+                    "imported_count": 0,
+                    "failed_count": failed,
+                    "errors": errors[:10],
+                }
+
+        except Exception as e:
+            db.rollback()
+            logger.error("import_clients_from_csv_failed", error=str(e))
             return {
                 "success": False,
-                "error": f"CSV file not found: {csv_path}",
+                "error": str(e),
                 "imported_count": 0,
                 "failed_count": 0,
             }
-
-        imported = 0
-        failed = 0
-        errors = []
-
-        with open(csv_file, encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-
-            for row_num, row in enumerate(reader, 1):
-                try:
-                    # Validate required fields
-                    denominazione = row.get("denominazione")
-                    if not denominazione:
-                        raise ValueError("denominazione is required")
-
-                    # At least one of partita_iva or codice_fiscale required
-                    partita_iva = row.get("partita_iva") or None
-                    codice_fiscale = row.get("codice_fiscale") or None
-
-                    if not partita_iva and not codice_fiscale:
-                        raise ValueError(
-                            "At least one of partita_iva or codice_fiscale is required"
-                        )
-
-                    # Create client
-                    cliente = Cliente(
-                        denominazione=denominazione,
-                        partita_iva=partita_iva,
-                        codice_fiscale=codice_fiscale,
-                        email=row.get("email") or None,
-                        pec=row.get("pec") or None,
-                        indirizzo=row.get("indirizzo") or None,
-                        cap=row.get("cap") or None,
-                        comune=row.get("comune") or None,
-                        provincia=row.get("provincia") or None,
-                        nazione=row.get("nazione") or "IT",
-                        codice_destinatario=row.get("codice_destinatario") or "0000000",
-                    )
-
-                    db.add(cliente)
-                    db.flush()
-                    imported += 1
-
-                except Exception as e:
-                    failed += 1
-                    errors.append(f"Row {row_num}: {str(e)}")
-                    logger.warning("client_import_row_failed", row=row_num, error=str(e))
-
-        # Commit if any succeeded
-        if imported > 0:
-            db.commit()
-
-            logger.info(
-                "clients_imported_from_csv",
-                succeeded=imported,
-                failed=failed,
-                csv_path=str(csv_file),
-            )
-
-            return {
-                "success": True,
-                "imported_count": imported,
-                "failed_count": failed,
-                "total_rows": imported + failed,
-                "errors": errors[:10],  # Limit errors
-                "message": f"Imported {imported}/{imported + failed} clients",
-            }
-        else:
-            db.rollback()
-            return {
-                "success": False,
-                "error": "No clients imported successfully",
-                "imported_count": 0,
-                "failed_count": failed,
-                "errors": errors[:10],
-            }
-
-    except Exception as e:
-        db.rollback()
-        logger.error("import_clients_from_csv_failed", error=str(e))
-        return {
-            "success": False,
-            "error": str(e),
-            "imported_count": 0,
-            "failed_count": 0,
-        }
-    finally:
-        db.close()
 
 
 # =============================================================================
@@ -414,49 +406,47 @@ def bulk_update_invoices_status(
             "updated_count": 0,
         }
 
-    db = get_session()
-    try:
-        # Get invoices
-        query = db.query(Fattura).filter(Fattura.anno == anno)
+    with db_session() as db:
+        try:
+            # Get invoices
+            query = db.query(Fattura).filter(Fattura.anno == anno)
 
-        if cliente_id:
-            query = query.filter(Fattura.cliente_id == cliente_id)
+            if cliente_id:
+                query = query.filter(Fattura.cliente_id == cliente_id)
 
-        fatture = query.all()
+            fatture = query.all()
 
-        if not fatture:
+            if not fatture:
+                return {
+                    "success": False,
+                    "error": "No invoices found matching criteria",
+                    "updated_count": 0,
+                }
+
+            # Bulk update
+            result = bulk_update_status(
+                invoices=fatture,
+                new_status=status_enum,
+                db_session=db,
+            )
+
+            logger.info(
+                "invoices_status_bulk_updated",
+                anno=anno,
+                new_status=new_status,
+                updated=result.succeeded,
+                failed=result.failed,
+            )
+
             return {
-                "success": False,
-                "error": "No invoices found matching criteria",
-                "updated_count": 0,
+                "success": result.succeeded > 0,
+                "updated_count": result.succeeded,
+                "failed_count": result.failed,
+                "new_status": new_status,
+                "errors": result.errors[:10],
+                "message": f"Updated {result.succeeded}/{result.total} invoices to {new_status}",
             }
 
-        # Bulk update
-        result = bulk_update_status(
-            invoices=fatture,
-            new_status=status_enum,
-            db_session=db,
-        )
-
-        logger.info(
-            "invoices_status_bulk_updated",
-            anno=anno,
-            new_status=new_status,
-            updated=result.succeeded,
-            failed=result.failed,
-        )
-
-        return {
-            "success": result.succeeded > 0,
-            "updated_count": result.succeeded,
-            "failed_count": result.failed,
-            "new_status": new_status,
-            "errors": result.errors[:10],
-            "message": f"Updated {result.succeeded}/{result.total} invoices to {new_status}",
-        }
-
-    except Exception as e:
-        logger.error("bulk_update_invoices_status_failed", error=str(e))
-        return {"success": False, "error": str(e), "updated_count": 0}
-    finally:
-        db.close()
+        except Exception as e:
+            logger.error("bulk_update_invoices_status_failed", error=str(e))
+            return {"success": False, "error": str(e), "updated_count": 0}
