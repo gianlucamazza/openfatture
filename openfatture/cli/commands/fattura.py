@@ -14,11 +14,8 @@ from openfatture.billing.application.invoice_queries import (
     get_invoice_details,
     search_invoices,
 )
+from openfatture.cli.output import remember_result
 from openfatture.i18n import _, get_locale
-from openfatture.pdf.generator import PDFGenerator, PDFGeneratorConfig
-from openfatture.platform.config import get_settings
-from openfatture.storage.database.base import get_session
-from openfatture.storage.database.models import Fattura
 
 app = typer.Typer(name="fattura", help="Manage invoices")
 console = Console()
@@ -47,6 +44,7 @@ def list_invoices(
         cliente_id=cliente_id,
         limit=limit,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -84,6 +82,11 @@ def list_invoices(
                 f"  {invoice['data']} · {document} · {_('cli-invoice-' + invoice['payment_status'])}",
                 markup=False,
             )
+            if invoice.get("collection_statement"):
+                console.print(
+                    f"  Dichiarazione: {invoice['collection_statement']['value']} · fonte: {invoice['collection_statement']['source']}",
+                    markup=False,
+                )
             console.print()
         if result.get("has_more"):
             console.print("… --limit")
@@ -126,6 +129,13 @@ def list_invoices(
         )
 
     console.print(table)
+    for invoice in result["fatture"]:
+        if invoice.get("collection_statement"):
+            statement = invoice["collection_statement"]
+            console.print(
+                f"{invoice['numero']}/{invoice['anno']} · dichiarazione: {statement['value']} · fonte: {statement['source']}",
+                markup=False,
+            )
 
     if result.get("has_more"):
         console.print("[dim]... and more. Use --limit to see more results.[/dim]")
@@ -137,6 +147,7 @@ def show_invoice(
 ) -> None:
     """Show detailed invoice information."""
     result = get_invoice_details(fattura_id=fattura_id)
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -171,6 +182,12 @@ def show_invoice(
             else format_currency(result[field], "EUR", locale=get_locale())
         )
         console.print(_("cli-invoice-" + label) + ": " + value)
+
+    if result.get("collection_statement"):
+        console.print(
+            f"Dichiarazione: {result['collection_statement']['value']} · fonte: {result['collection_statement']['source']}",
+            markup=False,
+        )
 
     # Client
     cliente = result.get("cliente", {})
@@ -233,6 +250,7 @@ def create_new_invoice(
         numero=numero,
         note=note,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -263,6 +281,7 @@ def add_line_item(
         aliquota_iva=iva,
         unita_misura=unita,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -284,40 +303,19 @@ def generate_pdf(
     logo: str = typer.Option(None, "--logo", help="Path to company logo"),
 ) -> None:
     """Generate PDF for an invoice."""
-    settings = get_settings()
+    from openfatture.pdf.tool_ops import generate_invoice_pdf
 
-    # Load invoice from database
-    session = get_session()
-    try:
-        fattura = session.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            console.print(f"[red]Error:[/red] Invoice {fattura_id} not found")
-            raise typer.Exit(code=1)
+    result = generate_invoice_pdf(
+        fattura_id=fattura_id, output_path=output, template=template, logo_path=logo
+    )
+    remember_result(result)
+    if not result.get("success"):
+        console.print(f"[red]Error:[/red] {result['error']}")
+        raise typer.Exit(code=1)
 
-        # Create PDF generator config
-        config = PDFGeneratorConfig(
-            template=template,
-            company_name=settings.cedente_denominazione or "OpenFatture",
-            company_vat=settings.cedente_partita_iva,
-            company_cf=settings.cedente_codice_fiscale,
-            company_address=settings.cedente_indirizzo,
-            company_city=f"{settings.cedente_cap} {settings.cedente_comune}".strip(),
-            regime_fiscale=settings.cedente_regime_fiscale,
-            logo_path=logo,
-            enable_qr_code=False,
-        )
-
-        generator = PDFGenerator(config)
-
-        # Generate PDF
-        pdf_path = generator.generate(fattura, output_path=output)
-
-        console.print("[green]✓[/green] PDF generated successfully")
-        console.print(f"Output: [cyan]{pdf_path}[/cyan]")
-        console.print(f"Size: {pdf_path.stat().st_size:,} bytes")
-
-    finally:
-        session.close()
+    console.print("[green]✓[/green] PDF generated successfully")
+    console.print(f"Output: [cyan]{result['pdf_path']}[/cyan]")
+    console.print(f"Size: {result['file_size']:,} bytes")
 
 
 @app.command("generate-xml")
@@ -327,53 +325,22 @@ def generate_xml(
     dry_run: bool = typer.Option(False, "--dry-run", help="Show XML without writing file"),
 ) -> None:
     """Generate FatturaPA XML for an invoice."""
-    from pathlib import Path
+    from openfatture.sdi.application.invoice_sdi_ops import generate_invoice_xml
 
-    from openfatture.billing.fatture.service import InvoiceService
-    from openfatture.exceptions import XMLValidationError
+    result = generate_invoice_xml(fattura_id, output_path=output, dry_run=dry_run)
+    remember_result(result)
+    if "error" in result:
+        console.print(f"[red]Error:[/red] {result['error']}")
+        raise typer.Exit(code=1)
 
-    settings = get_settings()
-    session = get_session()
-    try:
-        service = InvoiceService(settings)
-
-        fattura = session.query(Fattura).filter(Fattura.id == fattura_id).first()
-        if not fattura:
-            console.print(f"[red]Error:[/red] Invoice {fattura_id} not found")
-            raise typer.Exit(code=1)
-
-        try:
-            xml_content, error = service.generate_xml(fattura, validate=False)
-
-            if error:
-                console.print(f"[red]Error:[/red] {error}")
-                raise typer.Exit(code=1)
-
-            if dry_run:
-                console.print("[green]✓[/green] XML generated successfully (dry-run mode)")
-                console.print("\n[bold]XML Content:[/bold]")
-                console.print(xml_content)
-            else:
-                if output:
-                    xml_path = Path(output)
-                else:
-                    xml_path = service.get_xml_path(fattura)
-
-                xml_path.parent.mkdir(parents=True, exist_ok=True)
-                xml_path.write_text(xml_content, encoding="utf-8")
-
-                session.commit()
-
-                console.print("[green]✓[/green] XML generated successfully")
-                console.print(f"Output: [cyan]{xml_path}[/cyan]")
-                console.print(f"Size: {xml_path.stat().st_size:,} bytes")
-
-        except XMLValidationError as e:
-            console.print(f"[red]XML Validation Error:[/red] {e}")
-            raise typer.Exit(code=1) from None
-
-    finally:
-        session.close()
+    if dry_run:
+        console.print("[green]✓[/green] XML generated successfully (dry-run mode)")
+        console.print("\n[bold]XML Content:[/bold]")
+        console.print(result["xml_content"])
+        return
+    console.print("[green]✓[/green] XML generated successfully")
+    console.print(f"Output: [cyan]{result['xml_path']}[/cyan]")
+    console.print(f"Size: {result['file_size']:,} bytes")
 
 
 @app.command("set-status")
@@ -383,6 +350,7 @@ def set_status(
 ) -> None:
     """Update invoice status."""
     result = update_invoice_status(fattura_id=fattura_id, new_status=status)
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -408,6 +376,7 @@ def create_credit_note(
         note=note,
         full_refund=full_refund,
     )
+    remember_result(result)
 
     if "error" in result:
         console.print(f"[red]Error:[/red] {result['error']}")
@@ -428,19 +397,22 @@ def create_credit_note(
 @app.command("sdi-journal")
 def sdi_journal() -> None:
     """Inspect recorded submissions and imported receipts without sending anything."""
-    from openfatture.storage.database.models import SDINotificationRecord, SDISubmissionAttempt
+    from openfatture.sdi.application.journal_ops import list_sdi_journal
 
-    with get_session() as session:
-        for attempt in session.query(SDISubmissionAttempt).order_by(SDISubmissionAttempt.id):
-            console.print(
-                f"Invio #{attempt.id} · fattura {attempt.invoice_id} · {attempt.filename} · {attempt.outcome}",
-                markup=False,
-            )
-        for receipt in session.query(SDINotificationRecord).order_by(SDINotificationRecord.id):
-            console.print(
-                f"Ricevuta #{receipt.id} · fattura {receipt.invoice_id} · {receipt.outcome} · origine {receipt.source}",
-                markup=False,
-            )
+    journal = list_sdi_journal()
+    remember_result(journal)
+    for attempt in journal["submissions"]:
+        console.print(
+            f"Invio #{attempt['id']} · fattura {attempt['invoice_id']} · "
+            f"{attempt['filename']} · {attempt['outcome']}",
+            markup=False,
+        )
+    for receipt in journal["receipts"]:
+        console.print(
+            f"Ricevuta #{receipt['id']} · fattura {receipt['invoice_id']} · "
+            f"{receipt['outcome']} · origine {receipt['source']}",
+            markup=False,
+        )
 
 
 @app.command("associate-receipt")
@@ -448,29 +420,18 @@ def associate_receipt(
     receipt_id: int, invoice_id: int, evidence: str = typer.Option(..., "--evidence")
 ) -> None:
     """Associate an unresolved receipt after explicit human verification."""
-    import json
-
-    from openfatture.sdi.notifiche.parser import NotificaSDI
-    from openfatture.sdi.notifiche.processor import NotificationProcessor
-    from openfatture.storage.database.models import SDINotificationRecord
+    from openfatture.sdi.application import journal_ops
 
     if not typer.confirm(
         f"Associare ricevuta {receipt_id} alla fattura {invoice_id}?", default=False
     ):
         raise typer.Abort()
-    with get_session() as session:
-        receipt = session.get(SDINotificationRecord, receipt_id)
-        if receipt is None or receipt.outcome not in {"unassociated", "association_conflict"}:
-            console.print("Ricevuta non associabile")
-            raise typer.Exit(1)
-        success, error, _notification = NotificationProcessor(session).process_notification(
-            NotificaSDI.model_validate(json.loads(receipt.payload)),
-            associated_invoice_id=invoice_id,
-            association_note=evidence,
-        )
-        console.print(error or "Ricevuta associata")
-        if not success:
-            raise typer.Exit(1)
+    result = journal_ops.associate_receipt(receipt_id, invoice_id, evidence)
+    remember_result(result)
+    if "error" in result:
+        console.print(result["error"], markup=False)
+        raise typer.Exit(1)
+    console.print("Ricevuta associata")
 
 
 @app.command("resolve-submission")
@@ -480,15 +441,13 @@ def resolve_submission_command(
     evidence: str = typer.Option(..., "--evidence"),
 ) -> None:
     """Resolve an uncertain PEC attempt only after checking transport evidence."""
-    from openfatture.sdi.application.submissions import resolve_submission
+    from openfatture.sdi.application.journal_ops import resolve_submission_attempt
 
     if not typer.confirm(f"Confermare verifica invio {attempt_id}: inviato={sent}?", default=False):
         raise typer.Abort()
-    with get_session() as session:
-        try:
-            resolve_submission(session, attempt_id, sent=sent, note=evidence)
-        except ValueError as exc:
-            session.rollback()
-            console.print(str(exc), markup=False)
-            raise typer.Exit(1) from exc
+    result = resolve_submission_attempt(attempt_id, sent=sent, evidence=evidence)
+    remember_result(result)
+    if "error" in result:
+        console.print(result["error"], markup=False)
+        raise typer.Exit(1)
     console.print("Verifica registrata")

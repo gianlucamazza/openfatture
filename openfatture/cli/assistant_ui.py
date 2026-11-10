@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import re
+import time
 from collections.abc import AsyncIterator, Iterator
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager
 from typing import Any
 
-from rich.console import Console
+from rich.console import Console, Group, RenderableType
 from rich.live import Live
 from rich.markdown import Markdown
+from rich.spinner import Spinner
 from rich.text import Text
 
 from openfatture.i18n import _
@@ -25,6 +28,52 @@ def translate(key: str, locale: str, **values: Any) -> str:
     return key
 
 
+_FENCE = re.compile(r"^\s*(```|~~~)")
+
+
+def split_stable_markdown(text: str) -> tuple[str, str]:
+    """Split ``text`` into completed Markdown blocks and the block still being written.
+
+    The split happens after the last blank line outside a fenced code block, so
+    code, tables and contiguous lists are never cut. ``stable + tail == text``.
+    """
+    in_fence = False
+    position = 0
+    split = 0
+    for line in text.splitlines(keepends=True):
+        position += len(line)
+        if _FENCE.match(line):
+            in_fence = not in_fence
+        elif not in_fence and not line.strip() and line.endswith("\n"):
+            if text[:position].strip():
+                split = position
+    return text[:split], text[split:]
+
+
+class _LiveView:
+    """Live area: the block being written plus an animated status line."""
+
+    def __init__(self, presentation: ChatPresentation) -> None:
+        self.presentation = presentation
+        self.spinner = Spinner("dots")
+
+    def __rich__(self) -> RenderableType:
+        ui = self.presentation
+        parts: list[RenderableType] = []
+        if ui.buffer.strip():
+            parts.append(Markdown(ui.buffer))
+        if ui.tool or not ui.buffer.strip():
+            elapsed = int(time.monotonic() - ui.status_since)
+            label = (
+                ui.text("assistant-tool-running", name=ui.tool)
+                if ui.tool
+                else ui.text("assistant-thinking")
+            )
+            self.spinner.update(text=Text(f"{label} {elapsed}s" if elapsed else label, style="dim"))
+            parts.append(self.spinner)
+        return Group(*parts)
+
+
 class ChatPresentation:
     def __init__(self, console: Console, locale: str, *, interactive: bool = True):
         self.console = console
@@ -32,6 +81,21 @@ class ChatPresentation:
         self.interactive = interactive
         self.live: Live | None = None
         self.prompt_session: Any = None
+        self.buffer = ""
+        self.tool: str | None = None
+        self.status_since = time.monotonic()
+
+    def _set_status(self, tool: str | None) -> None:
+        self.tool = tool
+        self.status_since = time.monotonic()
+
+    def _commit(self, *, everything: bool = False) -> None:
+        """Print completed Markdown blocks permanently above the live area."""
+        stable, self.buffer = (
+            (self.buffer, "") if everything else split_stable_markdown(self.buffer)
+        )
+        if stable.strip():
+            self.console.print(Markdown(stable))
 
     def text(self, key: str, **values: Any) -> str:
         return translate(key, self.locale, **values)
@@ -62,6 +126,7 @@ class ChatPresentation:
         if not self.interactive:
             return False
         if self.live:
+            self._commit(everything=True)
             self.live.stop()
         try:
             from prompt_toolkit import PromptSession
@@ -81,64 +146,74 @@ class ChatPresentation:
 
     async def activity(self, name: str) -> None:
         if self.live:
-            self.live.update(Text(self.text("assistant-tool-running", name=name)))
+            # Text written before a tool call is a complete thought: keep it.
+            self._commit(everything=True)
+            self._set_status(name)
 
     async def finished(self, name: str, success: bool) -> None:
         if self.live:
-            self.live.update(
-                Text(
-                    self.text(
-                        "assistant-tool-completed" if success else "assistant-tool-failed",
-                        name=name,
-                    )
-                )
+            mark, style = ("✓", "green") if success else ("✗", "red")
+            label = self.text(
+                "assistant-tool-completed" if success else "assistant-tool-failed", name=name
             )
+            self.console.print(Text.assemble((f"{mark} ", style), (label, "dim")))
+            self._set_status(None)
 
     async def render(self, iterator: AsyncIterator[Any]) -> str:
+        from openfatture.platform.config import get_settings
+        from openfatture.platform.logging import suppress_stdout_logging
+
         parts: list[str] = []
         complete = False
-        try:
-            if self.console.is_terminal:
-                self.live = Live(
-                    Text(self.text("assistant-thinking")),
-                    console=self.console,
-                    transient=True,
-                    vertical_overflow="ellipsis",
-                    refresh_per_second=8,
-                )
-                self.live.start()
-            async for event in iterator:
-                content = (
-                    event
-                    if isinstance(event, str)
-                    else event.get_text()
-                    if event.is_content()
-                    else ""
-                )
-                if content:
-                    content = redact_sensitive(content)
-                    parts.append(content)
-                    if self.live:
-                        self.live.update(Markdown("".join(parts)))
-                    else:
-                        self.console.print(content, end="", markup=False, highlight=False)
-            complete = True
-        finally:
-            # Explicitly close the runtime generator before restoring the input prompt.
+        self.buffer = ""
+        self._set_status(None)
+        with ExitStack() as stack:
             try:
-                close = getattr(iterator, "aclose", None)
-                if close:
-                    await close()
+                if self.console.is_terminal:
+                    if not get_settings().debug_config.enable_debug_logging:
+                        # Console log lines would tear through the live area.
+                        stack.enter_context(suppress_stdout_logging())
+                    self.live = Live(
+                        _LiveView(self),
+                        console=self.console,
+                        transient=True,
+                        vertical_overflow="visible",
+                        refresh_per_second=12,
+                    )
+                    self.live.start()
+                async for event in iterator:
+                    content = (
+                        event
+                        if isinstance(event, str)
+                        else event.get_text()
+                        if event.is_content()
+                        else ""
+                    )
+                    if content:
+                        content = redact_sensitive(content)
+                        parts.append(content)
+                        if self.live:
+                            self.buffer += content
+                            self._commit()
+                        else:
+                            self.console.print(content, end="", markup=False, highlight=False)
+                complete = True
             finally:
-                if self.live:
-                    self.live.stop()
-                    self.live = None
-                    if parts:
-                        self.console.print(Markdown("".join(parts)))
-                elif parts:
-                    self.console.print()
-                if parts and not complete:
-                    self.console.print(Text(self.text("assistant-incomplete")))
+                # Explicitly close the runtime generator before restoring the input prompt.
+                try:
+                    close = getattr(iterator, "aclose", None)
+                    if close:
+                        await close()
+                finally:
+                    if self.live:
+                        self.live.stop()
+                        self.live = None
+                        self._commit(everything=True)
+                        self.tool = None
+                    elif parts:
+                        self.console.print()
+                    if parts and not complete:
+                        self.console.print(Text(self.text("assistant-incomplete")))
         return "".join(parts)
 
 

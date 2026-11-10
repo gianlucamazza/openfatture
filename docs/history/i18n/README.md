@@ -6,4 +6,4 @@ They are **not** the current i18n contract.
 Canonical i18n docs and runtime live under:
 
 - `openfatture/i18n/`
-- `docs/I18N_CLI_IMPLEMENTATION.md` (and related docs under `docs/`)
+- `docs/history/I18N_CLI_IMPLEMENTATION.md` (and related i18n docs in this folder)

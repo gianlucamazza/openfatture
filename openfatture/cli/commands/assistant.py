@@ -51,10 +51,28 @@ def _handle_slash_command(user_input: str, *, runtime: AssistantRuntime) -> str 
                 )
             )
         )
+    elif cmd == "/pending":
+        from openfatture.platform.logging import redact_sensitive
+
+        console.print(Text(str(redact_sensitive(runtime.uncertain_tools()))))
+    elif cmd == "/reconcile":
+        import json
+
+        try:
+            payload = json.loads(user_input.split(maxsplit=1)[1])
+            runtime.reconcile_tool(payload["call_id"], payload["result"], payload["evidence"])
+            console.print(Text("Esito verificato registrato. Usa /resume per continuare."))
+        except (ValueError, KeyError, IndexError, TypeError):
+            console.print(Text("Riconciliazione non valida: servono call_id, result ed evidence."))
     elif cmd == "/clear":
-        console.print(
-            Text(_text("assistant-cleared" if runtime.clear_session() else "assistant-no-session"))
-        )
+        try:
+            cleared = runtime.clear_session()
+        except ValueError:
+            console.print(
+                Text("Risolvi il turno pendente con /resume prima di cancellare lo storico.")
+            )
+        else:
+            console.print(Text(_text("assistant-cleared" if cleared else "assistant-no-session")))
     else:
         console.print(Text(_text("assistant-unknown-command", command=cmd)))
     return "handled"
@@ -73,12 +91,24 @@ def assistant(
     ),
 ) -> None:
     """Ask the assistant to explain, inspect, or perform an invoicing task."""
+    if message is None and (json_output or (ctx.obj or {}).get("format", "rich") != "rich"):
+        from openfatture.cli.formatters.utils import get_format_from_context
+        from openfatture.cli.output import emit
+
+        emit(
+            {
+                "success": False,
+                "data": None,
+                "warnings": [],
+                "error": {
+                    "code": "interactive_format",
+                    "message": "Provide a single request when using a structured output format",
+                },
+            },
+            get_format_from_context(ctx, json_output),
+        )
+        raise typer.Exit(2)
     run_sync_with_lifespan(_run_assistant(ctx, message, stream, json_output, session))
-
-
-async def run_assistant_session(message: str | None = None) -> None:
-    """Run the conversational assistant session used by interactive mode."""
-    await _run_assistant(None, message, True, False, None)
 
 
 async def _run_assistant(
@@ -150,6 +180,26 @@ async def _run_assistant(
                     console.print(Text(ui.text("assistant-turn-failed")))
                 return bool(response.success)
 
+        pending = runtime.pending_user_input
+        if isinstance(pending, str):
+            if not machine:
+                console.print(Text("Ripresa del turno interrotto…"))
+            from openfatture.ai.runtime.durability import UncertainToolOutcome
+
+            try:
+                success = await execute(pending)
+            except UncertainToolOutcome:
+                if machine or message is not None:
+                    raise
+                console.print(
+                    Text("Esito tool incerto: usa /pending e /reconcile prima di /resume.")
+                )
+                success = False
+            if not success and (machine or message is not None):
+                raise typer.Exit(1)
+            if message == pending:
+                return
+
         if message is not None:
             success = await execute(message)
             if not success:
@@ -174,6 +224,12 @@ async def _run_assistant(
                 continue
             if user_input.lower() in {"exit", "quit", "q"}:
                 break
+            if user_input.lower() == "/resume":
+                if runtime.pending_user_input:
+                    user_input = runtime.pending_user_input
+                else:
+                    console.print(Text("Nessun turno pendente."))
+                    continue
             slash = _handle_slash_command(user_input, runtime=runtime)
             if slash == "exit":
                 break

@@ -101,3 +101,114 @@ async def test_empty_response_releases_live_display():
     assert await ui.render(empty()) == ""
     assert ui.live is None
     assert not ui.console._live_stack
+
+
+# --- Incremental streaming -------------------------------------------------
+
+
+def test_split_stable_markdown_keeps_open_blocks():
+    from openfatture.cli.assistant_ui import split_stable_markdown
+
+    assert split_stable_markdown("Uno.\n\nDue in corso") == ("Uno.\n\n", "Due in corso")
+    assert split_stable_markdown("Nessuna riga vuota") == ("", "Nessuna riga vuota")
+    assert split_stable_markdown("\n\nInizio") == ("", "\n\nInizio")
+    fenced = "Testo.\n\n```python\nx = 1\n\ny = 2\n"
+    assert split_stable_markdown(fenced) == ("Testo.\n\n", "```python\nx = 1\n\ny = 2\n")
+    closed = "```\na\n\nb\n```\n\nDopo"
+    assert split_stable_markdown(closed) == ("```\na\n\nb\n```\n\n", "Dopo")
+    table = "| a | b |\n|---|---|\n| 1 | 2 |\n"
+    assert split_stable_markdown(table) == ("", table)
+
+
+def _terminal_ui(width: int = 80):
+    from openfatture.cli.assistant_ui import ChatPresentation
+
+    output = StringIO()
+    console = Console(file=output, force_terminal=True, width=width, height=10)
+    return ChatPresentation(console, "it"), output
+
+
+@pytest.mark.asyncio
+async def test_blocks_are_printed_once_without_final_reprint():
+    ui, output = _terminal_ui()
+
+    async def stream():
+        for number in range(30):
+            yield f"Blocco numero {number}.\n\n"
+
+    await ui.render(stream())
+    text = output.getvalue()
+    for number in range(30):
+        assert text.count(f"Blocco numero {number}.") == 1, number
+    # No overflow ellipsis: the only "…" is the spinner label.
+    assert "…" not in text.replace("Elaborazione…", "")
+
+
+@pytest.mark.asyncio
+async def test_text_before_a_tool_stays_visible():
+    ui, output = _terminal_ui()
+
+    async def stream():
+        yield "Controllo le fatture"
+        await ui.activity("search_invoices")
+        await ui.finished("search_invoices", True)
+        yield "Ci sono 2 fatture aperte."
+
+    result = await ui.render(stream())
+    text = output.getvalue()
+    before, tool, after = (
+        text.index("Controllo le fatture"),
+        text.index("✓"),
+        text.index("Ci sono 2 fatture aperte."),
+    )
+    assert before < tool < after
+    assert result == "Controllo le fattureCi sono 2 fatture aperte."
+
+
+@pytest.mark.asyncio
+async def test_partial_stream_reports_incomplete_and_releases_live():
+    ui, output = _terminal_ui()
+
+    async def stream():
+        yield "Primo blocco.\n\nSecondo"
+        raise RuntimeError("offline")
+
+    with pytest.raises(RuntimeError):
+        await ui.render(stream())
+    text = output.getvalue()
+    assert "Primo blocco." in text and "Secondo" in text
+    assert "Risposta incompleta." in text
+    assert ui.live is None and not ui.console._live_stack
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("debug", [False, True])
+async def test_console_logs_are_silenced_while_streaming(monkeypatch, debug):
+    import logging
+
+    from openfatture.platform import config
+
+    settings = config.get_settings()
+    monkeypatch.setattr(settings.debug_config, "enable_debug_logging", debug)
+    import sys
+
+    captured: list[str] = []
+
+    class Recorder(logging.StreamHandler):
+        def emit(self, record: logging.LogRecord) -> None:
+            captured.append(record.getMessage())
+
+    handler = Recorder(sys.stderr)
+    root = logging.getLogger()
+    root.addHandler(handler)
+    try:
+        ui, _output = _terminal_ui()
+
+        async def stream():
+            logging.getLogger("openfatture.test").warning("noisy_warning")
+            yield "ok"
+
+        await ui.render(stream())
+    finally:
+        root.removeHandler(handler)
+    assert ("noisy_warning" in captured) is debug

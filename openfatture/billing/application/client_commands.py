@@ -48,8 +48,7 @@ def create_client(
     Returns:
         Dictionary with client details or error
     """
-    from openfatture.cli.lifespan import get_event_bus
-    from openfatture.events import ClientCreatedEvent
+    from openfatture.events import ClientCreatedEvent, get_global_event_bus
 
     db = get_session()
     try:
@@ -92,7 +91,7 @@ def create_client(
         db.refresh(cliente)
 
         # Publish event
-        event_bus = get_event_bus()
+        event_bus = get_global_event_bus()
         if event_bus:
             event_bus.publish(
                 ClientCreatedEvent(
@@ -159,8 +158,7 @@ def update_client(
     Returns:
         Dictionary with result or error
     """
-    from openfatture.cli.lifespan import get_event_bus
-    from openfatture.events import ClientUpdatedEvent
+    from openfatture.events import ClientUpdatedEvent, get_global_event_bus
 
     # Validate input
     cliente_id = validate_integer_input(cliente_id, min_value=1)
@@ -238,7 +236,7 @@ def update_client(
         db.refresh(cliente)
 
         # Publish event
-        event_bus = get_event_bus()
+        event_bus = get_global_event_bus()
         if event_bus:
             event_bus.publish(
                 ClientUpdatedEvent(
@@ -280,8 +278,7 @@ def delete_client(
     Returns:
         Dictionary with deletion result
     """
-    from openfatture.cli.lifespan import get_event_bus
-    from openfatture.events import ClientDeletedEvent
+    from openfatture.events import ClientDeletedEvent, get_global_event_bus
 
     # Validate input
     cliente_id = validate_integer_input(cliente_id, min_value=1)
@@ -312,7 +309,7 @@ def delete_client(
         db.commit()
 
         # Publish event
-        event_bus = get_event_bus()
+        event_bus = get_global_event_bus()
         if event_bus:
             event_bus.publish(
                 ClientDeletedEvent(

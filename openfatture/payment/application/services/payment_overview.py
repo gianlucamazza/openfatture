@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -20,8 +20,8 @@ class PaymentDueEntry:
     payment_id: int
     invoice_ref: str
     client_name: str
-    due_date: date
-    days_delta: int
+    due_date: date | None
+    days_delta: int | None
     residual: Decimal
     paid: Decimal
     total: Decimal
@@ -37,6 +37,7 @@ class PaymentDueSummary:
     upcoming: list[PaymentDueEntry]
     total_outstanding: Decimal
     hidden_upcoming: int
+    without_due_date: list[PaymentDueEntry] = field(default_factory=list)
 
 
 def _compute_residual(payment: Pagamento) -> Decimal:
@@ -98,6 +99,7 @@ def collect_payment_due_summary(
         .all()
     )
 
+    unknown: list[PaymentDueEntry] = []
     overdue: list[PaymentDueEntry] = []
     due_soon: list[PaymentDueEntry] = []
     upcoming_full: list[PaymentDueEntry] = []
@@ -109,8 +111,8 @@ def collect_payment_due_summary(
             continue
 
         fattura = getattr(payment, "fattura", None)
-        due_date = getattr(payment, "data_scadenza", None) or today
-        days_delta = (due_date - today).days
+        due_date = getattr(payment, "data_scadenza", None)
+        days_delta = (due_date - today).days if due_date else None
 
         entry = PaymentDueEntry(
             payment_id=getattr(payment, "id", 0),
@@ -130,14 +132,16 @@ def collect_payment_due_summary(
 
         total_outstanding += residual
 
-        if due_date < today:
+        if due_date is None:
+            unknown.append(entry)
+        elif due_date < today:
             overdue.append(entry)
         elif due_date <= due_soon_threshold:
             due_soon.append(entry)
         else:
             upcoming_full.append(entry)
 
-    upcoming_full.sort(key=lambda item: (item.days_delta, item.invoice_ref))
+    upcoming_full.sort(key=lambda item: (item.days_delta or 0, item.invoice_ref))
     hidden_upcoming = max(0, len(upcoming_full) - max_upcoming)
     upcoming = upcoming_full[:max_upcoming]
 
@@ -147,4 +151,5 @@ def collect_payment_due_summary(
         upcoming=upcoming,
         total_outstanding=total_outstanding,
         hidden_upcoming=hidden_upcoming,
+        without_due_date=unknown,
     )

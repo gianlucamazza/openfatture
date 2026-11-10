@@ -268,6 +268,9 @@ class Settings(BaseSettings):
     ai_temperature: float = Field(default=0.7, description="AI temperature")
     ai_max_tokens: int = Field(default=2000, description="AI max tokens")
 
+    ai_model_timeout_seconds: float = Field(default=120, gt=0)
+    ai_tool_timeout_seconds: float = Field(default=60, gt=0)
+
     # AI Chat Assistant
     assistant_backend: Literal["chat", "langgraph"] = Field(
         default=DEFAULT_ASSISTANT_BACKEND,
@@ -305,7 +308,7 @@ class Settings(BaseSettings):
         description="Enable AI tool/function calling",
     )
     ai_enabled_tools: str = Field(
-        default="search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats",
+        default="search_invoices,get_invoice_details,get_invoice_stats,search_clients,get_client_details,get_client_stats,get_collections",
         description=(
             "Comma-separated allowlist of AI tools. Transmit tools such as "
             "send_invoice_to_sdi stay off unless named here; the value 'all' "
@@ -323,12 +326,6 @@ class Settings(BaseSettings):
 
     # Vector Store (for AI)
     vector_store_path: Path = Field(default=Path(dirs.user_data_dir) / "vector_store")
-
-    # Payment module
-    payment_event_listeners: str | None = Field(
-        default=None,
-        description="Comma-separated dotted paths to custom payment event listeners",
-    )
 
     # Global event system
     event_listeners: str | None = Field(

@@ -38,7 +38,7 @@ Use natural language for business operations:
 ```bash
 uv run openfatture assistant "Create an invoice for 3 hours of consulting at 90 euros"
 uv run openfatture assistant "List unpaid invoices"
-uv run openfatture interactive start
+uv run openfatture
 ```
 
 The assistant is the public business interface. Deterministic commands are

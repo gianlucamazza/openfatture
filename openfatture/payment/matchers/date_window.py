@@ -100,11 +100,15 @@ class DateWindowMatcher(IMatcherStrategy):
                 continue
 
             # Check date range
-            if not (date_min <= payment.data_scadenza <= date_max):
+            if payment.data_scadenza is None or not (date_min <= payment.data_scadenza <= date_max):
                 continue
 
             # Calculate confidence based on date proximity
-            date_diff_days = abs((payment.data_scadenza - transaction.date).days)
+            date_diff_days = (
+                abs((payment.data_scadenza - transaction.date).days)
+                if payment.data_scadenza
+                else 999999
+            )
             confidence = self._calculate_confidence(date_diff_days, amount_diff)
 
             # Build match reason
@@ -126,7 +130,11 @@ class DateWindowMatcher(IMatcherStrategy):
         results.sort(
             key=lambda r: (
                 -r.confidence,  # Negative for descending
-                abs((r.payment.data_scadenza - transaction.date).days),
+                (
+                    abs((r.payment.data_scadenza - transaction.date).days)
+                    if r.payment.data_scadenza
+                    else 999999
+                ),
             )
         )
 

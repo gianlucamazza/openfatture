@@ -413,7 +413,12 @@ Rispondi in formato JSON con:
             )
 
         # Analyze payment terms consistency
-        if client_history[0].pagamenti and fattura.pagamenti:
+        if (
+            client_history[0].pagamenti
+            and fattura.pagamenti
+            and client_history[0].pagamenti[0].data_scadenza is not None
+            and fattura.pagamenti[0].data_scadenza is not None
+        ):
             hist_payment_days = (
                 client_history[0].pagamenti[0].data_scadenza - client_history[0].data_emissione
             ).days

@@ -106,7 +106,7 @@ async def test_callbacks_are_session_scoped(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_interrupted_turn_is_persisted_with_partial_usage(monkeypatch, tmp_path):
+async def test_interrupted_turn_remains_pending_with_partial_usage(monkeypatch, tmp_path):
     from openfatture.ai.session.file_store import FileSessionStore
 
     store = FileSessionStore(sessions_dir=tmp_path)
@@ -116,16 +116,17 @@ async def test_interrupted_turn_is_persisted_with_partial_usage(monkeypatch, tmp
     )
     from openfatture.ai.session.models import ChatSession
 
+    instance.settings.data_dir = tmp_path
     instance.persist_session = True
     instance._session = ChatSession()
     instance._session_store = store
     with pytest.raises(RuntimeError):
         _ = [event async for event in instance.stream("read")]
     loaded = store.load(instance.session_id)
-    assert loaded.messages[-1].metadata["status"] == "error"
-    assert loaded.messages[-1].total_tokens == 10
-    assert loaded.messages[-1].metadata["usage_complete"] is False
-    assert loaded.metadata.total_tokens == 10
+    assert loaded.messages == []
+    assert loaded.pending_user_input == "read"
+    assert instance.last_response.usage.total_tokens == 10
+    assert instance.last_response.metadata["usage_complete"] is False
 
 
 @pytest.mark.asyncio

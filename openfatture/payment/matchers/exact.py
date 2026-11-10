@@ -93,7 +93,7 @@ class ExactAmountMatcher(IMatcherStrategy):
                 continue
 
             # Check date match (within tolerance window)
-            if not (date_min <= payment.data_scadenza <= date_max):
+            if payment.data_scadenza is None or not (date_min <= payment.data_scadenza <= date_max):
                 continue
 
             # Perfect match found!
@@ -114,7 +114,11 @@ class ExactAmountMatcher(IMatcherStrategy):
         # Sort by date proximity (closest date first) and amount difference
         results.sort(
             key=lambda r: (
-                abs((r.payment.data_scadenza - transaction.date).days),
+                (
+                    abs((r.payment.data_scadenza - transaction.date).days)
+                    if r.payment.data_scadenza
+                    else 999999
+                ),
                 r.amount_diff,
             )
         )
@@ -134,7 +138,11 @@ class ExactAmountMatcher(IMatcherStrategy):
         Returns:
             Human-readable match reason string
         """
-        date_diff_days = abs((payment.data_scadenza - transaction.date).days)
+        date_diff_days = (
+            abs((payment.data_scadenza - transaction.date).days)
+            if payment.data_scadenza
+            else 999999
+        )
 
         if amount_diff == 0 and date_diff_days == 0:
             return "Perfect match: exact amount and same date"

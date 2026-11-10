@@ -46,6 +46,7 @@ from openfatture.ai.orchestration.states import (
     InvoiceCreationState,
 )
 from openfatture.ai.providers import BaseLLMProvider, create_provider
+from openfatture.billing.application.numbering import next_numero
 from openfatture.billing.fatture.service import InvoiceService
 from openfatture.platform.config import Settings, get_settings
 from openfatture.platform.datetime import utc_now
@@ -111,7 +112,8 @@ class InvoiceCreationWorkflow:
     def __init__(
         self,
         confidence_threshold: float = 0.85,
-        enable_checkpointing: bool = True,
+        enable_checkpointing: bool = False,
+        checkpointer: Any = None,
         settings: Settings | None = None,
         provider: BaseLLMProvider | None = None,
         validate_xml: bool = True,
@@ -123,7 +125,10 @@ class InvoiceCreationWorkflow:
             enable_checkpointing: Enable state persistence for resume
         """
         self.confidence_threshold = confidence_threshold
-        self.enable_checkpointing = enable_checkpointing
+        self.enable_checkpointing = enable_checkpointing or checkpointer is not None
+        self.checkpointer = checkpointer
+        if self.enable_checkpointing and checkpointer is None:
+            raise ValueError("Checkpointing requires an injected checkpointer")
         self.settings = settings or get_settings()
         self.validate_xml = validate_xml
 
@@ -223,14 +228,7 @@ class InvoiceCreationWorkflow:
 
         # Compile with checkpointing
         if self.enable_checkpointing:
-            from importlib import import_module
-
-            checkpoint_module = import_module("langgraph.checkpoint")
-            memory_saver_cls = getattr(checkpoint_module, "MemorySaver", None)
-            if memory_saver_cls is None:
-                raise RuntimeError("LangGraph MemorySaver unavailable")
-            checkpointer = memory_saver_cls()
-            return workflow.compile(checkpointer=checkpointer)
+            return workflow.compile(checkpointer=self.checkpointer)
         return workflow.compile()
 
     # ========================================================================
@@ -822,24 +820,7 @@ class InvoiceCreationWorkflow:
 
     def _generate_invoice_number(self, db: Session, year: int) -> str:
         """Generate progressive invoice number for the given year."""
-        last_invoice = (
-            db.query(Fattura).filter(Fattura.anno == year).order_by(Fattura.numero.desc()).first()
-        )
-
-        if last_invoice is None:
-            return "1"
-
-        try:
-            next_number = int(last_invoice.numero) + 1
-            return str(next_number)
-        except (TypeError, ValueError):
-            # Fallback if previous number not numeric
-            logger.warning(
-                "invoice_number_non_numeric",
-                numero=last_invoice.numero,
-                anno=year,
-            )
-            return f"{last_invoice.numero}-1"
+        return next_numero(db, Fattura, year)
 
     async def execute(
         self,
@@ -916,7 +897,10 @@ class InvoiceCreationWorkflow:
         )
 
         # Execute graph
-        raw_final_state = await self.graph.ainvoke(initial_state)
+        raw_final_state = await self.graph.ainvoke(
+            initial_state,
+            config={"configurable": {"thread_id": str(initial_state.workflow_id)}},
+        )
 
         # LangGraph's ainvoke() is untyped: normalise whatever it returns back
         # into the workflow's own state model.

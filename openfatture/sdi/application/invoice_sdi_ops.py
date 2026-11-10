@@ -108,8 +108,7 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
         Dictionary with send result
     """
     from openfatture.billing.fatture.service import InvoiceService
-    from openfatture.cli.lifespan import get_event_bus
-    from openfatture.events import InvoiceSentEvent
+    from openfatture.events import InvoiceSentEvent, get_global_event_bus
     from openfatture.platform.config import get_settings
     from openfatture.platform.email.sender import TemplatePECSender
 
@@ -166,7 +165,7 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
             return {"error": f"Failed to send invoice: {error}"}
 
         # Publish event
-        event_bus = get_event_bus()
+        event_bus = get_global_event_bus()
         if event_bus:
             try:
                 event_bus.publish(
@@ -199,5 +198,50 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
         db.rollback()
         logger.error("send_invoice_to_sdi_failed", fattura_id=fattura_id, error=str(e))
         return {"error": str(e)}
+    finally:
+        db.close()
+
+
+def generate_invoice_xml(
+    fattura_id: int, output_path: str | None = None, dry_run: bool = False
+) -> dict[str, Any]:
+    """Build FatturaPA XML for an invoice.
+
+    With ``dry_run`` the XML is returned and the invoice record is left
+    unchanged; otherwise it is written to ``output_path`` (or the archive
+    path) and the invoice's ``xml_path`` is committed.
+    """
+    from pathlib import Path
+
+    from openfatture.billing.fatture.service import InvoiceService
+    from openfatture.exceptions import XMLValidationError
+    from openfatture.platform.config import get_settings
+
+    fattura_id = validate_integer_input(fattura_id, min_value=1)
+    db = get_session()
+    try:
+        fattura = db.get(Fattura, fattura_id)
+        if fattura is None:
+            return {"error": f"Invoice {fattura_id} not found"}
+        service = InvoiceService(get_settings())
+        try:
+            xml_content, error = service.generate_xml(fattura, validate=False)
+        except XMLValidationError as exc:
+            return {"error": f"XML validation error: {exc}"}
+        if error:
+            return {"error": error}
+        if dry_run:
+            db.rollback()
+            return {"success": True, "dry_run": True, "xml_content": xml_content}
+        xml_path = Path(output_path) if output_path else service.get_xml_path(fattura)
+        xml_path.parent.mkdir(parents=True, exist_ok=True)
+        xml_path.write_text(xml_content, encoding="utf-8")
+        db.commit()
+        return {
+            "success": True,
+            "fattura_id": fattura_id,
+            "xml_path": str(xml_path),
+            "file_size": xml_path.stat().st_size,
+        }
     finally:
         db.close()

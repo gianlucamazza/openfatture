@@ -224,6 +224,10 @@ class ReminderScheduler:
         if not payment:
             raise ValueError(f"Payment {payment_id} not found")
 
+        if self._has_unassigned_collections(payment):
+            raise ValueError(
+                "Allocate invoice collections to installments before scheduling reminders"
+            )
         outstanding = self._outstanding_amount(payment)
 
         # Validate payment is not fully paid
@@ -233,12 +237,18 @@ class ReminderScheduler:
                 "Cannot schedule reminders for paid invoices."
             )
 
-        if payment.data_scadenza < date.today() and outstanding > Decimal("0.00"):
+        if (
+            payment.data_scadenza is not None
+            and payment.data_scadenza < date.today()
+            and outstanding > Decimal("0.00")
+        ):
             if getattr(payment, "stato", None) != StatoPagamento.SCADUTO:
                 payment.stato = StatoPagamento.SCADUTO
                 self.payment_repo.update(payment)
 
         # 2. Calculate reminder dates
+        if payment.data_scadenza is None:
+            raise ValueError("Cannot schedule a reminder without an attested deadline")
         due_date = payment.data_scadenza
         schedule_days = strategy.get_schedule_days()
 
@@ -323,9 +333,16 @@ class ReminderScheduler:
         for reminder in reminders:
             try:
                 payment = reminder.payment
+                if payment.data_scadenza is None or self._has_unassigned_collections(payment):
+                    logger.warning("reminder_requires_collection_review", payment_id=payment.id)
+                    continue
                 outstanding = self._outstanding_amount(payment)
 
-                if payment.data_scadenza < target_date and outstanding > Decimal("0.00"):
+                if (
+                    payment.data_scadenza is not None
+                    and payment.data_scadenza < target_date
+                    and outstanding > Decimal("0.00")
+                ):
                     if getattr(payment, "stato", None) != StatoPagamento.SCADUTO:
                         payment.stato = StatoPagamento.SCADUTO
                         self.payment_repo.update(payment)
@@ -435,13 +452,28 @@ class ReminderScheduler:
             # Before due date
             return (
                 f"Reminder: Invoice {invoice_number} falls due in {days_before_due} days "
-                f"({payment.data_scadenza.strftime('%d/%m/%Y')}). "
+                f"({payment.data_scadenza.strftime('%d/%m/%Y') if payment.data_scadenza else 'unknown'}). "
                 f"Amount due: €{payment.importo_da_pagare}."
             )
 
     def __repr__(self) -> str:
         """Human-readable string representation."""
         return f"<ReminderScheduler(notifier={self.notifier.__class__.__name__})>"
+
+    @staticmethod
+    def _has_unassigned_collections(payment: "Pagamento") -> bool:
+        from openfatture.storage.database.models import Fattura
+
+        invoice = getattr(payment, "fattura", None)
+        if not isinstance(invoice, Fattura):
+            return False
+        return (
+            sum(
+                (entry.amount for entry in invoice.collection_entries if entry.payment_id is None),
+                Decimal("0.00"),
+            )
+            > 0
+        )
 
     @staticmethod
     def _outstanding_amount(payment: "Pagamento") -> Decimal:

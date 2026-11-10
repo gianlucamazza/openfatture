@@ -5,6 +5,6 @@ A modern, CLI-first invoicing system with AI-powered workflows and full
 compliance with FatturaPA and SDI requirements.
 """
 
-__version__ = "2.5.0"
+__version__ = "2.6.0"
 __author__ = "Gianluca Mazza"
 __license__ = "MIT"

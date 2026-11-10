@@ -208,6 +208,5 @@ The model, application commands, and XML/PDF generators all respect the `data_em
 
 ## Related
 
-- [Payment Terms](./PAYMENT_TERMS.md) - Payment terms reference data_emissione
-- [Invoice Workflow](./INVOICE_WORKFLOW.md) - Status transitions and editing rules
+- [Invoice status lifecycle](invoice-status-lifecycle.md) - Status transitions and editing rules
 - [CLI Reference](./CLI_REFERENCE.md) - Command-line invoice management

@@ -959,7 +959,6 @@ for fattura in invoices:  #
 - [Quick Start Guide](QUICKSTART.md) - Get started with OpenFatture
 - [CLI Reference](CLI_REFERENCE.md) - Full CLI commands
 - [Configuration](CONFIGURATION.md) - System configuration
-- [Batch Operations](BATCH_OPERATIONS.md) - CSV import/export
 
 ---
 

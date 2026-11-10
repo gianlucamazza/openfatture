@@ -16,7 +16,7 @@ This is the current documentation index for the CLI-first, agentic product.
 - [Release notes v2.0.0](releases/v2.0.0.md)
 - [Architecture](ARCHITECTURE.md)
 - [Core vs extras vs extensions](CORE_VS_EXTENSIONS.md)
-- [AI-era redesign](ARCHITECTURE_REDESIGN.md)
+- [AI-era redesign](history/ARCHITECTURE_REDESIGN.md)
 - [AI architecture](AI_ARCHITECTURE.md)
 - [Technical debt](TECHNICAL_DEBT.md)
 - [Security](../SECURITY.md)
@@ -25,18 +25,17 @@ This is the current documentation index for the CLI-first, agentic product.
 ## Core capabilities
 
 - [PDF generation](PDF_GENERATION.md)
-- [Architecture diagrams](ARCHITECTURE_DIAGRAMS.md)
-- [Internationalization](I18N_CLI_IMPLEMENTATION.md)
+- [Architecture diagrams](history/ARCHITECTURE_DIAGRAMS.md)
+- [Internationalization](history/I18N_CLI_IMPLEMENTATION.md)
 
-The assistant is the public entry point for business workflows. The
-underlying domain and integration modules remain available to the assistant
-and to extension code, but they are not duplicated as top-level CLI command
-groups.
+The assistant is the public entry point for business workflows. Only the
+`cliente`, `fattura` and `pagamento` data commands are exposed as
+deterministic CLI groups, as thin adapters over the same application services
+(see [CLI reference](CLI_REFERENCE.md)).
 
 ## Operations
 
 - [Development](DEVELOPMENT.md)
-- [CI/CD](operations/SETUP_CI_CD.md)
 - [Security](../SECURITY.md)
 - [Changelog](../CHANGELOG.md)
 

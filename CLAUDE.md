@@ -4,13 +4,16 @@ OpenFatture is a Python 3.12+ CLI-first application for Italian electronic
 invoicing. The public interface is intentionally agentic and small:
 
 - `openfatture init`
+- `openfatture` (starts the interactive assistant)
 - `openfatture assistant [MESSAGE]`
-- `openfatture interactive start`
 - `openfatture config ...`
 - `openfatture status`
+- `openfatture cliente|fattura|pagamento ...` (deterministic data commands)
 
-Domain operations belong in the application and domain layers. Do not add
-another public command for a workflow that the assistant can express through
+Domain operations belong in the application and domain layers. The data
+command groups are thin adapters over the same application services the
+assistant tools use; they never query ORM models directly. Do not add another
+public command group for a workflow that the assistant can express through
 existing tools.
 
 ## Local workflow
@@ -32,6 +35,8 @@ Use `uv run python -m pytest`, not an unrelated global pytest executable.
 - Keep startup read-only; setup happens only through `init`.
 - Keep `status` read-only and machine-readable with `--json`.
 - Route business actions through the assistant and domain tools.
+- Respect the package import rules in `docs/ARCHITECTURE.md`; they are
+  enforced by `tests/test_import_rules.py`.
 - Preserve confirmation and validation boundaries for mutating tools.
 - Do not add aliases, deprecated command paths, compatibility shims, or
   duplicate implementations.

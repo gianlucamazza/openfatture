@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any
 
 from pydantic import validate_call
-from sqlalchemy import extract, func
+from sqlalchemy import extract, func, or_
 
 from openfatture.payment.application.services.payment_overview import (
     PaymentDueEntry,
@@ -71,7 +71,7 @@ def generate_vat_report(
         query = (
             db.query(Fattura)
             .filter(Fattura.anno == anno)
-            .filter(Fattura.stato != StatoFattura.BOZZA)
+            .filter(or_(Fattura.stato != StatoFattura.BOZZA, Fattura.issued_elsewhere.is_(True)))
         )
 
         # Filter by quarter if specified
@@ -177,7 +177,7 @@ def generate_client_report(anno: int | None = None, limit: int = 20) -> dict[str
                 func.sum(Fattura.totale).label("totale_fatturato"),
             )
             .filter(Fattura.anno == anno)
-            .filter(Fattura.stato != StatoFattura.BOZZA)
+            .filter(or_(Fattura.stato != StatoFattura.BOZZA, Fattura.issued_elsewhere.is_(True)))
             .group_by(Fattura.cliente_id)
             .order_by(func.sum(Fattura.totale).desc())
             .limit(limit)
@@ -212,7 +212,7 @@ def generate_client_report(anno: int | None = None, limit: int = 20) -> dict[str
             )
 
         # Calculate total
-        totale_generale = sum(float(r[2]) for r in results)
+        totale_generale = float(sum((r[2] for r in results), Decimal("0.00")))
 
         logger.info(
             "client_report_generated",
@@ -258,7 +258,9 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
             max_upcoming=max_results,
         )
 
-        has_entries = any(summary.overdue or summary.due_soon or summary.upcoming)
+        has_entries = any(
+            summary.overdue or summary.due_soon or summary.upcoming or summary.without_due_date
+        )
 
         if not has_entries:
             return {
@@ -267,7 +269,8 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
                 "overdue": [],
                 "due_soon": [],
                 "upcoming": [],
-                "message": "No outstanding payments. All invoices are settled!",
+                "without_due_date": [],
+                "message": "No outstanding scheduled payments. Check invoice balances for unscheduled amounts.",
             }
 
         # Format entries
@@ -275,7 +278,7 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
             return {
                 "invoice_ref": entry.invoice_ref,
                 "client_name": entry.client_name,
-                "due_date": entry.due_date.isoformat(),
+                "due_date": entry.due_date.isoformat() if entry.due_date else None,
                 "days_delta": entry.days_delta,
                 "residual": float(entry.residual),
                 "paid": float(entry.paid),
@@ -291,12 +294,17 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
             "due_soon": [format_entry(e) for e in summary.due_soon],
             "upcoming": [format_entry(e) for e in summary.upcoming],
             "hidden_upcoming": summary.hidden_upcoming,
+            "without_due_date": [format_entry(e) for e in summary.without_due_date],
         }
 
         # Add totals by category
-        result["overdue_total"] = sum(float(e.residual) for e in summary.overdue)
-        result["due_soon_total"] = sum(float(e.residual) for e in summary.due_soon)
-        result["upcoming_total"] = sum(float(e.residual) for e in summary.upcoming)
+        result["overdue_total"] = float(sum((e.residual for e in summary.overdue), Decimal("0.00")))
+        result["due_soon_total"] = float(
+            sum((e.residual for e in summary.due_soon), Decimal("0.00"))
+        )
+        result["upcoming_total"] = float(
+            sum((e.residual for e in summary.upcoming), Decimal("0.00"))
+        )
 
         logger.info(
             "due_dates_report_generated",

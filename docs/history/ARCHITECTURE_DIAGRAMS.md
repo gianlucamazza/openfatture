@@ -737,10 +737,10 @@ All diagrams can be exported as:
 
 ## Related Documentation
 
-- [AI Architecture](AI_ARCHITECTURE.md) - Detailed AI module documentation
-- [CLI Reference](CLI_REFERENCE.md) - All command syntax and examples
-- [Quickstart Guide](QUICKSTART.md) - 5-minute setup tutorial
-- [README](../README.md) - Project overview and features
+- [AI Architecture](../AI_ARCHITECTURE.md) - Detailed AI module documentation
+- [CLI Reference](../CLI_REFERENCE.md) - All command syntax and examples
+- [Quickstart Guide](../QUICKSTART.md) - 5-minute setup tutorial
+- [README](../../README.md) - Project overview and features
 
 ---
 

@@ -406,20 +406,10 @@ class FatturaPABuilder:
 
         etree.SubElement(dettaglio_pag, self._qname("ModalitaPagamento")).text = modalita_code
 
-        # Data scadenza
-        from datetime import timedelta
-
-        if pagamento and hasattr(pagamento, "giorni_scadenza"):
-            # Use giorni_scadenza from Pagamento record
-            giorni = pagamento.giorni_scadenza
-            data_scadenza = fattura.data_emissione + timedelta(days=giorni)
-        else:
-            # Fallback: 30 giorni for backward compatibility
-            data_scadenza = fattura.data_emissione + timedelta(days=30)
-
-        etree.SubElement(
-            dettaglio_pag, self._qname("DataScadenzaPagamento")
-        ).text = data_scadenza.isoformat()
+        if pagamento and pagamento.data_scadenza:
+            etree.SubElement(
+                dettaglio_pag, self._qname("DataScadenzaPagamento")
+            ).text = pagamento.data_scadenza.isoformat()
 
         # Importo (total - ritenuta)
         importo_pagamento = fattura.totale

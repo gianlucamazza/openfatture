@@ -12,13 +12,13 @@ def test_public_commands_are_agent_first() -> None:
 
     assert result.exit_code == 0
     # Core commands
-    for command in ("assistant", "interactive", "init", "config", "status"):
+    for command in ("assistant", "init", "config", "status"):
         assert command in result.stdout
-    # First-class data commands (added per UX improvements)
-    for command in ("cliente", "fattura"):
+    # Deterministic data commands (documented in docs/CLI_REFERENCE.md)
+    for command in ("cliente", "fattura", "pagamento"):
         assert command in result.stdout
     # Commands that should remain hidden/removed
-    for removed in ("preventivo", "payment", "ai", "plugin", "web-scraper"):
+    for removed in ("interactive", "preventivo", "payment", "ai", "plugin", "web-scraper"):
         assert removed not in result.stdout
 
 
@@ -70,8 +70,58 @@ def test_init_runs_directly_without_nested_subcommand(tmp_path, monkeypatch) -> 
     assert settings.certificates_dir.is_dir()
 
 
-def test_no_command_shows_help_without_error():
-    result = runner.invoke(app, [])
+def test_no_command_starts_the_same_session_as_assistant(monkeypatch):
+    from openfatture.cli.commands import assistant
+
+    calls = []
+
+    async def record(ctx, message, stream, json_output, session):
+        calls.append((ctx.obj["format"], message, stream, json_output, session))
+
+    monkeypatch.setattr(assistant, "_run_assistant", record)
+    for args in ([], ["assistant"]):
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, result.output
+        assert "Usage:" not in result.stdout
+    assert calls == [("rich", None, True, False, None)] * 2
+
+
+def test_default_assistant_rejects_structured_output_without_a_request():
+    import json
+
+    for args in (["--format", "json"], ["--format", "json", "assistant"]):
+        result = runner.invoke(app, args)
+        assert result.exit_code == 2, result.output
+        assert json.loads(result.stdout)["error"]["code"] == "interactive_format"
+
+
+def test_help_and_version_do_not_start_the_assistant(monkeypatch):
+    from openfatture.cli.commands import assistant
+
+    def unexpected(*args, **kwargs):
+        raise AssertionError("Assistant must not start for help or version")
+
+    monkeypatch.setattr(assistant, "run_sync_with_lifespan", unexpected)
+    for args in (["--help"], ["--version"], ["status", "--help"]):
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, result.output
+
+
+def test_help_groups_commands():
+    result = runner.invoke(app, ["--help"], terminal_width=120)
     assert result.exit_code == 0
-    assert "Usage:" in result.stdout
-    assert "assistant" in result.stdout
+    for panel in ("Assistente", "Gestione dati", "Configurazione e diagnostica"):
+        assert panel in result.stdout
+    assert "openfatture assistant" in result.stdout
+
+
+def test_removed_interactive_command_is_rejected(monkeypatch):
+    from openfatture.cli.commands import assistant
+
+    def unexpected(*args, **kwargs):
+        raise AssertionError("Removed command must not start the assistant")
+
+    monkeypatch.setattr(assistant, "run_sync_with_lifespan", unexpected)
+    result = runner.invoke(app, ["interactive", "start"])
+    assert result.exit_code == 2
+    assert "No such command" in result.output

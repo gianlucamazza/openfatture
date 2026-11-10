@@ -1,5 +1,6 @@
 """Tools for payment tracking and reconciliation operations."""
 
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -45,12 +46,18 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
         # Get all payments for this invoice
         pagamenti = db.query(Pagamento).filter(Pagamento.fattura_id == fattura_id).all()
 
-        if not pagamenti:
+        from openfatture.billing.application.invoice_queries import payment_summary
+
+        summary = payment_summary(fattura, pagamenti)
+        if not pagamenti and not getattr(fattura, "collection_entries", []):
             return {
                 "invoice_id": fattura_id,
                 "invoice_number": f"{fattura.numero}/{fattura.anno}",
                 "total_amount": float(fattura.totale),
-                "payment_status": "no_payment_record",
+                **summary,
+                "outstanding": float(fattura.totale),
+                "payments_count": 0,
+                "unscheduled_amount": float(fattura.totale),
                 "amount_paid": 0.0,
                 "amount_due": float(fattura.totale),
                 "payments": [],
@@ -61,6 +68,10 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
         total_paid = sum((p.importo_pagato for p in pagamenti), Decimal("0.00"))
         scheduled = sum((p.importo for p in pagamenti), Decimal("0.00"))
         total_due = fattura.totale
+        total_paid += sum(
+            (e.amount for e in getattr(fattura, "collection_entries", []) if e.payment_id is None),
+            Decimal("0.00"),
+        )
         outstanding = max(total_due - total_paid, Decimal("0.00"))
 
         payments_info = []
@@ -72,9 +83,12 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
                     "importo_pagato": float(p.importo_pagato),
                     "saldo_residuo": float(p.saldo_residuo),
                     "stato": p.stato.value,
-                    "data_scadenza": p.data_scadenza.isoformat(),
+                    "data_scadenza": p.data_scadenza.isoformat() if p.data_scadenza else None,
                     "data_pagamento": p.data_pagamento.isoformat() if p.data_pagamento else None,
                     "modalita": p.modalita,
+                    "overdue": bool(
+                        p.data_scadenza and p.data_scadenza < date.today() and p.saldo_residuo > 0
+                    ),
                 }
             )
 
@@ -85,7 +99,7 @@ def get_payment_status(fattura_id: int) -> dict[str, Any]:
             "invoice_id": fattura_id,
             "invoice_number": f"{fattura.numero}/{fattura.anno}",
             "total_amount": float(fattura.totale),
-            "payment_status": payment_summary(fattura, pagamenti)["payment_status"],
+            **summary,
             "amount_paid": float(total_paid),
             "amount_due": float(total_due),
             "outstanding": float(outstanding),
@@ -152,9 +166,12 @@ def search_payments(
                     "importo_pagato": float(p.importo_pagato),
                     "saldo_residuo": float(p.saldo_residuo),
                     "stato": p.stato.value,
-                    "data_scadenza": p.data_scadenza.isoformat(),
+                    "data_scadenza": p.data_scadenza.isoformat() if p.data_scadenza else None,
                     "data_pagamento": p.data_pagamento.isoformat() if p.data_pagamento else None,
                     "modalita": p.modalita,
+                    "overdue": bool(
+                        p.data_scadenza and p.data_scadenza < date.today() and p.saldo_residuo > 0
+                    ),
                 }
             )
 

@@ -10,6 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, TypedDict
 
+from sqlalchemy import Integer, cast
 from sqlalchemy.orm import Session, selectinload
 
 from openfatture.platform.logging import get_logger
@@ -23,10 +24,16 @@ logger = get_logger(__name__)
 def payment_summary(invoice: Fattura, payments: Any = None) -> dict[str, Any]:
     """Summarize recorded collections against the full invoice total."""
     payments = invoice.pagamenti if payments is None else payments
+    entries = list(getattr(invoice, "collection_entries", []))
+    statements = list(getattr(invoice, "collection_statements", []))
     paid = sum((p.importo_pagato for p in payments), Decimal("0.00"))
+    paid += sum(
+        (e.amount for e in entries if e.payment_id is None),
+        Decimal("0.00"),
+    )
     status = (
         "no_payment_record"
-        if not payments
+        if not payments and not entries
         else "fully_paid"
         if paid >= invoice.totale
         else "partially_paid"
@@ -35,6 +42,14 @@ def payment_summary(invoice: Fattura, payments: Any = None) -> dict[str, Any]:
     )
     return {
         "payment_status": status,
+        "collection_statement": (
+            {
+                "value": max(statements, key=lambda st: st.id).value,
+                "source": max(statements, key=lambda st: st.id).source,
+            }
+            if statements
+            else None
+        ),
         "amount_paid": float(paid),
         "outstanding": float(max(invoice.totale - paid, Decimal("0.00"))),
     }
@@ -97,6 +112,8 @@ def search_invoices(
             selectinload(Fattura.pagamenti),
             selectinload(Fattura.sdi_receipts),
             selectinload(Fattura.sdi_submissions),
+            selectinload(Fattura.collection_entries),
+            selectinload(Fattura.collection_statements),
         )
 
         if query:
@@ -113,7 +130,9 @@ def search_invoices(
         if cliente_id:
             db_query = db_query.filter(Fattura.cliente_id == cliente_id)
 
-        db_query = db_query.order_by(Fattura.anno.desc(), Fattura.numero.desc())
+        db_query = db_query.order_by(
+            Fattura.anno.desc(), cast(Fattura.numero, Integer).desc(), Fattura.numero.desc()
+        )
         fatture = db_query.limit(limit).all()
 
         results = []
@@ -165,6 +184,8 @@ def get_invoice_details(
                 selectinload(Fattura.righe),
                 selectinload(Fattura.sdi_receipts),
                 selectinload(Fattura.sdi_submissions),
+                selectinload(Fattura.collection_entries),
+                selectinload(Fattura.collection_statements),
                 selectinload(Fattura.pagamenti),
             )
             .filter(Fattura.id == fattura_id)
@@ -253,7 +274,12 @@ def get_invoice_stats(
             stats["totale_fatture"] += count
         fatture = (
             db.query(Fattura)
-            .options(selectinload(Fattura.pagamenti), selectinload(Fattura.sdi_submissions))
+            .options(
+                selectinload(Fattura.pagamenti),
+                selectinload(Fattura.sdi_submissions),
+                selectinload(Fattura.collection_entries),
+                selectinload(Fattura.collection_statements),
+            )
             .filter(Fattura.anno == year)
             .all()
         )
@@ -284,7 +310,14 @@ def get_invoice_stats(
             summary = payment_summary(invoice)
             status = summary["payment_status"]
             result["per_stato_incasso"][status] = result["per_stato_incasso"].get(status, 0) + 1
-            paid = sum((p.importo_pagato for p in invoice.pagamenti), Decimal("0.00"))
+            paid = sum((p.importo_pagato for p in invoice.pagamenti), Decimal("0.00")) + sum(
+                (
+                    e.amount
+                    for e in getattr(invoice, "collection_entries", [])
+                    if e.payment_id is None
+                ),
+                Decimal("0.00"),
+            )
             collected += paid
             outstanding += max(invoice.totale - paid, Decimal("0.00"))
         result["incassato_totale"] = float(collected)

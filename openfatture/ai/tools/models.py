@@ -208,6 +208,7 @@ class Tool(BaseModel):
                             success=False,
                             error=str(e),
                             error_type=error_type,
+                            metadata={"outcome_uncertain": not self.retry_safe},
                             tool_name=self.name,
                             execution_time=execution_time,
                             retries=attempt,

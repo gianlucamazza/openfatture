@@ -3,8 +3,10 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+from sqlalchemy import Integer, cast
 from sqlalchemy.orm import Session
 
+from openfatture.billing.application.numbering import next_numero
 from openfatture.platform.config import Settings
 from openfatture.storage.database.models import (
     Cliente,
@@ -56,17 +58,7 @@ class PreventivoService:
 
             # Generate numero (sequential per year)
             anno = date.today().year
-            ultimo_preventivo = (
-                db.query(Preventivo)
-                .filter(Preventivo.anno == anno)
-                .order_by(Preventivo.numero.desc())
-                .first()
-            )
-
-            if ultimo_preventivo:
-                prossimo_numero = int(ultimo_preventivo.numero) + 1
-            else:
-                prossimo_numero = 1
+            prossimo_numero = next_numero(db, Preventivo, anno)
 
             # Calculate expiration date
             data_emissione = date.today()
@@ -74,7 +66,7 @@ class PreventivoService:
 
             # Create preventivo
             preventivo = Preventivo(
-                numero=str(prossimo_numero),
+                numero=prossimo_numero,
                 anno=anno,
                 data_emissione=data_emissione,
                 data_scadenza=data_scadenza,
@@ -158,7 +150,11 @@ class PreventivoService:
         Returns:
             List of Preventivo objects
         """
-        query = db.query(Preventivo).order_by(Preventivo.anno.desc(), Preventivo.numero.desc())
+        query = db.query(Preventivo).order_by(
+            Preventivo.anno.desc(),
+            cast(Preventivo.numero, Integer).desc(),
+            Preventivo.numero.desc(),
+        )
 
         if stato:
             query = query.filter(Preventivo.stato == stato)
@@ -295,21 +291,11 @@ class PreventivoService:
 
             # Generate invoice number (sequential per year)
             anno = date.today().year
-            ultima_fattura = (
-                db.query(Fattura)
-                .filter(Fattura.anno == anno)
-                .order_by(Fattura.numero.desc())
-                .first()
-            )
-
-            if ultima_fattura:
-                prossimo_numero = int(ultima_fattura.numero) + 1
-            else:
-                prossimo_numero = 1
+            prossimo_numero = next_numero(db, Fattura, anno)
 
             # Create fattura
             fattura = Fattura(
-                numero=str(prossimo_numero),
+                numero=prossimo_numero,
                 anno=anno,
                 data_emissione=date.today(),
                 tipo_documento=tipo_documento,

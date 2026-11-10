@@ -177,7 +177,7 @@ class FuzzyDescriptionMatcher(IMatcherStrategy):
         candidates = []
         for payment in payments:
             # Check date range
-            if not (date_min <= payment.data_scadenza <= date_max):
+            if payment.data_scadenza is None or not (date_min <= payment.data_scadenza <= date_max):
                 continue
 
             # Check amount range

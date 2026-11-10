@@ -12,7 +12,7 @@ All tests use mock providers / mock clients. No network access.
 """
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -322,16 +322,15 @@ async def test_chat_agent_dispatches_to_graph_react(mock_tool_registry):
     context = ChatContext(user_input="Quante fatture?", enable_tools=True)
     context.available_tools = ["get_invoice_count"]
 
-    with patch("openfatture.ai.orchestration.react.ReActOrchestrator") as mock_react_cls:
-        instance = mock_react_cls.return_value
-        instance.execute = AsyncMock(return_value="Risposta ReAct con 42 fatture.")
-        instance.get_metrics = MagicMock(return_value={"total_executions": 1})
-
-        response = await agent.execute(context)
-
+    provider.generate = AsyncMock(
+        return_value=AgentResponse(
+            content="<final_answer>Risposta ReAct con 42 fatture.</final_answer>"
+        )
+    )
+    response = await agent.execute(context)
     assert "Risposta ReAct" in response.content
     assert response.metadata["orchestrator"] == "langgraph_react"
-    mock_react_cls.assert_called_once()
+    provider.generate.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ class TransactionStatus(StrEnum):
     """
 
     UNMATCHED = "unmatched"  # Transaction not yet matched to any payment
+    PARTIALLY_MATCHED = "partially_matched"
     MATCHED = "matched"  # Transaction successfully matched
     IGNORED = "ignored"  # Transaction manually marked as irrelevant
 

@@ -44,11 +44,15 @@ class Provider:
     model = 'fake-model'
     provider_name = 'openai'
     supports_tools = True
+    waited = False
     async def generate(self, messages, **kwargs):
         if messages[-1].role.value == 'tool':
             return AgentResponse(content='TOOL_DONE', usage=UsageMetrics(total_tokens=1))
         text = messages[-1].content
+        if text == 'wait' and self.waited:
+            return AgentResponse(content='WAIT_DONE')
         if text == 'wait':
+            self.waited = True
             print('WAIT_READY', flush=True)
             await asyncio.Event().wait()
         if text == 'long':
@@ -63,7 +67,7 @@ app()
 
 
 class Terminal:
-    def __init__(self, tmp_path, width):
+    def __init__(self, tmp_path, width, command=("assistant",)):
         import fcntl
         import pty
         import termios
@@ -84,7 +88,7 @@ class Terminal:
                 CERTIFICATES_DIR=str(tmp_path / "certs"),
                 AI_MODEL="fake-model",
             )
-            os.execve(sys.executable, [sys.executable, "-u", "-c", CHILD, "assistant"], env)
+            os.execve(sys.executable, [sys.executable, "-u", "-c", CHILD, *command], env)
         self.output = b""
         fcntl.ioctl(self.fd, termios.TIOCSWINSZ, struct.pack("HHHH", 12, width, 0, 0))
 
@@ -123,8 +127,9 @@ class Terminal:
 
 
 @pytest.mark.parametrize("width", [40, 80, 120])
-def test_real_terminal_long_response_confirmation_and_interrupt(tmp_path, width):
-    terminal = Terminal(tmp_path, width)
+@pytest.mark.parametrize("command", [(), ("assistant",)])
+def test_real_terminal_long_response_confirmation_and_interrupt(tmp_path, width, command):
+    terminal = Terminal(tmp_path, width, command)
     try:
         terminal.expect("Tu ›")
         terminal.send("long\n")
@@ -145,6 +150,9 @@ def test_real_terminal_long_response_confirmation_and_interrupt(tmp_path, width)
         terminal.expect("WAIT_READY")
         terminal.resize(max(30, width // 2))
         os.kill(terminal.pid, signal.SIGINT)
+        terminal.expect("Tu ›")
+        terminal.send("/resume\n")
+        terminal.expect("WAIT_DONE")
         terminal.expect("Tu ›")
         terminal.send("hello\n")
         terminal.expect("HELLO_DONE")

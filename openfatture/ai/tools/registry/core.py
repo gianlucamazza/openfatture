@@ -47,6 +47,7 @@ class ToolRegistry:
 
         from openfatture.ai.runtime.contracts import ActivityCallback, ConfirmCallback
 
+        self.execution_timeout_seconds: float = 60
         self.confirmation_callback: ConfirmCallback | None = None
         self.activity_callback: ActivityCallback | None = None
         self.outcome_callback: Callable[[str, bool], Awaitable[None]] | None = None
@@ -634,7 +635,10 @@ class ToolRegistry:
         ):
             from copy import deepcopy
 
-            if self.confirmation_callback is not None:
+            if source == "human" and confirmed:
+                approved = True
+                error_type = "confirmation_denied"
+            elif self.confirmation_callback is not None:
                 approved = await self.confirmation_callback(tool_name, deepcopy(parameters))
                 error_type = "confirmation_denied"
             else:
@@ -739,7 +743,9 @@ class ToolRegistry:
             activity = getattr(self, "activity_callback", None)
             if activity:
                 await activity(tool_name)
-            result = await tool.execute(**parameters)
+            result = await asyncio.wait_for(
+                tool.execute(**parameters), timeout=self.execution_timeout_seconds
+            )
 
             # Record circuit breaker success/failure (Phase 3)
             if result.success:

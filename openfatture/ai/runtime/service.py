@@ -11,7 +11,8 @@ Backends (settings ``assistant_backend``):
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
+from contextlib import ExitStack, contextmanager
 from typing import TYPE_CHECKING, Any, cast
 
 from openfatture.ai.domain.context import ChatContext
@@ -98,6 +99,7 @@ class AssistantRuntime:
         from copy import copy
 
         self._tool_registry = copy(get_tool_registry())
+        self._tool_registry.execution_timeout_seconds = self.settings.ai_tool_timeout_seconds
         self._tool_registry.confirmation_callback = interaction.confirm if interaction else None
         self._tool_registry.activity_callback = interaction.activity if interaction else None
         self._tool_registry.outcome_callback = interaction.finished if interaction else None
@@ -125,6 +127,9 @@ class AssistantRuntime:
             from openfatture.ai.runtime.graph_backend import GraphAssistantBackend
 
             self._graph_backend = GraphAssistantBackend(
+                model_timeout_seconds=self.settings.ai_model_timeout_seconds,
+                temperature=self.settings.ai_temperature,
+                max_tokens=self.settings.ai_max_tokens,
                 provider=self._provider,
                 tool_registry=self._tool_registry,
                 enable_tools=enable_tools,
@@ -167,6 +172,48 @@ class AssistantRuntime:
     def session_id(self) -> str | None:
         return self._session.id if self._session is not None else None
 
+    @property
+    def pending_user_input(self) -> str | None:
+        return self._session.pending_user_input if self._session else None
+
+    async def resume(self) -> AgentResponse:
+        if self.pending_user_input is None:
+            raise ValueError("No pending turn")
+        return await self.run(self.pending_user_input)
+
+    def uncertain_tools(self) -> list[dict[str, Any]]:
+        from openfatture.ai.runtime.durability import ExecutionJournal
+
+        if self._session is None or self._session.pending_turn_id is None:
+            return []
+        journal = ExecutionJournal(self.settings.data_dir / "ai" / "runtime" / "executions.sqlite")
+        return journal.unresolved(f"{self._session.id}:{self._session.pending_turn_id}")
+
+    def reconcile_tool(self, call_id: str, result: dict[str, Any], evidence: str) -> None:
+        from openfatture.ai.runtime.durability import ExecutionJournal
+
+        if self._session is None:
+            raise ValueError("Reconciliation requires a persistent session")
+        journal = ExecutionJournal(self.settings.data_dir / "ai" / "runtime" / "executions.sqlite")
+        with self._session_guard(), journal.session_lock(self._session.id):
+            if call_id not in {entry["call_id"] for entry in self.uncertain_tools()}:
+                raise ValueError("Receipt does not belong to this pending turn")
+            journal.reconcile(call_id, result, evidence)
+
+    @contextmanager
+    def _session_guard(self) -> Iterator[None]:
+        from openfatture.ai.runtime.durability import ExecutionJournal
+
+        if self._session is None or self._session_store is None:
+            yield
+            return
+        journal = ExecutionJournal(self.settings.data_dir / "ai" / "runtime" / "executions.sqlite")
+        with journal.session_lock("runtime:" + self._session.id):
+            latest = self._session_store.load(self._session.id)
+            if latest is not None:
+                self._session = latest
+            yield
+
     def _context(
         self,
         user_input: str,
@@ -184,6 +231,21 @@ class AssistantRuntime:
         else:
             conv = ConversationHistory()
         context = ChatContext(user_input=user_input, conversation_history=conv)
+        if self._session is not None and self._graph_backend is not None:
+            import uuid
+
+            if self._session.pending_turn_id and self._session.pending_user_input != user_input:
+                raise ValueError("A pending turn must be resumed before a new message")
+            if not self._session.pending_turn_id:
+                self._session.pending_turn_id = str(uuid.uuid4())
+                self._session.pending_user_input = user_input
+                if self._session_store and not self._session_store.save(self._session):
+                    raise RuntimeError("Unable to persist pending turn")
+            context.session_id = self._session.id
+            context.metadata["turn_id"] = self._session.pending_turn_id
+            context.metadata["checkpoint_directory"] = str(
+                self.settings.data_dir / "ai" / "runtime"
+            )
         if self.enable_tools and not context.available_tools:
             context.available_tools = [t.name for t in self._tool_registry.list_tools()]
         return context
@@ -193,6 +255,10 @@ class AssistantRuntime:
     ) -> None:
         if not self.persist_session or self._session is None or self._session_store is None:
             return
+        original = self._session
+        self._session = original.model_copy(deep=True)
+        self._session.pending_turn_id = None
+        self._session.pending_user_input = None
         self._session.add_user_message(user_input)
         tokens = 0
         cost = 0.0
@@ -216,37 +282,48 @@ class AssistantRuntime:
             if response
             else {},
         )
-        self._session_store.save(self._session)
+        try:
+            if not self._session_store.save(self._session):
+                raise RuntimeError("Unable to persist completed turn")
+        except Exception:
+            self._session = original
+            raise
         logger.debug("assistant_session_saved", session_id=self._session.id)
 
     def clear_session(self) -> bool:
-        if self._session is None:
-            return False
-        self._session.clear_messages()
-        if self._session_store:
-            self._session_store.save(self._session)
-        return True
+        with self._session_guard():
+            if self._session is None:
+                return False
+            if self._session.pending_turn_id:
+                raise ValueError("Resume or reconcile the pending turn before clearing history")
+            self._session.clear_messages()
+            if self._session_store and not self._session_store.save(self._session):
+                raise RuntimeError("Unable to save cleared history")
+            return True
 
     def _finish_turn(
         self, user_input: str, response: AgentResponse, accounting: TurnAccounting
     ) -> None:
         response.provider = response.provider or self._provider.provider_name
         response.model = response.model or self._provider.model
-        if accounting.calls:
+        if accounting.calls and response.usage.total_tokens <= accounting.usage.total_tokens:
             response.usage = accounting.usage.model_copy(deep=True)
         if accounting.incomplete or not accounting.calls:
             response.metadata["usage_complete"] = False
         else:
             response.metadata["usage_complete"] = True
+        billed = accounting.usage
         for name in ("prompt_tokens", "completion_tokens", "total_tokens", "estimated_cost_usd"):
             setattr(
                 self.total_usage,
                 name,
-                getattr(self.total_usage, name) + getattr(response.usage, name),
+                getattr(self.total_usage, name) + getattr(billed, name),
             )
-        self.total_usage.cost_known &= response.usage.cost_known
+        self.total_usage.cost_known &= billed.cost_known
         response.metadata["tool_outcomes"] = accounting.tool_outcomes
         self.last_response = response
+        if response.metadata.get("interrupted") or (self._session and accounting.incomplete):
+            return
         self.turn_count += 1
         from openfatture.events import get_global_event_bus
         from openfatture.events.ai_events import AITurnCompletedEvent
@@ -264,13 +341,16 @@ class AssistantRuntime:
                     error=response.error,
                 )
             )
-        self._persist_turn(user_input, response.content, response)
+        if not accounting.incomplete and not response.metadata.get("interrupted"):
+            self._persist_turn(user_input, response.content, response)
 
     async def run(
         self, user_input: str, *, history: list[dict[str, str]] | ConversationHistory | None = None
     ) -> AgentResponse:
         import asyncio
 
+        lease = ExitStack()
+        lease.enter_context(self._session_guard())
         accounting = TurnAccounting()
         token = current_accounting.set(accounting)
         response = AgentResponse(
@@ -295,19 +375,25 @@ class AssistantRuntime:
             accounting.incomplete = True
             raise
         finally:
-            self._finish_turn(user_input, response, accounting)
-            current_accounting.reset(token)
+            try:
+                self._finish_turn(user_input, response, accounting)
+            finally:
+                current_accounting.reset(token)
+                lease.close()
 
     async def stream(
         self, user_input: str, *, history: list[dict[str, str]] | ConversationHistory | None = None
     ) -> AsyncIterator[StreamEvent]:
         import asyncio
 
+        lease = ExitStack()
+        lease.enter_context(self._session_guard())
         accounting = TurnAccounting()
         token = current_accounting.set(accounting)
         response = AgentResponse(
             content="", status=ResponseStatus.PARTIAL, usage=UsageMetrics(cost_known=False)
         )
+        iterator: AsyncIterator[StreamEvent] | None = None
         parts: list[str] = []
         try:
             context = self._context(user_input, history)
@@ -321,6 +407,7 @@ class AssistantRuntime:
                 if item.type.value == "done":
                     response.status = ResponseStatus(item.metadata.get("status", "partial"))
                     response.error = item.metadata.get("error")
+                    response.metadata["interrupted"] = item.metadata.get("interrupted", False)
                 elif item.type.value == "error":
                     response.status = ResponseStatus.ERROR
                     response.error = str(item.data)
@@ -339,11 +426,18 @@ class AssistantRuntime:
             accounting.incomplete = True
             raise
         finally:
-            response.content = "".join(parts)
             try:
-                self._finish_turn(user_input, response, accounting)
+                if iterator is not None:
+                    close = getattr(iterator, "aclose", None)
+                    if close is not None:
+                        await close()
             finally:
-                current_accounting.reset(token)
+                response.content = "".join(parts)
+                try:
+                    self._finish_turn(user_input, response, accounting)
+                finally:
+                    current_accounting.reset(token)
+                    lease.close()
 
 
 def create_assistant_runtime(**kwargs: Any) -> AssistantRuntime:

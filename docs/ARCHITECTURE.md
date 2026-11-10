@@ -7,12 +7,13 @@ application services and assistant tools.
 ## Public surface
 
 - `openfatture init`
-- `openfatture assistant [MESSAGE]`
-- `openfatture interactive start`
+- `openfatture` (interactive assistant) and `openfatture assistant [MESSAGE]`
 - `openfatture config ...`
 - `openfatture status`
+- `openfatture cliente|fattura|pagamento ...` — deterministic data commands,
+  thin adapters over the same application services the assistant tools use
 
-Business operations are not duplicated as top-level CLI groups. See
+No other business workflow gets its own top-level CLI group. See
 [CLI_REFERENCE.md](CLI_REFERENCE.md) and [AI_ARCHITECTURE.md](AI_ARCHITECTURE.md).
 
 ## Package layout (2.0)
@@ -34,7 +35,7 @@ openfatture/
 
 Removed from the product: browser `web`, `web_scraper`, `ai.voice`, orphan
 analytics agents, and the experimental in-process `plugins` package. See
-[ARCHITECTURE_REDESIGN.md](ARCHITECTURE_REDESIGN.md) and
+[ARCHITECTURE_REDESIGN.md](history/ARCHITECTURE_REDESIGN.md) and
 [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md).
 
 **Core vs extras vs extensions:** billing/SDI/payment/PDF are core; AI/RAG/ML/
@@ -44,9 +45,15 @@ are feature extras; user automation uses **hooks**.
 
 1. `cli` may call application services and AI entrypoints only.
 2. `ai` tools call application services; they are not a second domain layer.
-3. Domain packages do not import `cli` or `ai`.
-4. `platform` and `storage` do not depend on `ai`.
-5. Optional features fail with an explicit install hint when extras are missing.
+3. Domain packages (`billing`, `payment`, `sdi`, `pdf`) and `storage`,
+   `events`, `hooks`, `platform` do not import `cli` or `ai`; `ai` does not
+   import `cli`. Application services publish through
+   `events.get_global_event_bus()`.
+4. Optional features fail with an explicit install hint when extras are missing.
+
+Rule 3 is enforced by `tests/test_import_rules.py`. Known remaining coupling:
+`platform/email` depends on `billing` and `sdi`, and `storage` models
+reference payment ORM models lazily.
 
 ### Optional extras
 
@@ -55,7 +62,7 @@ are feature extras; user automation uses **hooks**.
 | *(core)* | Billing, SDI, payment, PDF, storage, platform, CLI, hooks engine |
 | `ai` | LLM providers, assistant, tools, orchestration |
 | `rag` | Vector store and embeddings |
-| `ml` | Forecasting models (optional / frozen features) |
+| `ml` | Forecasting models (frozen: not started by the CLI, no assistant tool uses them) |
 | `dev` | Tests and linters |
 | `all` | Union of feature extras |
 
@@ -83,11 +90,11 @@ Startup is read-only; setup happens only through `init`.
 
 ## Related docs
 
-- [Architecture complete](ARCHITECTURE_COMPLETE.md) — comprehensive roadmap, public surface, and phased delivery
+- [Architecture complete](history/ARCHITECTURE_COMPLETE.md) — comprehensive roadmap, public surface, and phased delivery
 - [Core vs extras vs extensions](CORE_VS_EXTENSIONS.md) — what is plugin vs core
-- [AI-era redesign](ARCHITECTURE_REDESIGN.md) — unify under LangGraph; deprecate list
+- [AI-era redesign](history/ARCHITECTURE_REDESIGN.md) — unify under LangGraph; deprecate list
 - [AI architecture](AI_ARCHITECTURE.md) — current assistant flow and tools
 - [Configuration](CONFIGURATION.md)
 - [Status](STATUS.md) — migration progress
 - [Technical debt](TECHNICAL_DEBT.md)
-- [Architecture diagrams](ARCHITECTURE_DIAGRAMS.md) — historical visuals
+- [Architecture diagrams](history/ARCHITECTURE_DIAGRAMS.md) — historical visuals

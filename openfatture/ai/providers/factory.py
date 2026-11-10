@@ -9,25 +9,11 @@ import httpx
 from openfatture.ai.config import AISettings, get_ai_settings
 
 if TYPE_CHECKING:
-    from contextvars import ContextVar
-
     from openfatture.ai.providers.anthropic import AnthropicProvider
     from openfatture.ai.providers.ollama import OllamaProvider
     from openfatture.ai.providers.openai import OpenAIProvider
-
-    _http_client_context: ContextVar[httpx.AsyncClient | None] | None
-    _has_context: bool
-else:
-    try:
-        # _http_client_context is intentionally private - used for shared HTTP client lifecycle
-        from openfatture.cli.lifespan import _http_client_context
-
-        _has_context = True
-    except ImportError:
-        # CLI lifespan module not available (e.g., in tests or non-CLI usage)
-        _http_client_context = None
-        _has_context = False
 from openfatture.ai.providers.base import BaseLLMProvider, ProviderError
+from openfatture.platform.http_context import shared_http_client
 from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
@@ -80,11 +66,8 @@ def create_provider(
         provider_type = settings.provider
 
     # Get HTTP client from context if not provided
-    if http_client is None and _has_context and _http_client_context is not None:
-        try:
-            http_client = _http_client_context.get()
-        except LookupError:
-            pass  # No context available
+    if http_client is None:
+        http_client = shared_http_client.get()
 
     # Validate provider type
     if provider_type not in ("openai", "anthropic", "ollama"):

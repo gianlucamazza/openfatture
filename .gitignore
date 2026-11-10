@@ -121,3 +121,7 @@ landing-page/dist/
 # (the lock file records a PID and session id).
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+
+# Local scratch output and database backups
+/tmp/
+*.db.bak-*

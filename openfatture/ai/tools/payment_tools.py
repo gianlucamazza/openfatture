@@ -167,8 +167,8 @@ def get_payment_tools() -> list[Tool]:
                 ToolParameter(
                     name="data_scadenza",
                     type=ToolParameterType.STRING,
-                    description="Due date (YYYY-MM-DD)",
-                    required=True,
+                    description="Attested due date (YYYY-MM-DD), omit if unknown",
+                    required=False,
                 ),
                 ToolParameter(
                     name="importo_pagato",

@@ -257,7 +257,7 @@ class ClientBehaviorFeatureExtractor(BaseEstimator, TransformerMixin):
         for fattura in fatture:
             if fattura.pagamenti:
                 for pagamento in fattura.pagamenti:
-                    if pagamento.data_pagamento:
+                    if pagamento.data_pagamento and pagamento.data_scadenza:
                         # Calculate delay (positive = late, negative = early)
                         delay_days = (pagamento.data_pagamento - pagamento.data_scadenza).days
                         payment_delays.append(delay_days)

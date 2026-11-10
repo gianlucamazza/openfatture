@@ -126,6 +126,7 @@ class StreamChunk(BaseModel):
     is_final: bool = False
     tool_call: ToolCall | None = None
     finish_reason: str | None = None
+    usage: UsageMetrics | None = None
 
     def __str__(self) -> str:
         """String representation."""

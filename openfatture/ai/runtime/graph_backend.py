@@ -14,6 +14,7 @@ from openfatture.ai.domain.message import Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.runtime.constants import DEFAULT_TOOL_MAX_ITERATIONS
+from openfatture.ai.runtime.model_calls import generate
 from openfatture.ai.runtime.prompt import build_chat_messages, build_chat_system_prompt
 from openfatture.ai.streaming.events import StreamEvent
 from openfatture.ai.tools.registry import ToolRegistry
@@ -37,6 +38,7 @@ class GraphAssistantBackend:
         debug_config: DebugConfig | None = None,
         temperature: float = 0.7,
         max_tokens: int = 1500,
+        model_timeout_seconds: float = 120,
     ) -> None:
         require_extra("ai", feature="LangGraph assistant backend")
         self.provider = provider
@@ -46,6 +48,7 @@ class GraphAssistantBackend:
         self.debug_config = debug_config
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.model_timeout_seconds = model_timeout_seconds
         self._compiled_tool_graph: Any | None = None
 
     def prepare_context(self, context: ChatContext) -> ChatContext:
@@ -70,6 +73,9 @@ class GraphAssistantBackend:
                 provider=self.provider,
                 tool_registry=self.tool_registry,
                 max_iterations=self.max_iterations,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                model_timeout_seconds=self.model_timeout_seconds,
             )
         return self._compiled_tool_graph
 
@@ -79,6 +85,15 @@ class GraphAssistantBackend:
         history_messages = build_chat_messages(
             context, enable_tools=self.enable_tools, include_system=False
         )
+        if self._use_react(context):
+            from openfatture.ai.orchestration.react import ReActOrchestrator
+
+            history_messages = ReActOrchestrator(
+                provider=self.provider,
+                tool_registry=self.tool_registry,
+            )._build_react_messages(context)
+            system_prompt = history_messages[0].content
+            history_messages = history_messages[1:]
         messages: list[dict[str, Any]] = []
         for msg in history_messages:
             entry: dict[str, Any] = {
@@ -93,6 +108,9 @@ class GraphAssistantBackend:
                 entry["name"] = msg.name
             messages.append(entry)
         return {
+            "tools_enabled": self._use_native_tools(context),
+            "react": self._use_react(context),
+            "streaming": bool(context.metadata.get("streaming")),
             "user_input": context.user_input,
             "system_prompt": system_prompt,
             "messages": messages,
@@ -107,7 +125,11 @@ class GraphAssistantBackend:
 
     def _state_to_response(self, state: dict[str, Any]) -> AgentResponse:
         status_raw = state.get("status") or "final"
-        if state.get("error") or status_raw == "error":
+        if state.get("interrupted"):
+            status = ResponseStatus.PARTIAL
+        elif state.get("error") == "max_iterations_reached":
+            status = ResponseStatus.PARTIAL
+        elif state.get("error") or status_raw == "error":
             status = ResponseStatus.ERROR
         elif status_raw == "final":
             status = ResponseStatus.SUCCESS
@@ -135,6 +157,8 @@ class GraphAssistantBackend:
             else UsageMetrics(total_tokens=tokens, cost_known=False),
             error=str(error) if error is not None else None,
             metadata={
+                "interrupted": bool(state.get("interrupted")),
+                "pending_approval": state.get("pending_approval"),
                 "orchestrator": "langgraph_tool_loop",
                 "tool_results": tool_results,
                 "iterations": state.get("iteration"),
@@ -148,7 +172,9 @@ class GraphAssistantBackend:
         if messages and messages[0].role == Role.SYSTEM:
             system = messages[0].content
             chat_messages = messages[1:]
-        response: AgentResponse = await self.provider.generate(
+        response: AgentResponse = await generate(
+            self.provider,
+            timeout=self.model_timeout_seconds,
             messages=chat_messages,
             system_prompt=system,
             temperature=self.temperature,
@@ -159,31 +185,34 @@ class GraphAssistantBackend:
         return response
 
     async def _run_react(self, context: ChatContext) -> AgentResponse:
-        from openfatture.ai.orchestration.react import ReActOrchestrator
-
-        orchestrator = ReActOrchestrator(
-            provider=self.provider,
-            tool_registry=self.tool_registry,
-            max_iterations=self.max_iterations,
-            debug_config=self.debug_config,
-        )
-        final_answer = await orchestrator.execute(context)
-        response = AgentResponse(
-            content=final_answer,
-            status=ResponseStatus.SUCCESS,
-            agent_name="chat_assistant",
-            model=self.provider.model,
-            provider=self.provider.provider_name,
-        )
+        response = await self._run_tool_graph(context)
         response.metadata["orchestrator"] = "langgraph_react"
-        response.metadata["orchestrator_metrics"] = orchestrator.get_metrics()
-        if response.metadata["orchestrator_metrics"].get("max_iterations_reached"):
-            response.status = ResponseStatus.PARTIAL
         return response
 
-    async def _run_tool_graph(self, context: ChatContext) -> AgentResponse:
-        graph = self._get_tool_graph()
-        state = await graph.ainvoke(self._initial_tool_state(context))
+    async def _run_tool_graph(self, context: ChatContext, on_event: Any = None) -> AgentResponse:
+        if context.metadata.get("checkpoint_directory"):
+            from pathlib import Path
+
+            from openfatture.ai.runtime.durability import DurableToolExecutor
+
+            state = await DurableToolExecutor(Path(context.metadata["checkpoint_directory"])).run(
+                session_id=context.session_id or "",
+                turn_id=context.metadata["turn_id"],
+                provider=self.provider,
+                registry=self.tool_registry,
+                initial=self._initial_tool_state(context),
+                on_event=on_event,
+                max_iterations=self.max_iterations,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                model_timeout_seconds=self.model_timeout_seconds,
+            )
+        else:
+            graph = self._get_tool_graph()
+            state = await graph.ainvoke(
+                self._initial_tool_state(context),
+                config={"recursion_limit": 2 * self.max_iterations + 2},
+            )
         if not isinstance(state, dict):
             return AgentResponse(
                 content="",
@@ -226,6 +255,8 @@ class GraphAssistantBackend:
             )
             return await self._run_react(context)
         logger.info("langgraph_plain", provider=self.provider.provider_name)
+        if context.metadata.get("checkpoint_directory"):
+            return await self._run_tool_graph(context)
         return await self._run_plain(context)
 
     async def stream(self, context: ChatContext) -> AsyncIterator[StreamEvent]:
@@ -235,63 +266,99 @@ class GraphAssistantBackend:
         receives progressive tool lifecycle events and final content.
         """
         context = self.prepare_context(context)
+        context.metadata["streaming"] = True
 
         if not context.user_input.strip() or len(context.user_input) > 5000:
             response = await self.run(context)
             yield StreamEvent.done(status=response.status.value, error=response.error)
             return
-        if self._use_react(context):
-            response = await self._run_react(context)
-            yield StreamEvent.metrics(**response.usage.model_dump())
-            if response.content:
-                yield StreamEvent.content(response.content)
-            yield StreamEvent.done(status=response.status.value, error=response.error)
-            return
+        if context.metadata.get("checkpoint_directory"):
+            import asyncio
+            from contextlib import suppress
 
-        if not self._use_native_tools(context):
-            response = await self._run_plain(context)
+            queue: asyncio.Queue[Any] = asyncio.Queue()
+            streamed_content = False
+            task = asyncio.create_task(self._run_tool_graph(context, queue.put_nowait))
+            task.add_done_callback(lambda _: queue.put_nowait(None))
+            try:
+                while True:
+                    update = await queue.get()
+                    if update is None:
+                        break
+                    if update.get("event") == "content":
+                        streamed_content = True
+                        yield StreamEvent.content(str(update["content"]))
+                        continue
+                    name = str(update.get("tool") or "unknown")
+                    if update.get("event") == "tool_start":
+                        event = StreamEvent.tool_start(
+                            name, parameters=update.get("parameters") or {}
+                        )
+                    elif update.get("event") == "tool_finished":
+                        event = (
+                            StreamEvent.tool_result(name, result=update.get("result"))
+                            if update.get("success")
+                            else StreamEvent.tool_error(name, error=str(update.get("result")))
+                        )
+                    else:
+                        continue
+                    event.metadata["tool_call_id"] = update.get("tool_call_id")
+                    yield event
+                response = await task
+            finally:
+                if not task.done():
+                    task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
             yield StreamEvent.metrics(**response.usage.model_dump())
-            if response.content:
+            if response.content and not streamed_content:
                 yield StreamEvent.content(response.content)
-            yield StreamEvent.done(status=response.status.value, error=response.error)
+            done = StreamEvent.done(status=response.status.value, error=response.error)
+            done.metadata["interrupted"] = response.metadata.get("interrupted", False)
+            yield done
             return
 
         graph = self._get_tool_graph()
         initial = self._initial_tool_state(context)
-        seen_tool_count = 0
         emitted_final_content = False
         merged: dict[str, Any] = dict(initial)
 
-        async for update in graph.astream(initial, stream_mode="updates"):
+        async for part in graph.astream(
+            initial,
+            config={"recursion_limit": 2 * self.max_iterations + 2},
+            stream_mode=["updates", "custom"],
+            version="v2",
+        ):
+            mode, update = part["type"], part["data"]
             if not isinstance(update, dict):
+                continue
+            if mode == "custom":
+                if update.get("event") == "content":
+                    emitted_final_content = True
+                    yield StreamEvent.content(str(update["content"]))
+                    continue
+                name = str(update.get("tool") or "unknown")
+                if update.get("event") == "tool_start":
+                    event = StreamEvent.tool_start(name, parameters=update.get("parameters") or {})
+                elif update.get("event") == "tool_finished":
+                    event = (
+                        StreamEvent.tool_result(name, result=update.get("result"))
+                        if update.get("success")
+                        else StreamEvent.tool_error(name, error=str(update.get("result")))
+                    )
+                else:
+                    continue
+                event.metadata["tool_call_id"] = update.get("tool_call_id")
+                yield event
                 continue
             for node_name, delta in update.items():
                 if not isinstance(delta, dict):
                     continue
                 merged = {**merged, **delta}
-                if node_name == "call_tools":
-                    results = delta.get("tool_results") or []
-                    if not isinstance(results, list):
-                        continue
-                    for entry in results[seen_tool_count:]:
-                        if not isinstance(entry, dict):
-                            continue
-                        name = str(entry.get("tool") or "unknown")
-                        params = entry.get("parameters") or {}
-                        if not isinstance(params, dict):
-                            params = {}
-                        yield StreamEvent.tool_start(name, parameters=params)
-                        if entry.get("success"):
-                            yield StreamEvent.tool_result(name, result=entry.get("result"))
-                        else:
-                            yield StreamEvent.tool_error(
-                                name, error=str(entry.get("result") or "tool failed")
-                            )
-                    seen_tool_count = len(results)
-                elif node_name == "call_model":
+                if node_name == "call_model":
                     content = str(delta.get("content") or "")
                     status = delta.get("status")
-                    if status == "final" and content:
+                    if status == "final" and content and not delta.get("streamed"):
                         emitted_final_content = True
                         yield StreamEvent.content(content)
                     elif status == "tool_calls":
@@ -301,8 +368,9 @@ class GraphAssistantBackend:
 
         yield StreamEvent(type=StreamEventType.METRICS, data=dict(merged.get("usage") or {}))
         final_response = self._state_to_response(merged)
-        yield StreamEvent.done(status=final_response.status.value, error=final_response.error)
         if not emitted_final_content:
             content = str(merged.get("content") or "")
             if content:
                 yield StreamEvent.content(content)
+
+        yield StreamEvent.done(status=final_response.status.value, error=final_response.error)

@@ -1,10 +1,11 @@
 # Technical Debt Inventory
 
 Honest inventory of **open** and **closed** debt after modernization **2.0**,
-the **2.1.0** LangGraph default flip, and post-2.1 hygiene (#31–#34).
+the **2.1.0** LangGraph default flip, post-2.1 hygiene (#31–#34) and the
+**2.6.0** architecture review.
 
-**Last updated:** 2026-08-08  
-**Version baseline:** 2.1.0 (`v2.1.0`)
+**Last updated:** 2026-11-10  
+**Version baseline:** 2.6.0 (`v2.6.0`)
 
 Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), [releases/v2.1.0.md](releases/v2.1.0.md).
@@ -52,7 +53,7 @@ firefighting. Do not invent new public domain CLI commands to “finish” debt.
 
 | Area | Level | Notes |
 |------|-------|--------|
-| Public CLI surface | Low | Agentic surface only: `init`, `assistant`, `interactive`, `config`, `status` |
+| Public CLI surface | Low | Assistant (`openfatture`, `assistant`), `init`, `config`, `status`, plus documented `cliente` / `fattura` / `pagamento` adapters |
 | Core billing / SDI / payment | Low | Tools → application services; payment suite floor 75% |
 | Package layout | Low | Bounded packages; no empty placeholders; extras explicit |
 | Config / SSOT | Low | Version, backends, AI credentials hydrated consistently (#32) |
@@ -90,6 +91,14 @@ Keep this ledger so old debt is not rediscovered as open.
 | Lightning Network module | #33 | Removed from tree; docs archived |
 | Dead Lightning i18n keys | #34 | GC’d from all `cli.ftl` locales |
 | Redundant payment-only lint job | #34 | Package-wide `lint` in `test.yml` covers it |
+| Lexicographic invoice numbering | 2.6.0 | Single `next_numero`; unique `(numero, anno)` index |
+| Two Alembic heads | 2.6.0 | `20261110_merge` reunites `dda5c6e9a600` |
+| Payment events never delivered | 2.6.0 | `PaymentEvent` extends `BaseEvent`; parallel bus removed |
+| Application layer importing `cli` / payment importing `ai` | 2.6.0 | Enforced by `tests/test_import_rules.py` |
+| Tool registration swallowing ImportError | 2.6.0 | Broken tool modules fail loudly |
+| Model-chosen export paths | 2.6.0 | Confined to `data_dir/exports` |
+| CLI data commands querying ORM | 2.6.0 | Routed through application services |
+| Unused payment AI insight chain, `ai.context`, `InvoiceBatchProcessor` | 2.6.0 | Removed |
 
 ---
 
@@ -196,6 +205,46 @@ primary path `asyncio.run`).
 **Impact:** Edge cases in nested loops / notebook-like hosts.  
 **Trigger:** Only if interactive/assistant hosts hit real nested-loop failures.
 
+### D-SCHEMA — Alembic cannot build a database from scratch
+
+**Location:** `alembic/versions/` base revision, `storage/database/base.py` (`create_all`)  
+**Behavior:** The base revision only adds indexes; tables come from
+`Base.metadata.create_all` on every process, which never adds columns to
+existing tables. Recent migrations call live ORM `__table__.create()`.  
+**Impact:** Silent schema drift on upgraded databases; old migrations change
+when models change.  
+**Trigger:** Next schema change that adds a column to an existing table.  
+**Direction:** Baseline revision from the current schema; runtime checks the
+Alembic head instead of `create_all`.
+
+### D-WF-WRITES — Invoice workflow writes the database directly
+
+**Location:** `ai/orchestration/workflows/invoice_creation.py`  
+**Behavior:** `db.add` / `db.commit` of invoices, lines and payments, bypassing
+application services, lifecycle rules and tool confirmation. Not reachable
+from the CLI.  
+**Trigger:** Part of the D-WF decision: rebuild on application services or delete.
+
+### D-PEC — Two PEC senders
+
+**Location:** `sdi/pec_sender/sender.py`, `platform/email/sender.py`  
+**Impact:** Duplicate SMTP / retry / rate-limit code; batch and single sends use
+different implementations. `platform/email` also depends on `billing` / `sdi`.  
+**Trigger:** Next change to PEC delivery.
+
+### D-SESSION — Mixed session handling
+
+**Behavior:** ~80 manual `get_session()` try/commit/close blocks versus
+`storage.session.db_session()`; some services commit sessions they receive.  
+**Trigger:** Convert per module when touched; no drive-by sweep.
+
+### D-I18N — Orphan and drifting translation keys
+
+**Behavior:** `it/cli.ftl` holds ~890 keys, ~190 referenced; `de` / `es` / `fr`
+lag behind `it`.  
+**Trigger:** Next i18n change; prune with a reference scan that accounts for
+dynamic keys.
+
 ---
 
 ## Product decisions (not code debt yet)
@@ -209,8 +258,9 @@ Documenting them here prevents them from being treated as silent backlog bugs.
 | Textual (or other) TUI | Non-goal | [#44](https://github.com/gianlucamazza/openfatture/issues/44); interactive terminal exists |
 | MCP server / external tool bus | Non-goal until designed | [#44](https://github.com/gianlucamazza/openfatture/issues/44); hooks + tool contracts today |
 | Browser / web app surface | Explicit non-goal | [#44](https://github.com/gianlucamazza/openfatture/issues/44); see STATUS |
-| Domain CLI command tree growth | Forbidden | Domain ops stay on assistant + application layer |
+| Domain CLI command tree growth | Forbidden | Only `cliente` / `fattura` / `pagamento` exist, as adapters over application services |
 | Lightning / LND payments | Removed | Archive only; reintroduce only as greenfield design |
+| ML forecasting | Frozen | Not started by the CLI since 2.6.0; no assistant tool consumes forecasts. Productize or remove |
 
 ---
 
