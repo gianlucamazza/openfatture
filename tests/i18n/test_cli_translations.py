@@ -25,10 +25,7 @@ def _referenced() -> set[str]:
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 literals.add(node.value)
-    referenced = known & literals
-    # Keys built at runtime from a constant prefix ("cli-invoice-" + status).
-    referenced |= {key for key in known if key.startswith("cli-invoice-")}
-    return referenced
+    return known & literals
 
 
 @pytest.mark.parametrize("locale", sorted(SUPPORTED_LOCALES))

@@ -73,6 +73,9 @@ cli-invoice-collection = Collection
 cli-invoice-document = Document
 cli-invoice-historical = Historical
 cli-invoice-unpaid = Unpaid
+cli-invoice-no-payment-record = Ningún cobro registrado
+cli-invoice-partially-paid = Cobrada parcialmente
+cli-invoice-fully-paid = Cobrada
 cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
 cli-invoice-total = Total
 
@@ -113,3 +116,177 @@ assistant-resolve-pending-first = Resuelve el turno pendiente con /resume antes 
 assistant-resuming = Reanudando el turno interrumpido…
 assistant-uncertain-tool = Resultado de herramienta incierto: usa /pending y /reconcile antes de /resume.
 assistant-no-pending = No hay ningún turno pendiente.
+
+## Shared command output
+cli-common-error = [red]Error:[/red] { $error }
+cli-common-more-results = [dim]... y más. Usa --limit para ver más resultados.[/dim]
+cli-common-not-available = N/D
+cli-common-number = Número
+cli-common-date = Fecha
+cli-common-status = Estado
+cli-common-client = Cliente
+cli-common-amount = Importe
+cli-common-name = Nombre
+cli-common-notes = Notas
+cli-common-vat-number = NIF-IVA
+cli-common-tax-code = Código fiscal
+
+## FATTURA Commands
+cli-fattura-none-found = [yellow]No se encontraron facturas.[/yellow]
+cli-fattura-list-title = Facturas ({ $count })
+cli-fattura-pec-to-verify = PEC: por verificar
+cli-fattura-statement = Declaración: { $value } · fuente: { $source }
+cli-fattura-show-title = [bold cyan]Factura n.º { $id }[/bold cyan]
+cli-fattura-submission-unverified = Resultado del envío por verificar; no repitas la transmisión automáticamente.
+cli-fattura-amounts = Importes
+cli-fattura-taxable = Base imponible
+cli-fattura-vat = IVA
+cli-fattura-line-items = [bold]Líneas:[/bold] { $count } en total
+cli-fattura-column-description = Descripción
+cli-fattura-column-quantity = Cant.
+cli-fattura-column-unit-price = Precio unitario
+cli-fattura-column-vat-rate = IVA %
+cli-fattura-created-id = ID de factura: [cyan]{ $id }[/cyan]
+cli-fattura-line = Línea n.º { $numero }: { $descrizione }
+cli-fattura-invoice-total = Total de la factura
+cli-fattura-pdf-generated = [green]✓[/green] PDF generado correctamente
+cli-fattura-xml-generated = [green]✓[/green] XML generado correctamente
+cli-fattura-xml-generated-dry-run = [green]✓[/green] XML generado correctamente (simulación, no se escribió ningún archivo)
+cli-fattura-xml-content = [bold]Contenido XML:[/bold]
+cli-fattura-output = Salida: [cyan]{ $path }[/cyan]
+cli-fattura-size = Tamaño: { $size } bytes
+cli-fattura-status-change = Estado: { $old } → { $new }
+cli-fattura-credit-note-id = ID de nota de crédito: [cyan]{ $id }[/cyan]
+cli-fattura-document-type = Tipo de documento
+cli-fattura-source-invoice = [dim]Factura de origen:[/dim]
+cli-fattura-journal-submission = Envío n.º { $id } · factura { $invoice } · { $filename } · { $outcome }
+cli-fattura-journal-receipt = Recibo n.º { $id } · factura { $invoice } · { $outcome } · origen { $source }
+cli-fattura-associate-confirm = ¿Asociar el recibo { $receipt } a la factura { $invoice }?
+cli-fattura-receipt-associated = Recibo asociado
+cli-fattura-resolve-confirm = ¿Confirmas que el envío { $attempt } { $sent ->
+        [yes] fue transmitido
+       *[no] no fue transmitido
+    }?
+cli-fattura-submission-resolved = Verificación registrada
+
+## CLIENTE Commands
+cli-cliente-none-found = [yellow]No se encontraron clientes.[/yellow]
+cli-cliente-list-title = Clientes ({ $count })
+cli-cliente-column-invoices = Facturas
+cli-cliente-show-title = [bold cyan]Cliente n.º { $id }[/bold cyan]
+cli-cliente-address = Dirección
+cli-cliente-contacts = Contactos
+cli-cliente-phone = Tel.
+cli-cliente-invoices-total = [bold]Facturas:[/bold] { $count } en total
+cli-cliente-recent-invoices = Facturas recientes
+cli-cliente-created-id = ID de cliente: [cyan]{ $id }[/cyan]
+
+## PAGAMENTO Commands
+cli-pagamento-reverse-confirm = ¿Anular { $amount } del asiento { $entry }?
+
+## INIT Command
+cli-init-title = [bold blue]Configuración de OpenFatture[/bold blue]
+cli-init-structured-needs-no-interactive = Usa --no-interactive con un formato de salida estructurado
+cli-init-creating-dirs = [cyan]Creando directorios...[/cyan]
+cli-init-dirs-created = Directorios de datos creados
+cli-init-initializing-db = [cyan]Inicializando la base de datos...[/cyan]
+cli-init-backup = Copia de seguridad antes de la actualización: { $path }
+cli-init-database = Base de datos { $state ->
+        [empty] creada
+        [current] ya actualizada
+        [outdated] actualizada
+        [unversioned] adoptada y actualizada
+       *[other] { $state }
+    }: { $url }
+cli-init-configure-company = [bold yellow]Configuremos los datos de tu empresa[/bold yellow]
+cli-init-overwrite-confirm = [yellow]Ya existe un perfil de OpenFatture. ¿Sobrescribir la configuración de empresa e IA?[/yellow]
+cli-init-config-preserved = [green]Configuración existente conservada.[/green] Los directorios y la base de datos se han verificado igualmente.
+cli-init-company-section = [bold]Datos de la empresa (Cedente Prestatore)[/bold]
+cli-init-prompt-name = Empresa o tu nombre
+cli-init-prompt-partita-iva = Partita IVA (11 dígitos)
+cli-init-invalid-partita-iva = [red]Partita IVA no válida. Inténtalo de nuevo.[/red]
+cli-init-prompt-codice-fiscale = Codice fiscale (16 caracteres)
+cli-init-invalid-codice-fiscale = [red]Codice fiscale no válido. Inténtalo de nuevo.[/red]
+cli-init-prompt-regime = Régimen fiscal (usa tu código RF real)
+cli-init-invalid-regime = [red]Introduce un régimen fiscal admitido por FatturaPA.[/red]
+cli-init-prompt-address = Dirección (calle)
+cli-init-prompt-cap = Código postal (CAP)
+cli-init-prompt-city = Municipio (Comune)
+cli-init-prompt-province = Provincia (2 letras, p. ej. RM)
+cli-init-pec-section = [bold]Configuración PEC[/bold]
+cli-init-prompt-pec-address = Tu dirección PEC
+cli-init-prompt-pec-password = Contraseña PEC
+cli-init-prompt-pec-smtp = Servidor SMTP PEC
+cli-init-notifications-section = [bold]Notificaciones por correo[/bold]
+cli-init-prompt-notification-email = Correo para notificaciones (avisos SDI, resúmenes)
+cli-init-prompt-locale = Idioma (it/en/de/es/fr)
+cli-init-ai-section = [bold]Configuración de IA (opcional)[/bold]
+cli-init-ai-description = [dim]Configura las funciones de IA: descripciones de facturas, sugerencias fiscales y asistente conversacional.[/dim]
+cli-init-ai-confirm = ¿Configurar ahora las funciones de IA? (También puedes hacerlo más tarde con openfatture config)
+cli-init-ai-provider = Proveedor de IA
+cli-init-ai-skip = Omitir por ahora
+cli-init-api-key-from = [cyan]{ $provider } seleccionado: obtén una clave API en:[/cyan]
+cli-init-ollama-selected = [cyan]Ollama seleccionado: ¡modelo local gratuito![/cyan]
+cli-init-ollama-install = Instalar: [bold]ollama pull { $model }[/bold]
+cli-init-ollama-start = Iniciar: [bold]ollama serve[/bold]
+cli-init-prompt-api-key = Clave API (déjala vacía para configurarla más tarde)
+cli-init-config-saved = Configuración guardada en: { $path }
+cli-init-secrets-saved = Secretos guardados { $backend ->
+        [keyring] en el llavero del sistema
+       *[file] en el archivo privado de credenciales
+    }
+cli-init-complete-title = Configuración completada
+cli-init-complete-body = [bold green]Configuración terminada[/bold green]
+
+    Próximos pasos:
+      • Comprueba el estado: [cyan]openfatture status[/cyan]
+      • Revisa la configuración: [cyan]openfatture config show[/cyan]
+      • Asistente (requiere [cyan]uv sync --extra ai[/cyan]): [cyan]openfatture assistant "Muestra las facturas abiertas"[/cyan]
+      • Ayuda: [cyan]openfatture --help[/cyan]
+
+## STATUS Command
+cli-status-readiness = [bold]Preparación[/bold]  núcleo: [cyan]{ $core ->
+        [yes] listo
+       *[no] no listo
+    }[/cyan]  asistente: [cyan]{ $assistant ->
+        [yes] configurado
+       *[no] no configurado
+    }[/cyan]
+cli-status-title = Estado de OpenFatture
+cli-status-label-ai-api-key-configured = Clave API de IA configurada
+cli-status-label-assistant-backend = Backend del asistente
+cli-status-label-assistant-backend-id = ID del backend del asistente
+cli-status-label-config-file = Archivo de configuración
+cli-status-label-secret-backend = Almacén de secretos
+cli-status-checks-title = Comprobaciones de preparación
+cli-status-column-check = Comprobación
+cli-status-yes = sí
+cli-status-no = no
+cli-status-next-steps = [bold]Próximos pasos[/bold]
+cli-status-extras-title = Extras opcionales (módulos funcionales)
+cli-status-column-extra = Extra
+cli-status-column-installed = Instalado
+cli-status-extensions-title = Extensiones
+cli-status-column-mechanism = Mecanismo
+cli-status-column-detail = Detalle
+cli-status-hooks = hooks (admitidos)
+cli-status-hooks-detail = { $path } ({ $count ->
+        [one] 1 script
+       *[other] { $count } scripts
+    })
+cli-status-plugins = plugins en proceso
+
+## Global
+cli-main-version = [bold blue]OpenFatture[/bold blue] versión { $version }
+cli-output-unsupported-format = Formatos admitidos: { $formats }
+
+## Rich formatter
+cli-formatter-error = [bold red]Error:[/bold red] { $error }
+cli-formatter-unknown-error = Error desconocido
+cli-formatter-ai-response = [bold]Respuesta de IA[/bold]
+cli-formatter-unknown = desconocido
+cli-formatter-provider = Proveedor: { $provider }
+cli-formatter-model = Modelo: { $model }
+cli-formatter-tokens = Tokens: { $tokens }
+cli-formatter-cost = Coste: { $cost }
+cli-formatter-latency = Latencia: { $latency } ms

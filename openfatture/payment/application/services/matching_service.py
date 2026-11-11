@@ -5,7 +5,6 @@ bank transactions to payments using multiple algorithms and optional AI enrichme
 """
 
 import asyncio
-import inspect
 from datetime import timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -115,8 +114,6 @@ class MatchingService:
         for strategy in self.strategies:
             try:
                 strategy_matches = strategy.match(transaction, candidates)
-                if inspect.isawaitable(strategy_matches):
-                    strategy_matches = await strategy_matches
 
                 # Merge results (keep highest confidence per payment)
                 for match in strategy_matches:

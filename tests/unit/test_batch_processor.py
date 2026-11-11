@@ -90,7 +90,7 @@ class TestBatchProcessor:
         def func(x):
             return x * 2
 
-        processor = BatchProcessor(process_func=func, batch_size=50)
+        processor = BatchProcessor[int, int](process_func=func, batch_size=50)
 
         assert processor.process_func == func
         assert processor.batch_size == 50
@@ -98,7 +98,7 @@ class TestBatchProcessor:
 
     def test_process_empty_list(self):
         """Test processing empty list."""
-        processor = BatchProcessor(process_func=lambda x: x)
+        processor = BatchProcessor[int, int](process_func=lambda x: x)
 
         result = processor.process([])
 
@@ -107,7 +107,7 @@ class TestBatchProcessor:
 
     def test_process_success(self):
         """Test successful processing."""
-        processor = BatchProcessor(process_func=lambda x: x * 2)
+        processor = BatchProcessor[int, int](process_func=lambda x: x * 2)
 
         items = [1, 2, 3, 4, 5]
         result = processor.process(items)
@@ -126,7 +126,7 @@ class TestBatchProcessor:
                 raise ValueError("Error on 3")
             return x * 2
 
-        processor = BatchProcessor(process_func=process_func, fail_fast=False)
+        processor = BatchProcessor[int, int](process_func=process_func, fail_fast=False)
 
         items = [1, 2, 3, 4, 5]
         result = processor.process(items)
@@ -146,7 +146,7 @@ class TestBatchProcessor:
                 raise ValueError("Error on 3")
             return x * 2
 
-        processor = BatchProcessor(process_func=process_func, fail_fast=True)
+        processor = BatchProcessor[int, int](process_func=process_func, fail_fast=True)
 
         items = [1, 2, 3, 4, 5]
         result = processor.process(items)
@@ -163,7 +163,7 @@ class TestBatchProcessor:
         def callback(current, total):
             callback_calls.append((current, total))
 
-        processor = BatchProcessor(process_func=lambda x: x, progress_callback=callback)
+        processor = BatchProcessor[int, int](process_func=lambda x: x, progress_callback=callback)
 
         items = [1, 2, 3]
         processor.process(items)
@@ -175,7 +175,7 @@ class TestBatchProcessor:
 
     def test_process_with_filter(self):
         """Test processing with filter."""
-        processor = BatchProcessor(process_func=lambda x: x * 2)
+        processor = BatchProcessor[int, int](process_func=lambda x: x * 2)
 
         items = [1, 2, 3, 4, 5]
         result = processor.process_with_filter(items, filter_func=lambda x: x % 2 == 0)
@@ -219,7 +219,7 @@ class TestChunkList:
 
     def test_chunk_list_empty(self):
         """Test chunking empty list."""
-        items = []
+        items: list[int] = []
         chunks = chunk_list(items, chunk_size=5)
 
         assert len(chunks) == 0

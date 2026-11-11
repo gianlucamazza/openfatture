@@ -2,23 +2,27 @@
 
 from __future__ import annotations
 
-import json
 import time
 import warnings
 from collections.abc import AsyncIterator
 from typing import Any, cast
 
-from openfatture.ai.domain.message import Message, Role
+from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import (
     AgentResponse,
     ResponseStatus,
     StreamChunk,
-    ToolCall,
     UsageMetrics,
 )
 from openfatture.ai.providers.base import (
     BaseLLMProvider,
     ProviderError,
+)
+from openfatture.ai.providers.openai_payload import (
+    StreamedToolCalls,
+    build_chat_messages,
+    filter_extra_params,
+    parse_tool_calls,
 )
 from openfatture.platform.extras import MissingExtraError
 from openfatture.platform.logging import get_logger
@@ -130,22 +134,6 @@ class OpenAIProvider(BaseLLMProvider):
         """Get list of deprecated model names."""
         return ["gpt-3.5-turbo"]
 
-    _ALLOWED_EXTRA_PARAMS = {
-        "tools",
-        "tool_choice",
-        "parallel_tool_calls",
-        "metadata",
-        "top_p",
-        "top_logprobs",
-        "logprobs",
-        "max_tokens",  # Changed from max_output_tokens
-        "store",
-        "user",
-        "stream_options",
-        "response_format",  # Now supported in Chat Completions
-        "reasoning_effort",  # GPT-5 reasoning control: "low", "medium", "high", or "none"
-    }
-
     def _build_usage_metrics(self, usage: Any | None) -> UsageMetrics:
         """Create UsageMetrics from OpenAI usage payload."""
         # OpenAI uses prompt_tokens/completion_tokens (not input_tokens/output_tokens like Anthropic)
@@ -162,103 +150,38 @@ class OpenAIProvider(BaseLLMProvider):
         metrics.cost_known = usage is not None and self.model in self.PRICING
         return metrics
 
-    def _build_chat_payload(
+    def _request_params(
         self,
         messages: list[Message],
         system_prompt: str | None,
-    ) -> list[dict[str, Any]]:
+        temperature: float | None,
+        max_tokens: int | None,
+        extra: dict[str, Any],
+        *,
+        stream: bool = False,
+        include_usage: bool = False,
+    ) -> dict[str, Any]:
+        """Chat Completions request for this model.
+
+        GPT-5 models use adaptive reasoning: they take no ``max_tokens`` and
+        only the default temperature (1).
         """
-        Convert internal messages into Chat Completions API message format.
-        """
-        chat_messages: list[dict[str, Any]] = []
-
-        # Add system prompt as first message if provided
-        if system_prompt:
-            chat_messages.append({"role": "system", "content": system_prompt})
-
-        for message in messages:
-            if message.role == Role.SYSTEM:
-                # System messages are handled via system_prompt, skip duplicates
-                continue
-
-            if message.role == Role.USER:
-                chat_messages.append({"role": "user", "content": message.content})
-                continue
-
-            if message.role == Role.ASSISTANT:
-                assistant_msg: dict[str, Any] = {"role": "assistant"}
-
-                if message.content:
-                    assistant_msg["content"] = message.content
-
-                if message.tool_calls:
-                    tool_calls = []
-                    for tool_call in message.tool_calls:
-                        if isinstance(tool_call, ToolCall):
-                            tool_calls.append(
-                                {
-                                    "id": tool_call.id,
-                                    "type": "function",
-                                    "function": {
-                                        "name": tool_call.name,
-                                        "arguments": (
-                                            json.dumps(tool_call.arguments)
-                                            if isinstance(tool_call.arguments, dict)
-                                            else tool_call.arguments
-                                        ),
-                                    },
-                                }
-                            )
-                        elif isinstance(tool_call, dict):
-                            # Handle dict format tool calls
-                            function = tool_call.get("function", {})
-                            arguments = function.get("arguments")
-                            if arguments is None:
-                                arguments = tool_call.get("arguments", {})
-                            if not isinstance(arguments, str):
-                                arguments = json.dumps(arguments, ensure_ascii=False)
-                            tool_calls.append(
-                                {
-                                    "id": tool_call.get("id") or tool_call.get("call_id"),
-                                    "type": "function",
-                                    "function": {
-                                        "name": function.get("name") or tool_call.get("name"),
-                                        "arguments": arguments,
-                                    },
-                                }
-                            )
-
-                    if tool_calls:
-                        assistant_msg["tool_calls"] = tool_calls
-
-                chat_messages.append(assistant_msg)
-                continue
-
-            if message.role == Role.TOOL:
-                if not message.tool_call_id:
-                    logger.warning(
-                        "tool_message_missing_id",
-                        message="Skipping tool message without tool_call_id",
-                    )
-                    continue
-
-                chat_messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": message.tool_call_id,
-                        "content": message.content,
-                    }
-                )
-
-        return chat_messages
-
-    def _extract_extra_params(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Filter kwargs to supported Chat Completions API parameters."""
-        extra: dict[str, Any] = {}
-        for key, value in params.items():
-            if key in self._ALLOWED_EXTRA_PARAMS:
-                extra[key] = value
-        return extra
+        params: dict[str, Any] = {
+            "model": self.model,
+            "messages": build_chat_messages(messages, system_prompt),
+        }
+        if stream:
+            params["stream"] = True
+        max_output_tokens = self._get_max_output_tokens(max_tokens)
+        if max_output_tokens and not self.model.startswith("gpt-5"):
+            params["max_tokens"] = max_output_tokens
+        temp = self._get_temperature(temperature)
+        if not self.model.startswith("gpt-5") or temp == 1.0:
+            params["temperature"] = temp
+        if include_usage:
+            params["stream_options"] = {"include_usage": True}
+        params.update(filter_extra_params(extra))
+        return params
 
     async def generate(
         self,
@@ -272,59 +195,21 @@ class OpenAIProvider(BaseLLMProvider):
         start_time = time.time()
 
         try:
-            chat_messages = self._build_chat_payload(messages, system_prompt)
+            api_params = self._request_params(
+                messages, system_prompt, temperature, max_tokens, kwargs
+            )
 
             logger.info(
                 "openai_request_started",
                 model=self.model,
-                message_count=len(chat_messages),
+                message_count=len(api_params["messages"]),
                 temperature=self._get_temperature(temperature),
             )
 
-            max_output_tokens = self._get_max_output_tokens(max_tokens)
-
-            api_params: dict[str, Any] = {
-                "model": self.model,
-                "messages": chat_messages,
-            }
-
-            # GPT-5 models don't support max_tokens or max_completion_tokens
-            # They use adaptive reasoning instead
-            if max_output_tokens and not self.model.startswith("gpt-5"):
-                api_params["max_tokens"] = max_output_tokens
-
-            # Set temperature - GPT-5 only supports default temperature (1)
-            temp = self._get_temperature(temperature)
-            if not self.model.startswith("gpt-5") or temp == 1.0:
-                api_params["temperature"] = temp
-
-            extra_params = self._extract_extra_params(kwargs)
-            api_params.update(extra_params)
-
             response = await self.client.chat.completions.create(**api_params)
-            content = response.choices[0].message.content or ""
-            tool_calls = []
-
-            # Extract tool calls from response
-            if response.choices[0].message.tool_calls:
-                for tool_call in response.choices[0].message.tool_calls:
-                    try:
-                        arguments = json.loads(tool_call.function.arguments)
-                    except json.JSONDecodeError:
-                        logger.warning(
-                            "tool_call_arguments_parse_failed",
-                            tool_name=tool_call.function.name,
-                            arguments=tool_call.function.arguments,
-                        )
-                        raise ValueError("Invalid tool arguments") from None
-
-                    tool_calls.append(
-                        ToolCall(
-                            id=tool_call.id,
-                            name=tool_call.function.name,
-                            arguments=arguments,
-                        )
-                    )
+            choice = response.choices[0]
+            content = choice.message.content or ""
+            tool_calls = parse_tool_calls(choice.message.tool_calls)
 
             usage = self._build_usage_metrics(response.usage)
             latency_ms = (time.time() - start_time) * 1000
@@ -335,7 +220,7 @@ class OpenAIProvider(BaseLLMProvider):
                 tokens=usage.total_tokens,
                 cost_usd=usage.estimated_cost_usd,
                 latency_ms=latency_ms,
-                finish_reason=response.choices[0].finish_reason,
+                finish_reason=choice.finish_reason,
             )
 
             agent_response = AgentResponse(
@@ -348,8 +233,8 @@ class OpenAIProvider(BaseLLMProvider):
                 tool_calls=tool_calls,
             )
 
-            if response.choices[0].finish_reason:
-                agent_response.metadata["finish_reason"] = response.choices[0].finish_reason
+            if choice.finish_reason:
+                agent_response.metadata["finish_reason"] = choice.finish_reason
 
             return agent_response
 
@@ -371,40 +256,20 @@ class OpenAIProvider(BaseLLMProvider):
     ) -> AsyncIterator[str]:
         """Stream response tokens from OpenAI."""
         try:
-            chat_messages = self._build_chat_payload(messages, system_prompt)
+            stream_params = self._request_params(
+                messages, system_prompt, temperature, max_tokens, kwargs, stream=True
+            )
 
             logger.info(
                 "openai_stream_started",
                 model=self.model,
-                message_count=len(chat_messages),
+                message_count=len(stream_params["messages"]),
             )
-
-            max_output_tokens = self._get_max_output_tokens(max_tokens)
-
-            stream_params: dict[str, Any] = {
-                "model": self.model,
-                "messages": chat_messages,
-                "stream": True,
-            }
-
-            # GPT-5 models don't support max_tokens or max_completion_tokens
-            # They use adaptive reasoning instead
-            if max_output_tokens and not self.model.startswith("gpt-5"):
-                stream_params["max_tokens"] = max_output_tokens
-
-            # Set temperature - GPT-5 only supports default temperature (1)
-            temp = self._get_temperature(temperature)
-            if not self.model.startswith("gpt-5") or temp == 1.0:
-                stream_params["temperature"] = temp
-
-            stream_params.update(self._extract_extra_params(kwargs))
 
             stream = await self.client.chat.completions.create(**stream_params)
 
             async for chunk in stream:
-                choice = chunk.choices[0]
-                delta = choice.delta
-
+                delta = chunk.choices[0].delta
                 if delta.content:
                     yield delta.content
 
@@ -426,36 +291,23 @@ class OpenAIProvider(BaseLLMProvider):
     ) -> AsyncIterator[StreamChunk]:
         """Stream structured response chunks from OpenAI with tool call support."""
         try:
-            chat_messages = self._build_chat_payload(messages, system_prompt)
+            stream_params = self._request_params(
+                messages,
+                system_prompt,
+                temperature,
+                max_tokens,
+                kwargs,
+                stream=True,
+                include_usage=True,
+            )
 
             logger.info(
                 "openai_stream_structured_started",
                 model=self.model,
-                message_count=len(chat_messages),
+                message_count=len(stream_params["messages"]),
             )
 
-            max_output_tokens = self._get_max_output_tokens(max_tokens)
-
-            stream_params: dict[str, Any] = {
-                "model": self.model,
-                "messages": chat_messages,
-                "stream": True,
-            }
-
-            # GPT-5 models don't support max_tokens or max_completion_tokens
-            # They use adaptive reasoning instead
-            if max_output_tokens and not self.model.startswith("gpt-5"):
-                stream_params["max_tokens"] = max_output_tokens
-
-            # Set temperature - GPT-5 only supports default temperature (1)
-            temp = self._get_temperature(temperature)
-            if not self.model.startswith("gpt-5") or temp == 1.0:
-                stream_params["temperature"] = temp
-
-            stream_params["stream_options"] = {"include_usage": True}
-            stream_params.update(self._extract_extra_params(kwargs))
-
-            tool_calls_buffer: list[dict[str, Any]] = []
+            tool_calls = StreamedToolCalls()
             finish_reason = None
             final_usage = None
 
@@ -469,57 +321,15 @@ class OpenAIProvider(BaseLLMProvider):
                 choice = chunk.choices[0]
                 delta = choice.delta
 
-                # Handle content deltas
                 if delta.content:
                     yield StreamChunk(content=delta.content)
 
-                # Handle tool call deltas
                 if delta.tool_calls:
-                    for tool_call_delta in delta.tool_calls:
-                        # Extend buffer if needed
-                        while len(tool_calls_buffer) <= tool_call_delta.index:
-                            tool_calls_buffer.append(
-                                {
-                                    "id": "",
-                                    "type": "function",
-                                    "function": {"name": "", "arguments": ""},
-                                }
-                            )
+                    tool_calls.add(delta.tool_calls)
 
-                        tool_call = tool_calls_buffer[tool_call_delta.index]
-
-                        # Update tool call data
-                        if tool_call_delta.id:
-                            tool_call["id"] = tool_call_delta.id
-                        if tool_call_delta.function:
-                            if tool_call_delta.function.name:
-                                tool_call["function"]["name"] += tool_call_delta.function.name
-                            if tool_call_delta.function.arguments:
-                                tool_call["function"]["arguments"] += (
-                                    tool_call_delta.function.arguments
-                                )
-
-                # Check for finish reason
                 if choice.finish_reason:
                     finish_reason = choice.finish_reason
-
-                    # Yield any pending tool calls
-                    for tool_call_data in tool_calls_buffer:
-                        try:
-                            arguments = json.loads(tool_call_data["function"]["arguments"])
-                        except json.JSONDecodeError:
-                            logger.warning(
-                                "tool_call_arguments_stream_parse_failed",
-                                tool_name=tool_call_data["function"]["name"],
-                                arguments=tool_call_data["function"]["arguments"],
-                            )
-                            raise ValueError("Invalid streamed tool arguments") from None
-
-                        tool_call = ToolCall(
-                            id=tool_call_data["id"],
-                            name=tool_call_data["function"]["name"] or "unknown_tool",
-                            arguments=arguments,
-                        )
+                    for tool_call in tool_calls.complete():
                         yield StreamChunk(content="", tool_call=tool_call)
 
             yield StreamChunk(

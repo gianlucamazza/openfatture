@@ -42,7 +42,7 @@ OpenFatture's **PDF Generation** module creates professional, legally-compliant 
 
 **3 Professional Templates** - Minimalist, Professional, Branded
 **PDF/A-3 Compliance** - Legal archiving (Agenzia delle Entrate approved)
-**QR Code Support** - SEPA instant payment (pagoPa planned)
+**QR Code Support** - SEPA credit transfer (EPC) for the amount due
 **Automatic Pagination** - Multi-page invoices handled automatically
 **Reusable Components** - Modular design for easy customization
 **Type-Safe Config** - Pydantic-based configuration
@@ -69,7 +69,7 @@ Modular components for consistent design:
 - **Header** - Company logo, name, VAT, address
 - **Footer** - Page numbers, digital signature note, custom text
 - **Table** - Invoice lines with automatic wrapping
-- **QR Code** - Payment QR codes (SEPA, pagoPa)
+- **QR Code** - SEPA (EPC) payment QR code
 
 ### 3. Legal Compliance
 
@@ -81,7 +81,6 @@ Modular components for consistent design:
 ### 4. Payment Integration
 
 - **QR Codes** - SEPA EPC QR for instant bank transfers
-- **pagoPa** - Italian public administration payment system (planned)
 - **IBAN Display** - Clear payment instructions
 - **Payment Terms** - Due dates and conditions
 
@@ -349,7 +348,6 @@ config = PDFGeneratorConfig(
     secondary_color="#95A5A6",  # Light grey
     # QR Code
     enable_qr_code=True,  # Enable payment QR
-    qr_code_type="sepa",  # sepa or pagopa
     # PDF/A compliance
     enable_pdfa=True,  # Legal archiving
     # Watermark (for drafts)
@@ -372,7 +370,6 @@ config = PDFGeneratorConfig(
 | `primary_color` | str | `"#2C3E50"` | Primary brand color (hex) |
 | `secondary_color` | str | `"#95A5A6"` | Secondary brand color (hex) |
 | `enable_qr_code` | bool | `False` | Enable payment QR code |
-| `qr_code_type` | str | `"sepa"` | QR type (sepa/pagopa) |
 | `enable_pdfa` | bool | `True` | Enable PDF/A-3 compliance |
 | `watermark_text` | str | `None` | Watermark text (e.g., BOZZA) |
 | `footer_text` | str | `None` | Custom footer text |
@@ -574,19 +571,21 @@ All Italian banks supporting SEPA Instant Credit Transfer (SCT Inst):
 #### Usage
 
 ```python
-config = PDFGeneratorConfig(enable_qr_code=True, qr_code_type="sepa")
+config = PDFGeneratorConfig(enable_qr_code=True)
 ```
 
-### pagoPa Integration (Planned)
+### Amounts
 
-**pagoPa** is Italy's public administration payment system.
+Every amount on the PDF comes from `billing.application.totals`, the same
+source as the XML: the *Dati di riepilogo* table matches `DatiRiepilogo`
+(social security contributions included), the totals box ends with the amount
+the customer pays (*Totale documento*, or *Netto a pagare* after the
+withholding tax), and the QR code requests that amount. The stamp duty is
+shown as paid virtually; when it is charged to the customer it is an `N1`
+line and therefore already in the total.
 
-```python
-config = PDFGeneratorConfig(
-    enable_qr_code=True,
-    qr_code_type="pagopa",  # Not yet implemented
-)
-```
+Sections never cross the footer: they move to a new page, and the footer shows
+the real page count.
 
 ---
 

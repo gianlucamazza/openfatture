@@ -4,6 +4,7 @@ Tests cover: SMTP mocking, Jinja2 template rendering, multi-channel notification
 error handling, and fallback text generation.
 """
 
+import inspect
 import smtplib
 from datetime import date
 from decimal import Decimal
@@ -208,18 +209,22 @@ class TestEmailNotifier:
             settings=custom_settings,
         )
 
-        notifier._render_template = AsyncMock(
-            side_effect=[
-                "<html>Body</html>",
-                "Plain text",
-            ]
+        render_template = mocker.patch.object(
+            notifier,
+            "_render_template",
+            AsyncMock(
+                side_effect=[
+                    "<html>Body</html>",
+                    "Plain text",
+                ]
+            ),
         )
-        notifier._send_email = AsyncMock(return_value=None)
+        mocker.patch.object(notifier, "_send_email", AsyncMock(return_value=None))
 
         result = await notifier.send_reminder(mock_reminder)
 
         assert result is True
-        first_call_context = notifier._render_template.call_args_list[0].args[1]
+        first_call_context = render_template.call_args_list[0].args[1]
         assert first_call_context["company_name"] == "Example S.r.l."
 
     @pytest.mark.asyncio
@@ -533,5 +538,5 @@ class TestINotifierInterface:
 
     def test_cannot_instantiate_interface(self):
         """Test that INotifier cannot be instantiated directly."""
-        with pytest.raises(TypeError):
-            INotifier()
+        assert inspect.isabstract(INotifier)
+        assert "send_reminder" in INotifier.__abstractmethods__

@@ -1,6 +1,6 @@
 """Parsers for extracting tool calls from LLM text responses.
 
-Used by ReAct orchestrator to parse tool calls from providers
+Used by the assistant graph to parse ReAct tool calls from providers
 that don't support native function calling (like Ollama).
 """
 

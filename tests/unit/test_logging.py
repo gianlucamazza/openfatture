@@ -5,6 +5,8 @@ Tests the structlog configuration and logging helpers.
 """
 
 import time
+from collections.abc import MutableMapping
+from typing import Any
 
 import pytest
 
@@ -71,11 +73,11 @@ class TestLoggingProcessors:
 
         from openfatture.platform import logging as platform_logging
 
-        def run(correlation: str | None) -> dict:
+        def run(correlation: str | None) -> MutableMapping[str, Any]:
             platform_logging._correlation_id_var.set(None)
             if correlation:
                 platform_logging.set_correlation_id(correlation)
-            return add_correlation_id(None, None, {"event": "test_event"})
+            return add_correlation_id(None, "info", {"event": "test_event"})
 
         assert "correlation_id" not in copy_context().run(run, None)
         assert copy_context().run(run, "abc123")["correlation_id"] == "abc123"
@@ -83,7 +85,7 @@ class TestLoggingProcessors:
     def test_add_correlation_id_preserves_existing(self):
         """Test that existing correlation_id is preserved."""
         event_dict = {"event": "test", "correlation_id": "abc-123"}
-        result = add_correlation_id(None, None, event_dict)
+        result = add_correlation_id(None, "info", event_dict)
 
         assert result["correlation_id"] == "abc-123"
 
@@ -94,7 +96,7 @@ class TestLoggingProcessors:
             "username": "user@example.com",
             "password": "super_secret",
         }
-        result = filter_sensitive_data(None, None, event_dict)
+        result = filter_sensitive_data(None, "info", event_dict)
 
         assert result["username"] == "user@example.com"
         assert result["password"] == "***REDACTED***"
@@ -106,7 +108,7 @@ class TestLoggingProcessors:
             "api_key": "sk-1234567890",
             "pec_password": "pec_secret",
         }
-        result = filter_sensitive_data(None, None, event_dict)
+        result = filter_sensitive_data(None, "info", event_dict)
 
         assert result["api_key"] == "***REDACTED***"
         assert result["pec_password"] == "***REDACTED***"
@@ -119,7 +121,7 @@ class TestLoggingProcessors:
             "action": "create_invoice",
             "amount": 1000.00,
         }
-        result = filter_sensitive_data(None, None, event_dict)
+        result = filter_sensitive_data(None, "info", event_dict)
 
         assert result["user_id"] == 123
         assert result["action"] == "create_invoice"
@@ -134,7 +136,7 @@ class TestLoggingProcessors:
             },
             "user": "test",
         }
-        result = filter_sensitive_data(None, None, event_dict)
+        result = filter_sensitive_data(None, "info", event_dict)
 
         assert result["event"]["password"] == "***REDACTED***"
         assert result["user"] == "test"
@@ -142,7 +144,7 @@ class TestLoggingProcessors:
     def test_add_app_context_processor(self):
         """Test that app context is added."""
         event_dict = {"event": "test"}
-        result = add_app_context(None, None, event_dict)
+        result = add_app_context(None, "info", event_dict)
 
         assert result["app"] == "openfatture"
         assert result["version"] == __version__
@@ -276,3 +278,21 @@ class TestLoggingIntegration:
             time.sleep(0.01)
 
         # Should complete without errors
+
+
+def test_log_handler_follows_redirected_stderr(monkeypatch, capsys):
+    """A handler configured under one stderr keeps working after it is replaced."""
+    import io
+    import logging as std_logging
+
+    from openfatture.platform.logging import configure_logging
+
+    first = io.StringIO()
+    monkeypatch.setattr("sys.stderr", first)
+    configure_logging(log_level="INFO")
+    first.close()
+
+    second = io.StringIO()
+    monkeypatch.setattr("sys.stderr", second)
+    std_logging.getLogger("openfatture.test").warning("still-logged")
+    assert "still-logged" in second.getvalue()

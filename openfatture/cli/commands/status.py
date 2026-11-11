@@ -24,31 +24,26 @@ def _hooks_dir() -> Path:
     return Path.home() / ".openfatture" / "hooks"
 
 
-def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
-    """Compute honest setup readiness (core invoicing vs assistant)."""
-    company_ok = bool(
-        (settings.cedente_partita_iva or "").strip()
-        and (settings.cedente_denominazione or "").strip()
-    )
-    data_dir_ok = settings.data_dir.exists()
-    archive_ok = settings.archivio_dir.exists()
-    ai_extra = bool(extras.get("ai"))
-    provider = (settings.ai_provider or "").lower()
-    # Ollama needs no cloud key; cloud providers need a key for real calls.
-    ai_credentials_ok = provider == "ollama" or bool(settings.ai_api_key)
-    assistant_ready = ai_extra and ai_credentials_ok
-    required_fields = (
-        "cedente_codice_fiscale",
-        "cedente_regime_fiscale",
-        "cedente_indirizzo",
-        "cedente_cap",
-        "cedente_comune",
-        "cedente_provincia",
-        "cedente_nazione",
-    )
-    missing_fields = [
-        field for field in required_fields if not str(getattr(settings, field, "") or "").strip()
+_REQUIRED_FISCAL_FIELDS = (
+    "cedente_codice_fiscale",
+    "cedente_regime_fiscale",
+    "cedente_indirizzo",
+    "cedente_cap",
+    "cedente_comune",
+    "cedente_provincia",
+    "cedente_nazione",
+)
+
+
+def _missing_fiscal_fields(settings: Settings) -> list[str]:
+    return [
+        field
+        for field in _REQUIRED_FISCAL_FIELDS
+        if not str(getattr(settings, field, "") or "").strip()
     ]
+
+
+def _invalid_fiscal_fields(settings: Settings) -> list[str]:
     from openfatture.platform.validators import (
         validate_codice_fiscale,
         validate_partita_iva,
@@ -66,24 +61,52 @@ def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
     regime = getattr(settings, "cedente_regime_fiscale", "")
     if regime and not validate_regime_fiscale(regime):
         invalid_fields.append("cedente_regime_fiscale")
-    core_ready = (
-        company_ok and data_dir_ok and archive_ok and not missing_fields and not invalid_fields
-    )
+    return invalid_fields
 
+
+def _core_next_steps(core_ready: bool, blocking_fields: list[str]) -> list[str]:
+    if core_ready:
+        return []
+    return ["Run: openfatture init"] + [
+        f"openfatture config set {field} '<value>'" for field in blocking_fields
+    ]
+
+
+def _assistant_next_steps(core_ready: bool, ai_extra: bool, ai_credentials_ok: bool) -> list[str]:
     next_steps: list[str] = []
-    if not core_ready:
-        next_steps.append("Run: openfatture init")
-        for field in missing_fields + invalid_fields:
-            next_steps.append(f"openfatture config set {field} '<value>'")
     if not ai_extra:
         next_steps.append("For the assistant: uv sync --extra ai")
     elif not ai_credentials_ok:
         next_steps.append("openfatture config set ai_api_key '<key>' (or ai_provider ollama)")
-    if core_ready and assistant_ready:
+    if core_ready and ai_extra and ai_credentials_ok:
         next_steps.append('Try: openfatture assistant "Elenca le fatture aperte"')
     elif core_ready and not ai_extra:
         # Only when the ai extra itself is missing — not when credentials alone fail.
         next_steps.append("Core is ready; enable the ai extra to use the assistant")
+    return next_steps
+
+
+def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
+    """Compute honest setup readiness (core invoicing vs assistant)."""
+    company_ok = bool(
+        (settings.cedente_partita_iva or "").strip()
+        and (settings.cedente_denominazione or "").strip()
+    )
+    data_dir_ok = settings.data_dir.exists()
+    archive_ok = settings.archivio_dir.exists()
+    ai_extra = bool(extras.get("ai"))
+    provider = (settings.ai_provider or "").lower()
+    # Ollama needs no cloud key; cloud providers need a key for real calls.
+    ai_credentials_ok = provider == "ollama" or bool(settings.ai_api_key)
+    assistant_ready = ai_extra and ai_credentials_ok
+    missing_fields = _missing_fiscal_fields(settings)
+    invalid_fields = _invalid_fiscal_fields(settings)
+    core_ready = (
+        company_ok and data_dir_ok and archive_ok and not missing_fields and not invalid_fields
+    )
+
+    next_steps = _core_next_steps(core_ready, missing_fields + invalid_fields)
+    next_steps += _assistant_next_steps(core_ready, ai_extra, ai_credentials_ok)
     if not next_steps:
         next_steps.append("openfatture --help")
 
@@ -220,44 +243,50 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
         print(json.dumps(data, indent=2, default=str))
         return
 
-    ready = data["readiness"]
-    core_label = "ready" if ready["core_ready"] else "not ready"
-    asst_label = "configured" if ready["assistant_ready"] else "not configured"
-    console.print(
-        f"[bold]Readiness[/bold]  core: [cyan]{core_label}[/cyan]  "
-        f"assistant: [cyan]{asst_label}[/cyan]\n"
-    )
-
-    table = Table(title="OpenFatture status")
-    table.add_column("Setting", style="cyan")
-    table.add_column("Value")
-    for key in (
-        "version",
-        "database",
-        "data_dir",
-        "archive_dir",
-        "ai_provider",
-        "ai_model",
-        "ai_api_key_configured",
-        "assistant_backend",
-        "assistant_backend_id",
-    ):
-        table.add_row(key.replace("_", " ").title(), str(data[key]))
-    configuration = data["configuration"]
-    table.add_row("Config File", configuration["config_file"])
-    table.add_row("Secret Backend", configuration["secret_backend"])
-    console.print(table)
-
-    checks = Table(title="Readiness checks")
-    checks.add_column("Check", style="cyan")
-    checks.add_column("OK")
-    for name, ok in ready["checks"].items():
-        checks.add_row(name.replace("_", " "), "yes" if ok else "no")
-    console.print(checks)
-
     from openfatture.i18n import _
 
     locale = get_settings().locale
+    ready = data["readiness"]
+    console.print(
+        _(
+            "cli-status-readiness",
+            locale=locale,
+            core="yes" if ready["core_ready"] else "no",
+            assistant="yes" if ready["assistant_ready"] else "no",
+        )
+        + "\n"
+    )
+
+    table = Table(title=_("cli-status-title", locale=locale))
+    table.add_column(_("cli-config-column-setting", locale=locale), style="cyan")
+    table.add_column(_("cli-config-column-value", locale=locale))
+    for key, label in (
+        ("version", "cli-config-label-app-version"),
+        ("database", "cli-config-label-database-url"),
+        ("data_dir", "cli-config-label-data-dir"),
+        ("archive_dir", "cli-config-label-archive-dir"),
+        ("ai_provider", "cli-config-label-ai-provider"),
+        ("ai_model", "cli-config-label-ai-model"),
+        ("ai_api_key_configured", "cli-status-label-ai-api-key-configured"),
+        ("assistant_backend", "cli-status-label-assistant-backend"),
+        ("assistant_backend_id", "cli-status-label-assistant-backend-id"),
+    ):
+        table.add_row(_(label, locale=locale), str(data[key]))
+    configuration = data["configuration"]
+    table.add_row(_("cli-status-label-config-file", locale=locale), configuration["config_file"])
+    table.add_row(
+        _("cli-status-label-secret-backend", locale=locale), configuration["secret_backend"]
+    )
+    console.print(table)
+
+    yes, no = _("cli-status-yes", locale=locale), _("cli-status-no", locale=locale)
+    checks = Table(title=_("cli-status-checks-title", locale=locale))
+    checks.add_column(_("cli-status-column-check", locale=locale), style="cyan")
+    checks.add_column("OK")
+    for name, ok in ready["checks"].items():
+        checks.add_row(name.replace("_", " "), yes if ok else no)
+    console.print(checks)
+
     if ready["missing_fields"] or ready["invalid_fields"]:
         fields = Table(title=_("status-blocking-fields", locale=locale))
         fields.add_column(_("status-field", locale=locale))
@@ -270,24 +299,30 @@ def status(json_output: bool = typer.Option(False, "--json", help="Emit status a
     console.print(_("status-local-only", locale=locale), markup=False)
 
     if ready["next_steps"]:
-        console.print("\n[bold]Next steps[/bold]")
+        console.print("\n" + _("cli-status-next-steps", locale=locale))
         for step in ready["next_steps"]:
             console.print(f"  • {step}")
         console.print()
 
-    extras_table = Table(title="Optional extras (feature modules)")
-    extras_table.add_column("Extra", style="cyan")
-    extras_table.add_column("Installed")
+    extras_table = Table(title=_("cli-status-extras-title", locale=locale))
+    extras_table.add_column(_("cli-status-column-extra", locale=locale), style="cyan")
+    extras_table.add_column(_("cli-status-column-installed", locale=locale))
     for name, installed in sorted(data["extras"].items()):
-        extras_table.add_row(name, "yes" if installed else "no")
+        extras_table.add_row(name, yes if installed else no)
     console.print(extras_table)
 
     ext = data["extensions"]
-    ext_table = Table(title="Extensions")
-    ext_table.add_column("Mechanism", style="cyan")
-    ext_table.add_column("Detail")
+    ext_table = Table(title=_("cli-status-extensions-title", locale=locale))
+    ext_table.add_column(_("cli-status-column-mechanism", locale=locale), style="cyan")
+    ext_table.add_column(_("cli-status-column-detail", locale=locale))
     ext_table.add_row(
-        "hooks (supported)", f"{ext['hooks_dir']} ({len(ext['hooks_scripts'])} scripts)"
+        _("cli-status-hooks", locale=locale),
+        _(
+            "cli-status-hooks-detail",
+            locale=locale,
+            path=str(ext["hooks_dir"]),
+            count=len(ext["hooks_scripts"]),
+        ),
     )
-    ext_table.add_row("in-process plugins", str(ext["in_process_plugins"]))
+    ext_table.add_row(_("cli-status-plugins", locale=locale), str(ext["in_process_plugins"]))
     console.print(ext_table)

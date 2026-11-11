@@ -3,7 +3,7 @@
 Enterprise-grade PDF generation for invoices with:
 - Multiple templates (minimalist, professional, branded)
 - PDF/A compliance for 10-year legal storage
-- QR code support for pagoPa
+- SEPA (EPC) payment QR code
 - Reusable components (header, footer, table)
 
 Example:

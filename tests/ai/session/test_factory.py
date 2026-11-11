@@ -94,7 +94,8 @@ class TestFactoryEdgeCases:
         assert store1 is not store2
 
         # But same type and directory
-        assert type(store1) is type(store2)
+        assert isinstance(store1, FileSessionStore)
+        assert isinstance(store2, FileSessionStore)
         assert store1.sessions_dir == store2.sessions_dir
 
 

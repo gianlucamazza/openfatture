@@ -4,6 +4,7 @@ import tempfile
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -74,7 +75,7 @@ def test_preventivo(db_session: Session, test_cliente: Cliente) -> Preventivo:
     db_session.flush()
 
     # Add righe
-    righe_data = [
+    righe_data: list[dict[str, Any]] = [
         {
             "numero_riga": 1,
             "descrizione": "Consulenza IT",

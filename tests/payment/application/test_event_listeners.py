@@ -54,7 +54,12 @@ def test_global_listeners_receive_payment_events() -> None:
 def test_payment_listeners_subscribe_by_payment_event_type() -> None:
     bus = GlobalEventBus()
     received: list[PaymentEvent] = []
-    bus.subscribe(PaymentEvent, received.append)
+
+    def collect(event: BaseEvent) -> None:
+        assert isinstance(event, PaymentEvent)
+        received.append(event)
+
+    bus.subscribe(PaymentEvent, collect)
 
     event = _matched()
     bus.publish(event)

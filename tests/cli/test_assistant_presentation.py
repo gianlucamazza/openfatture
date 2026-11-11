@@ -2,10 +2,12 @@
 
 from io import StringIO
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 from rich.console import Console
 
+from openfatture.ai.runtime.service import AssistantRuntime
 from openfatture.cli.commands import assistant
 
 
@@ -21,7 +23,9 @@ async def test_stream_preserves_content_and_finishes(monkeypatch, terminal):
         yield "**Ciao"
         yield "**, mondo!"
 
-    result = await assistant._render_stream(SimpleNamespace(stream=stream), "saluto")
+    result = await assistant._render_stream(
+        MagicMock(spec=AssistantRuntime, stream=stream), "saluto"
+    )
     assert result == "**Ciao**, mondo!"
     assert "mondo!" in output.getvalue()
     if not terminal:
@@ -39,7 +43,7 @@ async def test_stream_error_cleans_up_live_display(monkeypatch):
         raise RuntimeError("offline")
 
     with pytest.raises(RuntimeError, match="offline"):
-        await assistant._render_stream(SimpleNamespace(stream=stream), "saluto")
+        await assistant._render_stream(MagicMock(spec=AssistantRuntime, stream=stream), "saluto")
     assert not assistant.console._live_stack
 
 
@@ -55,7 +59,7 @@ async def test_long_response_keeps_complete_final_text(monkeypatch, width):
         for number in range(50):
             yield f"Paragraph {number}.\n\n"
 
-    runtime = SimpleNamespace(stream=stream)
+    runtime = MagicMock(spec=AssistantRuntime, stream=stream)
     result = await assistant._render_stream(runtime, "long response")
     assert "Paragraph 49." in result
     assert "Paragraph 49." in output.getvalue()
@@ -70,7 +74,10 @@ def test_help_is_translated_without_warnings(monkeypatch, caplog, locale, expect
     output = StringIO()
     monkeypatch.setattr(assistant, "console", Console(file=output))
     monkeypatch.setattr(assistant, "get_settings", lambda: SimpleNamespace(locale=locale))
-    assert assistant._handle_slash_command("/help", runtime=object()) == "handled"
+    assert (
+        assistant._handle_slash_command("/help", runtime=MagicMock(spec=AssistantRuntime))
+        == "handled"
+    )
     assert expected in output.getvalue()
     assert "Translation not found" not in caplog.text
     assert "Failed to format" not in caplog.text

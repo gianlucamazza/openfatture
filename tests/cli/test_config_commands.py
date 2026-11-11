@@ -11,30 +11,17 @@ validated against ``get_settings()``, type-converted from the current value, and
 persisted via ``save_config``.
 """
 
-from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from click.testing import Result
 from typer.testing import CliRunner
 
 from openfatture.cli.commands.config import app
 
-
-class _WideCliRunner(CliRunner):
-    """CliRunner that renders Rich output at a wide terminal width.
-
-    Under the default 80-column terminal Rich truncates table cells, which would
-    make substring assertions ("Not set", "Set", the API key) flaky. A fixed wide
-    width keeps the rendered tokens intact and deterministic.
-    """
-
-    def invoke(self, *args: Any, **kwargs: Any) -> Result:
-        env = {"COLUMNS": "220", **(kwargs.pop("env", None) or {})}
-        return super().invoke(*args, env=env, **kwargs)
-
-
-runner = _WideCliRunner()
+# Under the default 80-column terminal Rich truncates table cells, which would
+# make substring assertions ("Not set", "Set", the API key) flaky. A fixed wide
+# width keeps the rendered tokens intact and deterministic.
+runner = CliRunner(env={"COLUMNS": "220"})
 pytestmark = pytest.mark.unit
 
 
@@ -321,6 +308,22 @@ class TestMigrateConfigCommand:
         assert "Invalid value for PEC_SMTP_PORT" in result.stdout
         assert "pw" in (self.profile / "credentials.toml").read_text()
         assert self.dotenv.exists()
+
+    def test_env_file_keeps_stored_secrets_and_equal_values(self):
+        self.config.write_text('ai_model = "same"\n')
+        assert runner.invoke(app, ["set", "pec_password", "old"]).exit_code == 0
+        self.dotenv.write_text("AI_MODEL=same\nPEC_PASSWORD=new\nAI_API_KEY=\n")
+
+        result = runner.invoke(app, ["migrate", "--env-file", str(self.dotenv)])
+
+        assert result.exit_code == 0, result.stdout
+        assert "Already set, not overwritten: pec_password" in result.stdout
+        assert "ai_model" not in result.stdout
+        assert self.config.read_text() == 'ai_model = "same"\n'
+        credentials = (self.profile / "credentials.toml").read_text()
+        assert "old" in credentials
+        assert "new" not in credentials
+        assert "ai_api_key" not in credentials
 
     def test_nothing_to_migrate(self):
         result = runner.invoke(app, ["migrate"])

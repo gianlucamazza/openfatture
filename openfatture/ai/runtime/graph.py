@@ -301,9 +301,11 @@ def build_tool_loop_graph(
                         raise UncertainToolOutcome(receipt_id)
                     if journal:
                         journal.complete(receipt_id, result.model_dump(mode="json"))
+                # Application refusals keep their full payload (error code,
+                # suggested next number, ...) so the model can act on it.
                 content = (
                     json.dumps(result.data, default=str, ensure_ascii=False)
-                    if result.success
+                    if result.success or result.data is not None
                     else f"Error: {result.error}"
                 )
                 results.append(
@@ -323,9 +325,12 @@ def build_tool_loop_graph(
                     raise
                 if reserved:
                     raise UncertainToolOutcome(receipt_id) from exc
-                content = f"Error executing tool: {exc}"
+                from openfatture.platform.errors import describe_error
+
+                error = describe_error(exc)
+                content = f"Error executing tool: {error}"
                 results.append(
-                    {"tool": name, "parameters": arguments, "success": False, "result": str(exc)}
+                    {"tool": name, "parameters": arguments, "success": False, "result": error}
                 )
             writer({"event": "tool_finished", **results[-1], "tool_call_id": tool_call_id})
             messages.append(

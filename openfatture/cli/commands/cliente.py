@@ -11,7 +11,8 @@ from openfatture.billing.application.client_queries import (
     get_client_details,
     search_clients,
 )
-from openfatture.cli.output import remember_result
+from openfatture.cli.output import format_eur, remember_result
+from openfatture.i18n import _
 
 app = typer.Typer(name="cliente", help="Manage clients (customers)")
 console = Console()
@@ -34,21 +35,21 @@ def list_clients(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     if result["count"] == 0:
-        console.print("[yellow]No clients found.[/yellow]")
+        console.print(_("cli-cliente-none-found"))
         return
 
     # Display as table
-    table = Table(title=f"Clients ({result['count']})")
+    table = Table(title=_("cli-cliente-list-title", count=result["count"]))
     table.add_column("ID", style="cyan")
-    table.add_column("Name", style="green")
-    table.add_column("P.IVA")
-    table.add_column("CF")
+    table.add_column(_("cli-common-name"), style="green")
+    table.add_column(_("cli-common-vat-number"))
+    table.add_column(_("cli-common-tax-code"))
     table.add_column("Email")
-    table.add_column("Invoices", justify="right")
+    table.add_column(_("cli-cliente-column-invoices"), justify="right")
 
     for cliente in result["clienti"]:
         table.add_row(
@@ -63,7 +64,7 @@ def list_clients(
     console.print(table)
 
     if result.get("has_more"):
-        console.print("[dim]... and more. Use --limit to see more results.[/dim]")
+        console.print(_("cli-common-more-results"))
 
 
 @app.command("show")
@@ -75,22 +76,22 @@ def show_client(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     # Display client details
-    console.print(f"\n[bold cyan]Client #{result['id']}[/bold cyan]")
-    console.print(f"[bold]Name:[/bold] {result['denominazione']}")
+    console.print("\n" + _("cli-cliente-show-title", id=str(result["id"])))
+    console.print(f"[bold]{_('cli-common-name')}:[/bold] {result['denominazione']}")
 
     if result.get("partita_iva"):
-        console.print(f"[bold]P.IVA:[/bold] {result['partita_iva']}")
+        console.print(f"[bold]{_('cli-common-vat-number')}:[/bold] {result['partita_iva']}")
     if result.get("codice_fiscale"):
-        console.print(f"[bold]Codice Fiscale:[/bold] {result['codice_fiscale']}")
+        console.print(f"[bold]{_('cli-common-tax-code')}:[/bold] {result['codice_fiscale']}")
 
     # Address
     indirizzo = result.get("indirizzo", {})
     if any(indirizzo.values()):
-        console.print("\n[bold]Address:[/bold]")
+        console.print(f"\n[bold]{_('cli-cliente-address')}:[/bold]")
         if indirizzo.get("via"):
             console.print(f"  {indirizzo['via']}")
         if indirizzo.get("cap") or indirizzo.get("comune"):
@@ -99,30 +100,30 @@ def show_client(
     # Contacts
     contatti = result.get("contatti", {})
     if any(contatti.values()):
-        console.print("\n[bold]Contacts:[/bold]")
+        console.print(f"\n[bold]{_('cli-cliente-contacts')}:[/bold]")
         if contatti.get("email"):
             console.print(f"  Email: {contatti['email']}")
         if contatti.get("pec"):
             console.print(f"  PEC: {contatti['pec']}")
         if contatti.get("telefono"):
-            console.print(f"  Tel: {contatti['telefono']}")
+            console.print(f"  {_('cli-cliente-phone')}: {contatti['telefono']}")
 
     # Recent invoices
-    console.print(f"\n[bold]Invoices:[/bold] {result['fatture_count']} total")
+    console.print("\n" + _("cli-cliente-invoices-total", count=result["fatture_count"]))
     if result.get("fatture_recenti"):
-        table = Table(title="Recent Invoices")
+        table = Table(title=_("cli-cliente-recent-invoices"))
         table.add_column("ID", style="cyan")
-        table.add_column("Number")
-        table.add_column("Date")
-        table.add_column("Amount", justify="right")
-        table.add_column("Status")
+        table.add_column(_("cli-common-number"))
+        table.add_column(_("cli-common-date"))
+        table.add_column(_("cli-common-amount"), justify="right")
+        table.add_column(_("cli-common-status"))
 
         for fattura in result["fatture_recenti"]:
             table.add_row(
                 str(fattura["id"]),
                 f"{fattura['numero']}/{fattura['anno']}",
                 fattura["data"],
-                f"€ {fattura['importo']:.2f}",
+                format_eur(fattura["importo"]),
                 fattura["stato"],
             )
 
@@ -160,8 +161,8 @@ def create_new_client(
     remember_result(result)
 
     if "error" in result:
-        console.print(f"[red]Error:[/red] {result['error']}")
+        console.print(_("cli-common-error", error=result["error"]))
         raise typer.Exit(code=1)
 
     console.print(f"[green]✓[/green] {result['message']}")
-    console.print(f"Client ID: [cyan]{result['client_id']}[/cyan]")
+    console.print(_("cli-cliente-created-id", id=str(result["client_id"])))

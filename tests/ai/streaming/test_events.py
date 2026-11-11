@@ -88,6 +88,7 @@ class TestStreamEventFactoryMethods:
             parameters={"query": "2024", "limit": 10},
         )
         assert event.type == StreamEventType.TOOL_START
+        assert isinstance(event.data, dict)
         assert event.data["tool_name"] == "search_invoices"
         assert event.data["parameters"]["query"] == "2024"
         assert event.data["parameters"]["limit"] == 10
@@ -95,6 +96,7 @@ class TestStreamEventFactoryMethods:
     def test_tool_start_without_parameters(self):
         """Test tool_start() without parameters defaults to empty dict."""
         event = StreamEvent.tool_start(tool_name="health_check")
+        assert isinstance(event.data, dict)
         assert event.data["parameters"] == {}
 
     def test_tool_progress_factory(self):
@@ -105,6 +107,7 @@ class TestStreamEventFactoryMethods:
             percentage=50.0,
         )
         assert event.type == StreamEventType.TOOL_PROGRESS
+        assert isinstance(event.data, dict)
         assert event.data["tool_name"] == "search_invoices"
         assert event.data["progress"] == "Searching database..."
         assert event.data["percentage"] == 50.0
@@ -115,6 +118,7 @@ class TestStreamEventFactoryMethods:
             tool_name="test",
             progress="Working...",
         )
+        assert isinstance(event.data, dict)
         assert event.data["percentage"] is None
 
     def test_tool_result_factory(self):
@@ -125,6 +129,7 @@ class TestStreamEventFactoryMethods:
             duration_ms=150.5,
         )
         assert event.type == StreamEventType.TOOL_RESULT
+        assert isinstance(event.data, dict)
         assert event.data["tool_name"] == "search_invoices"
         assert "INV-001" in event.data["result"]
         assert event.data["duration_ms"] == 150.5
@@ -136,6 +141,7 @@ class TestStreamEventFactoryMethods:
             error="Database connection failed",
         )
         assert event.type == StreamEventType.TOOL_ERROR
+        assert isinstance(event.data, dict)
         assert event.data["tool_name"] == "search_invoices"
         assert event.data["error"] == "Database connection failed"
 
@@ -177,6 +183,7 @@ class TestStreamEventFactoryMethods:
             cache_hits=3,
         )
         assert event.type == StreamEventType.METRICS
+        assert isinstance(event.data, dict)
         assert event.data["total_tokens"] == 1500
         assert event.data["duration_ms"] == 2500.5
         assert event.data["cache_hits"] == 3
@@ -184,6 +191,7 @@ class TestStreamEventFactoryMethods:
     def test_metrics_optional_fields(self):
         """Test metrics() with only some fields."""
         event = StreamEvent.metrics(total_tokens=1000)
+        assert isinstance(event.data, dict)
         assert event.data["total_tokens"] == 1000
         assert "duration_ms" not in event.data
 
@@ -274,6 +282,8 @@ class TestStreamEventSerialization:
         restored = StreamEvent.from_dict(data)
 
         assert restored.type == original.type
+        assert isinstance(restored.data, dict)
+        assert isinstance(original.data, dict)
         assert restored.data["tool_name"] == original.data["tool_name"]
         assert restored.data["result"] == original.data["result"]
 
@@ -341,6 +351,7 @@ class TestStreamEventEdgeCases:
                 },
             },
         )
+        assert isinstance(event.data, dict)
         assert event.data["parameters"]["filters"]["date"]["from"] == "2024-01-01"
         assert "draft" in event.data["parameters"]["filters"]["status"]
 

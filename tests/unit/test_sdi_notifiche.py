@@ -254,10 +254,10 @@ class TestSDINotificationParser:
     def test_get_text_with_namespace(self):
         """Test _get_text helper with namespace."""
         parser = SDINotificationParser()
-        import xml.etree.ElementTree as ET
+        from lxml import etree
 
         xml = """<root xmlns:ns="http://test"><ns:element>value</ns:element></root>"""
-        root = ET.fromstring(xml)
+        root = etree.fromstring(xml)
 
         # With namespace, need to use the full path with namespace
         text = parser._get_text(root, ".//{http://test}element")
@@ -266,10 +266,10 @@ class TestSDINotificationParser:
     def test_get_text_empty_element(self):
         """Test _get_text with empty element."""
         parser = SDINotificationParser()
-        import xml.etree.ElementTree as ET
+        from lxml import etree
 
         xml = """<root><empty/></root>"""
-        root = ET.fromstring(xml)
+        root = etree.fromstring(xml)
 
         text = parser._get_text(root, ".//empty")
         assert text == ""  # Should return empty string

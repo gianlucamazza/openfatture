@@ -39,10 +39,7 @@ def journaled_submission(
             return False, "PEC password not configured"
         if not path.exists():
             return False, f"XML file not found: {path}"
-        try:
-            session = object_session(invoice)
-        except Exception:
-            session = None
+        session = object_session(invoice)
         if session is None or invoice.id is None:
             return False, "Persist the invoice before attempting SDI submission"
         if (

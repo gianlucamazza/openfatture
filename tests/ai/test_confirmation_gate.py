@@ -37,12 +37,11 @@ async def test_denials_do_not_consume_concurrency_slots():
         )
     )
     registry.confirmation_callback = AsyncMock(return_value=False)
-    semaphore = registry.get_bulkhead_semaphore("protected_test")
-    capacity = semaphore._value
-    for _ in range(capacity + 2):
+    bulkhead = registry.get_bulkhead("protected_test")
+    for _ in range(bulkhead.config.max_concurrent_executions + 2):
         result = await registry.execute_tool("protected_test", {})
         assert result.error_type == "confirmation_denied"
-        assert semaphore._value == capacity
+        assert (bulkhead.active, bulkhead.queued) == (0, 0)
 
 
 @pytest.mark.asyncio
@@ -58,11 +57,10 @@ async def test_cache_hits_do_not_consume_concurrency_slots():
     registry._cache.get_cached_result = AsyncMock(
         return_value=ToolResult(success=True, tool_name="get_test")
     )
-    semaphore = registry.get_bulkhead_semaphore("get_test")
-    capacity = semaphore._value
+    bulkhead = registry.get_bulkhead("get_test")
     for _ in range(3):
         assert (await registry.execute_tool("get_test", {})).success
-        assert semaphore._value == capacity
+        assert (bulkhead.active, bulkhead.queued) == (0, 0)
 
 
 @pytest.mark.asyncio

@@ -11,7 +11,7 @@ from openfatture.ai.tools.registry.defaults import _register_default_tools
 
 
 @pytest.fixture
-def exports(tmp_path, monkeypatch) -> Path:
+def exports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     base = tmp_path / "exports"
     monkeypatch.setattr(output_paths, "exports_dir", lambda: base)
     return base.resolve()

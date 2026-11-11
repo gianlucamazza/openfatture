@@ -97,6 +97,7 @@ def test_preventivo(
         note="Test preventivo",
     )
 
+    assert preventivo is not None
     return preventivo
 
 
@@ -162,6 +163,7 @@ class TestPreventivoConversion:
         )
 
         assert fattura is None
+        assert error is not None
         assert "already converted" in error.lower()
 
     def test_converti_a_fattura_expired(
@@ -181,6 +183,7 @@ class TestPreventivoConversion:
         )
 
         assert fattura is None
+        assert error is not None
         assert "expired" in error.lower()
 
     def test_converti_a_fattura_scaduto_status(
@@ -200,6 +203,7 @@ class TestPreventivoConversion:
         )
 
         assert fattura is None
+        assert error is not None
         assert "cannot convert expired" in error.lower()
 
     def test_converti_a_fattura_preserves_notes(
@@ -218,6 +222,7 @@ class TestPreventivoConversion:
         )
 
         assert error is None
+        assert fattura is not None
         assert fattura.note == test_note
 
     def test_converti_a_fattura_different_document_types(
@@ -240,18 +245,22 @@ class TestPreventivoConversion:
         prev1, _ = preventivo_service.create_preventivo(
             db=db_session, cliente_id=test_cliente.id, righe=righe
         )
+        assert prev1 is not None
         fattura1, _ = preventivo_service.converti_a_fattura(
             db_session, prev1.id, TipoDocumento.TD01
         )
+        assert fattura1 is not None
         assert fattura1.tipo_documento == TipoDocumento.TD01
 
         # TD06 - Parcella
         prev2, _ = preventivo_service.create_preventivo(
             db=db_session, cliente_id=test_cliente.id, righe=righe
         )
+        assert prev2 is not None
         fattura2, _ = preventivo_service.converti_a_fattura(
             db_session, prev2.id, TipoDocumento.TD06
         )
+        assert fattura2 is not None
         assert fattura2.tipo_documento == TipoDocumento.TD06
 
     def test_converti_a_fattura_sequential_invoice_numbers(
@@ -281,18 +290,24 @@ class TestPreventivoConversion:
             db=db_session, cliente_id=test_cliente.id, righe=righe
         )
 
+        assert prev1 is not None
         fattura1, _ = preventivo_service.converti_a_fattura(
             db_session, prev1.id, TipoDocumento.TD01
         )
+        assert prev2 is not None
         fattura2, _ = preventivo_service.converti_a_fattura(
             db_session, prev2.id, TipoDocumento.TD01
         )
+        assert prev3 is not None
         fattura3, _ = preventivo_service.converti_a_fattura(
             db_session, prev3.id, TipoDocumento.TD01
         )
 
+        assert fattura1 is not None
         assert fattura1.numero == "1"
+        assert fattura2 is not None
         assert fattura2.numero == "2"
+        assert fattura3 is not None
         assert fattura3.numero == "3"
 
     def test_converti_a_fattura_bidirectional_relationship(
@@ -310,6 +325,7 @@ class TestPreventivoConversion:
 
         # Test relationship from fattura to preventivo
         db_session.refresh(fattura)
+        assert fattura is not None
         assert fattura.preventivo_id == test_preventivo.id
         assert fattura.preventivo is not None
         assert fattura.preventivo.id == test_preventivo.id

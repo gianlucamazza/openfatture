@@ -7,6 +7,7 @@ from rich.panel import Panel
 
 from openfatture.ai.domain.response import AgentResponse
 from openfatture.cli.formatters.base import BaseFormatter
+from openfatture.i18n import _
 
 
 class RichFormatter(BaseFormatter):
@@ -72,16 +73,15 @@ class RichFormatter(BaseFormatter):
         """
         # Handle errors
         if response.status.value == "error":
-            self.console.print(
-                f"\n[bold red]Error:[/bold red] {response.error or 'Unknown error'}\n"
-            )
+            error = response.error or _("cli-formatter-unknown-error")
+            self.console.print("\n" + _("cli-formatter-error", error=error) + "\n")
             return
 
         # Display content in panel
         self.console.print(
             Panel(
                 response.content,
-                title="[bold]AI Response[/bold]",
+                title=_("cli-formatter-ai-response"),
                 border_style="green",
             )
         )
@@ -103,20 +103,21 @@ class RichFormatter(BaseFormatter):
         metrics_table.add_column("Metric", style="dim")
         metrics_table.add_column("Value", style="dim")
 
+        unknown = _("cli-formatter-unknown")
         metrics_table.add_row(
-            f"Provider: {response.provider or 'unknown'}",
-            f"Model: {response.model or 'unknown'}",
+            _("cli-formatter-provider", provider=response.provider or unknown),
+            _("cli-formatter-model", model=response.model or unknown),
         )
 
         if response.usage:
             metrics_table.add_row(
-                f"Tokens: {response.usage.total_tokens}",
-                f"Cost: {response.usage.cost_display}",
+                _("cli-formatter-tokens", tokens=response.usage.total_tokens),
+                _("cli-formatter-cost", cost=response.usage.cost_display),
             )
 
         if response.latency_ms:
             metrics_table.add_row(
-                f"Latency: {response.latency_ms:.0f}ms",
+                _("cli-formatter-latency", latency=f"{response.latency_ms:.0f}"),
                 "",
             )
 

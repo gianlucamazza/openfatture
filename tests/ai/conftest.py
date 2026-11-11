@@ -187,9 +187,10 @@ def validate_json_response(content: str) -> dict[str, Any] | None:
     import json
 
     try:
-        return json.loads(content)
+        parsed: dict[str, Any] = json.loads(content)
     except json.JSONDecodeError:
         return None
+    return parsed
 
 
 def validate_invoice_response(response_data: dict[str, Any]) -> bool:

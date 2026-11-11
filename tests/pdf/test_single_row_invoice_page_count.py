@@ -60,6 +60,7 @@ def mock_single_row_invoice_with_payment():
     riga.prezzo_unitario = Decimal("100.00")
     riga.unita_misura = "ore"
     riga.aliquota_iva = Decimal("22")
+    riga.natura = None
     riga.imponibile = Decimal("1000.00")
     riga.iva = Decimal("220.00")
     riga.totale = Decimal("1220.00")
@@ -81,6 +82,7 @@ def mock_single_row_invoice_with_payment():
     fattura.tipo_documento = Mock(value="TD01")
     fattura.cliente = cliente
     fattura.righe = [riga]
+    fattura.cassa_previdenziale = []
     fattura.pagamenti = [pagamento]
     fattura.imponibile = Decimal("1000.00")
     fattura.iva = Decimal("220.00")

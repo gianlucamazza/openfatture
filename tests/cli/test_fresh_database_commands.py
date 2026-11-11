@@ -11,7 +11,8 @@ import pytest
 
 
 @pytest.mark.parametrize(
-    "command, expected", [("fattura", "No invoices found"), ("cliente", "No clients found")]
+    "command, expected",
+    [("fattura", "Nessuna fattura trovata"), ("cliente", "Nessun cliente trovato")],
 )
 def test_list_initializes_database_in_fresh_process(tmp_path, command, expected):
     root = Path(__file__).resolve().parents[2]
@@ -22,6 +23,7 @@ def test_list_initializes_database_in_fresh_process(tmp_path, command, expected)
         DATA_DIR=str(tmp_path / "data"),
         ARCHIVIO_DIR=str(tmp_path / "archive"),
         CERTIFICATES_DIR=str(tmp_path / "certs"),
+        LOCALE="it",
     )
     result = subprocess.run(
         [sys.executable, "-m", "openfatture.cli.main", command, "list"],

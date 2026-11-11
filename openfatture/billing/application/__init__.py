@@ -10,7 +10,9 @@ from openfatture.billing.application import (
     client_queries,
     invoice_commands,
     invoice_queries,
-    preventivo_ops,
+    line_commands,
+    preventivo_commands,
+    preventivo_queries,
     prodotto_ops,
     report_queries,
 )
@@ -18,9 +20,11 @@ from openfatture.billing.application import (
 __all__ = [
     "invoice_queries",
     "invoice_commands",
+    "line_commands",
     "client_queries",
     "client_commands",
-    "preventivo_ops",
+    "preventivo_queries",
+    "preventivo_commands",
     "prodotto_ops",
     "batch_ops",
     "report_queries",

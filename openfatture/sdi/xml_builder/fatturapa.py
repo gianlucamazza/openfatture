@@ -7,6 +7,7 @@ from typing import cast
 
 from lxml import etree
 
+from openfatture.billing.application.totals import amount_due, check_vat, vat_summary
 from openfatture.platform.config import Settings
 from openfatture.storage.database.models import Fattura
 
@@ -92,6 +93,15 @@ class FatturaPABuilder:
 
         if not fattura.righe:
             raise ValueError("Invoice must have at least one line item")
+
+        for riga in fattura.righe:
+            error = check_vat(Decimal(riga.aliquota_iva), riga.natura)
+            if error:
+                raise ValueError(f"Line {riga.numero_riga}: {error}")
+        for cassa in fattura.cassa_previdenziale:
+            error = check_vat(Decimal(cassa.aliquota_iva), cassa.natura)
+            if error:
+                raise ValueError(f"Cassa previdenziale {cassa.tipo_cassa}: {error}")
 
     def _build_header(self, root: etree._Element, fattura: Fattura) -> None:
         """Build FatturaElettronicaHeader section."""
@@ -307,6 +317,10 @@ class FatturaPABuilder:
                         dati_cassa, self._qname("RiferimentoAmministrazione")
                     ).text = cassa.riferimento_amministrazione
 
+        etree.SubElement(
+            dati_doc, self._qname("ImportoTotaleDocumento")
+        ).text = self._format_decimal(fattura.totale)
+
         # Note: DatiFattureCollegate inserted earlier, after DatiGeneraliDocumento
 
     def _build_dati_beni_servizi(self, body: etree._Element, fattura: Fattura) -> None:
@@ -323,7 +337,8 @@ class FatturaPABuilder:
             etree.SubElement(dettaglio, self._qname("Quantita")).text = self._format_decimal(
                 riga.quantita
             )
-            etree.SubElement(dettaglio, self._qname("UnitaMisura")).text = riga.unita_misura
+            if riga.unita_misura:
+                etree.SubElement(dettaglio, self._qname("UnitaMisura")).text = riga.unita_misura
             etree.SubElement(dettaglio, self._qname("PrezzoUnitario")).text = self._format_decimal(
                 riga.prezzo_unitario
             )
@@ -339,22 +354,18 @@ class FatturaPABuilder:
                 etree.SubElement(dettaglio, self._qname("Natura")).text = riga.natura
 
         # DatiRiepilogo: one block per (rate, natura), computed exactly like the
-        # stored invoice totals (billing.application.totals).
-        from openfatture.billing.application.totals import vat_summary
-
-        for (aliquota, natura), (imponibile, iva_importo) in vat_summary(fattura.righe).items():
+        # stored invoice totals, contributions included.
+        summary = vat_summary(fattura.righe, fattura.cassa_previdenziale)
+        for (aliquota, natura), (imponibile, iva_importo) in summary.items():
             riepilogo = etree.SubElement(dati_beni, self._qname("DatiRiepilogo"))
 
             etree.SubElement(riepilogo, self._qname("AliquotaIVA")).text = self._format_decimal(
                 aliquota
             )
 
-            # Natura (required for zero-rated, exempt, or out-of-scope VAT)
+            # Natura (checked in _validate_invoice: present exactly when the rate is 0)
             if natura:
                 etree.SubElement(riepilogo, self._qname("Natura")).text = natura
-            elif aliquota == Decimal("0"):
-                # Default to N2.2 (non soggette - altri casi) for zero VAT if no natura specified
-                etree.SubElement(riepilogo, self._qname("Natura")).text = "N2.2"
 
             etree.SubElement(
                 riepilogo, self._qname("ImponibileImporto")
@@ -364,8 +375,9 @@ class FatturaPABuilder:
                 iva_importo
             )
 
-            # EsigibilitaIVA
-            etree.SubElement(riepilogo, self._qname("EsigibilitaIVA")).text = "I"  # Immediata
+            # EsigibilitaIVA only applies to taxable amounts
+            if not natura:
+                etree.SubElement(riepilogo, self._qname("EsigibilitaIVA")).text = "I"  # Immediata
 
     def _build_dati_pagamento(self, body: etree._Element, fattura: Fattura) -> None:
         """Build DatiPagamento section."""
@@ -402,11 +414,7 @@ class FatturaPABuilder:
                 dettaglio_pag, self._qname("DataScadenzaPagamento")
             ).text = pagamento.data_scadenza.isoformat()
 
-        # Importo (total - ritenuta)
-        importo_pagamento = fattura.totale
-        if fattura.ritenuta_acconto:
-            importo_pagamento -= fattura.ritenuta_acconto
-
+        importo_pagamento = amount_due(fattura.totale, fattura.ritenuta_acconto)
         etree.SubElement(
             dettaglio_pag, self._qname("ImportoPagamento")
         ).text = self._format_decimal(importo_pagamento)

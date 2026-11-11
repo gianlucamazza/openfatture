@@ -1,14 +1,16 @@
-"""AI tool adapters over `openfatture.billing.application.preventivo_ops`."""
+"""AI tool adapters over the preventivo application services."""
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
-from openfatture.billing.application.preventivo_ops import (
+from openfatture.billing.application.preventivo_commands import (
     convert_preventivo_to_invoice,
     create_preventivo,
     delete_preventivo,
-    get_preventivo_details,
-    search_preventivi,
     update_preventivo,
     update_preventivo_status,
+)
+from openfatture.billing.application.preventivo_queries import (
+    get_preventivo_details,
+    search_preventivi,
 )
 
 
@@ -90,7 +92,7 @@ def get_preventivo_tools() -> list[Tool]:
                 ToolParameter(
                     name="righe",
                     type=ToolParameterType.ARRAY,
-                    description="List of line items (each with descrizione, quantita, prezzo_unitario, aliquota_iva, unita_misura)",
+                    description="List of line items (each with descrizione, quantita, prezzo_unitario, aliquota_iva, natura, unita_misura)",
                     required=True,
                     items={
                         "type": "object",
@@ -109,7 +111,11 @@ def get_preventivo_tools() -> list[Tool]:
                             },
                             "aliquota_iva": {
                                 "type": "number",
-                                "description": "VAT rate percentage (default 22.0)",
+                                "description": "VAT rate percentage (cedente default when omitted)",
+                            },
+                            "natura": {
+                                "type": "string",
+                                "description": "VAT natura, only with a 0% rate (default N2.2 for forfettario)",
                             },
                             "unita_misura": {
                                 "type": "string",

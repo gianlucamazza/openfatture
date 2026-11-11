@@ -121,6 +121,16 @@ def create_client(
             return {"error": describe_error(e)}
 
 
+def _apply_client_changes(cliente: Cliente, requested: dict[str, str | None]) -> list[str]:
+    """Set each provided value that differs from the stored one; return changed fields."""
+    changes = []
+    for field, value in requested.items():
+        if value is not None and value != getattr(cliente, field):
+            setattr(cliente, field, value)
+            changes.append(field)
+    return changes
+
+
 def update_client(
     cliente_id: int,
     denominazione: str | None = None,
@@ -170,65 +180,24 @@ def update_client(
             if not cliente:
                 return {"error": f"Client {cliente_id} not found"}
 
-            # Track changes
-            changes = []
-
-            # Update fields if provided
-            if denominazione is not None and denominazione != cliente.denominazione:
-                cliente.denominazione = denominazione
-                changes.append("denominazione")
-
-            if partita_iva is not None and partita_iva != cliente.partita_iva:
-                cliente.partita_iva = partita_iva
-                changes.append("partita_iva")
-
-            if codice_fiscale is not None and codice_fiscale != cliente.codice_fiscale:
-                cliente.codice_fiscale = codice_fiscale
-                changes.append("codice_fiscale")
-
-            if email is not None and email != cliente.email:
-                cliente.email = email
-                changes.append("email")
-
-            if pec is not None and pec != cliente.pec:
-                cliente.pec = pec
-                changes.append("pec")
-
-            if indirizzo is not None and indirizzo != cliente.indirizzo:
-                cliente.indirizzo = indirizzo
-                changes.append("indirizzo")
-
-            if cap is not None and cap != cliente.cap:
-                cliente.cap = cap
-                changes.append("cap")
-
-            if comune is not None and comune != cliente.comune:
-                cliente.comune = comune
-                changes.append("comune")
-
-            if provincia is not None and provincia != cliente.provincia:
-                cliente.provincia = provincia
-                changes.append("provincia")
-
-            if nazione is not None and nazione != cliente.nazione:
-                cliente.nazione = nazione
-                changes.append("nazione")
-
-            if (
-                codice_destinatario is not None
-                and codice_destinatario != cliente.codice_destinatario
-            ):
-                cliente.codice_destinatario = codice_destinatario
-                changes.append("codice_destinatario")
-
-            if telefono is not None and telefono != cliente.telefono:
-                cliente.telefono = telefono
-                changes.append("telefono")
-
-            if note is not None and note != cliente.note:
-                cliente.note = note
-                changes.append("note")
-
+            changes = _apply_client_changes(
+                cliente,
+                {
+                    "denominazione": denominazione,
+                    "partita_iva": partita_iva,
+                    "codice_fiscale": codice_fiscale,
+                    "email": email,
+                    "pec": pec,
+                    "indirizzo": indirizzo,
+                    "cap": cap,
+                    "comune": comune,
+                    "provincia": provincia,
+                    "nazione": nazione,
+                    "codice_destinatario": codice_destinatario,
+                    "telefono": telefono,
+                    "note": note,
+                },
+            )
             if not changes:
                 return {
                     "success": True,

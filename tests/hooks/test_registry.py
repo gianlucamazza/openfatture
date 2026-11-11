@@ -211,12 +211,14 @@ def test_enable_disable_hooks(temp_hooks_dir, sample_hooks):
     result = registry.disable_hook(hook_name)
     assert result is True
     hook = registry.get_hook(hook_name)
+    assert hook is not None
     assert hook.enabled is False
 
     # Enable hook
     result = registry.enable_hook(hook_name)
     assert result is True
     hook = registry.get_hook(hook_name)
+    assert hook is not None
     assert hook.enabled is True
 
     # Try to disable non-existent hook

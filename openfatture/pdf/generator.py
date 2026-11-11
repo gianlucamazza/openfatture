@@ -8,6 +8,8 @@ Enterprise-grade PDF generation with:
 - Type-safe configuration
 """
 
+import io
+from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -17,6 +19,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfgen.canvas import Canvas
 
+from openfatture.billing.application.totals import amount_due, vat_summary
 from openfatture.pdf.components import (
     draw_footer,
     draw_header,
@@ -62,7 +65,6 @@ class PDFGeneratorConfig(BaseModel):
 
     # QR Code
     enable_qr_code: bool = Field(default=False, description="Enable QR code for payments")
-    qr_code_type: str = Field(default="sepa", description="QR code type (sepa, pagopa)")
 
     # PDF/A
     enable_pdfa: bool = Field(default=True, description="Enable PDF/A-3 compliance")
@@ -182,8 +184,17 @@ class PDFGenerator:
             output_path=str(output_file),
         )
 
-        # Create PDF
-        canvas = Canvas(str(output_file), pagesize=A4)
+        # First pass counts the pages for the "Pagina N di M" footers.
+        dry_run = _FooterCanvas(
+            io.BytesIO(), pagesize=A4, total_pages=0, footer_text=self.config.footer_text
+        )
+        self._draw_invoice(dry_run, fattura_data)
+        canvas = _FooterCanvas(
+            str(output_file),
+            pagesize=A4,
+            total_pages=dry_run.getPageNumber(),
+            footer_text=self.config.footer_text,
+        )
 
         # Set PDF metadata
         canvas.setAuthor(self.config.company_name or "OpenFatture")
@@ -257,26 +268,17 @@ class PDFGenerator:
                 "importo": pag.importo,
             }
 
-        # Cassa previdenziale data
-        cassa_data = []
-        cassa_attr = getattr(fattura, "cassa_previdenziale", None)
-        # Only iterate if it's a real iterable (list/tuple/SQLAlchemy collection), not a Mock
-        if cassa_attr is not None and hasattr(cassa_attr, "__iter__"):
-            try:
-                for cassa in cassa_attr:
-                    cassa_data.append(
-                        {
-                            "tipo_cassa": cassa.tipo_cassa,
-                            "al_cassa": cassa.al_cassa,
-                            "importo_contributo_cassa": cassa.importo_contributo_cassa,
-                            "imponibile_cassa": cassa.imponibile_cassa,
-                            "aliquota_iva": cassa.aliquota_iva,
-                            "natura": cassa.natura,
-                        }
-                    )
-            except (AttributeError, TypeError):
-                # If iteration fails (e.g., Mock object), treat as empty
-                pass
+        cassa_data = [
+            {
+                "tipo_cassa": cassa.tipo_cassa,
+                "al_cassa": cassa.al_cassa,
+                "importo_contributo_cassa": cassa.importo_contributo_cassa,
+                "imponibile_cassa": cassa.imponibile_cassa,
+                "aliquota_iva": cassa.aliquota_iva,
+                "natura": cassa.natura,
+            }
+            for cassa in fattura.cassa_previdenziale
+        ]
 
         # Cedente data (from config)
         cedente_data = {
@@ -300,9 +302,13 @@ class PDFGenerator:
             "ritenuta_acconto": fattura.ritenuta_acconto or Decimal(0),
             "aliquota_ritenuta": fattura.aliquota_ritenuta or Decimal(0),
             "importo_bollo": fattura.importo_bollo or Decimal(0),
-            "bollo_assolto_virtuale": fattura.bollo_assolto_virtuale
-            if hasattr(fattura, "bollo_assolto_virtuale")
-            else False,
+            "importo_da_pagare": amount_due(fattura.totale, fattura.ritenuta_acconto),
+            "riepilogo": [
+                {"aliquota_iva": aliquota, "natura": natura, "imponibile": imp, "imposta": tax}
+                for (aliquota, natura), (imp, tax) in vat_summary(
+                    fattura.righe, fattura.cassa_previdenziale
+                ).items()
+            ],
             "stato": fattura.stato.value,
             "note": fattura.note,
             "cedente": cedente_data,
@@ -313,19 +319,11 @@ class PDFGenerator:
         }
 
     def _draw_invoice(self, canvas: Canvas, fattura_data: dict[str, Any]) -> None:
-        """Draw complete invoice on canvas.
-
-        Args:
-            canvas: ReportLab canvas
-            fattura_data: Invoice data dictionary
-        """
-        page_width, page_height = A4
-        y = page_height - 2 * cm
-
-        # Header with company info
+        """Draw the invoice, breaking pages so no section crosses the footer."""
+        top = A4[1] - 2 * cm
         y = draw_header(
             canvas,
-            y,
+            top,
             company_name=self.config.company_name or "OpenFatture",
             company_vat=self.config.company_vat,
             company_cf=self.config.company_cf,
@@ -335,278 +333,106 @@ class PDFGenerator:
             logo_path=self.config.logo_path,
             primary_color=self.template.get_primary_color(),
         )
-
-        # Custom template elements
         y = self.template.draw_custom_elements(canvas, fattura_data, y)
-
-        # Invoice info (number, date)
         y = self.template.draw_invoice_info(canvas, fattura_data, y)
-
-        # Client info
         y = self.template.draw_client_info(canvas, fattura_data["cliente"], y)
 
-        # Calculate space needed for summary, payment, notes (post-table content)
-        # Reserve space to prevent negative box_y in summary
-        summary_height = self._calculate_summary_height(fattura_data)
-        payment_height = self._calculate_payment_height(fattura_data["pagamento"])
-        notes_height = self._calculate_notes_height(fattura_data.get("note"))
-        footer_height = 2 * cm  # Footer space at bottom
-
-        # Total space needed after table (individual calcs already include margins)
-        post_table_space = summary_height + payment_height + notes_height + footer_height
-
-        # Available height for table (ensure summary won't get negative y)
-        available_for_table = y - post_table_space
-
-        # If not enough space for table + summary, start table on new page
-        # Threshold: table header (~0.8cm) + 1 row (~1.5cm) + small margin = ~3cm
-        if available_for_table < 3 * cm:
-            # Start new page for table
+        # Line items: split across pages as needed.
+        if y - _CONTENT_BOTTOM < _MIN_TABLE_HEIGHT:
             canvas.showPage()
-            page_width, page_height = A4
-            y = page_height - 2 * cm
-
-            # Redraw header on new page
-            y = draw_header(
-                canvas,
-                y,
-                company_name=self.config.company_name or "OpenFatture",
-                company_vat=self.config.company_vat,
-                company_cf=self.config.company_cf,
-                company_address=self.config.company_address,
-                company_city=self.config.company_city,
-                regime_fiscale=self.config.regime_fiscale,
-                logo_path=self.config.logo_path,
-                primary_color=self.template.get_primary_color(),
-            )
-
-            # Recalculate available space on fresh page
-            available_for_table = y - post_table_space
-
-        # Draw invoice table with available space
-        y, remaining_tables = draw_invoice_table(
+            y = top
+        y, remaining = draw_invoice_table(
             canvas,
             y,
             fattura_data["righe"],
             primary_color=self.template.get_primary_color(),
-            available_height=available_for_table,
+            available_height=y - _CONTENT_BOTTOM,
         )
-
-        # Handle remaining table portions on new pages
-        page_num = 1
-        while remaining_tables:
-            page_num += 1
+        while remaining:
             canvas.showPage()
+            y = top
+            table = remaining.pop(0)
+            available = y - _CONTENT_BOTTOM
+            _, height = table.wrap(17 * cm, available)
+            if height > available:
+                parts = table.split(17 * cm, available)
+                table, remaining = parts[0], [*parts[1:], *remaining]
+                _, height = table.wrap(17 * cm, available)
+            table.drawOn(canvas, 2 * cm, y - height)
+            y -= height + 0.5 * cm
 
-            # Draw footer for previous page
-            draw_footer(
-                canvas,
-                page_number=page_num - 1,
-                total_pages=page_num + len(remaining_tables),  # Estimate
-                show_digital_signature_note=True,
-                footer_text=self.config.footer_text,
-            )
-
-            # Reset Y for new page
-            page_width, page_height = A4
-            y = page_height - 2 * cm
-
-            # Draw continued table
-            next_table = remaining_tables[0]
-            available_height = y - post_table_space
-            table_width, table_height = next_table.wrap(17 * cm, available_height)
-
-            if table_height <= available_height:
-                # Table fits
-                next_table.drawOn(canvas, 2 * cm, y - table_height)
-                y = y - table_height - 0.5 * cm
-                remaining_tables = remaining_tables[1:]
-            else:
-                # Still doesn't fit, split further
-                split_tables = next_table.split(17 * cm, available_height)
-                if split_tables:
-                    first = split_tables[0]
-                    first_width, first_height = first.wrap(17 * cm, available_height)
-                    first.drawOn(canvas, 2 * cm, y - first_height)
-                    y = y - first_height - 0.5 * cm
-                    # Replace with remaining parts
-                    remaining_tables = split_tables[1:] + remaining_tables[1:]  # type: ignore[operator]
-                else:
-                    # Can't split further, draw what we have
-                    next_table.drawOn(canvas, 2 * cm, y - table_height)
-                    y = y - table_height - 0.5 * cm
-                    remaining_tables = remaining_tables[1:]
-
-        # Draw footer for last table page
-        draw_footer(
-            canvas,
-            page_number=page_num,
-            total_pages=page_num,
-            show_digital_signature_note=True,
-            footer_text=self.config.footer_text,
-        )
-
-        # Dati di riepilogo (tax breakdown table)
-        y = self.template.draw_dati_riepilogo(canvas, fattura_data, y)
-
-        # Summary (totals)
-        y = self.template.draw_summary(canvas, fattura_data, y)
-
-        # Cassa previdenziale (if present)
+        # Sections after the table, each kept whole on a page.
+        sections: list[Callable[[Canvas, float], float]] = [
+            lambda c, at: self.template.draw_dati_riepilogo(c, fattura_data, at),
+            lambda c, at: self.template.draw_summary(c, fattura_data, at),
+        ]
         if fattura_data.get("cassa_previdenziale"):
-            y = self.template.draw_cassa_previdenziale(
-                canvas, fattura_data["cassa_previdenziale"], y
+            sections.append(
+                lambda c, at: self.template.draw_cassa_previdenziale(
+                    c, fattura_data["cassa_previdenziale"], at
+                )
             )
-
-        # Payment info
-        y = self.template.draw_payment_info(canvas, fattura_data["pagamento"], y)
-
-        # QR Code (if enabled and payment data available)
-        if self.config.enable_qr_code and fattura_data["pagamento"]:
-            self._draw_payment_qr(canvas, fattura_data)
-
-        # Notes
-        y = self.template.draw_notes(canvas, fattura_data.get("note"), y)
-
-        # Bollo footer (if present)
-        if fattura_data.get("importo_bollo", Decimal(0)) > 0:
-            y = self.template.draw_bollo_footer(
-                canvas,
-                fattura_data["importo_bollo"],
-                fattura_data.get("bollo_assolto_virtuale", False),
-                y,
-            )
-
-    def _calculate_summary_height(self, fattura_data: dict[str, Any]) -> float:
-        """Calculate height needed for summary box.
-
-        Args:
-            fattura_data: Invoice data
-
-        Returns:
-            Height in cm
-        """
-        from decimal import Decimal
-
-        line_height = 0.6 * cm
-        num_lines = 3  # Imponibile, IVA, Total
-
-        # Add lines for optional fields
-        if fattura_data.get("ritenuta_acconto", Decimal(0)) > 0:
-            num_lines += 1
-        if fattura_data.get("importo_bollo", Decimal(0)) > 0 and not fattura_data.get(
-            "bollo_assolto_virtuale", False
-        ):
-            num_lines += 1
-
-        box_height = (num_lines * line_height) + 1.4 * cm
-        # Add spacing before and after (reduced from 1.5cm total to 1.0cm)
-        return box_height + 0.8 * cm + 0.2 * cm
-
-    def _calculate_payment_height(self, pagamento_data: dict[str, Any] | None) -> float:
-        """Calculate height needed for payment info section.
-
-        Args:
-            pagamento_data: Payment data
-
-        Returns:
-            Height in cm
-        """
-        if not pagamento_data:
-            return 0
-
-        # Title + spacing
-        height = 0.8 * cm + 0.6 * cm
-
-        # Method line
-        height += 0.5 * cm
-
-        # Optional lines
-        if pagamento_data.get("data_scadenza"):
-            height += 0.5 * cm
-        if pagamento_data.get("iban"):
-            height += 0.5 * cm
-        if pagamento_data.get("bic_swift"):
-            height += 0.5 * cm
-
-        # Spacing after (reduced from 0.5cm since summary has spacing before)
-        height += 0.3 * cm
-
-        return height
-
-    def _calculate_notes_height(self, note: str | None) -> float:
-        """Calculate height needed for notes section.
-
-        Args:
-            note: Notes text
-
-        Returns:
-            Height in cm
-        """
-        if not note:
-            return 0
-
-        # Title + spacing
-        height = 0.8 * cm + 0.5 * cm
-
-        # Estimate lines (max 80 chars per line)
-        words = note.split()
-        lines_count = 1
-        current_line_len = 0
-
-        for word in words:
-            if current_line_len + len(word) + 1 <= 80:
-                current_line_len += len(word) + 1
-            else:
-                lines_count += 1
-                current_line_len = len(word) + 1
-
-        # Line height
-        height += lines_count * 0.4 * cm
-
-        # Spacing after
-        height += 0.3 * cm
-
-        return height
-
-    def _draw_payment_qr(self, canvas: Canvas, fattura_data: dict[str, Any]) -> None:
-        """Draw payment QR code.
-
-        Args:
-            canvas: ReportLab canvas
-            fattura_data: Invoice data
-        """
-        pagamento = fattura_data["pagamento"]
-
-        if not pagamento or not pagamento.get("iban"):
-            return
-
-        # Generate QR data
-        if self.config.qr_code_type == "sepa":
-            qr_data = generate_sepa_qr_data(
-                beneficiary_name=self.config.company_name or "OpenFatture",
-                iban=pagamento["iban"],
-                amount=float(fattura_data["totale"]),
-                reference=f"Fattura {fattura_data['numero']}/{fattura_data['anno']}",
-                bic=pagamento.get("bic_swift"),
-            )
-        else:
-            # pagoPa not yet implemented
-            logger.warning("pagopa_qr_not_implemented")
-            return
-
-        # Draw QR code (bottom-right corner)
-        draw_qr_code(
-            canvas,
-            x_position=15.5 * cm,
-            y_position=2.5 * cm,
-            data=qr_data,
-            size=3 * cm,
+        sections.append(
+            lambda c, at: self.template.draw_payment_info(c, fattura_data["pagamento"], at)
         )
+        if self.config.enable_qr_code and (fattura_data["pagamento"] or {}).get("iban"):
+            sections.append(lambda c, at: self._draw_payment_qr(c, fattura_data, at))
+        sections.append(lambda c, at: self.template.draw_notes(c, fattura_data.get("note"), at))
+        if fattura_data.get("importo_bollo", Decimal(0)) > 0:
+            sections.append(
+                lambda c, at: self.template.draw_bollo_footer(c, fattura_data["importo_bollo"], at)
+            )
 
-        # Label
+        for draw in sections:
+            if y - _section_height(draw, y) < _CONTENT_BOTTOM:
+                canvas.showPage()
+                y = top
+            y = draw(canvas, y)
+
+    def _draw_payment_qr(self, canvas: Canvas, fattura_data: dict[str, Any], y: float) -> float:
+        """Draw the SEPA credit transfer (EPC) QR for the amount the customer pays."""
+        pagamento = fattura_data["pagamento"]
+        qr_data = generate_sepa_qr_data(
+            beneficiary_name=self.config.company_name or "OpenFatture",
+            iban=pagamento["iban"],
+            amount=float(fattura_data["importo_da_pagare"]),
+            reference=f"Fattura {fattura_data['numero']}/{fattura_data['anno']}",
+            bic=pagamento.get("bic_swift"),
+        )
+        size = 3 * cm
+        draw_qr_code(canvas, x_position=15.5 * cm, y_position=y - size, data=qr_data, size=size)
         canvas.setFont("Helvetica", 8)
-        canvas.drawString(15.5 * cm, 2 * cm, "Paga con QR Code")
+        canvas.drawString(15.5 * cm, y - size - 0.4 * cm, "Paga con QR Code")
+        return y - size - 0.8 * cm
+
+
+# Footer area (page number, notes) below this line; content stays above it.
+_CONTENT_BOTTOM = 2.0 * cm
+_MIN_TABLE_HEIGHT = 3 * cm
+
+
+def _section_height(draw: Callable[[Canvas, float], float], y: float) -> float:
+    """Height a section takes, measured by drawing it on a scratch canvas."""
+    return y - draw(Canvas(io.BytesIO(), pagesize=A4), y)
+
+
+class _FooterCanvas(Canvas):
+    """Canvas that draws the "Pagina N di M" footer on every page it ends."""
+
+    def __init__(self, *args: Any, total_pages: int, footer_text: str | None, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._total_pages = total_pages
+        self._footer_text = footer_text
+
+    def showPage(self) -> None:
+        draw_footer(
+            self,
+            page_number=self.getPageNumber(),
+            total_pages=self._total_pages,
+            show_digital_signature_note=True,
+            footer_text=self._footer_text,
+        )
+        super().showPage()
 
 
 def create_pdf_generator(template: str = "professional", **kwargs: Any) -> PDFGenerator:

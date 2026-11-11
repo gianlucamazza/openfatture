@@ -1,11 +1,11 @@
 # Technical Debt Inventory
 
 Honest inventory of **open** and **closed** debt after modernization **2.0**,
-the **2.1.0** LangGraph default flip, post-2.1 hygiene (#31–#34) and the
-**2.6.0–2.8.0** architecture review.
+the **2.1.0** LangGraph default flip, post-2.1 hygiene (#31–#34), the
+**2.6.0–2.8.0** architecture review and the **2.9.0** burn-down of all open debt.
 
 **Last updated:** 2026-11-10  
-**Version baseline:** 2.8.2 (`v2.8.2`) · analysis: [docs/reports/technical-debt-analysis-2026-11.md](reports/technical-debt-analysis-2026-11.md)
+**Version baseline:** 2.9.0 (`v2.9.0`) · analysis: [docs/reports/technical-debt-analysis-2026-11.md](reports/technical-debt-analysis-2026-11.md)
 
 Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), [releases/v2.1.0.md](releases/v2.1.0.md).
@@ -18,15 +18,14 @@ Related: [STATUS.md](STATUS.md), [CORE_VS_EXTENSIONS.md](CORE_VS_EXTENSIONS.md),
 | Milestone | [Post-2.1 backlog (on-demand)](https://github.com/gianlucamazza/openfatture/milestone/1) |
 | Labels | `technical-debt`, `product-decision`, `on-demand`, `priority:p1`–`p3` |
 
-| ID | Issue | Priority |
-|----|-------|----------|
-| D-SIZE | [#37](https://github.com/gianlucamazza/openfatture/issues/37) | P1 |
-| D-OBS | [#40](https://github.com/gianlucamazza/openfatture/issues/40) | P3 |
-| D-PDF-PAGOPA | [#41](https://github.com/gianlucamazza/openfatture/issues/41) | P2 |
-| D-TYPES-TESTS | [#42](https://github.com/gianlucamazza/openfatture/issues/42) | P3 |
-| D-ASYNC | [#43](https://github.com/gianlucamazza/openfatture/issues/43) | P3 |
-| D-COV | *(acceptable — no issue; baseline floors only)* | — |
-| Product surfaces (TUI/MCP/web) | [#44](https://github.com/gianlucamazza/openfatture/issues/44) | decision |
+| ID | Issue | State |
+|----|-------|-------|
+| D-SIZE | [#37](https://github.com/gianlucamazza/openfatture/issues/37) | Closed in 2.9.0 |
+| D-OBS | [#40](https://github.com/gianlucamazza/openfatture/issues/40) | Closed in 2.9.0 |
+| D-PDF-PAGOPA | [#41](https://github.com/gianlucamazza/openfatture/issues/41) | Closed in 2.9.0 (removed: not applicable) |
+| D-TYPES-TESTS | [#42](https://github.com/gianlucamazza/openfatture/issues/42) | Closed in 2.9.0 |
+| D-ASYNC | [#43](https://github.com/gianlucamazza/openfatture/issues/43) | Closed in 2.9.0 |
+| Product surfaces (TUI/MCP/web) | [#44](https://github.com/gianlucamazza/openfatture/issues/44) | Product decision, not debt |
 
 Close the matching issue and move the row to the closed ledger when debt is burned.
 
@@ -36,14 +35,14 @@ Close the matching issue and move the row to the closed ledger when debt is burn
 
 | Signal | State |
 |--------|--------|
-| Structural modernization (2.0) | **Done** |
-| AI product backend (LangGraph default) | **Done** (2.1.0) |
-| Packaging / CLI surface / suppressions | **Clean** |
-| Real remaining debt | **Oversized modules** (split when touched) |
+| Open code debt | **None** (2.9.0) |
+| Module size | No product module above ~520 LOC; no function above radon rank C |
+| Types | mypy on `openfatture/` and `tests/`, zero suppressions |
+| Amount consistency | Stored totals, XML and PDF share `billing.application.totals` |
 | Blocking release debt | **None** |
 
-Remaining work is **maintenance when touched** or **product decisions**, not
-firefighting. Do not invent new public domain CLI commands to “finish” debt.
+New debt is recorded here with an ID, impact and trigger when it is found;
+it is not left in code comments.
 
 ---
 
@@ -56,10 +55,10 @@ firefighting. Do not invent new public domain CLI commands to “finish” debt.
 | Package layout | Low | Bounded packages; no empty placeholders; extras explicit |
 | Config / SSOT | Low | Version, backends, AI credentials hydrated consistently (#32) |
 | AI runtime (product path) | Low | Default `langgraph_tool_loop`; single tool-loop; ChatAgent slim rollback |
-| Module size / cohesion | Medium | A few files >700 LOC; split only when editing them |
+| Module size / cohesion | Low | Split by cohesion in 2.9.0; radon rank ≤ C everywhere |
 | Lightning | **Removed** | Incomplete LND gRPC; archive under `docs/history/lightning/` |
 | RAG auto-update | Low | Real `reindex_callback` required; default auto-update off |
-| Tooling / types | Low | Zero in-code `noqa` / `type: ignore` / `pragma: no cover` |
+| Tooling / types | Low | Zero in-code `noqa` / `type: ignore` / `pragma: no cover`; tests type-checked |
 | Tests | Low | Skips are for extras, external services, or intentional env limits |
 | Coverage floors | Acceptable | Package 78% (measured 81%); payment 75% |
 
@@ -110,97 +109,51 @@ Keep this ledger so old debt is not rediscovered as open.
 | Unsafe XML parsing of SDI notifications | 2.8.2 | `sdi.safe_xml` |
 | Raw exceptions returned to the assistant | 2.8.2 | `platform.errors.describe_error` |
 | Unused deps, advisory-only security CI, 49% coverage floor | 2.8.2 | deptry/pip-audit/bandit blocking; floor 78% |
+| Contributions missing from DatiRiepilogo/totals; PDF riepilogo and totals diverging from XML | 2.9.0 | One summary for totals, XML and PDF; amount due on PDF and QR |
+| 0% lines without natura; quotes losing natura | 2.9.0 | Rule enforced at creation and XML build; regime defaults |
+| Stamp duty never computed; meaningless `bollo_assolto_virtuale` | 2.9.0 | Automatic `importo_bollo`; flag dropped (migration) |
+| PDF sections running under the footer / off the page | 2.9.0 | Measured page flow, real page count |
+| D-XML-TOTAL `ImportoTotaleDocumento` not emitted | 2.9.0 | Emitted from the stored total |
+| D-SIZE oversized modules and complexity hotspots (#37) | 2.9.0 | Models package, command/query modules, registry/PDF/provider splits; no rank D+ |
+| D-OBS approximate bulkhead queue (#40) | 2.9.0 | `Bulkhead` counts waiters explicitly |
+| D-PDF-PAGOPA (#41) | 2.9.0 | Removed: pagoPA notices are issued by public creditors |
+| D-TYPES-TESTS (#42) | 2.9.0 | `check_untyped_defs` on tests; CI runs `mypy openfatture/ tests/` |
+| D-ASYNC nested-loop bridge (#43) | 2.9.0 | One strategy, no `nest_asyncio` |
+| D-CLI-I18N hard-coded CLI text | 2.9.0 | All command output in `cli.ftl`, five locales |
+| D-ERRORS application refusals reported as tool success | 2.9.0 | `{"error"}` → failed `ToolResult`, not cached, breaker-neutral |
+| Awaitable matcher list shim | 2.9.0 | Synchronous matcher contract |
+| Duplicate line tools, `ReActOrchestrator`, unused feedback tables | 2.9.0 | Removed |
 
 ---
 
 ## Open debt
 
-Each item has an **ID**, **impact**, **trigger** (when to act), and **non-goal**
-if relevant. Prefer fixing debt in the same PR that touches the module.
+None. Record new items here with an **ID**, **impact** and **trigger**.
 
-### D-SIZE — Oversized modules
+### Error contract (reference)
 
-**GitHub:** [#37](https://github.com/gianlucamazza/openfatture/issues/37)  
-**Impact:** Harder review, higher merge conflict risk, mixed concerns.  
-**Risk to users:** Low until bugs land in these files.  
-**Trigger:** Split **when you edit** them for a real feature/bug; do not drive
-standalone “LOC reduction” PRs.
+Layers keep one contract each, translated at the boundary:
 
-| Module | ~LOC | Suggested split direction | Priority |
-|--------|------|---------------------------|----------|
-| `storage/database/models.py` | ~840 | Models by bounded context (billing / payment / events / SDI) | P2 |
-| `ai/tools/registry/core.py` | ~810 | Extract bulkhead/circuit-breaker and metrics | P3 |
-| `pdf/templates/base.py` | ~770 | Summary/table drawing helpers | P3 |
-| `billing/application/invoice_commands.py` | ~680 | Invoice vs line commands | P2 |
-| `ai/tools/invoice_tools/__init__.py` | ~660 | One module per tool group | P3 |
-| `ai/orchestration/react.py` | ~630 | Keep unless ReAct path expands | P3 |
-| `ai/providers/openai.py` | ~630 | Client vs streaming vs tool-call mapping | P3 |
-| `billing/application/preventivo_ops.py` | ~540 | Ops vs PDF/email side paths | P2 |
+1. Domain and infrastructure code raises exceptions (`OpenFattureError`,
+   `XMLValidationError`, library errors).
+2. Application services return `{"success": True, ...}` or
+   `{"error": <message>, "error_code"?: <code>}`; exception text goes through
+   `platform.errors.describe_error` (no SQL).
+3. Tools turn an error dict into `ToolResult(success=False, data=<dict>)`;
+   such refusals are not cached and do not open the circuit breaker.
 
-**Done nearby:** `chat_agent.py` slimmed (structured + graph delegation);
-`ai.tools.registry` is already a package.
+Broad `except Exception` remains only where it isolates peripheral work
+(post-commit events and notifications, hooks, optional caches) and logs it.
 
-### D-CLI-I18N — Hard-coded CLI strings
-
-**Location:** `cli/commands/fattura.py` (69), `init.py` (26), `cliente.py` (19).  
-**Impact:** Mixed Italian/English output; non-Italian locales see untranslated text.  
-**Trigger:** Next change to these commands; move strings to `cli.ftl` (the i18n
-test then enforces every locale).
-
-### D-ERRORS — Three error contracts
-
-**Behavior:** Application services return `{"error": ...}`, the XML path raises
-`XMLValidationError`, tools wrap results in `ToolResult`. 54 broad `except`
-blocks only log; the reviewed ones isolate post-commit side effects
-(events, notification emails).  
-**Trigger:** A new caller that needs typed errors; unify at the tool boundary.
-
-### D-XML-TOTAL — `ImportoTotaleDocumento` not emitted
-
-Optional in FatturaPA; some customer tools expect it. Add when the bollo and
-cassa contributions are folded into the document total rules.
-
-### D-OBS — Bulkhead queue length is approximate
-
-**GitHub:** [#40](https://github.com/gianlucamazza/openfatture/issues/40)  
-**Location:** `ai/tools/registry/core.py` (+ `ToolResult.bulkhead_queue_length`)  
-**Behavior:** Derived from semaphore `_value` / max concurrent, not a real wait-queue depth.  
-**Impact:** Observability only; concurrency limiting still works.  
-**Trigger:** If tool-resilience dashboards need accurate queue depth.
-
-### D-PDF-PAGOPA — pagoPA QR not implemented
-
-**GitHub:** [#41](https://github.com/gianlucamazza/openfatture/issues/41)  
-**Location:** `pdf/generator.py` (`pagopa_qr_not_implemented` warning)  
-**Impact:** PDF generation continues without QR when that path is requested.  
-**Trigger:** Customer need for pagoPA QR on generated PDFs.
-
-### D-TYPES-TESTS — mypy does not type-check `tests.*`
-
-**GitHub:** [#42](https://github.com/gianlucamazza/openfatture/issues/42)  
-**Location:** `pyproject.toml` mypy config  
-**Impact:** Test-only type bugs slip until runtime.  
-**Trigger:** Optional incremental enable for critical test packages.  
-**Not debt:** third-party `ignore_missing_imports` for packages without stubs.
-
-### D-COV — Global coverage floor is a baseline, not a goal
+### D-COV — Coverage floors are baselines
 
 | Suite | Floor | Source |
 |-------|-------|--------|
 | Full package | 78% | `[tool.coverage.report] fail_under` + `test.yml` |
-| Payment | 75% | `payment-tests.yml` (~78% measured) |
+| Payment | 75% | `payment-tests.yml` |
 
-**Impact:** Prevents large regressions; does not drive quality by itself.  
-**Trigger:** Raise floors only when a suite sustainably exceeds them.  
-**Local default:** pytest without coverage (speed); use CI flags for reports.
-
-### D-ASYNC — Nested event-loop bridge
-
-**GitHub:** [#43](https://github.com/gianlucamazza/openfatture/issues/43)  
-**Location:** platform async bridge (`nest_asyncio` optional, else worker thread;
-primary path `asyncio.run`).  
-**Impact:** Edge cases in nested loops / notebook-like hosts.  
-**Trigger:** Only if interactive/assistant hosts hit real nested-loop failures.
+Raise floors only when a suite sustainably exceeds them. This is a policy,
+not debt.
 
 ---
 
@@ -230,16 +183,6 @@ Documenting them here prevents them from being treated as silent backlog bugs.
 | `__init__.py` F401 per-file ignore | Public re-export barrels |
 | Interactive / TTY-only test skips | Cannot assert full UX headlessly |
 | SQLite in-memory concurrency skips | Known engine limit, not app bug |
-
----
-
-## Recommended burn-down order
-
-Act only with a real trigger. Order is **cost/benefit**, not a sprint backlog.
-
-1. **D-SIZE P2** — `models.py` / `invoice_commands` / `preventivo_ops` when billing storage changes  
-2. **D-OBS / D-PDF-PAGOPA / D-TYPES-TESTS / D-ASYNC** — opportunistic  
-3. **Product decisions** (TUI / MCP / web) — separate design + release, not drive-by PRs  
 
 ---
 

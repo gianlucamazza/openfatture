@@ -1,14 +1,18 @@
 """Integration tests for formatters with AI commands."""
 
 import json
+from collections.abc import AsyncIterator
+from typing import Any
 
 import pytest
 
 from openfatture.ai.agents.chat_agent import ChatAgent
 from openfatture.ai.domain.context import ChatContext
+from openfatture.ai.domain.message import Message
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics
 from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.cli.formatters.factory import get_formatter
+from openfatture.cli.formatters.stream_json import StreamJSONFormatter
 
 
 class IntegrationMockProvider(BaseLLMProvider):
@@ -33,7 +37,14 @@ class IntegrationMockProvider(BaseLLMProvider):
     def supports_tools(self) -> bool:
         return self._supports_tools
 
-    async def generate(self, messages, **kwargs):
+    async def generate(
+        self,
+        messages: list[Message],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        **kwargs: Any,
+    ) -> AgentResponse:
         """Generate realistic responses."""
         content = "This is a detailed AI-generated response for your query."
         return AgentResponse(
@@ -50,7 +61,14 @@ class IntegrationMockProvider(BaseLLMProvider):
             latency_ms=750,
         )
 
-    async def stream(self, messages, **kwargs):
+    async def stream(
+        self,
+        messages: list[Message],
+        system_prompt: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
         response = await self.generate(messages, **kwargs)
         words = response.content.split()
         for word in words:
@@ -149,17 +167,18 @@ class TestFormatterIntegrationWithChatAgent:
         context = ChatContext(user_input="Stream test")
 
         formatter = get_formatter("stream-json")
+        assert isinstance(formatter, StreamJSONFormatter)
 
         # Collect streamed chunks
-        chunks = []
+        chunks: list[str] = []
         async for chunk in agent.execute_stream(context):
             formatted_chunk = formatter.format_stream_chunk(chunk)
             chunks.append(formatted_chunk)
 
         # Verify chunks are valid JSON Lines
         assert len(chunks) > 0
-        for chunk in chunks:
-            data = json.loads(chunk.strip())
+        for line in chunks:
+            data = json.loads(line.strip())
             assert data["type"] == "chunk"
             assert "content" in data
             assert "index" in data

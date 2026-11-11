@@ -9,7 +9,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from openfatture.ai.domain.agent import AgentConfig
+from openfatture.ai.domain.agent_contract import AgentConfig
 from openfatture.ai.domain.context import AgentContext, InvoiceContext
 from openfatture.ai.domain.message import ConversationHistory, Message, Role
 from openfatture.ai.domain.response import AgentResponse, ResponseStatus, UsageMetrics

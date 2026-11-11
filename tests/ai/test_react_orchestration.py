@@ -1,4 +1,4 @@
-"""Tests for ReAct orchestration and tool call parsing."""
+"""Tests for the ReAct prompt and tool call parsing."""
 
 import pytest
 
@@ -101,6 +101,7 @@ Final Answer: Ecco le tue fatture:
 
         assert parsed.is_final is False
         assert parsed.tool_call is not None
+        assert parsed.tool_call.thought is not None
         assert "Devo cercare" in parsed.tool_call.thought
 
     def test_parse_no_tool_or_final_treats_as_final(self):
@@ -287,6 +288,7 @@ and should be preserved.
 
         assert parsed.is_final is False
         assert parsed.tool_call is not None
+        assert parsed.tool_call.thought is not None
         assert "multiline thought" in parsed.tool_call.thought
         assert "spans multiple lines" in parsed.tool_call.thought
 
@@ -302,94 +304,10 @@ and should be preserved.
         parsed = parser.parse(response_text)
 
         assert parsed.is_final is False
+        assert parsed.tool_call is not None
         assert parsed.tool_call.parameters["filters"]["status"] == "INVIATA"
         assert parsed.tool_call.parameters["filters"]["year"] == 2025
         assert parsed.tool_call.parameters["limit"] == 10
-
-
-@pytest.mark.asyncio
-class TestReActOrchestrator:
-    """Test ReActOrchestrator for managing tool calling loop."""
-
-    async def test_orchestrator_initialization(self):
-        """Test that orchestrator initializes correctly."""
-        from unittest.mock import MagicMock
-
-        from openfatture.ai.orchestration.react import ReActOrchestrator
-        from openfatture.ai.tools.registry import ToolRegistry
-
-        provider = MagicMock()
-        provider.provider_name = "test_provider"
-        provider.model = "test_model"
-
-        registry = ToolRegistry()
-
-        orchestrator = ReActOrchestrator(
-            provider=provider,
-            tool_registry=registry,
-            max_iterations=5,
-        )
-
-        assert orchestrator.provider == provider
-        assert orchestrator.tool_registry == registry
-        assert orchestrator.max_iterations == 5
-        assert orchestrator.parser is not None
-
-    async def test_orchestrator_format_observation_dict(self):
-        """Test formatting observation from dict."""
-        from unittest.mock import MagicMock
-
-        from openfatture.ai.orchestration.react import ReActOrchestrator
-
-        provider = MagicMock()
-        registry = MagicMock()
-
-        orchestrator = ReActOrchestrator(provider, registry)
-
-        result = orchestrator._format_observation({"key1": "value1", "key2": 123})
-
-        assert "key1: value1" in result
-        assert "key2: 123" in result
-
-    async def test_orchestrator_format_observation_list(self):
-        """Test formatting observation from list."""
-        from unittest.mock import MagicMock
-
-        from openfatture.ai.orchestration.react import ReActOrchestrator
-
-        provider = MagicMock()
-        registry = MagicMock()
-
-        orchestrator = ReActOrchestrator(provider, registry)
-
-        data = [{"id": 1, "name": "Item1"}, {"id": 2, "name": "Item2"}]
-        result = orchestrator._format_observation(data)
-
-        assert "id=1" in result
-        assert "name=Item1" in result
-        assert "id=2" in result
-        assert "name=Item2" in result
-
-    async def test_orchestrator_stats(self):
-        """Test orchestrator statistics."""
-        from unittest.mock import MagicMock
-
-        from openfatture.ai.orchestration.react import ReActOrchestrator
-
-        provider = MagicMock()
-        provider.provider_name = "test"
-        provider.model = "test-model"
-
-        registry = MagicMock()
-
-        orchestrator = ReActOrchestrator(provider, registry, max_iterations=3)
-
-        stats = orchestrator.get_stats()
-
-        assert stats["provider"] == "test"
-        assert stats["model"] == "test-model"
-        assert stats["max_iterations"] == 3
-        assert "parser_stats" in stats
 
 
 @pytest.mark.asyncio
@@ -398,45 +316,34 @@ class TestReActIntegration:
     """Integration tests for ReAct orchestration with real components."""
 
     async def test_react_system_prompt_includes_tools(self):
-        """Test that ReAct system prompt includes tool descriptions."""
-        from unittest.mock import MagicMock
-
+        """The ReAct prompt carries the XML format and the enabled tools."""
         from openfatture.ai.domain.context import ChatContext
-        from openfatture.ai.orchestration.react import ReActOrchestrator
-        from openfatture.ai.tools.registry import ToolRegistry
-
-        provider = MagicMock()
-        provider.provider_name = "test"
-
-        # Get real tool registry with tools
-        registry = ToolRegistry()
+        from openfatture.ai.orchestration.react import build_react_messages
         from openfatture.ai.tools import invoice_tools
 
-        for tool in invoice_tools.get_invoice_tools():
-            registry.register(tool)
-
-        orchestrator = ReActOrchestrator(provider, registry)
-
-        # Build context
-        context = ChatContext(
-            user_input="Test query",
-            enable_tools=True,
-        )
-
-        # Get system prompt
-        messages = orchestrator._build_react_messages(context)
+        context = ChatContext(user_input="Test query", enable_tools=True)
+        messages = build_react_messages(context, invoice_tools.get_invoice_tools())
 
         system_prompt = messages[0].content
-
-        # Verify ReAct format instructions are present (check for XML tags - language-agnostic)
-        assert "<thought>" in system_prompt or "Thought:" in system_prompt
-        assert "<action>" in system_prompt or "Action:" in system_prompt
-        assert "<action_input>" in system_prompt or "Action Input:" in system_prompt
-        assert "<final_answer>" in system_prompt or "Final Answer:" in system_prompt
-
-        # Verify tools are listed
+        assert messages[0].role.value == "system"
+        assert messages[-1].role.value == "user"
+        assert messages[-1].content == "Test query"
+        for tag in ("<thought>", "<action>", "<action_input>", "<final_answer>"):
+            assert tag in system_prompt
         assert "search_invoices" in system_prompt
         assert "get_invoice_details" in system_prompt
+
+    async def test_react_system_prompt_without_tools_and_with_stats(self):
+        from openfatture.ai.domain.context import ChatContext
+        from openfatture.ai.orchestration.react import build_react_system_prompt
+
+        context = ChatContext(user_input="Test query")
+        context.current_year_stats = {"anno": 2026, "totale_fatture": 3, "importo_totale": 120}
+        prompt = build_react_system_prompt(context, [])
+
+        assert "Nessun tool disponibile" in prompt
+        assert "- Anno corrente: 2026" in prompt
+        assert "- Importo totale YTD: €120.00" in prompt
 
     async def test_parser_handles_multiple_formats(self):
         """Test parser robustness with various XML response formats."""

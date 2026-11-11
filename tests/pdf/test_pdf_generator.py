@@ -14,7 +14,6 @@ from openfatture.pdf import (
     ProfessionalTemplate,
 )
 from openfatture.pdf.components.qrcode import (
-    generate_pagopa_qr_data,
     generate_sepa_qr_data,
 )
 
@@ -205,7 +204,6 @@ class TestPDFGenerator:
             template="professional",
             company_name="Test Company",
             enable_qr_code=True,
-            qr_code_type="sepa",
         )
         generator = PDFGenerator(config)
 
@@ -263,20 +261,6 @@ class TestQRCodeGeneration:
         assert "IT60X0542811101000000123456" in qr_data
         assert "EUR1708.00" in qr_data
         assert "Fattura 001/2025" in qr_data
-
-    def test_generate_pagopa_qr(self):
-        """Test pagoPa QR code generation."""
-        qr_data = generate_pagopa_qr_data(
-            creditor_fiscal_code="12345678901",
-            notice_number="123456789012345678",
-            amount=1708.00,
-        )
-
-        assert qr_data.startswith("PAGOPA|")
-        assert "002" in qr_data  # Version
-        assert "123456789012345678" in qr_data  # Notice number
-        assert "12345678901" in qr_data  # Fiscal code
-        assert "170800" in qr_data  # Amount in cents
 
     def test_sepa_qr_without_bic(self):
         """Test SEPA QR without BIC (optional)."""

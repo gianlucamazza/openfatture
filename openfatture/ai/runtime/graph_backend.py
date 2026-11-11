@@ -6,7 +6,9 @@ without re-entering :class:`AssistantRuntime` from graph nodes.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import asyncio
+from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import aclosing, suppress
 from typing import Any
 
 from openfatture.ai.domain.context import ChatContext
@@ -16,13 +18,48 @@ from openfatture.ai.providers.base import BaseLLMProvider
 from openfatture.ai.runtime.constants import DEFAULT_TOOL_MAX_ITERATIONS
 from openfatture.ai.runtime.model_calls import generate
 from openfatture.ai.runtime.prompt import build_chat_messages, build_chat_system_prompt
-from openfatture.ai.streaming.events import StreamEvent
+from openfatture.ai.streaming.events import StreamEvent, StreamEventType
 from openfatture.ai.tools.registry import ToolRegistry
 from openfatture.platform.config import DebugConfig
 from openfatture.platform.extras import require_extra
 from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _tool_event(update: dict[str, Any]) -> StreamEvent | None:
+    """Translate a tool lifecycle update emitted by the graph; None for other updates."""
+    name = str(update.get("tool") or "unknown")
+    if update.get("event") == "tool_start":
+        event = StreamEvent.tool_start(name, parameters=update.get("parameters") or {})
+    elif update.get("event") == "tool_finished":
+        event = (
+            StreamEvent.tool_result(name, result=update.get("result"))
+            if update.get("success")
+            else StreamEvent.tool_error(name, error=str(update.get("result")))
+        )
+    else:
+        return None
+    event.metadata["tool_call_id"] = update.get("tool_call_id")
+    return event
+
+
+def _custom_update_event(update: dict[str, Any]) -> StreamEvent | None:
+    """Translate a custom (writer) update: streamed content or a tool lifecycle event."""
+    if update.get("event") == "content":
+        return StreamEvent.content(str(update["content"]))
+    return _tool_event(update)
+
+
+def _model_update_event(delta: dict[str, Any]) -> StreamEvent | None:
+    """Translate a ``call_model`` node update: unstreamed final content or tool dispatch."""
+    content = str(delta.get("content") or "")
+    status = delta.get("status")
+    if status == "final" and content and not delta.get("streamed"):
+        return StreamEvent.content(content)
+    if status == "tool_calls":
+        return StreamEvent.status("Calling tools…")
+    return None
 
 
 class GraphAssistantBackend:
@@ -86,12 +123,11 @@ class GraphAssistantBackend:
             context, enable_tools=self.enable_tools, include_system=False
         )
         if self._use_react(context):
-            from openfatture.ai.orchestration.react import ReActOrchestrator
+            from openfatture.ai.orchestration.react import build_react_messages
 
-            history_messages = ReActOrchestrator(
-                provider=self.provider,
-                tool_registry=self.tool_registry,
-            )._build_react_messages(context)
+            history_messages = build_react_messages(
+                context, self.tool_registry.list_tools(enabled_only=True)
+            )
             system_prompt = history_messages[0].content
             history_messages = history_messages[1:]
         messages: list[dict[str, Any]] = []
@@ -272,52 +308,42 @@ class GraphAssistantBackend:
             response = await self.run(context)
             yield StreamEvent.done(status=response.status.value, error=response.error)
             return
-        if context.metadata.get("checkpoint_directory"):
-            import asyncio
-            from contextlib import suppress
+        events = (
+            self._stream_checkpointed(context)
+            if context.metadata.get("checkpoint_directory")
+            else self._stream_graph(context)
+        )
+        async with aclosing(events):
+            async for event in events:
+                yield event
 
-            queue: asyncio.Queue[Any] = asyncio.Queue()
-            streamed_content = False
-            task = asyncio.create_task(self._run_tool_graph(context, queue.put_nowait))
-            task.add_done_callback(lambda _: queue.put_nowait(None))
-            try:
-                while True:
-                    update = await queue.get()
-                    if update is None:
-                        break
-                    if update.get("event") == "content":
-                        streamed_content = True
-                        yield StreamEvent.content(str(update["content"]))
-                        continue
-                    name = str(update.get("tool") or "unknown")
-                    if update.get("event") == "tool_start":
-                        event = StreamEvent.tool_start(
-                            name, parameters=update.get("parameters") or {}
-                        )
-                    elif update.get("event") == "tool_finished":
-                        event = (
-                            StreamEvent.tool_result(name, result=update.get("result"))
-                            if update.get("success")
-                            else StreamEvent.tool_error(name, error=str(update.get("result")))
-                        )
-                    else:
-                        continue
-                    event.metadata["tool_call_id"] = update.get("tool_call_id")
+    async def _stream_checkpointed(self, context: ChatContext) -> AsyncGenerator[StreamEvent, None]:
+        """Stream a durable turn; closing the stream cancels the running turn."""
+        queue: asyncio.Queue[Any] = asyncio.Queue()
+        streamed_content = False
+        task = asyncio.create_task(self._run_tool_graph(context, queue.put_nowait))
+        task.add_done_callback(lambda _: queue.put_nowait(None))
+        try:
+            while (update := await queue.get()) is not None:
+                event = _custom_update_event(update)
+                if event is not None:
+                    streamed_content = streamed_content or event.type is StreamEventType.CONTENT
                     yield event
-                response = await task
-            finally:
-                if not task.done():
-                    task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await task
-            yield StreamEvent.metrics(**response.usage.model_dump())
-            if response.content and not streamed_content:
-                yield StreamEvent.content(response.content)
-            done = StreamEvent.done(status=response.status.value, error=response.error)
-            done.metadata["interrupted"] = response.metadata.get("interrupted", False)
-            yield done
-            return
+            response = await task
+        finally:
+            if not task.done():
+                task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        yield StreamEvent.metrics(**response.usage.model_dump())
+        if response.content and not streamed_content:
+            yield StreamEvent.content(response.content)
+        done = StreamEvent.done(status=response.status.value, error=response.error)
+        done.metadata["interrupted"] = response.metadata.get("interrupted", False)
+        yield done
 
+    async def _stream_graph(self, context: ChatContext) -> AsyncGenerator[StreamEvent, None]:
+        """Stream the in-memory tool graph, merging node updates into the final state."""
         graph = self._get_tool_graph()
         initial = self._initial_tool_state(context)
         emitted_final_content = False
@@ -333,38 +359,15 @@ class GraphAssistantBackend:
             if not isinstance(update, dict):
                 continue
             if mode == "custom":
-                if update.get("event") == "content":
-                    emitted_final_content = True
-                    yield StreamEvent.content(str(update["content"]))
-                    continue
-                name = str(update.get("tool") or "unknown")
-                if update.get("event") == "tool_start":
-                    event = StreamEvent.tool_start(name, parameters=update.get("parameters") or {})
-                elif update.get("event") == "tool_finished":
-                    event = (
-                        StreamEvent.tool_result(name, result=update.get("result"))
-                        if update.get("success")
-                        else StreamEvent.tool_error(name, error=str(update.get("result")))
+                events = [_custom_update_event(update)]
+            else:
+                merged, events = self._merge_node_updates(merged, update)
+            for event in events:
+                if event is not None:
+                    emitted_final_content = (
+                        emitted_final_content or event.type is StreamEventType.CONTENT
                     )
-                else:
-                    continue
-                event.metadata["tool_call_id"] = update.get("tool_call_id")
-                yield event
-                continue
-            for node_name, delta in update.items():
-                if not isinstance(delta, dict):
-                    continue
-                merged = {**merged, **delta}
-                if node_name == "call_model":
-                    content = str(delta.get("content") or "")
-                    status = delta.get("status")
-                    if status == "final" and content and not delta.get("streamed"):
-                        emitted_final_content = True
-                        yield StreamEvent.content(content)
-                    elif status == "tool_calls":
-                        yield StreamEvent.status("Calling tools…")
-
-        from openfatture.ai.streaming.events import StreamEventType
+                    yield event
 
         yield StreamEvent(type=StreamEventType.METRICS, data=dict(merged.get("usage") or {}))
         final_response = self._state_to_response(merged)
@@ -374,3 +377,17 @@ class GraphAssistantBackend:
                 yield StreamEvent.content(content)
 
         yield StreamEvent.done(status=final_response.status.value, error=final_response.error)
+
+    @staticmethod
+    def _merge_node_updates(
+        merged: dict[str, Any], update: dict[str, Any]
+    ) -> tuple[dict[str, Any], list[StreamEvent | None]]:
+        """Fold per-node deltas into the state; return it with the model's events."""
+        events: list[StreamEvent | None] = []
+        for node_name, delta in update.items():
+            if not isinstance(delta, dict):
+                continue
+            merged = {**merged, **delta}
+            if node_name == "call_model":
+                events.append(_model_update_event(delta))
+        return merged, events

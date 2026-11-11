@@ -9,6 +9,7 @@ from rich.console import Console
 
 from openfatture.cli.database import ensure_database
 from openfatture.cli.output import remember_result
+from openfatture.i18n import _
 from openfatture.payment.application import collection_api as api
 
 app = typer.Typer(name="pagamento")
@@ -80,7 +81,9 @@ def reverse(
     request_id: str | None = typer.Option(None, "--request-id"),
 ) -> None:
     """Reverse a ledger entry after confirmation; history is preserved."""
-    if not typer.confirm(f"Stornare {amount} dalla registrazione {entry_id}?", default=False):
+    if not typer.confirm(
+        _("cli-pagamento-reverse-confirm", amount=amount, entry=str(entry_id)), default=False
+    ):
         raise typer.Abort()
     show_result(api.reverse_collection(entry_id, amount, reason, request_id or str(uuid4())))
 

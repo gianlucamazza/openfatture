@@ -7,24 +7,39 @@ import pytest
 
 from openfatture.ai.rag.config import DEFAULT_KNOWLEDGE_MANIFEST, RAGConfig
 from openfatture.ai.rag.knowledge_indexer import KnowledgeIndexer
+from openfatture.ai.rag.vector_store import VectorStore
 
 
-class FakeStore:
+class FakeStore(VectorStore):
+    """In-memory VectorStore double; skips the ChromaDB-backed initialiser."""
+
     def __init__(self) -> None:
         self.documents: list[dict[str, Any]] = []
 
     def count(self) -> int:
         return len(self.documents)
 
-    async def add_documents(self, documents, metadatas=None, ids=None, **kwargs) -> None:
+    async def add_documents(
+        self,
+        documents: list[str],
+        metadatas: list[dict[str, Any]] | None = None,
+        ids: list[str] | None = None,
+    ) -> list[str]:
         for index, document in enumerate(documents):
             self.documents.append(
                 {"document": document, "metadata": (metadatas or [{}] * len(documents))[index]}
             )
+        return ids or [str(i) for i in range(len(documents))]
 
-    async def search(self, query: str, top_k: int = 5, filters=None) -> list[dict[str, Any]]:
+    async def search(
+        self,
+        query: str,
+        top_k: int | None = None,
+        filters: dict[str, Any] | None = None,
+        min_similarity: float | None = None,
+    ) -> list[dict[str, Any]]:
         hits = [d for d in self.documents if query.lower() in d["document"].lower()]
-        return [{**hit, "similarity": 1.0} for hit in hits[:top_k]]
+        return [{**hit, "similarity": 1.0} for hit in hits[: top_k or 5]]
 
 
 def test_manifest_and_sources_are_packaged(tmp_path, monkeypatch):

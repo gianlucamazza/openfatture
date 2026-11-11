@@ -1,5 +1,12 @@
 # ReAct Orchestration Best Practices (2025)
 
+> **Historical.** This guide describes the standalone `ReActOrchestrator`
+> loop, which was removed: the assistant graph (`openfatture.ai.runtime.graph`)
+> now runs the ReAct turns, using the prompt from
+> `openfatture.ai.orchestration.react.build_react_messages` and
+> `orchestration.parsers.ToolCallParser`. See
+> [AI_ARCHITECTURE.md](../AI_ARCHITECTURE.md) for the current flow.
+
 **Last Updated:** October 2025
 **Status:** Production Ready
 **Target:** Ollama local LLM deployments

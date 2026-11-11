@@ -12,6 +12,7 @@ import pytest
 
 from openfatture.payment.domain.enums import MatchType
 from openfatture.payment.matchers.exact import ExactAmountMatcher
+from openfatture.storage.database.models import Pagamento
 
 pytestmark = pytest.mark.unit
 
@@ -36,7 +37,7 @@ class TestExactAmountMatcher:
         )  # Required for payment_amount_for_matching calculation
         payment.data_scadenza = date(2025, 1, 17)  # 2 days later, within tolerance
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
         results = matcher.match(transaction, candidates)
 
@@ -60,7 +61,7 @@ class TestExactAmountMatcher:
         payment.importo_pagato = Decimal("0.00")
         payment.data_scadenza = date.today()
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
         results = matcher.match(transaction, candidates)
 
@@ -92,7 +93,7 @@ class TestExactAmountMatcher:
         payment3.importo = Decimal("600.00")  # Different
         payment3.importo_pagato = Decimal("0.00")
 
-        candidates = [payment1, payment2, payment3]
+        candidates: list[Pagamento] = [payment1, payment2, payment3]
 
         results = matcher.match(transaction, candidates)
 
@@ -123,7 +124,7 @@ class TestExactAmountMatcher:
         payment_out_window.importo_pagato = Decimal("0.00")
         payment_out_window.data_scadenza = date(2025, 3, 15)  # 60 days later
 
-        candidates = [payment_in_window, payment_out_window]
+        candidates: list[Pagamento] = [payment_in_window, payment_out_window]
 
         # With 30-day window, only first payment should match
         results = matcher.match(transaction, candidates)
@@ -152,7 +153,7 @@ class TestExactAmountMatcher:
         payment2.importo_pagato = Decimal("0.00")
         payment2.data_scadenza = date.today()
 
-        candidates = [payment1, payment2]
+        candidates: list[Pagamento] = [payment1, payment2]
 
         results = matcher.match(transaction, candidates)
 
@@ -189,7 +190,7 @@ class TestExactAmountMatcher:
         payment.importo_pagato = Decimal("0.00")
         payment.data_scadenza = date.today()
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
         results = matcher.match(transaction, candidates)
 
@@ -210,7 +211,7 @@ class TestExactAmountMatcher:
         payment.importo_pagato = Decimal("0.00")
         payment.data_scadenza = date.today()
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
         results = matcher.match(transaction, candidates)
 

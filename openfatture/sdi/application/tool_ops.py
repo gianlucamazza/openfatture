@@ -137,8 +137,8 @@ def get_sdi_notification_details(notification_id: int) -> dict[str, Any]:
                 if xml_path.exists():
                     try:
                         xml_content = xml_path.read_text(encoding="utf-8")
-                    except Exception as e:
-                        xml_content = f"Error reading XML: {e}"
+                    except (OSError, UnicodeDecodeError) as e:
+                        logger.warning("sdi_notification_xml_unreadable", error=str(e))
 
             return {
                 "notification_id": notification.id,

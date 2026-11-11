@@ -24,7 +24,7 @@ uv run openfatture --help
 uv run python -m pytest -q
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy openfatture/
+uv run mypy openfatture/ tests/
 ```
 
 Use `uv run python -m pytest`, not an unrelated global pytest executable.

@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -54,7 +55,9 @@ async def test_transient_then_success() -> None:
 
 
 @pytest.mark.asyncio
-async def test_streamed_provider_emits_tokens_and_records_usage_once() -> None:
+async def test_streamed_provider_emits_tokens_and_records_usage_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from openfatture.ai.domain.response import StreamChunk, UsageMetrics
     from openfatture.ai.providers.openai import OpenAIProvider
     from openfatture.ai.runtime.contracts import (
@@ -71,10 +74,10 @@ async def test_streamed_provider_emits_tokens_and_records_usage_once() -> None:
         yield StreamChunk(content="second")
         yield StreamChunk(content="", is_final=True, usage=UsageMetrics(total_tokens=7))
 
-    provider.stream_structured = chunks
+    monkeypatch.setattr(provider, "stream_structured", chunks)
     accounting = TurnAccounting()
     token = current_accounting.set(accounting)
-    events = []
+    events: list[dict[str, Any]] = []
     try:
         response = await generate_streamed(AccountedProvider(provider), events.append)
     finally:
@@ -86,7 +89,7 @@ async def test_streamed_provider_emits_tokens_and_records_usage_once() -> None:
 
 
 @pytest.mark.asyncio
-async def test_partial_stream_is_not_retried() -> None:
+async def test_partial_stream_is_not_retried(monkeypatch: pytest.MonkeyPatch) -> None:
     from openfatture.ai.domain.response import StreamChunk
     from openfatture.ai.providers.openai import OpenAIProvider
     from openfatture.ai.runtime.model_calls import generate_streamed
@@ -100,8 +103,8 @@ async def test_partial_stream_is_not_retried() -> None:
         yield StreamChunk(content="partial")
         raise ConnectionError("lost stream")
 
-    provider.stream_structured = chunks
-    events = []
+    monkeypatch.setattr(provider, "stream_structured", chunks)
+    events: list[dict[str, Any]] = []
     with pytest.raises(ConnectionError):
         await generate_streamed(provider, events.append)
     assert calls == 1

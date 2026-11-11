@@ -12,6 +12,7 @@ import pytest
 
 from openfatture.payment.domain.enums import MatchType
 from openfatture.payment.matchers.iban import IBANMatcher
+from openfatture.storage.database.models import Pagamento
 
 pytestmark = pytest.mark.unit
 
@@ -19,8 +20,7 @@ pytestmark = pytest.mark.unit
 class TestIBANMatcher:
     """Tests for IBANMatcher."""
 
-    @pytest.mark.asyncio
-    async def test_iban_full_match_in_description(self):
+    def test_iban_full_match_in_description(self):
         """Test full IBAN match in transaction description."""
         matcher = IBANMatcher()
 
@@ -38,16 +38,15 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = "IT60X0542811101000000123456"
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         assert len(results) == 1
         assert results[0].confidence == Decimal("1.0")
         assert results[0].match_type == MatchType.IBAN
 
-    @pytest.mark.asyncio
-    async def test_iban_partial_match_last_4_digits(self):
+    def test_iban_partial_match_last_4_digits(self):
         """Test partial IBAN match using last 4 digits."""
         matcher = IBANMatcher()
 
@@ -65,16 +64,15 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = "IT60X0542811101000000123456"  # Ends with 3456
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # Partial match should have lower confidence than full match
         assert len(results) == 1
         assert Decimal("0.7") <= results[0].confidence < Decimal("1.0")
 
-    @pytest.mark.asyncio
-    async def test_iban_normalization_spaces_removed(self):
+    def test_iban_normalization_spaces_removed(self):
         """Test that spaces in IBAN are normalized."""
         matcher = IBANMatcher()
 
@@ -93,16 +91,15 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = "IT60X0542811101000000123456"  # No spaces
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # Should match despite space differences
         assert len(results) == 1
         assert results[0].confidence > Decimal("0.8")
 
-    @pytest.mark.asyncio
-    async def test_iban_case_insensitive(self):
+    def test_iban_case_insensitive(self):
         """Test that IBAN matching is case-insensitive."""
         matcher = IBANMatcher()
 
@@ -120,14 +117,13 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = "IT60X0542811101000000123456"  # Uppercase
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         assert len(results) == 1
 
-    @pytest.mark.asyncio
-    async def test_iban_invalid_format_no_match(self):
+    def test_iban_invalid_format_no_match(self):
         """Test that invalid IBAN format doesn't match."""
         matcher = IBANMatcher()
 
@@ -145,15 +141,14 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = "IT60X0542811101000000123456"
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # No valid IBAN in description
         assert len(results) == 0
 
-    @pytest.mark.asyncio
-    async def test_iban_multiple_ibans_in_description(self):
+    def test_iban_multiple_ibans_in_description(self):
         """Test handling of multiple IBANs in description."""
         matcher = IBANMatcher()
 
@@ -173,15 +168,14 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = "IT60X0542811101000000123456"  # Second IBAN
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # Should match the correct IBAN
         assert len(results) == 1
 
-    @pytest.mark.asyncio
-    async def test_iban_in_memo_field(self):
+    def test_iban_in_memo_field(self):
         """Test IBAN extraction from memo field if description empty."""
         matcher = IBANMatcher()
 
@@ -199,15 +193,14 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = "IT60X0542811101000000123456"
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # Should find IBAN in memo field
         assert len(results) == 1
 
-    @pytest.mark.asyncio
-    async def test_iban_no_iban_in_payment_cliente(self):
+    def test_iban_no_iban_in_payment_cliente(self):
         """Test behavior when payment cliente has no IBAN."""
         matcher = IBANMatcher()
 
@@ -225,15 +218,14 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = None  # No IBAN
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # Cannot match without IBAN
         assert len(results) == 0
 
-    @pytest.mark.asyncio
-    async def test_iban_match_reason_includes_iban(self):
+    def test_iban_match_reason_includes_iban(self):
         """Test that match reason includes the matched IBAN."""
         matcher = IBANMatcher()
 
@@ -251,9 +243,9 @@ class TestIBANMatcher:
         payment.fattura.cliente = Mock()
         payment.fattura.cliente.iban = "IT60X0542811101000000123456"
 
-        candidates = [payment]
+        candidates: list[Pagamento] = [payment]
 
-        results = await matcher.match(transaction, candidates)
+        results = matcher.match(transaction, candidates)
 
         # Match reason should mention IBAN
         assert "IBAN" in results[0].match_reason or "IT60" in results[0].match_reason

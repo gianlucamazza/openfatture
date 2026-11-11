@@ -17,7 +17,7 @@ import uuid
 from contextvars import ContextVar
 from logging.handlers import RotatingFileHandler
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TextIO, cast
 
 import structlog
 from structlog.types import EventDict, Processor
@@ -185,13 +185,29 @@ def configure_logging(
     # stays pure on stdout.
     logging.basicConfig(
         format="%(message)s",
-        stream=sys.stderr,
+        handlers=[_StderrHandler()],
         level=getattr(logging, log_level.upper()),
         force=True,
     )
 
     for handler in logging.getLogger().handlers:
         handler.addFilter(SensitiveLogFilter())
+
+
+class _StderrHandler(logging.StreamHandler[TextIO]):
+    """Writes to the current ``sys.stderr``, not the one seen at configuration.
+
+    Redirections (test runners, captured output) replace ``sys.stderr``; a
+    handler holding the old object would write to a closed stream.
+    """
+
+    @property
+    def stream(self) -> TextIO:
+        return sys.stderr
+
+    @stream.setter
+    def stream(self, _value: TextIO) -> None:
+        """The stream is always the current ``sys.stderr``."""
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:

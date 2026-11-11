@@ -51,7 +51,7 @@ async def test_model_parameters_and_budget() -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("persistent", [False, True])
 async def test_streamed_content_not_duplicated_and_done_is_last(
-    tmp_path: Path, persistent: bool
+    tmp_path: Path, persistent: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from openfatture.ai.providers.openai import OpenAIProvider
 
@@ -63,7 +63,7 @@ async def test_streamed_content_not_duplicated_and_done_is_last(
         yield StreamChunk(content="two")
         yield StreamChunk(content="", is_final=True, usage=UsageMetrics(total_tokens=2))
 
-    provider.stream_structured = chunks
+    monkeypatch.setattr(provider, "stream_structured", chunks)
     registry = MagicMock()
     registry.get_openai_functions.return_value = []
     backend = GraphAssistantBackend(provider=provider, tool_registry=registry)

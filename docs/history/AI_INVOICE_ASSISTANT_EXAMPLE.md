@@ -51,7 +51,7 @@ Sample response (JSON mode):
 
 ```python
 from openfatture.ai.agents.invoice_assistant import InvoiceAssistantAgent
-from openfatture.ai.domain.agent import AgentConfig
+from openfatture.ai.domain.agent_contract import AgentConfig
 from openfatture.ai.domain.context import InvoiceContext
 from openfatture.ai.providers import create_provider
 

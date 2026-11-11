@@ -251,7 +251,7 @@ Matches by exact amount within a date tolerance window.
 from openfatture.payment.matchers import ExactAmountMatcher
 
 matcher = ExactAmountMatcher(date_tolerance_days=30)
-matches = await matcher.match(transaction, candidate_payments)
+matches = matcher.match(transaction, candidate_payments)
 ```
 
 **Algorithm:**
@@ -267,7 +267,7 @@ NLP-based description matching using Levenshtein distance.
 from openfatture.payment.matchers import FuzzyDescriptionMatcher
 
 matcher = FuzzyDescriptionMatcher(threshold=0.7, date_tolerance_days=90)
-matches = await matcher.match(transaction, candidate_payments)
+matches = matcher.match(transaction, candidate_payments)
 ```
 
 **Algorithm:**
@@ -283,7 +283,7 @@ Direct IBAN/BIC validation for wire transfers.
 from openfatture.payment.matchers import IBANMatcher
 
 matcher = IBANMatcher()
-matches = await matcher.match(transaction, candidate_payments)
+matches = matcher.match(transaction, candidate_payments)
 ```
 
 **Algorithm:**
@@ -305,11 +305,11 @@ matcher = CompositeMatcher(
         (IBANMatcher(), 0.2),
     ]
 )
-matches = await matcher.match(transaction, candidate_payments)
+matches = matcher.match(transaction, candidate_payments)
 ```
 
 **Algorithm:**
-1. Run all sub-strategies in parallel
+1. Run every sub-strategy (a failing one is logged and skipped)
 2. Aggregate results with weighted average: `confidence = Σ(strategy_conf × weight)`
 3. Deduplicate and sort by confidence
 
