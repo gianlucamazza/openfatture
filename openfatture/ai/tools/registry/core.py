@@ -6,14 +6,18 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 
 from openfatture.ai.orchestration.resilience import CircuitBreaker
-from openfatture.ai.tools.models import Tool, ToolResult
+from openfatture.ai.tools.models import Tool, ToolResult, ToolRisk
 from openfatture.ai.tools.registry.metrics import circuit_breaker_stats, circuit_breaker_summary
 from openfatture.ai.tools.registry.policy import (
+    ACCESS_RISKS,
     ToolSource,
+    access_command,
     confirmation_required,
+    disabled_remediation,
     has_human_confirmation,
     is_tool_enabled_for_agent,
     is_transmit_tool,
+    minimum_access_for,
     strip_reserved_parameters,
 )
 from openfatture.ai.tools.registry.resilience import (
@@ -28,7 +32,7 @@ from openfatture.platform.rate_limiter import RateLimiter
 if TYPE_CHECKING:
     from openfatture.ai.cache.tool_cache import ToolResultCache
     from openfatture.ai.tools.metrics import ToolMetricsCollector
-    from openfatture.platform.config import Settings
+    from openfatture.platform.config import AiToolAccess, Settings
 
 logger = get_logger(__name__)
 
@@ -164,21 +168,21 @@ class ToolRegistry:
             tools = [
                 tool
                 for tool in tools
-                if is_tool_enabled_for_agent(
-                    tool.name,
-                    settings.ai_enabled_tools,
-                    apply_allowlist=self._apply_ai_settings,
-                    tool_enabled=tool.enabled,
-                )
+                if is_tool_enabled_for_agent(tool, settings, apply_access=self._apply_ai_settings)
             ]
 
         return tools
+
+    def _risk_of(self, tool_name: str) -> ToolRisk | None:
+        tool = self._tools.get(tool_name)
+        return tool.risk if tool else None
 
     def get_circuit_breaker(self, tool_name: str) -> CircuitBreaker:
         """Get or create the circuit breaker for a tool."""
         if tool_name not in self._circuit_breakers:
             self._circuit_breakers[tool_name] = CircuitBreaker(
-                name=f"tool_{tool_name}", config=circuit_breaker_config_for(tool_name)
+                name=f"tool_{tool_name}",
+                config=circuit_breaker_config_for(self._risk_of(tool_name)),
             )
             logger.debug("circuit_breaker_created", tool_name=tool_name)
 
@@ -187,7 +191,7 @@ class ToolRegistry:
     def get_bulkhead(self, tool_name: str) -> Bulkhead:
         """Get or create the bulkhead limiting concurrent executions of a tool."""
         if tool_name not in self._bulkheads:
-            self._bulkheads[tool_name] = Bulkhead(bulkhead_config_for(tool_name))
+            self._bulkheads[tool_name] = Bulkhead(bulkhead_config_for(self._risk_of(tool_name)))
             logger.debug("bulkhead_created", tool_name=tool_name)
 
         return self._bulkheads[tool_name]
@@ -209,6 +213,28 @@ class ToolRegistry:
 
         logger.warning("circuit_breaker_not_found", tool_name=tool_name)
         return False
+
+    def disabled_capabilities(self) -> dict[str, str]:
+        """Categories with tools the access level hides, mapped to the enabling command.
+
+        Transmit tools are left out: they are opted into deliberately, never
+        suggested. Empty for registries that do not apply the AI settings.
+        """
+        if not self._apply_ai_settings:
+            return {}
+        settings = get_settings()
+        levels = list(ACCESS_RISKS)
+        lowest: dict[str, AiToolAccess] = {}
+        for tool in self._tools.values():
+            level = minimum_access_for(tool.risk)
+            if level is None or not tool.enabled:
+                continue
+            if is_tool_enabled_for_agent(tool, settings, apply_access=True):
+                continue
+            current = lowest.get(tool.category)
+            if current is None or levels.index(level) < levels.index(current):
+                lowest[tool.category] = level
+        return {category: access_command(lowest[category]) for category in sorted(lowest)}
 
     def get_circuit_breaker_stats(self) -> dict[str, dict[str, Any]]:
         """Statistics for all circuit breakers, keyed by tool name."""
@@ -381,19 +407,16 @@ class ToolRegistry:
 
     def _disabled_refusal(self, tool: Tool, settings: Settings) -> ToolResult | None:
         """Refuse a tool that the allowlist or its own flag keeps off."""
-        if is_tool_enabled_for_agent(
-            tool.name,
-            settings.ai_enabled_tools,
-            apply_allowlist=self._apply_ai_settings,
-            tool_enabled=tool.enabled,
-        ):
+        if is_tool_enabled_for_agent(tool, settings, apply_access=self._apply_ai_settings):
             return None
         logger.error("tool_disabled", name=tool.name)
-        if is_transmit_tool(tool.name):
+        if is_transmit_tool(tool):
             error = (
                 f"Tool '{tool.name}' is disabled. Transmit tools (SDI/PEC send) "
                 "stay off unless explicitly listed in ai_enabled_tools."
             )
+        elif tool.enabled:
+            error = f"Tool '{tool.name}' is disabled. Enable it with: {disabled_remediation(tool)}"
         else:
             error = f"Tool '{tool.name}' is disabled"
         return ToolResult(
@@ -415,9 +438,7 @@ class ToolRegistry:
         """Refuse a tool that needs a human yes it did not get."""
         tool_name = tool.name
         if not confirmation_required(
-            tool_name,
-            tool_requires_confirmation=tool.requires_confirmation,
-            require_confirmation=settings.ai_tools_require_confirmation,
+            tool, require_confirmation=settings.ai_tools_require_confirmation
         ):
             return None
         from copy import deepcopy

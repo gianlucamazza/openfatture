@@ -1,6 +1,6 @@
 """AI tool adapters over the preventivo application services."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application.preventivo_commands import (
     convert_preventivo_to_invoice,
     create_preventivo,
@@ -24,6 +24,7 @@ def get_preventivo_tools() -> list[Tool]:
     return [
         Tool(
             name="search_preventivi",
+            risk=ToolRisk.READ,
             description="Search preventivi (quotes) with optional filters (status, client, year)",
             category="preventivi",
             parameters=[
@@ -64,6 +65,7 @@ def get_preventivo_tools() -> list[Tool]:
         ),
         Tool(
             name="get_preventivo_details",
+            risk=ToolRisk.READ,
             description="Get detailed information about a specific preventivo including line items",
             category="preventivi",
             parameters=[
@@ -80,6 +82,7 @@ def get_preventivo_tools() -> list[Tool]:
         ),
         Tool(
             name="create_preventivo",
+            risk=ToolRisk.MUTATE,
             description="Create a new preventivo (quote/estimate) with line items",
             category="preventivi",
             parameters=[
@@ -158,6 +161,7 @@ def get_preventivo_tools() -> list[Tool]:
         ),
         Tool(
             name="update_preventivo_status",
+            risk=ToolRisk.MUTATE,
             description="Update preventivo status (bozza, inviato, accettato, rifiutato, scaduto)",
             category="preventivi",
             parameters=[
@@ -185,6 +189,7 @@ def get_preventivo_tools() -> list[Tool]:
         ),
         Tool(
             name="update_preventivo",
+            risk=ToolRisk.MUTATE,
             description="Update preventivo fields (note, condizioni, validita_giorni). Only BOZZA status can be edited.",
             category="preventivi",
             parameters=[
@@ -223,6 +228,7 @@ def get_preventivo_tools() -> list[Tool]:
         ),
         Tool(
             name="delete_preventivo",
+            risk=ToolRisk.MUTATE,
             description="CRITICAL: Delete preventivo from database. Only BOZZA status and non-converted preventivi can be deleted.",
             category="preventivi",
             parameters=[
@@ -240,6 +246,7 @@ def get_preventivo_tools() -> list[Tool]:
         ),
         Tool(
             name="convert_preventivo_to_invoice",
+            risk=ToolRisk.MUTATE,
             description="CRITICAL: Convert preventivo to fattura (cannot be undone). Creates new invoice from quote.",
             category="preventivi",
             parameters=[

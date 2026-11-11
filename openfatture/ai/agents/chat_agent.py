@@ -105,6 +105,7 @@ class ChatAgent(BaseAgent[ChatContext]):
     def _ensure_available_tools(self, context: ChatContext) -> None:
         if self.enable_tools and not context.available_tools:
             context.available_tools = self.get_available_tools()
+            context.disabled_capabilities = self.tool_registry.disabled_capabilities()
 
     async def execute(self, context: ChatContext, **kwargs: Any) -> AgentResponse:
         """Execute one turn: structured schema path or shared graph orchestration."""

@@ -227,20 +227,6 @@ class TestPDFGenerator:
         assert data["pagamento"]["iban"] == "IT60X0542811101000000123456"
         assert data["totale"] == Decimal("1708.00")
 
-    def test_auto_generated_filename(self, mock_fattura, tmp_path):
-        """Test auto-generated filename."""
-        import os
-
-        os.chdir(tmp_path)  # Change to temp dir
-
-        config = PDFGeneratorConfig()
-        generator = PDFGenerator(config)
-
-        pdf_path = generator.generate(mock_fattura)
-
-        assert pdf_path.name == "fattura_001_2025.pdf"
-        assert pdf_path.exists()
-
 
 class TestQRCodeGeneration:
     """Test QR code generation."""

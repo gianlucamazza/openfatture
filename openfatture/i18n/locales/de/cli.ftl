@@ -35,15 +35,14 @@ cli-config-label-chat-auto-save = Chat-Auto-Speicherung
 cli-config-label-max-messages = Max. Nachrichten/Sitzung
 cli-config-label-max-tokens = Max. Tokens/Sitzung
 cli-config-label-tools-enabled = Werkzeuge aktiviert
-cli-config-label-enabled-tools = Aktivierte Werkzeuge
+cli-config-label-tool-access = KI-Werkzeugzugriff
+cli-config-label-extra-tools = Zusätzliche Werkzeuge
 cli-config-not-set = [red]Nicht festgelegt[/red]
 cli-config-not-set-optional = [yellow]Nicht festgelegt[/yellow]
 cli-config-set = [green]Festgelegt[/green]
 cli-config-yes = [green]Ja[/green]
 cli-config-no = [red]Nein[/red]
 cli-config-auto-generated = [dim]Automatisch generiert[/dim]
-cli-config-all-tools = alle
-cli-config-tools-count = { $count } Werkzeuge
 cli-config-reload-success = [green]Konfiguration neu geladen[/green]
 cli-config-set-success = [green]{ $key } = { $value } festgelegt[/green]
 cli-config-saved-to = [dim]Gespeichert in { $path }[/dim]

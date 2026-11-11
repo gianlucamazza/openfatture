@@ -13,6 +13,8 @@ from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
+PREVENTIVO_NOTE = "Questo preventivo non costituisce fattura"
+
 
 class PreventivoPDFGenerator:
     """PDF Generator for preventivi (quotes/estimates).
@@ -37,13 +39,13 @@ class PreventivoPDFGenerator:
     def generate(
         self,
         preventivo: Any,  # Preventivo model instance
-        output_path: str | None = None,
+        output_path: str,
     ) -> Path:
         """Generate PDF for preventivo.
 
         Args:
             preventivo: Preventivo model instance (from database)
-            output_path: Output file path (auto-generates if None)
+            output_path: Output file path; the caller picks the location
 
         Returns:
             Path to generated PDF
@@ -53,10 +55,6 @@ class PreventivoPDFGenerator:
         """
         # Convert model to dict
         preventivo_data = self._preventivo_to_dict(preventivo)
-
-        # Auto-generate filename if not provided
-        if output_path is None:
-            output_path = f"preventivo_{preventivo.numero}_{preventivo.anno}.pdf"
 
         output_file = Path(output_path)
 
@@ -232,8 +230,8 @@ class PreventivoPDFGenerator:
             canvas,
             page_number=1,
             total_pages=1,
-            show_digital_signature_note=False,
-            footer_text=self.config.footer_text or "Questo preventivo non costituisce fattura",
+            legal_note=PREVENTIVO_NOTE,
+            footer_text=self.config.footer_text,
         )
 
     def _draw_client_info(self, canvas: Canvas, cliente_data: dict[str, Any], y: float) -> float:

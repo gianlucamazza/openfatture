@@ -1,6 +1,6 @@
 """Invoice SDI tools — adapters over sdi.application.invoice_sdi_ops."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.sdi.application.invoice_sdi_ops import (
     send_invoice_to_sdi,
     validate_invoice_xml,
@@ -14,6 +14,7 @@ def tools() -> list[Tool]:
     return [
         Tool(
             name="validate_invoice_xml",
+            risk=ToolRisk.READ,
             description="Validate FatturaPA XML for invoice before sending to SDI",
             category="invoices",
             parameters=[
@@ -30,6 +31,7 @@ def tools() -> list[Tool]:
         ),
         Tool(
             name="send_invoice_to_sdi",
+            risk=ToolRisk.TRANSMIT,
             description="Send invoice to SDI via PEC. CRITICAL: Cannot be undone!",
             category="invoices",
             parameters=[

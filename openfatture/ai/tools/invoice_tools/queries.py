@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import validate_call
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application import invoice_queries
 
 
@@ -43,6 +43,7 @@ def tools() -> list[Tool]:
     return [
         Tool(
             name="search_invoices",
+            risk=ToolRisk.READ,
             description="Search for invoices by number, year, status, or client",
             category="invoices",
             parameters=[
@@ -89,6 +90,7 @@ def tools() -> list[Tool]:
         ),
         Tool(
             name="get_invoice_details",
+            risk=ToolRisk.READ,
             description="Get detailed information about a specific invoice",
             category="invoices",
             parameters=[
@@ -105,6 +107,7 @@ def tools() -> list[Tool]:
         ),
         Tool(
             name="get_invoice_stats",
+            risk=ToolRisk.READ,
             description="Get statistics about invoices (count, totals by status)",
             category="invoices",
             parameters=[

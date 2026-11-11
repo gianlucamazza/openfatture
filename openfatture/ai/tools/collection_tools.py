@@ -4,7 +4,7 @@ import inspect
 from collections.abc import Callable
 from typing import Any
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.payment.application import collection_api as api
 
 
@@ -44,15 +44,17 @@ def get_collection_tools() -> list[Tool]:
                     required=parameter.default is inspect.Parameter.empty,
                 )
             )
+        reads = function is api.get_collections
         tools.append(
             Tool(
                 name=function.__name__,
+                risk=ToolRisk.READ if reads else ToolRisk.MUTATE,
                 description=description,
                 category="payments",
                 parameters=parameters,
                 func=function,
-                requires_confirmation=function is not api.get_collections,
-                tags=["read"] if function is api.get_collections else ["write", "collection"],
+                requires_confirmation=not reads,
+                tags=["read"] if reads else ["write", "collection"],
             )
         )
     return tools

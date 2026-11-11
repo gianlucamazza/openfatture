@@ -20,6 +20,22 @@ class ToolParameterType(StrEnum):
     OBJECT = "object"
 
 
+class ToolRisk(StrEnum):
+    """What a tool can affect. The agent access policy decides by this class.
+
+    - ``read``: only reads local data.
+    - ``local_artifact``: writes a new file inside the exports directory and
+      touches no record (PDF, CSV export).
+    - ``mutate``: creates, changes or deletes records.
+    - ``transmit``: sends data outside the machine (SDI/PEC).
+    """
+
+    READ = "read"
+    LOCAL_ARTIFACT = "local_artifact"
+    MUTATE = "mutate"
+    TRANSMIT = "transmit"
+
+
 class ToolParameter(BaseModel):
     """
     A parameter for a tool function.
@@ -71,6 +87,10 @@ class Tool(BaseModel):
     func: Callable = Field(..., description="Python function to execute")
 
     # Control
+    risk: ToolRisk = Field(
+        default=ToolRisk.MUTATE,
+        description="Risk class; unclassified tools are treated as mutating (fail-closed)",
+    )
     requires_confirmation: bool = Field(
         default=False,
         description="Ask user confirmation before executing",

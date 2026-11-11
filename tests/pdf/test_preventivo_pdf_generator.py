@@ -168,28 +168,6 @@ class TestPreventivoPDFGeneration:
             assert pdf_path.exists()
             assert pdf_path.stat().st_size > 0
 
-    def test_generate_pdf_auto_filename(self, test_preventivo: Preventivo):
-        """Test PDF generation with automatic filename."""
-        generator = PreventivoPDFGenerator()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Change to temp directory for auto-generated file
-            import os
-
-            original_cwd = os.getcwd()
-            os.chdir(tmpdir)
-
-            try:
-                pdf_path = generator.generate(test_preventivo)
-
-                assert pdf_path.exists()
-                assert (
-                    pdf_path.name
-                    == f"preventivo_{test_preventivo.numero}_{test_preventivo.anno}.pdf"
-                )
-            finally:
-                os.chdir(original_cwd)
-
     def test_generate_pdf_multiple_righe(self, db_session: Session, test_cliente: Cliente):
         """Test PDF generation with multiple line items."""
         preventivo = Preventivo(

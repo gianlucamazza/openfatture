@@ -248,6 +248,7 @@ class AssistantRuntime:
             )
         if self.enable_tools and not context.available_tools:
             context.available_tools = [t.name for t in self._tool_registry.list_tools()]
+            context.disabled_capabilities = self._tool_registry.disabled_capabilities()
         return context
 
     def _persist_turn(

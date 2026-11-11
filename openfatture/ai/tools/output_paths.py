@@ -12,7 +12,7 @@ from openfatture.platform.errors import describe_error
 
 
 def exports_dir() -> Path:
-    return get_settings().data_dir / "exports"
+    return get_settings().exports_dir
 
 
 def confine_output_path(output_path: str) -> str:

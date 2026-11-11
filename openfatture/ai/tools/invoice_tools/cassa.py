@@ -1,6 +1,6 @@
 """Cassa previdenziale tools — adapter over billing.application.cassa_ops."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application.cassa_ops import set_cassa_previdenziale
 
 __all__ = ["set_cassa_previdenziale"]
@@ -11,6 +11,7 @@ def tools() -> list[Tool]:
     return [
         Tool(
             name="set_cassa_previdenziale",
+            risk=ToolRisk.MUTATE,
             description=(
                 "Set or remove the invoice's social security contribution (rivalsa, "
                 "DatiCassaPrevidenziale), e.g. INPS gestione separata TC22 at 4%. "

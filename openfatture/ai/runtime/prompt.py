@@ -12,6 +12,20 @@ from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
+_CATEGORY_LABELS = {
+    "batch": "import/export CSV e aggiornamenti massivi",
+    "clients": "gestione clienti",
+    "invoices": "gestione fatture e righe",
+    "knowledge": "base di conoscenza normativa",
+    "payments": "pagamenti e incassi",
+    "pdf": "generazione PDF di fatture e preventivi",
+    "preventivi": "preventivi",
+    "prodotti": "catalogo prodotti",
+    "reports": "report",
+    "sdi": "notifiche SDI",
+    "signature": "firma digitale",
+}
+
 
 def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True) -> str:
     """Build the product assistant system prompt with optional tool/context hints."""
@@ -38,6 +52,8 @@ def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True)
         "- Se non hai informazioni sufficienti, chiedi chiarimenti",
         "- Prima di eseguire azioni distruttive, chiedi conferma",
         "- Cita i dati specifici quando disponibili (numeri, date, importi)",
+        "- Il PDF di una fattura è una copia di cortesia: l'originale fiscale è l'XML transitato da SDI. Puoi generarlo anche per le fatture issued_elsewhere, dicendo che è una copia di cortesia. Riporta il percorso del file restituito dallo strumento.",
+        "- OpenFatture è un'applicazione a riga di comando: non esiste un'interfaccia grafica, non descriverne una.",
     ]
 
     if context.current_year_stats:
@@ -57,10 +73,20 @@ def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True)
             [
                 "",
                 "Strumenti disponibili:",
-                f"- Hai accesso a {len(context.available_tools)} tools",
-                "- Usa i tools per recuperare dati o eseguire azioni",
-                "- I tools includono: ricerca fatture, statistiche, info clienti",
+                f"- Puoi chiamare esattamente i {len(context.available_tools)} strumenti nello schema; usali per recuperare dati o eseguire azioni.",
             ]
+        )
+
+    if enable_tools and context.disabled_capabilities:
+        parts.extend(["", "Capacità di OpenFatture disattivate per l'assistente:"])
+        for category, command in context.disabled_capabilities.items():
+            label = _CATEGORY_LABELS.get(category, category)
+            parts.append(f"- {label}: l'utente può attivarla con `{command}`")
+        parts.append(
+            "- Se una richiesta richiede una capacità disattivata, non dire che OpenFatture "
+            "non la supporta: spiega che è disattivata per l'assistente e indica il comando "
+            "per attivarla, oppure il comando CLI equivalente (`openfatture fattura --help`, "
+            "`openfatture cliente --help`, `openfatture pagamento --help`)."
         )
 
     if context.relevant_documents:

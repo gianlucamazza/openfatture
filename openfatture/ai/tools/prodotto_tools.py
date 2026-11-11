@@ -1,6 +1,6 @@
 """AI tool adapters over `openfatture.billing.application.prodotto_ops`."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application.prodotto_ops import (
     create_prodotto,
     delete_prodotto,
@@ -20,6 +20,7 @@ def get_prodotto_tools() -> list[Tool]:
     return [
         Tool(
             name="search_prodotti",
+            risk=ToolRisk.READ,
             description="Search products/services in catalog with optional filters (category, type, code, description)",
             category="prodotti",
             parameters=[
@@ -65,6 +66,7 @@ def get_prodotto_tools() -> list[Tool]:
         ),
         Tool(
             name="get_prodotto_details",
+            risk=ToolRisk.READ,
             description="Get detailed information about a specific product/service including usage statistics",
             category="prodotti",
             parameters=[
@@ -81,6 +83,7 @@ def get_prodotto_tools() -> list[Tool]:
         ),
         Tool(
             name="create_prodotto",
+            risk=ToolRisk.MUTATE,
             description="Create a new product/service in catalog with pricing and VAT information",
             category="prodotti",
             parameters=[
@@ -146,6 +149,7 @@ def get_prodotto_tools() -> list[Tool]:
         ),
         Tool(
             name="update_prodotto",
+            risk=ToolRisk.MUTATE,
             description="Update product/service information (selective field updates)",
             category="prodotti",
             parameters=[
@@ -208,6 +212,7 @@ def get_prodotto_tools() -> list[Tool]:
         ),
         Tool(
             name="delete_prodotto",
+            risk=ToolRisk.MUTATE,
             description="CRITICAL: Delete product/service from catalog (irreversible operation)",
             category="prodotti",
             parameters=[

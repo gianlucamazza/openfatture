@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import validate_call
 
 from openfatture.ai.rag import KnowledgeIndexer, get_rag_config
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import sanitize_string_input, validate_integer_input
 
@@ -104,6 +104,7 @@ def get_knowledge_tools() -> list[Tool]:
     return [
         Tool(
             name="search_knowledge_base",
+            risk=ToolRisk.READ,
             description="Esegue una ricerca semantica nella knowledge base normativa e operativa",
             category="knowledge",
             func=search_knowledge_base,

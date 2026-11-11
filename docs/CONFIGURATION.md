@@ -129,7 +129,8 @@ uv sync --all-extras
 | `AI_API_KEY` | **Product SSOT** provider credential |
 | `AI_BASE_URL` | **Product SSOT** local provider endpoint (Ollama) |
 | `ASSISTANT_BACKEND` | Product assistant orchestration: `langgraph` (default) or `chat` (rollback) |
-| `AI_ENABLED_TOOLS` | Comma-separated allowlist of tools the chat/AI agent may use. Default is read-only invoice/client lookups. Transmit tools such as `send_invoice_to_sdi` stay off unless you name them here. The value `all` enables every non-transmit tool; it does **not** enable SDI/PEC send. |
+| `AI_TOOL_ACCESS` | Which tools the assistant may use, by risk class. `read`: lookups only. `standard` (default): lookups plus local files written inside `data_dir/exports` (invoice and quote PDFs, CSV exports). `full`: also creates, changes and deletes records; each of those tools still asks for a human confirmation. No level enables SDI/PEC send. |
+| `AI_ENABLED_TOOLS` | Comma-separated tool names enabled on top of `AI_TOOL_ACCESS` (default empty). It is the only way to enable a transmit tool such as `send_invoice_to_sdi`. Unknown names are ignored; `all` is not a special value. |
 | `AI_TOOLS_REQUIRE_CONFIRMATION` | Default `true`. When true, tools that require confirmation (including every SDI/PEC send) refuse unless a human says yes. An interactive TTY may prompt (default no). `source="human"` with `confirmed=True` is an API for human-facing callers; no built-in UI uses that path yet (there is no TUI). The model cannot self-confirm. Non-interactive sessions refuse and do not transmit. Setting this to `false` skips the prompt but still requires an `AI_ENABLED_TOOLS` opt-in for transmit tools. |
 
 Product credentials written by `openfatture init` use the `AI_*` names above.
@@ -222,10 +223,15 @@ assistant; `openfatture --help` lists the commands.
 
 ### Assistant file exports
 
+Without `--output`, PDFs are written to `data_dir/exports/fatture/` (invoices)
+and `data_dir/exports/preventivi/` (quotes), never to the current directory.
 When the assistant chooses an output path for PDF or CSV exports, the path is
 resolved inside `data_dir/exports`. Absolute paths or `..` segments that would
 leave that directory are refused before the tool runs. Commands typed by a
 person (`fattura generate-pdf --output ...`) are not restricted.
+
+An invoice PDF is a courtesy copy: its footer says it has no fiscal value and
+that the original is the FatturaPA XML sent through SDI.
 
 ### Event listeners
 

@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import validate_call
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application import client_queries
 from openfatture.billing.application.client_commands import (
     create_client,
@@ -52,6 +52,7 @@ def get_client_tools() -> list[Tool]:
     return [
         Tool(
             name="search_clients",
+            risk=ToolRisk.READ,
             description="Search for clients by name, partita IVA, or codice fiscale",
             category="clients",
             parameters=[
@@ -79,6 +80,7 @@ def get_client_tools() -> list[Tool]:
         ),
         Tool(
             name="get_client_details",
+            risk=ToolRisk.READ,
             description="Get detailed information about a specific client",
             category="clients",
             parameters=[
@@ -95,6 +97,7 @@ def get_client_tools() -> list[Tool]:
         ),
         Tool(
             name="get_client_stats",
+            risk=ToolRisk.READ,
             description="Get statistics about all clients",
             category="clients",
             parameters=[],
@@ -105,6 +108,7 @@ def get_client_tools() -> list[Tool]:
         # WRITE tools
         Tool(
             name="create_client",
+            risk=ToolRisk.MUTATE,
             description="Create a new client. Requires at least partita_iva or codice_fiscale.",
             category="clients",
             parameters=[
@@ -198,6 +202,7 @@ def get_client_tools() -> list[Tool]:
         ),
         Tool(
             name="update_client",
+            risk=ToolRisk.MUTATE,
             description="Update client information. Only provided fields will be updated.",
             category="clients",
             parameters=[
@@ -296,6 +301,7 @@ def get_client_tools() -> list[Tool]:
         ),
         Tool(
             name="delete_client",
+            risk=ToolRisk.MUTATE,
             description="Delete client from database. CRITICAL: Cannot delete clients with invoices.",
             category="clients",
             parameters=[

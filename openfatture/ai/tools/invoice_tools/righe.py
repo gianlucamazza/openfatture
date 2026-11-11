@@ -1,6 +1,6 @@
 """Invoice line tools — adapters over billing.application.line_commands."""
 
-from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType
+from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application.line_commands import (
     create_riga,
     delete_riga,
@@ -15,6 +15,7 @@ def tools() -> list[Tool]:
     return [
         Tool(
             name="create_riga",
+            risk=ToolRisk.MUTATE,
             description="Add line item to invoice. Updates invoice totals automatically.",
             category="invoices",
             parameters=[
@@ -78,6 +79,7 @@ def tools() -> list[Tool]:
         ),
         Tool(
             name="update_riga",
+            risk=ToolRisk.MUTATE,
             description="Update line item in invoice (only BOZZA or DA_INVIARE). Updates invoice totals automatically.",
             category="invoices",
             parameters=[
@@ -134,6 +136,7 @@ def tools() -> list[Tool]:
         ),
         Tool(
             name="delete_riga",
+            risk=ToolRisk.MUTATE,
             description="CRITICAL: Delete line item from invoice (only BOZZA or DA_INVIARE). Updates invoice totals automatically.",
             category="invoices",
             parameters=[
