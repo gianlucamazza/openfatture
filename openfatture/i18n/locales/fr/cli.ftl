@@ -295,3 +295,4 @@ cli-help-resolve-evidence = Preuve vérifiée (par ex. la référence du fournis
 cli-help-collections-migrate = Met à jour les données historiques d'encaissement sans modifier les montants.
 cli-help-install-completion = Installe la complétion pour le shell courant.
 cli-help-show-completion = Affiche la complétion pour le shell courant, pour la copier ou la personnaliser.
+cli-help-help-option = Affiche ce message et quitte.

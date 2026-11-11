@@ -1,5 +1,7 @@
 """Contract tests for the intentionally small public CLI."""
 
+import re
+
 from typer.testing import CliRunner
 
 from openfatture.cli.main import app
@@ -184,6 +186,9 @@ def test_every_command_and_parameter_is_described(monkeypatch):
                 undocumented.append(f"{' '.join(path)} {param.name}")
         result = runner.invoke(app, [*path, "--help"])
         assert result.exit_code == 0, (path, result.output)
+        plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        text = " ".join(plain.replace("│", " ").split())
+        assert "Mostra questo messaggio ed esci." in text, path
     assert undocumented == []
 
 

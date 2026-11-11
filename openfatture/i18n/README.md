@@ -24,9 +24,12 @@ files are the sources; after editing one, compile it with
 `uv run python scripts/compile_cli_catalogs.py`.
 `tests/i18n/test_framework_catalogs.py` fails on a stale `.mo`, on a lost
 placeholder, and when a Click/Typer upgrade adds an untranslated message.
-Typer releases that vendor Click (`typer._click`) translate only Typer's own
-labels through gettext; Click's text there is fixed English, so upgrading Typer
-can leave a few framework strings in English until it is localizable again.
+Typer releases that vendor Click (`typer._click`, which a fresh install from
+PyPI resolves) translate only Typer's own labels through gettext; Click's text
+there is fixed English. The lines every help page shows (`--help`,
+`--install-completion`, `--show-completion`) therefore come from Fluent
+(`cli-help-help-option`, `cli-help-*-completion`) and are localized with either
+Typer; rarer Click messages, such as some usage errors, can stay in English.
 
 ## Usage
 

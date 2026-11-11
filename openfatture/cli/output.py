@@ -194,6 +194,20 @@ def _final_error(
     return code, error
 
 
+def _localize_help_options(command: click.Command, ctx: click.Context) -> None:
+    """Give ``--help`` of ``command`` and its subcommands a localized text.
+
+    Click translates it with gettext, but Typer releases that vendor Click
+    hardcode it in English. Commands cache their help option, so setting it
+    once covers every later use.
+    """
+    option = command.get_help_option(ctx)
+    if option is not None and hasattr(option, "help"):
+        option.help = _("cli-help-help-option")
+    for subcommand in getattr(command, "commands", {}).values():
+        _localize_help_options(subcommand, ctx)
+
+
 class OutputGroup(TyperGroup):
     # Typer adds the completion options with fixed English help text.
     # They are appended after the group is built, so localize them on use.
@@ -203,6 +217,7 @@ class OutputGroup(TyperGroup):
     }
 
     def get_params(self, ctx: click.Context) -> list[click.Parameter]:
+        _localize_help_options(self, ctx)
         params = super().get_params(ctx)
         for param in params:
             key = self._COMPLETION_HELP.get(param.name or "")

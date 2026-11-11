@@ -294,3 +294,4 @@ cli-help-resolve-evidence = Verified evidence (e.g. the provider reference)
 cli-help-collections-migrate = Upgrade historical collection data without changing amounts.
 cli-help-install-completion = Install completion for the current shell.
 cli-help-show-completion = Show completion for the current shell, to copy it or customize the installation.
+cli-help-help-option = Show this message and exit.

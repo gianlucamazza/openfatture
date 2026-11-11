@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-11-11
+
+### Fixed
+
+- `--help` of every command describes itself in the configured locale also with
+  Typer releases that vendor Click (as installed from PyPI), which hardcode that
+  line in English.
+
 ## [2.10.0] - 2026-11-11
 
 The assistant is the only path for business operations: tool access by risk class,

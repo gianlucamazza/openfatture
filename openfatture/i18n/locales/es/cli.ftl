@@ -295,3 +295,4 @@ cli-help-resolve-evidence = Evidencia verificada (p. ej. la referencia del prove
 cli-help-collections-migrate = Actualiza los datos históricos de cobros sin cambiar los importes.
 cli-help-install-completion = Instala el autocompletado para la shell actual.
 cli-help-show-completion = Muestra el autocompletado para la shell actual, para copiarlo o personalizarlo.
+cli-help-help-option = Muestra este mensaje y sale.
