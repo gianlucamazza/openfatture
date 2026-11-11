@@ -295,3 +295,4 @@ cli-help-resolve-evidence = Geprüfter Nachweis (z. B. die Referenz des Anbieter
 cli-help-collections-migrate = Historische Zahlungseingangsdaten aktualisieren, ohne Beträge zu ändern.
 cli-help-install-completion = Vervollständigung für die aktuelle Shell installieren.
 cli-help-show-completion = Vervollständigung für die aktuelle Shell anzeigen, zum Kopieren oder Anpassen.
+cli-help-help-option = Diese Hilfe anzeigen und beenden.

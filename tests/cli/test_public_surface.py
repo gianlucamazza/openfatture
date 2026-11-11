@@ -184,6 +184,8 @@ def test_every_command_and_parameter_is_described(monkeypatch):
                 undocumented.append(f"{' '.join(path)} {param.name}")
         result = runner.invoke(app, [*path, "--help"])
         assert result.exit_code == 0, (path, result.output)
+        text = " ".join(result.output.replace("│", " ").split())
+        assert "Mostra questo messaggio ed esci." in text, path
     assert undocumented == []
 
 

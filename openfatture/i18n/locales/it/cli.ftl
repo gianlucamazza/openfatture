@@ -291,3 +291,4 @@ cli-help-resolve-evidence = Riscontro verificato (es. riferimento del provider)
 cli-help-collections-migrate = Aggiorna i dati storici degli incassi senza cambiare gli importi.
 cli-help-install-completion = Installa il completamento per la shell corrente.
 cli-help-show-completion = Mostra il completamento per la shell corrente, da copiare o personalizzare.
+cli-help-help-option = Mostra questo messaggio ed esci.
