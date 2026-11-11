@@ -11,8 +11,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from openfatture.billing.application.invoice_queries import (
     collected_amount,
+    is_local_draft,
     payment_summary,
     status_evidence,
+    unscheduled_balances,
 )
 from openfatture.payment.application.services.payment_overview import (
     PaymentDueEntry,
@@ -276,9 +278,16 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
                 window_days=window_days,
                 max_upcoming=max_results,
             )
+            # Installments cover only part of what is owed: invoices without
+            # them (or not fully covered) are outstanding without a due date.
+            unscheduled = unscheduled_balances(db)
 
             has_entries = any(
-                summary.overdue or summary.due_soon or summary.upcoming or summary.without_due_date
+                summary.overdue
+                or summary.due_soon
+                or summary.upcoming
+                or summary.without_due_date
+                or unscheduled
             )
 
             if not has_entries:
@@ -289,7 +298,7 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
                     "due_soon": [],
                     "upcoming": [],
                     "without_due_date": [],
-                    "message": "No outstanding scheduled payments. Check invoice balances for unscheduled amounts.",
+                    "message": "Nothing outstanding: every issued invoice is collected.",
                 }
 
             # Format entries
@@ -303,17 +312,34 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
                     "paid": float(entry.paid),
                     "total": float(entry.total),
                     "status": entry.status.value,
+                    "source": "installment",
                 }
+
+            def format_unscheduled(balance: Any) -> dict[str, Any]:
+                return {
+                    "invoice_ref": balance["invoice_ref"],
+                    "client_name": balance["client_name"],
+                    "due_date": None,
+                    "days_delta": None,
+                    "residual": float(balance["residual"]),
+                    "paid": float(balance["paid"]),
+                    "total": float(balance["total"]),
+                    "status": None,
+                    "source": "invoice",
+                }
+
+            unscheduled_total = sum((b["residual"] for b in unscheduled), Decimal("0.00"))
 
             result = {
                 "has_outstanding": True,
-                "total_outstanding": float(summary.total_outstanding),
+                "total_outstanding": float(summary.total_outstanding + unscheduled_total),
                 "window_days": window_days,
                 "overdue": [format_entry(e) for e in summary.overdue],
                 "due_soon": [format_entry(e) for e in summary.due_soon],
                 "upcoming": [format_entry(e) for e in summary.upcoming],
                 "hidden_upcoming": summary.hidden_upcoming,
-                "without_due_date": [format_entry(e) for e in summary.without_due_date],
+                "without_due_date": [format_entry(e) for e in summary.without_due_date]
+                + [format_unscheduled(b) for b in unscheduled],
             }
 
             # Add totals by category
@@ -325,6 +351,10 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
             )
             result["upcoming_total"] = float(
                 sum((e.residual for e in summary.upcoming), Decimal("0.00"))
+            )
+            result["without_due_date_total"] = float(
+                sum((e.residual for e in summary.without_due_date), Decimal("0.00"))
+                + unscheduled_total
             )
 
             logger.info(
@@ -346,10 +376,6 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
 # =============================================================================
 
 _ZERO = Decimal("0.00")
-
-
-def _is_local_draft(invoice: Fattura) -> bool:
-    return invoice.stato == StatoFattura.BOZZA and not invoice.issued_elsewhere
 
 
 def _overdue(invoice: Fattura, today: date) -> Decimal:
@@ -432,8 +458,8 @@ def invoice_situation(
                 .order_by(cast(Fattura.numero, Integer), Fattura.numero)
                 .all()
             )
-            drafts = [f for f in invoices if _is_local_draft(f)]
-            documents = [f for f in invoices if not _is_local_draft(f)]
+            drafts = [f for f in invoices if is_local_draft(f)]
+            documents = [f for f in invoices if not is_local_draft(f)]
             rows = [_situation_row(f, today) for f in documents]
             invoices_only = [f for f in documents if f.tipo_documento != TipoDocumento.TD04]
             credit_notes = sum(

@@ -43,7 +43,6 @@ def workspace(
         monkeypatch.setenv(name, value)
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("ARCHIVIO_DIR", str(tmp_path / "data" / "archivio"))
-    monkeypatch.setenv("AI_TOOL_ACCESS", "standard")
     session_factory = request.getfixturevalue("runtime_db")
     session = session_factory()
     _seed(session)
@@ -107,6 +106,18 @@ def _seed(session: Session) -> None:
 
 async def _ask(message: str) -> tuple[str, list[str]]:
     """The answer and the names of the tools it called."""
+    answer, outcomes = await _ask_with_outcomes(message)
+    return answer, [outcome["tool"] for outcome in outcomes]
+
+
+async def _ask_with_outcomes(
+    message: str, *, awaiting_confirmation: bool = False
+) -> tuple[str, list[dict[str, Any]]]:
+    """The answer and the tool calls, with their parameters.
+
+    With ``awaiting_confirmation`` the turn may stop at a change that needs a
+    person's yes (there is none here), instead of completing.
+    """
     from openfatture.ai.runtime import create_assistant_runtime
     from openfatture.platform.config import get_settings
 
@@ -115,9 +126,13 @@ async def _ask(message: str) -> tuple[str, list[str]]:
         pytest.skip("no AI key configured")
     runtime = create_assistant_runtime(enable_streaming=False, persist_session=False)
     response = await runtime.run(message)
-    assert response.success, response.error
+    outcomes_so_far = response.metadata.get("tool_outcomes", [])
+    pending = awaiting_confirmation and any(
+        o.get("result") == "confirmation_required" for o in outcomes_so_far
+    )
+    assert response.success or pending, response.error
     outcomes: list[dict[str, Any]] = response.metadata.get("tool_outcomes", [])
-    return response.content, [outcome["tool"] for outcome in outcomes]
+    return response.content, outcomes
 
 
 @pytest.mark.asyncio
@@ -156,3 +171,29 @@ async def test_a_disabled_capability_points_at_the_setting(
     assert "generate_invoice_pdf" not in tools
     assert "ai_tool_access standard" in answer, answer
     assert "non supporta" not in answer.lower(), answer
+
+
+@pytest.mark.asyncio
+async def test_payment_status_counts_invoices_without_installments(workspace: Session) -> None:
+    # Invoice 1/2026 is issued elsewhere with no installment: 1220 is still owed.
+    answer, tools = await _ask("mostrami lo stato dei pagamenti")
+    assert tools
+    assert "1.220" in answer or "1220" in answer, answer
+    assert "nessun importo da incassare" not in answer.lower(), answer
+
+
+@pytest.mark.asyncio
+async def test_a_receipt_from_yesterday_is_recorded_with_its_date(workspace: Session) -> None:
+    from datetime import date, timedelta
+
+    # Without a person at the terminal the confirmation is refused, but the
+    # attempted call and its parameters are recorded.
+    _answer, outcomes = await _ask_with_outcomes(
+        "ho ricevuto ieri 500 euro da Studio Esempio per la fattura 1/2026",
+        awaiting_confirmation=True,
+    )
+    calls = [o for o in outcomes if o["tool"] == "record_collection"]
+    assert calls, [o["tool"] for o in outcomes]
+    parameters = calls[-1]["parameters"]
+    assert parameters.get("effective_date") == (date.today() - timedelta(days=1)).isoformat()
+    assert str(parameters.get("amount")).startswith("500")

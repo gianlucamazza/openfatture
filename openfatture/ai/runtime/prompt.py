@@ -6,26 +6,57 @@ compare orchestration, not copy-paste drift.
 
 from __future__ import annotations
 
+from datetime import date
+
 from openfatture.ai.domain.context import ChatContext
 from openfatture.ai.domain.message import Message, Role
 from openfatture.platform.logging import get_logger
 
 logger = get_logger(__name__)
 
+# What each category lets the assistant do, so that a hidden capability is
+# described by its effect and the model does not guess a procedure for it.
 _CATEGORY_LABELS = {
-    "batch": "import/export CSV e aggiornamenti massivi",
-    "clients": "gestione clienti",
+    "batch": "importazione ed esportazione CSV di fatture e clienti, cambi di stato massivi",
+    "clients": "creazione, modifica ed eliminazione di clienti",
     "documents": "apertura dei documenti generati",
-    "invoices": "gestione fatture e righe",
+    "invoices": "creazione e modifica di fatture, righe, note di credito e XML FatturaPA",
     "knowledge": "base di conoscenza normativa",
-    "payments": "pagamenti e incassi",
+    "payments": (
+        "registrazione di incassi (anche manuali, senza movimento bancario), allocazioni "
+        "alle fatture, storni e rate di pagamento"
+    ),
     "pdf": "generazione PDF di fatture, preventivi e riepiloghi",
-    "preventivi": "preventivi",
-    "prodotti": "catalogo prodotti",
+    "preventivi": "creazione, modifica e conversione in fattura di preventivi",
+    "prodotti": "gestione del catalogo prodotti",
     "reports": "report",
     "sdi": "notifiche SDI",
     "signature": "firma digitale",
 }
+
+_WEEKDAYS = ("lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica")
+_MONTHS = (
+    "gennaio",
+    "febbraio",
+    "marzo",
+    "aprile",
+    "maggio",
+    "giugno",
+    "luglio",
+    "agosto",
+    "settembre",
+    "ottobre",
+    "novembre",
+    "dicembre",
+)
+
+
+def _today_line(today: date) -> str:
+    """Today's date, so that "ieri" or "fine mese" resolve; it changes once a day."""
+    return (
+        f"Oggi è {_WEEKDAYS[today.weekday()]} {today.day} {_MONTHS[today.month - 1]} "
+        f"{today.year} ({today.isoformat()})."
+    )
 
 
 _PRODUCT = """\
@@ -120,10 +151,11 @@ _GENERATED_FILES = (
 def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True) -> str:
     """The product assistant system prompt.
 
-    It depends only on the enabled tools and the disabled capabilities, which
-    are fixed for a session, so the prefix stays the same from turn to turn.
+    It depends only on today's date, the enabled tools and the disabled
+    capabilities, which are fixed for a session (the date for a day), so the
+    prefix stays the same from turn to turn.
     """
-    sections = [_PRODUCT, _DATA, _ACTIONS]
+    sections = [_PRODUCT + "\n\n" + _today_line(date.today()), _DATA, _ACTIONS]
     if enable_tools and context.available_tools:
         enabled = set(context.available_tools)
         rules = [rule for name, rule in _TOOL_RULES.items() if name in enabled]
@@ -142,9 +174,10 @@ def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True)
             label = _CATEGORY_LABELS.get(category, category)
             lines.append(f"- {label}: l'utente può attivarla con `{command}`")
         lines.append(
-            "Se una richiesta richiede una capacità disattivata, non dire che OpenFatture "
-            "non la supporta: spiega che è disattivata per l'assistente e indica il comando "
-            "per attivarla."
+            "Se una richiesta richiede una capacità disattivata, dillo subito, prima di "
+            "consultare altri dati: non dire che OpenFatture non la supporta, spiega che è "
+            "disattivata per l'assistente e indica il comando per attivarla. Non descrivere "
+            "procedure per strumenti che non ti sono stati forniti."
         )
         sections.append("\n".join(lines))
     return "\n\n".join(sections)

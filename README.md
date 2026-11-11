@@ -54,12 +54,12 @@ or verifying SDI delivery.
 ### Create a draft and preview it
 
 Invoices, clients, PDFs and collections are handled by the assistant (`ai`
-extra and a configured provider). Changes to your data ask for confirmation
-first. With the default `ai_tool_access = "standard"` the assistant reads data
-and writes PDFs; set `ai_tool_access = "full"` to let it create records.
+extra and a configured provider). Every change to your data shows its
+parameters and asks for your confirmation first; sending to SDI is off. For a
+consultation-only assistant set `ai_tool_access = "standard"` (lookups and
+documents) or `"read"`.
 
 ```bash
-uv run openfatture config set ai_tool_access full
 uv run openfatture -m "Crea il cliente Demo Client, P.IVA 12345678903"
 uv run openfatture -m "Crea una bozza per Demo Client: 3 ore di consulenza a 90 euro, IVA 22%"
 uv run openfatture -m "Genera il PDF della bozza appena creata"

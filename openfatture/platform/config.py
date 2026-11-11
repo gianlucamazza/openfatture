@@ -335,13 +335,15 @@ class Settings(BaseSettings):
         default=True,
         description="Enable AI tool/function calling",
     )
+    # Changes are gated by a human confirmation, not hidden: the assistant can
+    # propose them and code asks the person (see docs/AI_ARCHITECTURE.md).
     ai_tool_access: AiToolAccess = Field(
-        default="standard",
+        default="full",
         description=(
             "Which AI tools the assistant may use, by risk: 'read' (lookups), "
-            "'standard' (lookups plus local PDF/CSV files in the exports "
-            "directory) or 'full' (also creates, changes and deletes records, "
-            "each behind a human confirmation). No level enables SDI/PEC send."
+            "'standard' (lookups plus local documents: PDF, XML, CSV) or 'full' "
+            "(also creates, changes and deletes records, each behind a human "
+            "confirmation). No level enables SDI/PEC send."
         ),
     )
     ai_enabled_tools: str = Field(

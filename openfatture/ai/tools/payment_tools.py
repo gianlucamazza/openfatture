@@ -144,9 +144,10 @@ def get_payment_tools() -> list[Tool]:
                 "Return totals over all payment installments: by_status (count per stored "
                 "status), total_payments, total_amount_due, total_amount_paid, total_outstanding, "
                 "overdue_count and overdue_amount (installments past their due date and not in "
-                "status pagato). Amounts are EUR floats. Invoices without installments and money "
-                "allocated without an installment are not counted; use get_payment_status per "
-                "invoice for those."
+                "status pagato), all over installments only; outstanding_without_installments is "
+                "what no installment covers (for example invoices without installments), and "
+                "invoices_outstanding is the whole amount still to be collected. Amounts are EUR "
+                "floats. Use get_due_dates for the outstanding amounts by invoice and due date."
             ),
             category="payments",
             parameters=[],

@@ -123,8 +123,8 @@ When a tool writes a document (PDF, FatturaPA XML, signed `.p7m`, CSV export), t
 its path under the tool line as a terminal link: Ctrl+click (Cmd+click on
 macOS) opens it in terminals that support OSC 8 hyperlinks. `/open` opens the
 latest document, `/open 2` the one before. Asking the assistant to open a
-document ("aprilo") uses the `open_document` tool, enabled with the default
-`ai_tool_access = "standard"`.
+document ("aprilo") uses the `open_document` tool, enabled from
+`ai_tool_access = "standard"` up (the default is `full`).
 
 Only `.pdf`, `.xml`, `.p7m` and `.csv` files, or folders ("apri la cartella
 delle esportazioni"), inside the exports or the archive directory can be
