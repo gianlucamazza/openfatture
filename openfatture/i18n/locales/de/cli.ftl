@@ -74,6 +74,8 @@ assistant-confirm-operation = Diesen Vorgang bestätigen? [y/N]
 assistant-help = Slash-Befehle
     /help     Diese Hilfe anzeigen
     /open     Letztes erzeugtes Dokument öffnen (/open 2 das davor)
+    /memory   Notizen anzeigen, die über Gespräche hinweg erhalten bleiben
+    /forget N Notiz N löschen
     /exit     Beenden (auch: exit, quit, q)
     /session  Sitzungs-ID anzeigen
     /clear    Sitzungsnachrichten löschen
@@ -83,6 +85,10 @@ assistant-open-invalid = Gib eine Zahl von 1 bis { $count } an: /open 1 ist das 
 assistant-open-unavailable = Keine grafische Sitzung zum Öffnen: { $path }
 assistant-open-failed = Die Standardanwendung für { $path } kann nicht gestartet werden
 assistant-opened = Geöffnet: { $name }
+assistant-memory-empty = Keine gespeicherten Notizen. Bitte den Assistenten, sich eine Vorliebe zu merken, um eine zu speichern.
+assistant-memory-title = Gespeicherte Notizen (der Assistent sieht sie in jedem Gespräch):
+assistant-forget-invalid = Gib die Nummer einer Notiz an: /forget 2 (Notizen siehst du mit /memory).
+assistant-forgot = Notiz gelöscht: { $text }
 assistant-input = Du ›
 assistant-operation = Vorgang: { $name }
 assistant-tool-running = Läuft · { $name }
@@ -259,6 +265,9 @@ cli-help-assistant-message = Anfrage an den Assistenten.
 cli-help-assistant-stream = Antwort während der Erzeugung anzeigen.
 cli-help-assistant-session = Gespeicherte Sitzung über ihre ID fortsetzen (aktiviert die Speicherung).
 cli-help-assistant-options-alone = --message und --session gelten nur für den Assistenten, ohne Befehl.
+cli-help-assistant-continue = Das letzte gespeicherte Gespräch fortsetzen.
+cli-help-assistant-continue-or-session = Verwende --continue oder --session, nicht beides.
+cli-assistant-no-session-to-continue = Kein Gespräch zum Fortsetzen: ein neues wird gestartet.
 cli-help-init-interactive = Interaktiver Einrichtungsassistent
 cli-help-status-json = Status als JSON ausgeben.
 cli-help-config-show =

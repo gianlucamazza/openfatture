@@ -13,6 +13,7 @@ descriptions, and compare the results.
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
@@ -147,7 +148,7 @@ async def test_an_invoice_issued_elsewhere_is_not_called_unsent(workspace: Sessi
     answer, tools = await _ask("mostrami lo stato delle fatture del 2026")
     assert tools, "the answer must come from the tools"
     lowered = answer.lower()
-    assert "non verificat" in lowered, answer
+    assert re.search(r"non (è |e )?verificat", lowered), answer
     for claim in ("non è stata inviata", "non è stata emessa", "non inviata"):
         assert claim not in lowered, answer
 
@@ -197,3 +198,27 @@ async def test_a_receipt_from_yesterday_is_recorded_with_its_date(workspace: Ses
     parameters = calls[-1]["parameters"]
     assert parameters.get("effective_date") == (date.today() - timedelta(days=1)).isoformat()
     assert str(parameters.get("amount")).startswith("500")
+
+
+@pytest.mark.asyncio
+async def test_the_chat_remembers_the_previous_turn(workspace: Session) -> None:
+    from openfatture.ai.runtime import create_assistant_runtime
+
+    runtime = create_assistant_runtime(enable_streaming=False, persist_session=True)
+    first = await runtime.run("Per questa conversazione chiamami Marta, per favore.")
+    assert first.success, first.error
+    second = await runtime.run("Come ti ho chiesto di chiamarmi?")
+    assert second.success, second.error
+    assert "Marta" in second.content, second.content
+
+
+@pytest.mark.asyncio
+async def test_a_stated_preference_is_offered_as_a_note(workspace: Session) -> None:
+    _answer, outcomes = await _ask_with_outcomes(
+        "Ricorda per le prossime volte: gli incassi senza fattura indicata vanno "
+        "allocati partendo dalla fattura più vecchia.",
+        awaiting_confirmation=True,
+    )
+    calls = [o for o in outcomes if o["tool"] == "remember_note"]
+    assert calls, [o["tool"] for o in outcomes]
+    assert "vecchia" in str(calls[-1]["parameters"].get("text", "")).lower()

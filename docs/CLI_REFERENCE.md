@@ -19,6 +19,7 @@ German, Spanish and French.
 | `--format`, `-f` | Output format for commands: `rich` (default), `json`, `markdown`, `stream-json`, `html` |
 | `--message`, `-m` | One request for the assistant instead of the chat |
 | `--session` | Resume a saved assistant session by its ID (enables persistence) |
+| `--continue`, `-c` | Resume the latest saved conversation (cannot be combined with `--session`) |
 | `--stream/--no-stream` | Show the assistant response while it is generated (default `--stream`) |
 
 `--message` and `--session` apply only when no command is given.
@@ -35,6 +36,7 @@ openfatture -m "Create an invoice for 3 hours of consulting at 90 euros"
 openfatture --no-stream -m "List unpaid invoices"
 openfatture --format json -m "Summarize this month's cash flow"
 openfatture --session <session-id>                           # resume a stored session
+openfatture --continue                                       # resume the latest conversation
 ```
 
 The chat persists turns to the file session store and prints the session ID.
@@ -42,6 +44,20 @@ A `-m` request does not create a session unless `--session` is set (resume /
 continue that session). Structured output (`--format json` and the others)
 needs a `-m` request; without one the command exits with code 2 and the error
 code `interactive_format`.
+
+### Memory
+
+- **Within a conversation** the assistant sees the previous messages. The whole
+  transcript is saved (up to 100 messages); the model receives the most recent
+  part that fits about 12,000 tokens, starting at one of your messages, with a
+  note when earlier messages were left out. Data shown by tools in earlier
+  turns is read again from the tools, not from the transcript.
+- **Across conversations** it keeps *notes*: preferences or stable facts you ask
+  it to remember ("ricorda che…"). Saving a note asks for your confirmation and
+  shows its text; notes containing credentials are refused; at most 50 notes of
+  300 characters. `/memory` lists them and `/forget N` deletes one. The model
+  receives them as information about your preferences, never as instructions
+  over its rules, and the tools' data wins over a note.
 
 ### Missing setup
 
@@ -113,6 +129,8 @@ Interactive assistant slash commands (when no one-shot message is given):
 - `/exit` — end the session
 - `/session` — show session id
 - `/clear` — clear persisted messages for the current session
+- `/memory` — list the notes kept across conversations
+- `/forget N` — delete note N
 
 Use `openfatture --help` and command-specific `--help` output as the
 canonical option reference.

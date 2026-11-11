@@ -156,7 +156,6 @@ class ChatSession(BaseModel):
 
     # Configuration
     max_messages: int = 100
-    max_tokens: int = 8000
     auto_save: bool = True
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -366,33 +365,14 @@ class ChatSession(BaseModel):
         )
 
     def _truncate_if_needed(self) -> None:
-        """Truncate messages if exceeding limits."""
-        # Keep system messages and truncate conversation
+        """Keep at most ``max_messages`` messages (system messages are always kept).
+
+        Only the stored transcript is capped here. What the model receives is
+        trimmed by the runtime to a token budget; provider usage counters must
+        not drive this cut, because they include the prompt of every turn.
+        """
         if len(self.messages) > self.max_messages:
             system_messages = [m for m in self.messages if m.role == Role.SYSTEM]
             other_messages = [m for m in self.messages if m.role != Role.SYSTEM]
-
-            # Keep most recent messages
             recent = other_messages[-(self.max_messages - len(system_messages)) :]
-
             self.messages = system_messages + recent
-
-        # Token-based truncation (simplified)
-        # In production, use tiktoken for accurate counting
-        if self.metadata.total_tokens > self.max_tokens:
-            # Keep last N messages that fit within token limit
-            cumulative_tokens = 0
-            keep_messages: list[ChatMessage] = []
-
-            for msg in reversed(self.messages):
-                if msg.role == Role.SYSTEM:
-                    keep_messages.insert(0, msg)
-                    continue
-
-                cumulative_tokens += msg.total_tokens
-                if cumulative_tokens <= self.max_tokens:
-                    keep_messages.insert(0, msg)
-                else:
-                    break
-
-            self.messages = keep_messages

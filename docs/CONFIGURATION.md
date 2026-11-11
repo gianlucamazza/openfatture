@@ -250,5 +250,7 @@ The former `PAYMENT_EVENT_LISTENERS` setting was removed.
   human approval (default `60`). Synchronous domain calls finish cooperatively.
 
 Persistent LangGraph sessions keep per-turn checkpoints and tool receipts in
-`data_dir/ai/runtime/`. See [AI architecture](AI_ARCHITECTURE.md#durable-local-execution)
+`data_dir/ai/runtime/`. Conversations are saved in `AI_CHAT_SESSIONS_DIR`, and
+the notes the assistant keeps across conversations in `data_dir/ai/memory.json`
+(owner-only permissions; manage them with `/memory` and `/forget`). See [AI architecture](AI_ARCHITECTURE.md#durable-local-execution)
 for restart, approval and reconciliation behavior.

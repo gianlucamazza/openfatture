@@ -73,6 +73,8 @@ assistant-confirm-operation = Confirm this operation? [y/N]
 assistant-help = Slash commands
     /help     Show this help
     /open     Open the latest generated document (/open 2 the one before)
+    /memory   Show the notes kept across conversations
+    /forget N Delete note N
     /exit     Exit (also: exit, quit, q)
     /session  Show session ID
     /clear    Clear session messages
@@ -82,6 +84,10 @@ assistant-open-invalid = Give a number from 1 to { $count }: /open 1 is the most
 assistant-open-unavailable = No graphical session to open it: { $path }
 assistant-open-failed = Cannot start the default application for { $path }
 assistant-opened = Opened: { $name }
+assistant-memory-empty = No saved notes. Ask the assistant to remember a preference to save one.
+assistant-memory-title = Saved notes (the assistant sees them in every conversation):
+assistant-forget-invalid = Give the number of a note: /forget 2 (see the notes with /memory).
+assistant-forgot = Note deleted: { $text }
 assistant-input = You ›
 assistant-operation = Operation: { $name }
 assistant-tool-running = Running · { $name }
@@ -258,6 +264,9 @@ cli-help-assistant-message = A request for the assistant.
 cli-help-assistant-stream = Show the response while it is generated.
 cli-help-assistant-session = Resume a saved session by its ID (enables persistence).
 cli-help-assistant-options-alone = --message and --session apply to the assistant only, without a command.
+cli-help-assistant-continue = Resume the latest saved conversation.
+cli-help-assistant-continue-or-session = Use --continue or --session, not both.
+cli-assistant-no-session-to-continue = No conversation to resume: starting a new one.
 cli-help-init-interactive = Interactive setup wizard
 cli-help-status-json = Emit the status as JSON.
 cli-help-config-show =

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-11-12
+
+The assistant remembers the conversation, and keeps notes across
+conversations.
+
+### Fixed
+
+- **The chat forgot every previous message.** The session cut its transcript
+  when the cumulative provider usage (which counts the whole prompt of every
+  turn) exceeded 8,000 tokens, which happened on the first turn, so each
+  message reached the model without history. The stored transcript is now
+  capped only by message count, and the runtime sends the model the most
+  recent messages within a token budget, from a user message, noting when
+  earlier ones are omitted.
+
+### Added
+
+- `openfatture --continue` (`-c`) resumes the latest saved conversation.
+- Notes kept across conversations: the assistant proposes `remember_note` when
+  you ask it to remember a preference (each save asks for confirmation and
+  shows the text; credentials are refused; at most 50 notes). `/memory` lists
+  them, `/forget N` deletes one. They reach the model as information about
+  your preferences, not as instructions, and the tools' data wins over them.
+
 ## [2.14.0] - 2026-11-12
 
 The outstanding amount includes invoices without installments, and the

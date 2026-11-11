@@ -73,6 +73,8 @@ assistant-confirm-operation = Confermi questa operazione? [s/N]
 assistant-help = Comandi
     /help     Mostra questo aiuto
     /open     Apri l'ultimo documento generato (/open 2 il penultimo)
+    /memory   Mostra le note salvate tra le conversazioni
+    /forget N Cancella la nota N
     /exit     Esci (anche: exit, quit, q)
     /session  Mostra ID sessione
     /clear    Cancella i messaggi della sessione
@@ -82,6 +84,10 @@ assistant-open-invalid = Indica un numero da 1 a { $count }: /open 1 è il docum
 assistant-open-unavailable = Nessuna sessione grafica per aprirlo: { $path }
 assistant-open-failed = Impossibile avviare l'applicazione predefinita per { $path }
 assistant-opened = Aperto: { $name }
+assistant-memory-empty = Nessuna nota salvata. Chiedi all'assistente di ricordare una preferenza per salvarne una.
+assistant-memory-title = Note salvate (le vede l'assistente in ogni conversazione):
+assistant-forget-invalid = Indica il numero di una nota: /forget 2 (le note si vedono con /memory).
+assistant-forgot = Nota cancellata: { $text }
 assistant-input = Tu ›
 assistant-operation = Operazione: { $name }
 assistant-tool-running = Esecuzione · { $name }
@@ -255,6 +261,9 @@ cli-help-assistant-message = Richiesta per l'assistente.
 cli-help-assistant-stream = Mostra la risposta mentre viene generata.
 cli-help-assistant-session = Riprendi una sessione salvata tramite il suo ID (attiva il salvataggio).
 cli-help-assistant-options-alone = --message e --session valgono solo per l'assistente, senza un comando.
+cli-help-assistant-continue = Riprendi l'ultima conversazione salvata.
+cli-help-assistant-continue-or-session = Usa --continue oppure --session, non entrambi.
+cli-assistant-no-session-to-continue = Nessuna conversazione da riprendere: ne inizio una nuova.
 cli-help-init-interactive = Configurazione guidata interattiva
 cli-help-status-json = Restituisci lo stato in JSON.
 cli-help-config-show =

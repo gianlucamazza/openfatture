@@ -75,3 +75,33 @@ def test_open_explains_what_is_missing(monkeypatch, tmp_path) -> None:
     assert opened == [] and "da 1 a 1" in text
     text, opened = _open(monkeypatch, "/open", [document], desktop=False)
     assert opened == [] and str(document) in text
+
+
+def _slash(monkeypatch, tmp_path, command: str) -> str:
+    from io import StringIO
+
+    from rich.console import Console
+
+    from openfatture.ai import memory
+    from openfatture.ai.memory.store import MemoryStore
+    from openfatture.cli.commands import assistant
+
+    store = MemoryStore(tmp_path / "memory.json")
+    monkeypatch.setattr(memory, "get_memory_store", lambda: store)
+    output = StringIO()
+    monkeypatch.setattr(assistant, "console", Console(file=output, width=200))
+    runtime = MagicMock(spec=AssistantRuntime, session_id=None)
+    if command != "/memory-empty":
+        store.add("Alloca dalla fattura più vecchia")
+    assert _handle_slash_command(command.replace("-empty", ""), runtime=runtime) == "handled"
+    return output.getvalue()
+
+
+def test_memory_lists_the_notes(monkeypatch, tmp_path) -> None:
+    assert "Nessuna nota salvata" in _slash(monkeypatch, tmp_path, "/memory-empty")
+    assert "[1] Alloca dalla fattura più vecchia" in _slash(monkeypatch, tmp_path, "/memory")
+
+
+def test_forget_deletes_a_note(monkeypatch, tmp_path) -> None:
+    assert "Nota cancellata: Alloca" in _slash(monkeypatch, tmp_path, "/forget 1")
+    assert "/forget 2" in _slash(monkeypatch, tmp_path, "/forget x")

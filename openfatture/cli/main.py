@@ -68,6 +68,13 @@ def main(
         help=_("cli-help-assistant-session"),
         rich_help_panel=_("cli-help-panel-assistant"),
     ),
+    continue_session: bool = typer.Option(
+        False,
+        "--continue",
+        "-c",
+        help=_("cli-help-assistant-continue"),
+        rich_help_panel=_("cli-help-panel-assistant"),
+    ),
     stream: bool = typer.Option(
         True,
         "--stream/--no-stream",
@@ -84,9 +91,13 @@ def main(
     configure_dynamic_logging(settings.debug_config)
     ctx.ensure_object(dict)
     ctx.obj["format"] = format_type
+    if continue_session and session is not None:
+        raise typer.BadParameter(_("cli-help-assistant-continue-or-session"))
     if ctx.invoked_subcommand is None:
-        assistant.start(ctx, message=message, stream=stream, session=session)
-    elif message is not None or session is not None:
+        assistant.start(
+            ctx, message=message, stream=stream, session=session, resume_latest=continue_session
+        )
+    elif message is not None or session is not None or continue_session:
         raise typer.BadParameter(_("cli-help-assistant-options-alone"))
 
 
