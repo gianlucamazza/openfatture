@@ -5,8 +5,9 @@ Searching, creating and editing invoices, and their PDFs, go through the assista
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 
-from openfatture.cli.output import remember_result
+from openfatture.cli.output import error_message, remember_result
 from openfatture.i18n import _
 
 app = typer.Typer(name="fattura")
@@ -32,7 +33,7 @@ def generate_xml(
     result = generate_invoice_xml(fattura_id, output_path=output, dry_run=dry_run)
     remember_result(result)
     if "error" in result:
-        console.print(_("cli-common-error", error=result["error"]))
+        console.print(_("cli-common-error", error=escape(error_message(result))))
         raise typer.Exit(code=1)
 
     if dry_run:
@@ -95,7 +96,7 @@ def associate_receipt(
     result = journal_ops.associate_receipt(receipt_id, invoice_id, evidence)
     remember_result(result)
     if "error" in result:
-        console.print(result["error"], markup=False)
+        console.print(_("cli-common-error", error=escape(error_message(result))))
         raise typer.Exit(1)
     console.print(_("cli-fattura-receipt-associated"))
 
@@ -125,6 +126,6 @@ def resolve_submission_command(
     result = resolve_submission_attempt(attempt_id, sent=sent, evidence=evidence)
     remember_result(result)
     if "error" in result:
-        console.print(result["error"], markup=False)
+        console.print(_("cli-common-error", error=escape(error_message(result))))
         raise typer.Exit(1)
     console.print(_("cli-fattura-submission-resolved"))

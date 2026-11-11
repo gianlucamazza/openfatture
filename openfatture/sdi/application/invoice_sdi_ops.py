@@ -259,14 +259,15 @@ def generate_invoice_xml(
     with db_session() as db:
         fattura = db.get(Fattura, fattura_id)
         if fattura is None:
-            return {"error": f"Invoice {fattura_id} not found"}
+            return {"error": f"Invoice {fattura_id} not found", "error_code": "invoice_not_found"}
         service = InvoiceService(get_settings())
         try:
             xml_content, error = service.generate_xml(fattura, validate=False)
         except XMLValidationError as exc:
-            return {"error": f"XML validation error: {exc}"}
+            return {"error": f"XML validation error: {exc}", "error_code": "xml_invalid"}
         if error:
-            return {"error": error}
+            code = "invoice_issued_elsewhere" if fattura.issued_elsewhere else "xml_failed"
+            return {"error": error, "error_code": code}
         if dry_run:
             db.rollback()
             return {"success": True, "dry_run": True, "xml_content": xml_content}

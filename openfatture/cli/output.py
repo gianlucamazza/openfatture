@@ -34,6 +34,28 @@ def remember_result(value: Any) -> None:
     _result.set(value)
 
 
+# Refusals that application services identify with an ``error_code``. Their
+# ``error`` text stays English for the assistant; the CLI shows it localized.
+_ERROR_MESSAGES = {
+    "invoice_not_found": "cli-error-invoice-not-found",
+    "invoice_issued_elsewhere": "cli-error-invoice-issued-elsewhere",
+    "xml_invalid": "cli-error-xml-invalid",
+    "xml_failed": "cli-error-xml-failed",
+    "receipt_not_associable": "cli-error-receipt-not-associable",
+    "evidence_required": "cli-error-evidence-required",
+    "submission_not_found": "cli-error-submission-not-found",
+    "submission_already_resolved": "cli-error-submission-already-resolved",
+    "sdi_evidence_contradicts": "cli-error-sdi-evidence-contradicts",
+    "submission_concurrent_update": "cli-error-submission-concurrent-update",
+}
+
+
+def error_message(result: dict[str, Any]) -> str:
+    """The refusal in ``result`` in the user's language, else the service text."""
+    key = _ERROR_MESSAGES.get(str(result.get("error_code")))
+    return _(key, detail=str(result["error"])) if key else str(result["error"])
+
+
 def clean(value: Any) -> Any:
     if isinstance(value, dict):
         return {

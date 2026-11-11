@@ -231,3 +231,15 @@ cli-formatter-model = Modell: { $model }
 cli-formatter-tokens = Tokens: { $tokens }
 cli-formatter-cost = Kosten: { $cost }
 cli-formatter-latency = Latenz: { $latency } ms
+
+## Localized refusals of application services (error_code)
+cli-error-invoice-not-found = Rechnung nicht gefunden.
+cli-error-invoice-issued-elsewhere = Die Rechnung wurde anderswo ausgestellt und dient nur als Referenz: Es wird kein XML erzeugt, um eine doppelte SDI-Übermittlung zu vermeiden.
+cli-error-xml-invalid = Das XML ist ungültig: { $detail }
+cli-error-xml-failed = XML kann nicht erzeugt werden: { $detail }
+cli-error-receipt-not-associable = Die Empfangsbestätigung existiert nicht oder ist bereits zugeordnet.
+cli-error-evidence-required = Ein geprüfter Nachweis ist erforderlich (--evidence).
+cli-error-submission-not-found = Übermittlungsversuch nicht gefunden.
+cli-error-submission-already-resolved = Der Übermittlungsversuch ist bereits geklärt.
+cli-error-sdi-evidence-contradicts = Erfasste SDI-Nachweise widersprechen dem Ergebnis „nicht gesendet“.
+cli-error-submission-concurrent-update = Der Versuch wurde inzwischen geklärt: neu laden und erneut versuchen.

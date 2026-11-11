@@ -227,3 +227,15 @@ cli-formatter-model = Modello: { $model }
 cli-formatter-tokens = Token: { $tokens }
 cli-formatter-cost = Costo: { $cost }
 cli-formatter-latency = Latenza: { $latency } ms
+
+## Localized refusals of application services (error_code)
+cli-error-invoice-not-found = Fattura non trovata.
+cli-error-invoice-issued-elsewhere = La fattura è stata emessa altrove ed è conservata solo come riferimento: l'XML non viene generato per evitare un doppio invio allo SDI.
+cli-error-xml-invalid = L'XML non è valido: { $detail }
+cli-error-xml-failed = Impossibile generare l'XML: { $detail }
+cli-error-receipt-not-associable = La ricevuta non esiste o è già stata associata.
+cli-error-evidence-required = Serve un riscontro verificato (--evidence).
+cli-error-submission-not-found = Tentativo di invio non trovato.
+cli-error-submission-already-resolved = Il tentativo di invio è già stato risolto.
+cli-error-sdi-evidence-contradicts = Le evidenze SDI registrate contraddicono l'esito "non inviato".
+cli-error-submission-concurrent-update = Il tentativo è stato risolto nel frattempo: ricarica e riprova.

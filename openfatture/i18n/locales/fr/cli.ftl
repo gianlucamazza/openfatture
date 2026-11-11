@@ -231,3 +231,15 @@ cli-formatter-model = Modèle : { $model }
 cli-formatter-tokens = Jetons : { $tokens }
 cli-formatter-cost = Coût : { $cost }
 cli-formatter-latency = Latence : { $latency } ms
+
+## Localized refusals of application services (error_code)
+cli-error-invoice-not-found = Facture introuvable.
+cli-error-invoice-issued-elsewhere = La facture a été émise ailleurs et n'est conservée qu'à titre de référence : aucun XML n'est généré, pour éviter un double envoi au SDI.
+cli-error-xml-invalid = Le XML n'est pas valide : { $detail }
+cli-error-xml-failed = Impossible de générer le XML : { $detail }
+cli-error-receipt-not-associable = L'accusé n'existe pas ou est déjà associé.
+cli-error-evidence-required = Une preuve vérifiée est requise (--evidence).
+cli-error-submission-not-found = Tentative d'envoi introuvable.
+cli-error-submission-already-resolved = La tentative d'envoi est déjà résolue.
+cli-error-sdi-evidence-contradicts = Les preuves SDI enregistrées contredisent le résultat « non envoyé ».
+cli-error-submission-concurrent-update = La tentative a été résolue entre-temps : rechargez et réessayez.

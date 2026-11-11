@@ -230,3 +230,15 @@ cli-formatter-model = Model: { $model }
 cli-formatter-tokens = Tokens: { $tokens }
 cli-formatter-cost = Cost: { $cost }
 cli-formatter-latency = Latency: { $latency } ms
+
+## Localized refusals of application services (error_code)
+cli-error-invoice-not-found = Invoice not found.
+cli-error-invoice-issued-elsewhere = The invoice was issued elsewhere and is kept for reference only: no XML is generated, to avoid a duplicate SDI submission.
+cli-error-xml-invalid = The XML is not valid: { $detail }
+cli-error-xml-failed = Cannot generate the XML: { $detail }
+cli-error-receipt-not-associable = The receipt does not exist or is already associated.
+cli-error-evidence-required = Verified evidence is required (--evidence).
+cli-error-submission-not-found = Submission attempt not found.
+cli-error-submission-already-resolved = The submission attempt is already resolved.
+cli-error-sdi-evidence-contradicts = Recorded SDI evidence contradicts a "not sent" outcome.
+cli-error-submission-concurrent-update = The attempt was resolved meanwhile: reload and retry.
