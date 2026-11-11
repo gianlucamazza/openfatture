@@ -8,40 +8,10 @@ from openfatture.cli.formatters.factory import get_formatter
 from openfatture.cli.formatters.rich_formatter import RichFormatter
 
 
-def get_format_from_context(
-    ctx: typer.Context | None = None,
-    json_output: bool = False,
-    format_override: str | None = None,
-) -> str:
-    """Determine output format from context and options.
-
-    Priority order:
-    1. format_override parameter (explicit format)
-    2. json_output flag
-    3. Context format setting (global --format flag)
-    4. Default to "rich"
-
-    Args:
-        ctx: Typer context (may contain format from global flag)
-        json_output: Request JSON output
-        format_override: Explicit format override
-
-    Returns:
-        Format type string
-    """
-    # Priority 1: Explicit override
-    if format_override:
-        return format_override
-
-    # Priority 2: Explicit JSON output
-    if json_output:
-        return "json"
-
-    # Priority 3: Global --format flag from context
+def get_format_from_context(ctx: typer.Context | None = None) -> str:
+    """The output format chosen with the root ``--format`` option (default ``rich``)."""
     if ctx and ctx.obj and "format" in ctx.obj:
         return str(ctx.obj["format"])
-
-    # Default: rich
     return "rich"
 
 

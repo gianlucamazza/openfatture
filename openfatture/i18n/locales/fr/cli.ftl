@@ -107,11 +107,6 @@ assistant-no-pending = Aucun tour en attente.
 ## Shared command output
 cli-common-error = [red]Erreur :[/red] { $error }
 ## FATTURA Commands
-cli-fattura-xml-generated = [green]✓[/green] XML généré avec succès
-cli-fattura-xml-generated-dry-run = [green]✓[/green] XML généré avec succès (simulation, aucun fichier écrit)
-cli-fattura-xml-content = [bold]Contenu XML :[/bold]
-cli-fattura-output = Sortie : [cyan]{ $path }[/cyan]
-cli-fattura-size = Taille : { $size } octets
 cli-fattura-journal-submission = Envoi n° { $id } · facture { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Accusé n° { $id } · facture { $invoice } · { $outcome } · origine { $source }
 cli-fattura-journal-empty = Aucun envoi ni accusé SDI enregistré.
@@ -182,7 +177,7 @@ cli-init-complete-body = [bold green]Configuration achevée[/bold green]
     Prochaines étapes :
       • Vérifier l'état : [cyan]openfatture status[/cyan]
       • Revoir les paramètres : [cyan]openfatture config show[/cyan]
-      • Assistant (nécessite [cyan]uv sync --extra ai[/cyan]) : [cyan]openfatture assistant "Affiche les factures ouvertes"[/cyan]
+      • Assistant (nécessite [cyan]uv sync --extra ai[/cyan]) : [cyan]openfatture -m "Affiche les factures ouvertes"[/cyan]
       • Aide : [cyan]openfatture --help[/cyan]
 
 ## STATUS Command
@@ -233,10 +228,6 @@ cli-formatter-cost = Coût : { $cost }
 cli-formatter-latency = Latence : { $latency } ms
 
 ## Localized refusals of application services (error_code)
-cli-error-invoice-not-found = Facture introuvable.
-cli-error-invoice-issued-elsewhere = La facture a été émise ailleurs et n'est conservée qu'à titre de référence : aucun XML n'est généré, pour éviter un double envoi au SDI.
-cli-error-xml-invalid = Le XML n'est pas valide : { $detail }
-cli-error-xml-failed = Impossible de générer le XML : { $detail }
 cli-error-receipt-not-associable = L'accusé n'existe pas ou est déjà associé.
 cli-error-evidence-required = Une preuve vérifiée est requise (--evidence).
 cli-error-submission-not-found = Tentative d'envoi introuvable.
@@ -246,23 +237,21 @@ cli-error-submission-concurrent-update = La tentative a été résolue entre-tem
 
 ## Command-line help
 cli-help-app = Facturation électronique avec assistant. Lancez openfatture pour converser.
-cli-help-epilog = Exemples : openfatture · openfatture assistant "Affiche les factures impayées"
+cli-help-epilog = Exemples : openfatture · openfatture -m "Affiche les factures impayées"
 cli-help-version = Affiche la version et quitte.
 cli-help-debug = Affiche les journaux de diagnostic et les tracebacks.
 cli-help-format = Format de sortie : rich, json, markdown, stream-json, html
 cli-help-panel-assistant = Assistant
 cli-help-panel-setup = Configuration et diagnostic
-cli-help-panel-tools = Outils
-cli-help-assistant = Envoie une demande ou reprend une session
+cli-help-panel-sdi = Vérifications SDI
 cli-help-init = Initialise OpenFatture
 cli-help-config = Gère la configuration
 cli-help-status = Vérifie la configuration et la disponibilité
-cli-help-fattura = XML FatturaPA et journal SDI
-cli-help-pagamento = Maintenance du registre des encaissements
+cli-help-fattura = Journal SDI et résolutions avec preuve manuelle
 cli-help-assistant-message = Demande pour l'assistant.
 cli-help-assistant-stream = Affiche la réponse pendant sa génération.
-cli-help-assistant-json = Renvoie la réponse en JSON.
 cli-help-assistant-session = Reprend une session enregistrée par son ID (active l'enregistrement).
+cli-help-assistant-options-alone = --message et --session ne valent que pour l'assistant, sans commande.
 cli-help-init-interactive = Assistant de configuration interactif
 cli-help-status-json = Renvoie l'état en JSON.
 cli-help-config-show =
@@ -280,10 +269,7 @@ cli-help-config-migrate =
 
     Les secrets vont dans le trousseau (ou le fichier privé d'identifiants) ; les autres valeurs de --env-file sont ajoutées à config.toml seulement si elles ne sont pas déjà définies. Le fichier source n'est jamais modifié.
 cli-help-config-env-file = Importe les réglages d'un fichier dotenv (les valeurs existantes sont conservées).
-cli-help-xml = Génère le XML FatturaPA d'une facture (sans validation XSD ni envoi).
 cli-help-invoice-id = ID de la facture
-cli-help-xml-output = Chemin du fichier XML
-cli-help-xml-dry-run = Affiche le XML sans écrire le fichier
 cli-help-sdi-journal = Affiche les envois PEC et les accusés SDI enregistrés, sans rien envoyer.
 cli-help-associate-receipt = Associe un accusé non résolu à une facture, après une vérification manuelle.
 cli-help-receipt-id = ID de l'accusé SDI
@@ -292,7 +278,23 @@ cli-help-resolve-submission = Résout un envoi PEC incertain, après vérificati
 cli-help-attempt-id = ID de la tentative d'envoi
 cli-help-resolve-sent = Résultat vérifié : envoyé ou non envoyé
 cli-help-resolve-evidence = Preuve vérifiée (par ex. la référence du fournisseur)
-cli-help-collections-migrate = Met à jour les données historiques d'encaissement sans modifier les montants.
 cli-help-install-completion = Installe la complétion pour le shell courant.
 cli-help-show-completion = Affiche la complétion pour le shell courant, pour la copier ou la personnaliser.
 cli-help-help-option = Affiche ce message et quitte.
+
+## Startup setup and status next steps
+status-next-init = Exécute : openfatture init
+status-next-set-field = openfatture config set { $field } '<valeur>'
+status-next-ai-extra = Pour l'assistant : uv sync --extra ai
+status-next-ai-key = openfatture config set ai_api_key '<clé>' (ou ai_provider ollama)
+status-next-try = Essaie : openfatture -m "Affiche les factures ouvertes"
+status-next-core-ready = La base est prête ; installe l'extra ai pour utiliser l'assistant
+status-next-help = openfatture --help
+status-next-upgrade-db = Mets à jour le schéma de la base de données : openfatture init
+status-next-newer-db = La base de données est plus récente que cette version : mets à jour OpenFatture
+status-next-migrate-secrets = Déplace les secrets en clair vers le trousseau : openfatture config migrate
+status-next-dotenv = ./.env n'est pas lu : utilise `uv run --env-file .env ...` ou importe-le avec `openfatture config migrate --env-file .env`
+cli-setup-running = Configuration manquante : lancement de openfatture init.
+cli-setup-required = Configuration manquante : exécute `openfatture init`.
+cli-setup-newer-database = La base de données provient d'une version plus récente d'OpenFatture : mets à jour OpenFatture.
+cli-setup-ai-key = Aucune clé API pour { $provider } : exécute `openfatture config set ai_api_key` ou utilise `openfatture config set ai_provider ollama`.

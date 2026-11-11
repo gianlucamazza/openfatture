@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.11.0] - 2026-11-11
+
+The CLI keeps only what the assistant must not do: the SDI journal and the
+resolutions backed by a person's evidence. `openfatture` itself is the
+assistant, and it runs `init` when the setup is missing.
+
+### Removed (Breaking)
+
+- `openfatture assistant`. Use `openfatture` for the chat and
+  `openfatture -m "..."` for one request; `--session` and `--no-stream` are
+  root options. Its `--json` is replaced by the root `--format json`.
+- `openfatture pagamento migrate` and the `pagamento` group. `openfatture init`
+  already applies the same collection ledger migration, after backing up the
+  SQLite file, and every collection operation prepares any balances not yet
+  migrated.
+- `openfatture fattura generate-xml`. It wrote the XML without XSD validation,
+  and with `--output` it recorded on the invoice the archive path instead of the
+  file it had written. Ask the assistant for the XML file instead.
+
+### Changed
+
+- Assistant tool `validate_invoice_xml` is now `generate_invoice_xml`, with risk
+  class `local_artifact` (it writes the archive file; it used to be `read`, and
+  so stayed enabled with `ai_tool_access = "read"`). An XSD error is reported as
+  `valid: false` with the validator's message.
+- `--help` groups the `fattura` commands under "Verifiche SDI" (it was "Strumenti").
+- Starting the assistant with the setup missing: in a terminal it runs
+  `openfatture init` (the wizard when the company profile is missing, only the
+  database upgrade otherwise); elsewhere it explains what to run and exits with
+  code 3 (`setup_required`, `newer_database`, `ai_key_missing` with
+  `--format json`). A missing AI key is reported up front instead of failing
+  the first request.
+- The `next_steps` of `openfatture status` are in the configured language.
+- `ai_model` defaults to empty, meaning the provider's default model; it used to
+  be `gpt-4-turbo-preview`, which replaced the OpenAI default `gpt-5`.
+
+### Fixed
+
+- An invalid FatturaPA XML is no longer written to the archive: the file is
+  saved only after XSD validation passes, so `sign_invoice_xml` cannot sign it.
+- Starting the assistant no longer creates an empty database silently.
+
 ## [2.10.1] - 2026-11-11
 
 ### Fixed

@@ -37,10 +37,6 @@ def remember_result(value: Any) -> None:
 # Refusals that application services identify with an ``error_code``. Their
 # ``error`` text stays English for the assistant; the CLI shows it localized.
 _ERROR_MESSAGES = {
-    "invoice_not_found": "cli-error-invoice-not-found",
-    "invoice_issued_elsewhere": "cli-error-invoice-issued-elsewhere",
-    "xml_invalid": "cli-error-xml-invalid",
-    "xml_failed": "cli-error-xml-failed",
     "receipt_not_associable": "cli-error-receipt-not-associable",
     "evidence_required": "cli-error-evidence-required",
     "submission_not_found": "cli-error-submission-not-found",
@@ -233,7 +229,7 @@ class OutputGroup(TyperGroup):
                 param_hint="--format",
             )
         args = [*getattr(ctx, "_protected_args", []), *ctx.args]
-        if kind == "rich" or not args or args[0] == "assistant":
+        if kind == "rich" or not args:  # no command: the assistant formats its own output
             return super().invoke(ctx)
         output = _CapturedOutput()
         token = _result.set(None)

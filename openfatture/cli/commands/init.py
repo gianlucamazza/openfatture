@@ -1,6 +1,7 @@
 """Initialize OpenFatture."""
 
 from collections.abc import Callable
+from typing import Literal
 
 import questionary
 import typer
@@ -50,16 +51,45 @@ def init(
         openfatture init                    # Interactive setup wizard
         openfatture init --no-interactive   # Automated setup with defaults
     """
-    console.print("\n" + _("cli-init-title") + "\n")
-
     if interactive and _structured_output(ctx):
         raise typer.BadParameter(_("cli-init-structured-needs-no-interactive"))
-    settings = get_settings()
+    run_setup(get_settings(), wizard=interactive)
+    _print_setup_complete()
+
+
+SetupGap = Literal["profile", "database", "newer_database", "ai_key"]
+
+
+def setup_gap(settings: Settings) -> SetupGap | None:
+    """What keeps the assistant from starting, read-only; None when nothing does.
+
+    ``profile`` and ``database`` are fixed by ``init``; ``newer_database``
+    needs a newer OpenFatture; ``ai_key`` needs a key (or the Ollama provider).
+    """
+    from openfatture.storage.schema import database_schema_state
+
+    if not (
+        (settings.cedente_partita_iva or "").strip()
+        and (settings.cedente_denominazione or "").strip()
+    ):
+        return "profile"
+    schema = database_schema_state(str(settings.database_url))
+    if schema == "ahead":
+        return "newer_database"
+    if schema != "current" or not settings.archivio_dir.exists():
+        return "database"
+    if (settings.ai_provider or "").lower() != "ollama" and not settings.ai_api_key:
+        return "ai_key"
+    return None
+
+
+def run_setup(settings: Settings, *, wizard: bool) -> None:
+    """Create the data directories, bring the schema to head, optionally ask the profile."""
+    console.print("\n" + _("cli-init-title") + "\n")
     _create_directories(settings)
     _upgrade_schema(settings)
-    if interactive:
+    if wizard:
         _run_wizard(settings)
-    _print_setup_complete()
 
 
 def _structured_output(ctx: typer.Context | None) -> bool:

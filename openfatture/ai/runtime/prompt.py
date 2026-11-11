@@ -53,6 +53,7 @@ def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True)
         "- Prima di eseguire azioni distruttive, chiedi conferma",
         "- Cita i dati specifici quando disponibili (numeri, date, importi)",
         "- Il PDF di una fattura è una copia di cortesia: l'originale fiscale è l'XML transitato da SDI. Puoi generarlo anche per le fatture issued_elsewhere, dicendo che è una copia di cortesia. Riporta il percorso del file restituito dallo strumento.",
+        "- Per il file XML FatturaPA di una fattura (da caricare su un portale, da dare a un intermediario o da firmare) usa generate_invoice_xml: lo valida con lo schema XSD, lo salva nell'archivio solo se valido e non trasmette nulla. Riporta il percorso o gli errori di validazione.",
         "- Per un riepilogo o report in PDF della situazione fatture usa generate_invoice_summary_pdf: i numeri del documento li calcola lo strumento, non ricomporli tu. Riporta il percorso e i totali restituiti.",
         "- OpenFatture è un'applicazione a riga di comando: non esiste un'interfaccia grafica, non descriverne una.",
     ]

@@ -7,19 +7,21 @@ not create a receipt or assert that the amount received is zero.
 
 ## Migration and recovery
 
-Back up the SQLite file while application writers are stopped, then run:
+The ledger schema is part of the packaged database migrations. After upgrading
+OpenFatture from a release without the ledger, stop other application writers
+and run:
 
 ```sh
-openfatture pagamento migrate
+openfatture init
 ```
 
-This command upgrades the schema and turns historical cumulative paid amounts into
-opening receipts and allocations. Individual receipt dates remain unknown when not
-attested. Existing bank allocations retain their transaction provenance. Monetary
-mismatches abort the migration. It is idempotent. SQLite schema rebuilding temporarily
-disables foreign keys on its own connection and validates them before commit. Do
-not run concurrent writers during migration. Restore the backup to downgrade; do
-not delete ledger tables to erase history.
+`init` backs up the SQLite file next to the database, then upgrades the schema
+and turns historical cumulative paid amounts into opening receipts and
+allocations. Individual receipt dates remain unknown when not attested. Existing
+bank allocations retain their transaction provenance. Monetary mismatches abort
+the migration. It is idempotent, and every collection operation also prepares
+any balances not migrated yet in its own transaction. Restore the backup to
+downgrade; do not delete ledger tables to erase history.
 
 ## Receiving and allocating money
 
@@ -34,9 +36,9 @@ invoices and optionally a specific installment. A receipt without an allocation
 is available money, not a paid invoice.
 
 ```sh
-openfatture assistant "Registra un incasso di 2000 euro sulla fattura 1"
-openfatture assistant "Ripartisci l'incasso 2: 100 euro sulla fattura 3 e 200 sulla 4"
-openfatture assistant "Mostra il registro incassi della fattura 1"
+openfatture -m "Registra un incasso di 2000 euro sulla fattura 1"
+openfatture -m "Ripartisci l'incasso 2: 100 euro sulla fattura 3 e 200 sulla 4"
+openfatture -m "Mostra il registro incassi della fattura 1"
 ```
 
 Every mutating tool call carries a request ID. Repeating it with identical arguments
@@ -54,8 +56,8 @@ and legacy allocation evidence remain available.
 ## Corrections and declarations
 
 ```sh
-openfatture assistant "Storna 100 euro dell'allocazione 1: fattura sbagliata"
-openfatture assistant "Dichiara che la fattura 3 non è stata saldata"
+openfatture -m "Storna 100 euro dell'allocazione 1: fattura sbagliata"
+openfatture -m "Dichiara che la fattura 3 non è stata saldata"
 ```
 
 A reversal corrects an allocation and releases its money for allocation again. It

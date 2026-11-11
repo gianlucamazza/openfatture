@@ -2,20 +2,25 @@
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.sdi.application.invoice_sdi_ops import (
+    generate_invoice_xml,
     send_invoice_to_sdi,
-    validate_invoice_xml,
 )
 
-__all__ = ["validate_invoice_xml", "send_invoice_to_sdi"]
+__all__ = ["generate_invoice_xml", "send_invoice_to_sdi"]
 
 
 def tools() -> list[Tool]:
-    """Assistant tool definitions for SDI validation and sending."""
+    """Assistant tool definitions for the FatturaPA XML and SDI sending."""
     return [
         Tool(
-            name="validate_invoice_xml",
-            risk=ToolRisk.READ,
-            description="Validate FatturaPA XML for invoice before sending to SDI",
+            name="generate_invoice_xml",
+            risk=ToolRisk.LOCAL_ARTIFACT,
+            description=(
+                "Generate the FatturaPA XML of an invoice, validate it against the XSD and, "
+                "if valid, save it in the archive with the SDI file name (returns xml_path). "
+                "Use it to produce the XML file, to check it before sending, and before "
+                "sign_invoice_xml. It does not transmit anything."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
@@ -25,9 +30,9 @@ def tools() -> list[Tool]:
                     required=True,
                 ),
             ],
-            func=validate_invoice_xml,
-            examples=["validate_invoice_xml(fattura_id=123)"],
-            tags=["validation", "xml"],
+            func=generate_invoice_xml,
+            examples=["generate_invoice_xml(fattura_id=123)"],
+            tags=["xml", "validation", "file"],
         ),
         Tool(
             name="send_invoice_to_sdi",

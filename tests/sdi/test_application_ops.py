@@ -1,4 +1,6 @@
-"""SDI application operations used by the deterministic CLI."""
+"""SDI application operations: FatturaPA XML and the SDI journal."""
+
+from pathlib import Path
 
 from openfatture.sdi.application.invoice_sdi_ops import generate_invoice_xml
 from openfatture.sdi.application.journal_ops import (
@@ -18,22 +20,31 @@ def test_journal_operations_report_errors(runtime_db):
     assert "error" in resolve_submission_attempt(999, sent=True, evidence="   ")
 
 
-def test_generate_xml_dry_run_leaves_invoice_unchanged(runtime_session, seed_fattura):
-    result = generate_invoice_xml(seed_fattura.id, dry_run=True)
+def test_generate_xml_writes_the_valid_file_in_the_archive(runtime_session, seed_fattura):
+    result = generate_invoice_xml(seed_fattura.id)
 
-    assert result.get("success"), result
-    assert "FatturaElettronica" in result["xml_content"]
+    assert result.get("valid"), result
+    path = Path(result["xml_path"])
+    assert path.parent.name == "xml"
+    assert path.read_text(encoding="utf-8").startswith("<?xml")
+    runtime_session.expire_all()
+    assert runtime_session.get(Fattura, seed_fattura.id).xml_path == str(path)
+
+
+def test_invalid_xml_is_never_written(runtime_session, seed_fattura, monkeypatch):
+    from openfatture.sdi.validator.xsd_validator import FatturaPAValidator
+
+    monkeypatch.setattr(FatturaPAValidator, "validate", lambda self, xml: (False, "bad"))
+
+    result = generate_invoice_xml(seed_fattura.id)
+
+    assert result["valid"] is False
+    assert "bad" in result["error"]
     runtime_session.expire_all()
     assert runtime_session.get(Fattura, seed_fattura.id).xml_path is None
+    from openfatture.platform.config import get_settings
 
-
-def test_generate_xml_writes_requested_file(runtime_session, seed_fattura, tmp_path):
-    target = tmp_path / "out" / "fattura.xml"
-
-    result = generate_invoice_xml(seed_fattura.id, output_path=str(target))
-
-    assert result.get("success"), result
-    assert target.read_text(encoding="utf-8").startswith("<?xml")
+    assert not list((get_settings().archivio_dir / "xml").glob("*.xml"))
 
 
 def test_generate_xml_unknown_invoice(runtime_db):

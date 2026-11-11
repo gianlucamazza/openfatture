@@ -283,8 +283,8 @@ class Settings(BaseSettings):
         description="AI provider (openai, anthropic, ollama)",
     )
     ai_model: str = Field(
-        default="gpt-4-turbo-preview",
-        description="AI model name",
+        default="",
+        description="AI model name (empty: the provider's default model)",
     )
     ai_api_key: str | None = Field(default=None, description="AI API key")
     ai_base_url: str | None = Field(

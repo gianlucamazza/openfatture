@@ -36,8 +36,7 @@ The public CLI is intentionally small:
 
 ```bash
 uv run openfatture --help
-uv run openfatture assistant --help
-uv run openfatture interactive --help
+uv run openfatture fattura --help
 uv run openfatture status --json
 ```
 

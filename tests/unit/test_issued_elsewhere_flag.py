@@ -10,7 +10,7 @@ Tests that when issued_elsewhere=True:
 from decimal import Decimal
 
 from openfatture.billing.fatture.service import InvoiceService
-from openfatture.sdi.application.invoice_sdi_ops import send_invoice_to_sdi, validate_invoice_xml
+from openfatture.sdi.application.invoice_sdi_ops import generate_invoice_xml, send_invoice_to_sdi
 from openfatture.storage.database.models import Fattura, RigaFattura, StatoFattura, TipoDocumento
 
 
@@ -154,7 +154,7 @@ class TestIssuedElsewhereFlag:
         assert "<FatturaElettronica" in xml_content, "Should contain XML"
 
     def test_validate_xml_tool_blocked_when_issued_elsewhere(self, runtime_db, sample_cliente):
-        """Test that validate_invoice_xml tool blocks invoices issued elsewhere."""
+        """Test that generate_invoice_xml tool blocks invoices issued elsewhere."""
         # Create session from runtime_db
         session = runtime_db()
 
@@ -195,8 +195,8 @@ class TestIssuedElsewhereFlag:
         fattura_id = fattura.id
         session.close()
 
-        # Try to validate via tool
-        result = validate_invoice_xml(fattura_id)
+        # Try to generate via tool
+        result = generate_invoice_xml(fattura_id)
 
         # Should block with error
         assert "error" in result, f"Should return error: {result}"

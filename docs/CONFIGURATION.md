@@ -184,7 +184,7 @@ for diagnostic logs.
 
 ## Terminal assistant behavior
 
-`openfatture` and `openfatture assistant` share a terminal presentation layer.
+The chat (`openfatture`) and single requests (`openfatture -m`) share a terminal presentation layer.
 Live previews are temporary; the complete Markdown response is printed once
 into scrollback. Slash commands support help, session ID, clearing messages
 and exit. Input history stays in memory. `NO_COLOR` is respected.
@@ -216,7 +216,7 @@ it does not authenticate providers or certify fiscal correctness. Missing or
 invalid fiscal fields must be corrected before issuing documents. The setup
 wizard no longer assumes RF19.
 
-The `fattura` and `pagamento` commands initialize database
+The `fattura` commands initialize database
 access on each new CLI process. No prior assistant or setup process is needed
 for an existing database. Running `openfatture` alone starts the interactive
 assistant; `openfatture --help` lists the commands.

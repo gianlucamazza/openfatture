@@ -84,7 +84,7 @@ def sign_invoice_xml(
             else:
                 return {
                     "success": False,
-                    "error": "No XML generated for this invoice: generate it first (generate-xml)",
+                    "error": "No XML generated for this invoice: generate it first (generate_invoice_xml)",
                 }
 
             # At this point xml_file is guaranteed to be non-None

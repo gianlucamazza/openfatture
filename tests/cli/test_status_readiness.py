@@ -73,7 +73,7 @@ def test_readiness_missing_ai_extra_suggests_sync(tmp_path: Path) -> None:
     assert result["core_ready"] is True
     assert result["assistant_ready"] is False
     assert any("uv sync --extra ai" in s for s in result["next_steps"])
-    assert any("enable the ai extra" in s.lower() for s in result["next_steps"])
+    assert any("installa l'extra ai" in s for s in result["next_steps"])
 
 
 def test_readiness_full_ready_suggests_assistant(tmp_path: Path) -> None:
@@ -87,7 +87,7 @@ def test_readiness_full_ready_suggests_assistant(tmp_path: Path) -> None:
 
     assert result["core_ready"] is True
     assert result["assistant_ready"] is True
-    assert any("openfatture assistant" in s for s in result["next_steps"])
+    assert any('openfatture -m "' in s for s in result["next_steps"])
 
 
 def test_partial_fiscal_profile_explains_not_ready(tmp_path):
@@ -117,11 +117,11 @@ def test_invalid_fiscal_identifiers_block_core(tmp_path: Path) -> None:
     ]
     assert result["checks"]["fiscal_profile"] is False
     assert result["next_steps"] == [
-        "Run: openfatture init",
-        "openfatture config set cedente_partita_iva '<value>'",
-        "openfatture config set cedente_codice_fiscale '<value>'",
-        "openfatture config set cedente_regime_fiscale '<value>'",
-        "For the assistant: uv sync --extra ai",
+        "Esegui: openfatture init",
+        "openfatture config set cedente_partita_iva '<valore>'",
+        "openfatture config set cedente_codice_fiscale '<valore>'",
+        "openfatture config set cedente_regime_fiscale '<valore>'",
+        "Per l'assistente: uv sync --extra ai",
     ]
 
 
@@ -137,7 +137,7 @@ def test_partita_iva_is_accepted_as_fiscal_code(tmp_path: Path) -> None:
     assert result["delivery_configured"] is True
     assert result["assistant_ready"] is True
     assert result["checks"]["ai_credentials"] is True
-    assert result["next_steps"] == ['Try: openfatture assistant "Elenca le fatture aperte"']
+    assert result["next_steps"] == ['Prova: openfatture -m "Elenca le fatture aperte"']
 
 
 def test_missing_company_and_directories(tmp_path: Path) -> None:
@@ -150,8 +150,8 @@ def test_missing_company_and_directories(tmp_path: Path) -> None:
     assert result["delivery_configured"] is False
     assert result["invalid_fields"] == []
     assert result["next_steps"] == [
-        "Run: openfatture init",
-        "For the assistant: uv sync --extra ai",
+        "Esegui: openfatture init",
+        "Per l'assistente: uv sync --extra ai",
     ]
 
 
@@ -159,8 +159,8 @@ def test_core_not_ready_with_ai_extra_but_no_key(tmp_path: Path) -> None:
     settings = _settings(data_dir=tmp_path / "absent")
     result = _readiness(settings, {"ai": True})
     assert result["next_steps"] == [
-        "Run: openfatture init",
-        "openfatture config set ai_api_key '<key>' (or ai_provider ollama)",
+        "Esegui: openfatture init",
+        "openfatture config set ai_api_key '<chiave>' (oppure ai_provider ollama)",
     ]
 
 

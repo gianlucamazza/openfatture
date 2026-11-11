@@ -39,8 +39,8 @@ from .righe import (
     update_riga,
 )
 from .sdi import (
+    generate_invoice_xml,
     send_invoice_to_sdi,
-    validate_invoice_xml,
 )
 
 __all__ = [
@@ -54,7 +54,7 @@ __all__ = [
     "format_course_description",
     "update_riga",
     "delete_riga",
-    "validate_invoice_xml",
+    "generate_invoice_xml",
     "send_invoice_to_sdi",
     "update_invoice",
     "delete_invoice",

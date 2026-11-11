@@ -68,22 +68,22 @@ def _invalid_fiscal_fields(settings: Settings) -> list[str]:
 def _core_next_steps(core_ready: bool, blocking_fields: list[str]) -> list[str]:
     if core_ready:
         return []
-    return ["Run: openfatture init"] + [
-        f"openfatture config set {field} '<value>'" for field in blocking_fields
+    return [_("status-next-init")] + [
+        _("status-next-set-field", field=field) for field in blocking_fields
     ]
 
 
 def _assistant_next_steps(core_ready: bool, ai_extra: bool, ai_credentials_ok: bool) -> list[str]:
     next_steps: list[str] = []
     if not ai_extra:
-        next_steps.append("For the assistant: uv sync --extra ai")
+        next_steps.append(_("status-next-ai-extra"))
     elif not ai_credentials_ok:
-        next_steps.append("openfatture config set ai_api_key '<key>' (or ai_provider ollama)")
+        next_steps.append(_("status-next-ai-key"))
     if core_ready and ai_extra and ai_credentials_ok:
-        next_steps.append('Try: openfatture assistant "Elenca le fatture aperte"')
+        next_steps.append(_("status-next-try"))
     elif core_ready and not ai_extra:
         # Only when the ai extra itself is missing — not when credentials alone fail.
-        next_steps.append("Core is ready; enable the ai extra to use the assistant")
+        next_steps.append(_("status-next-core-ready"))
     return next_steps
 
 
@@ -109,7 +109,7 @@ def _readiness(settings: Settings, extras: dict[str, bool]) -> dict[str, Any]:
     next_steps = _core_next_steps(core_ready, missing_fields + invalid_fields)
     next_steps += _assistant_next_steps(core_ready, ai_extra, ai_credentials_ok)
     if not next_steps:
-        next_steps.append("openfatture --help")
+        next_steps.append(_("status-next-help"))
 
     return {
         "core_ready": core_ready,
@@ -168,22 +168,14 @@ def _build_status() -> dict[str, Any]:
     if database_schema in ("outdated", "ahead"):
         readiness["core_ready"] = readiness["invoice_ready"] = False
     if database_schema in ("outdated", "unversioned"):
-        readiness["next_steps"].insert(0, "Upgrade the database schema: openfatture init")
+        readiness["next_steps"].insert(0, _("status-next-upgrade-db"))
     elif database_schema == "ahead":
-        readiness["next_steps"].insert(
-            0, "The database is newer than this release: upgrade OpenFatture"
-        )
+        readiness["next_steps"].insert(0, _("status-next-newer-db"))
     configuration = _configuration()
     if configuration["plaintext_secrets"]:
-        readiness["next_steps"].insert(
-            0, "Move plaintext secrets to the keychain: openfatture config migrate"
-        )
+        readiness["next_steps"].insert(0, _("status-next-migrate-secrets"))
     if configuration["ignored_dotenv"]:
-        readiness["next_steps"].insert(
-            0,
-            "./.env is not read: use `uv run --env-file .env ...` "
-            "or import it with `openfatture config migrate --env-file .env`",
-        )
+        readiness["next_steps"].insert(0, _("status-next-dotenv"))
     # Backend ids SSOT: platform.assistant_backends (no AI package import).
     from openfatture.platform.assistant_backends import (
         DEFAULT_ASSISTANT_BACKEND,

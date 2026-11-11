@@ -7,11 +7,11 @@ application services and assistant tools.
 ## Public surface
 
 - `openfatture init`
-- `openfatture` (interactive assistant) and `openfatture assistant [MESSAGE]`
+- `openfatture` (interactive assistant; `-m MESSAGE` for one request)
 - `openfatture config ...`
 - `openfatture status`
-- `openfatture fattura|pagamento ...` — only operations without an assistant
-  tool (FatturaPA XML file, SDI journal resolutions, ledger migration)
+- `openfatture fattura ...` — only the SDI journal and the resolutions that
+  need a person's evidence
 
 Business operations are assistant tools and are not duplicated in the CLI. See
 [CLI_REFERENCE.md](CLI_REFERENCE.md) and [AI_ARCHITECTURE.md](AI_ARCHITECTURE.md).

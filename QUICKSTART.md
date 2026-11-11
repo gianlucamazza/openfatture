@@ -36,8 +36,8 @@ uv run openfatture status --json
 Use natural language for business operations:
 
 ```bash
-uv run openfatture assistant "Create an invoice for 3 hours of consulting at 90 euros"
-uv run openfatture assistant "List unpaid invoices"
+uv run openfatture -m "Create an invoice for 3 hours of consulting at 90 euros"
+uv run openfatture -m "List unpaid invoices"
 uv run openfatture
 ```
 

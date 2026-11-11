@@ -1,4 +1,4 @@
-"""Invoice SDI tools (XML validation and PEC sending)."""
+"""Invoice SDI operations: FatturaPA XML and PEC sending."""
 
 from pathlib import Path
 from typing import Any
@@ -18,78 +18,49 @@ logger = get_logger(__name__)
 
 
 @validate_call
-def validate_invoice_xml(fattura_id: int) -> dict[str, Any]:
-    """
-    Validate FatturaPA XML for invoice.
+def generate_invoice_xml(fattura_id: int) -> dict[str, Any]:
+    """Generate the FatturaPA XML of an invoice, validated against the XSD.
 
-    Args:
-        fattura_id: Invoice ID
-
-    Returns:
-        Dictionary with validation result
+    The file is written to the archive (``archivio/xml``, named as SDI
+    requires) only when it is valid, and the invoice records its path: it is
+    the file that ``sign_invoice_xml`` signs and that a portal or
+    intermediary receives.
     """
     from openfatture.billing.fatture.service import InvoiceService
+    from openfatture.exceptions import XMLValidationError
     from openfatture.platform.config import get_settings
 
-    # Validate input
     fattura_id = validate_integer_input(fattura_id, min_value=1)
-
     with db_session() as db:
         try:
-            fattura = db.query(Fattura).filter(Fattura.id == fattura_id).first()
-            if not fattura:
+            fattura = db.get(Fattura, fattura_id)
+            if fattura is None:
                 return {"error": f"Invoice {fattura_id} not found"}
-
-            # Check if invoice was issued elsewhere
-            if getattr(fattura, "issued_elsewhere", False):
-                logger.warning(
-                    "xml_validation_blocked_issued_elsewhere",
-                    fattura_id=fattura_id,
-                    numero=fattura.numero,
-                    anno=fattura.anno,
-                )
-                return {
-                    "error": (
-                        f"Cannot validate XML for invoice {fattura.numero}/{fattura.anno}: "
-                        "This invoice was issued elsewhere and is stored for reference only."
-                    )
-                }
-
-            # Check has righe
             if not fattura.righe:
                 return {"error": "Invoice has no line items. Add at least one riga first."}
-
-            settings = get_settings()
-            service = InvoiceService(settings)
-
-            # Generate and validate XML
-            xml_content, error = service.generate_xml(fattura, validate=True)
-
+            number = f"{fattura.numero}/{fattura.anno}"
+            try:
+                _content, error = InvoiceService(get_settings()).generate_xml(
+                    fattura, validate=True
+                )
+            except XMLValidationError as exc:
+                error = str(exc)
             if error:
-                logger.warning("invoice_xml_validation_failed", fattura_id=fattura_id, error=error)
-                return {
-                    "success": False,
-                    "valid": False,
-                    "error": error,
-                    "invoice_number": f"{fattura.numero}/{fattura.anno}",
-                }
-
-            # Update database with xml_path
+                db.rollback()
+                return {"success": False, "valid": False, "error": error, "invoice_number": number}
             db.commit()
-
-            logger.info("invoice_xml_validated", fattura_id=fattura_id)
-
+            logger.info("invoice_xml_generated", fattura_id=fattura_id)
             return {
                 "success": True,
                 "valid": True,
                 "invoice_id": fattura_id,
-                "invoice_number": f"{fattura.numero}/{fattura.anno}",
+                "invoice_number": number,
                 "xml_path": fattura.xml_path,
-                "message": f"XML validated successfully for invoice {fattura.numero}/{fattura.anno}",
+                "message": f"Valid XML written for invoice {number}",
             }
-
         except Exception as e:
-            logger.error("validate_invoice_xml_failed", fattura_id=fattura_id, error=str(e))
+            db.rollback()
+            logger.error("generate_invoice_xml_failed", fattura_id=fattura_id, error=str(e))
             return {"error": describe_error(e)}
 
 
@@ -238,46 +209,3 @@ def send_invoice_to_sdi(fattura_id: int, signed: bool = False) -> dict[str, Any]
             db.rollback()
             logger.error("send_invoice_to_sdi_failed", fattura_id=fattura_id, error=str(e))
             return {"error": describe_error(e)}
-
-
-def generate_invoice_xml(
-    fattura_id: int, output_path: str | None = None, dry_run: bool = False
-) -> dict[str, Any]:
-    """Build FatturaPA XML for an invoice.
-
-    With ``dry_run`` the XML is returned and the invoice record is left
-    unchanged; otherwise it is written to ``output_path`` (or the archive
-    path) and the invoice's ``xml_path`` is committed.
-    """
-    from pathlib import Path
-
-    from openfatture.billing.fatture.service import InvoiceService
-    from openfatture.exceptions import XMLValidationError
-    from openfatture.platform.config import get_settings
-
-    fattura_id = validate_integer_input(fattura_id, min_value=1)
-    with db_session() as db:
-        fattura = db.get(Fattura, fattura_id)
-        if fattura is None:
-            return {"error": f"Invoice {fattura_id} not found", "error_code": "invoice_not_found"}
-        service = InvoiceService(get_settings())
-        try:
-            xml_content, error = service.generate_xml(fattura, validate=False)
-        except XMLValidationError as exc:
-            return {"error": f"XML validation error: {exc}", "error_code": "xml_invalid"}
-        if error:
-            code = "invoice_issued_elsewhere" if fattura.issued_elsewhere else "xml_failed"
-            return {"error": error, "error_code": code}
-        if dry_run:
-            db.rollback()
-            return {"success": True, "dry_run": True, "xml_content": xml_content}
-        xml_path = Path(output_path) if output_path else service.get_xml_path(fattura)
-        xml_path.parent.mkdir(parents=True, exist_ok=True)
-        xml_path.write_text(xml_content, encoding="utf-8")
-        db.commit()
-        return {
-            "success": True,
-            "fattura_id": fattura_id,
-            "xml_path": str(xml_path),
-            "file_size": xml_path.stat().st_size,
-        }
