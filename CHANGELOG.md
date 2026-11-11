@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.14.0] - 2026-11-12
+
+The outstanding amount includes invoices without installments, and the
+assistant can record receipts with the default configuration.
+
+### Fixed
+
+- `get_due_dates` and `get_payment_stats` counted only payment installments,
+  so an issued invoice without installments (for example one issued
+  elsewhere) disappeared from what is still owed. The assistant reported only
+  the residual of the installments as the whole exposure. The part of each
+  invoice that no installment covers is now listed in `without_due_date`
+  (`source: "invoice"`) and counted in `total_outstanding`, matching the
+  invoice summary. `get_payment_stats` adds `outstanding_without_installments`
+  and `invoices_outstanding`.
+- The assistant could not resolve "ieri" or "fine mese": the system prompt
+  now states today's date.
+
+### Changed (default)
+
+- `ai_tool_access` defaults to `full`. Changes are gated by a confirmation
+  that shows their parameters, rather than hidden: the assistant can record a
+  receipt or create an invoice without extra configuration, and every change
+  still needs your yes in the terminal. SDI/PEC sending stays off. To keep a
+  consultation-only assistant: `openfatture config set ai_tool_access standard`.
+- A capability hidden by a lower access level is described by what it does
+  (for example "registrazione di incassi, anche manuali"), and the assistant
+  says so before consulting other data, instead of guessing a procedure.
+
 ## [2.13.0] - 2026-11-12
 
 The assistant's instructions are reorganized for current models, and every

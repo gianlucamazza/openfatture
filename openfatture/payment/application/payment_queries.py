@@ -320,6 +320,14 @@ def get_payment_stats() -> dict[str, Any]:
             stats["overdue_count"] = len(overdue)
             stats["overdue_amount"] = sum(float(p.saldo_residuo) for p in overdue)
 
+            # The installment totals above leave out what no installment
+            # covers (for example invoices without installments).
+            from openfatture.billing.application.invoice_queries import unscheduled_balances
+
+            unscheduled = sum((b["residual"] for b in unscheduled_balances(db)), Decimal("0.00"))
+            stats["outstanding_without_installments"] = float(unscheduled)
+            stats["invoices_outstanding"] = stats["total_outstanding"] + float(unscheduled)
+
             return stats
 
         except Exception as e:

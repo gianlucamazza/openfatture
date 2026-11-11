@@ -77,3 +77,41 @@ def test_credit_notes_reduce_vat_and_client_reports(
     assert vat["by_vat_rate"] == [{"vat_rate": 22.0, "imponibile": 900.0, "iva": 198.0}]
     clients = report_queries.generate_client_report(anno=2025)
     assert clients["clients"][0]["total_revenue"] == 1098.0
+
+
+def test_outstanding_includes_invoices_without_installments(
+    runtime_session: Session, seed_fattura: Fattura
+) -> None:
+    from openfatture.payment.application import payment_queries
+
+    # An invoice issued elsewhere, with no installment: all 1220 is outstanding.
+    seed_fattura.issued_elsewhere = True
+    runtime_session.commit()
+
+    due = report_queries.get_due_dates()
+    assert due["has_outstanding"] is True
+    assert due["total_outstanding"] == 1220.0
+    assert due["without_due_date"] == [
+        {
+            "invoice_ref": "1/2025",
+            "client_name": "Acme Corporation",
+            "due_date": None,
+            "days_delta": None,
+            "residual": 1220.0,
+            "paid": 0.0,
+            "total": 1220.0,
+            "status": None,
+            "source": "invoice",
+        }
+    ]
+    situation = report_queries.invoice_situation(2025)
+    assert due["total_outstanding"] == situation["totals"]["outstanding"]
+
+    stats = payment_queries.get_payment_stats()
+    assert stats["total_outstanding"] == 0.0  # no installments
+    assert stats["outstanding_without_installments"] == 1220.0
+    assert stats["invoices_outstanding"] == 1220.0
+
+
+def test_local_drafts_owe_nothing(seed_fattura: Fattura) -> None:
+    assert report_queries.get_due_dates()["has_outstanding"] is False

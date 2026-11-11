@@ -52,19 +52,31 @@ def test_mutating_and_transmit_tools_require_confirmation() -> None:
     assert unconfirmed == []
 
 
-def test_default_access_exposes_pdf_but_no_mutation_or_send() -> None:
-    names = _names(_registry(), Settings())
+def test_default_access_gates_changes_by_confirmation_not_by_hiding() -> None:
+    registry = _registry()
+    names = _names(registry, Settings())
     assert {
         "generate_invoice_pdf",
-        "generate_preventivo_pdf",
         "generate_invoice_summary_pdf",
         "generate_invoice_xml",
         "open_document",
         "search_invoices",
+        "get_collections",
+        "record_collection",
+        "create_invoice",
     } <= names
-    assert "get_collections" in names
-    assert "create_invoice" not in names
     assert "send_invoice_to_sdi" not in names
+    # Every change the default exposes still needs a human yes.
+    for tool in registry.list_tools(enabled_only=False):
+        if tool.name in names and tool.risk is ToolRisk.MUTATE:
+            assert tool.requires_confirmation, tool.name
+
+
+def test_standard_access_exposes_documents_but_no_mutation() -> None:
+    names = _names(_registry(), Settings(ai_tool_access="standard"))
+    assert {"generate_invoice_pdf", "open_document", "get_collections"} <= names
+    assert "create_invoice" not in names
+    assert "record_collection" not in names
 
 
 def test_read_access_hides_pdf_and_full_shows_mutations() -> None:

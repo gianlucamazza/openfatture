@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, selectinload
 from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import sanitize_sql_like_input, validate_integer_input
-from openfatture.storage.database.models import Fattura, StatoFattura
+from openfatture.storage.database.models import Fattura, StatoFattura, TipoDocumento
 from openfatture.storage.session import session_scope
 
 logger = get_logger(__name__)
@@ -30,6 +30,64 @@ def collected_amount(invoice: Fattura, payments: Any = None) -> Decimal:
         (e.amount for e in getattr(invoice, "collection_entries", []) if e.payment_id is None),
         Decimal("0.00"),
     )
+
+
+def is_local_draft(invoice: Fattura) -> bool:
+    """A draft that exists only here: not issued, so nothing is owed on it."""
+    return invoice.stato == StatoFattura.BOZZA and not invoice.issued_elsewhere
+
+
+class UnscheduledBalance(TypedDict):
+    """The part of an invoice's outstanding amount that no installment covers."""
+
+    fattura_id: int
+    invoice_ref: str
+    client_name: str
+    residual: Decimal
+    paid: Decimal
+    total: Decimal
+
+
+def unscheduled_balances(db: Session) -> list[UnscheduledBalance]:
+    """Outstanding amounts not covered by any installment, per invoice (all years).
+
+    The outstanding amount of an issued invoice (local drafts and credit notes
+    excluded) is its total minus the collections recorded against it; the
+    installment residuals cover part of it, and the rest has no due date. An
+    invoice without installments is wholly unscheduled.
+    """
+    invoices = (
+        db.query(Fattura)
+        .options(
+            selectinload(Fattura.cliente),
+            selectinload(Fattura.pagamenti),
+            selectinload(Fattura.collection_entries),
+        )
+        .filter(Fattura.tipo_documento != TipoDocumento.TD04)
+        .order_by(Fattura.anno, cast(Fattura.numero, Integer), Fattura.numero)
+        .all()
+    )
+    zero = Decimal("0.00")
+    balances: list[UnscheduledBalance] = []
+    for invoice in invoices:
+        if is_local_draft(invoice):
+            continue
+        paid = collected_amount(invoice)
+        outstanding = max(invoice.totale - paid, zero)
+        scheduled = sum((max(p.saldo_residuo, zero) for p in invoice.pagamenti), zero)
+        residual = outstanding - scheduled
+        if residual > zero:
+            balances.append(
+                UnscheduledBalance(
+                    fattura_id=invoice.id,
+                    invoice_ref=f"{invoice.numero}/{invoice.anno}",
+                    client_name=invoice.cliente.denominazione if invoice.cliente else "N/D",
+                    residual=residual,
+                    paid=paid,
+                    total=invoice.totale,
+                )
+            )
+    return balances
 
 
 def payment_summary(invoice: Fattura, payments: Any = None) -> dict[str, Any]:

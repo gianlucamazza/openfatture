@@ -68,8 +68,15 @@ Rollback: `ASSISTANT_BACKEND=chat`. Inspect with `openfatture status --json`
   `mutate`, `transmit`; unclassified tools count as `mutate`). The access
   policy in `ai/tools/registry/policy.py` decides by class through
   `ai_tool_access`; resilience limits (bulkheads, circuit breakers) also
-  follow the class. The system prompt lists the capabilities the current
-  level hides, with the command that enables them, so the model neither
+  follow the class. The default is `full`: changes are gated by a human
+  approval rather than hidden, as recommended for agents that act on the
+  user's own data ([OWASP LLM06:2025 Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/):
+  authorization outside the model, approval for high-impact actions;
+  [MCP tool annotations](https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/):
+  risk metadata decides what needs confirmation). Hiding the tools added no
+  protection over the confirmation and made the model guess workarounds.
+  The system prompt lists the capabilities a lower level hides, described by
+  what they do, with the command that enables them, so the model neither
   denies an existing feature nor invents one.
 - Mutating tools keep confirmation boundaries. Transmit tools
   (`send_invoice_to_sdi`) are off unless named in `ai_enabled_tools`, and
@@ -145,7 +152,8 @@ the provider can reuse its cached prefix.
 `OPENFATTURE_EVAL=1`, billed by the provider) and measure behaviour: a short
 reply to a greeting, documents issued elsewhere reported as unverified rather
 than unsent, summary totals computed by the tool, disabled capabilities pointing
-at the setting.
+at the setting, outstanding amounts including invoices without installments,
+and a receipt "ieri" recorded with yesterday's date.
 
 A durable receipt is reserved before invoking a tool. Completed receipts are
 reused. If the process stops after reservation but before its result is saved,

@@ -97,16 +97,18 @@ def get_report_tools() -> list[Tool]:
             name="get_due_dates",
             risk=ToolRisk.READ,
             description=(
-                "Open payment instalments of every year grouped by due date relative to "
-                "today: overdue, due_soon (within window_days), upcoming (later) and "
-                "without_due_date. Each entry has invoice_ref (numero/anno), client_name, "
-                "due_date, days_delta (negative when overdue), residual, paid, total and "
-                "status; the result also has total_outstanding, overdue_total, "
-                "due_soon_total, upcoming_total and hidden_upcoming (upcoming entries left "
-                "out by max_results). Only scheduled payments with a residual are listed: "
-                "has_outstanding=false means none, not that every invoice is collected, "
-                "since amounts without a payment schedule do not appear. For one invoice "
-                "use get_payment_status."
+                "Everything still to be collected on issued invoices of every year, grouped "
+                "by due date relative to today: overdue, due_soon (within window_days), "
+                "upcoming (later) and without_due_date. Installments are listed by their due "
+                "date (source=installment); the part of an invoice that no installment covers, "
+                "such as an invoice without installments, is in without_due_date with "
+                "source=invoice. Each entry has invoice_ref (numero/anno), client_name, "
+                "due_date, days_delta (negative when overdue), residual, paid, total and status. "
+                "The result also has total_outstanding (the whole amount still to be "
+                "collected), overdue_total, due_soon_total, upcoming_total, "
+                "without_due_date_total and hidden_upcoming (upcoming entries left out by "
+                "max_results). Local drafts and credit notes are excluded. For one invoice use "
+                "get_payment_status."
             ),
             category="reports",
             parameters=[

@@ -90,3 +90,26 @@ def test_tool_descriptions_state_contracts_without_shouting() -> None:
         assert "!" not in tool.description, tool.name
         for parameter in tool.parameters:
             assert parameter.description != parameter.name, (tool.name, parameter.name)
+
+
+def test_prompt_states_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    from datetime import date
+
+    from openfatture.ai.runtime import prompt
+
+    class Today(date):
+        @classmethod
+        def today(cls) -> Today:
+            return cls(2026, 11, 12)
+
+    monkeypatch.setattr(prompt, "date", Today)
+    assert "Oggi è giovedì 12 novembre 2026 (2026-11-12)." in _prompt([])
+
+
+def test_hidden_receipts_are_described_by_their_effect() -> None:
+    prompt = _prompt(
+        ["search_invoices"],
+        {"payments": "openfatture config set ai_tool_access full"},
+    )
+    assert "incassi (anche manuali, senza movimento bancario)" in prompt
+    assert "dillo subito, prima di consultare altri dati" in prompt
