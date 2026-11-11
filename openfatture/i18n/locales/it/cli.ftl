@@ -96,17 +96,6 @@ status-missing = Da completare
 status-invalid = Da correggere
 status-local-only = I controlli descrivono la configurazione locale. Autenticazione AI e invio SDI non vengono verificati da questo comando.
 cli-database-unavailable = Database non accessibile. Controlla DATABASE_URL e i permessi; usa --debug per i dettagli.
-cli-invoice-collected = Incassato
-cli-invoice-residual = Residuo
-cli-invoice-collection = Incasso
-cli-invoice-document = Documento
-cli-invoice-historical = Storica
-cli-invoice-unpaid = Non pagato
-cli-invoice-no-payment-record = Nessun incasso registrato
-cli-invoice-partially-paid = Parzialmente incassata
-cli-invoice-fully-paid = Incassata
-cli-invoice-historical-note = Documento emesso altrove; invio bloccato. Stato SDI non verificato.
-cli-invoice-total = Totale
 assistant-reconciled = Esito verificato registrato. Usa /resume per continuare.
 assistant-reconcile-invalid = Riconciliazione non valida: servono call_id, result ed evidence.
 assistant-resolve-pending-first = Risolvi il turno pendente con /resume prima di cancellare lo storico.
@@ -116,46 +105,12 @@ assistant-no-pending = Nessun turno pendente.
 
 ## Shared command output
 cli-common-error = [red]Errore:[/red] { $error }
-cli-common-more-results = [dim]... e altri risultati. Usa --limit per vederne di più.[/dim]
-cli-common-not-available = N/D
-cli-common-number = Numero
-cli-common-date = Data
-cli-common-status = Stato
-cli-common-client = Cliente
-cli-common-amount = Importo
-cli-common-name = Denominazione
-cli-common-notes = Note
-cli-common-vat-number = P.IVA
-cli-common-tax-code = Codice fiscale
-
 ## FATTURA Commands
-cli-fattura-none-found = [yellow]Nessuna fattura trovata.[/yellow]
-cli-fattura-list-title = Fatture ({ $count })
-cli-fattura-pec-to-verify = PEC: da verificare
-cli-fattura-statement = Dichiarazione: { $value } · fonte: { $source }
-cli-fattura-show-title = [bold cyan]Fattura n. { $id }[/bold cyan]
-cli-fattura-submission-unverified = Esito invio da verificare; non ripetere automaticamente la trasmissione.
-cli-fattura-amounts = Importi
-cli-fattura-taxable = Imponibile
-cli-fattura-vat = IVA
-cli-fattura-line-items = [bold]Righe:[/bold] { $count } in totale
-cli-fattura-column-description = Descrizione
-cli-fattura-column-quantity = Q.tà
-cli-fattura-column-unit-price = Prezzo unitario
-cli-fattura-column-vat-rate = IVA %
-cli-fattura-created-id = ID fattura: [cyan]{ $id }[/cyan]
-cli-fattura-line = Riga n. { $numero }: { $descrizione }
-cli-fattura-invoice-total = Totale fattura
-cli-fattura-pdf-generated = [green]✓[/green] PDF generato correttamente
 cli-fattura-xml-generated = [green]✓[/green] XML generato correttamente
 cli-fattura-xml-generated-dry-run = [green]✓[/green] XML generato correttamente (simulazione, nessun file scritto)
 cli-fattura-xml-content = [bold]Contenuto XML:[/bold]
 cli-fattura-output = File: [cyan]{ $path }[/cyan]
 cli-fattura-size = Dimensione: { $size } byte
-cli-fattura-status-change = Stato: { $old } → { $new }
-cli-fattura-credit-note-id = ID nota di credito: [cyan]{ $id }[/cyan]
-cli-fattura-document-type = Tipo documento
-cli-fattura-source-invoice = [dim]Fattura di origine:[/dim]
 cli-fattura-journal-submission = Invio n. { $id } · fattura { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Ricevuta n. { $id } · fattura { $invoice } · { $outcome } · origine { $source }
 cli-fattura-associate-confirm = Associare la ricevuta { $receipt } alla fattura { $invoice }?
@@ -167,20 +122,7 @@ cli-fattura-resolve-confirm = Confermi che l'invio { $attempt } { $sent ->
 cli-fattura-submission-resolved = Verifica registrata
 
 ## CLIENTE Commands
-cli-cliente-none-found = [yellow]Nessun cliente trovato.[/yellow]
-cli-cliente-list-title = Clienti ({ $count })
-cli-cliente-column-invoices = Fatture
-cli-cliente-show-title = [bold cyan]Cliente n. { $id }[/bold cyan]
-cli-cliente-address = Indirizzo
-cli-cliente-contacts = Contatti
-cli-cliente-phone = Tel.
-cli-cliente-invoices-total = [bold]Fatture:[/bold] { $count } in totale
-cli-cliente-recent-invoices = Fatture recenti
-cli-cliente-created-id = ID cliente: [cyan]{ $id }[/cyan]
-
 ## PAGAMENTO Commands
-cli-pagamento-reverse-confirm = Stornare { $amount } dalla registrazione { $entry }?
-
 ## INIT Command
 cli-init-title = [bold blue]Configurazione di OpenFatture[/bold blue]
 cli-init-structured-needs-no-interactive = Usa --no-interactive con un formato di output strutturato

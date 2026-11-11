@@ -14,11 +14,19 @@ def test_public_commands_are_agent_first() -> None:
     # Core commands
     for command in ("assistant", "init", "config", "status"):
         assert command in result.stdout
-    # Deterministic data commands (documented in docs/CLI_REFERENCE.md)
-    for command in ("cliente", "fattura", "pagamento"):
+    # Tools without an assistant equivalent (documented in docs/CLI_REFERENCE.md)
+    for command in ("fattura", "pagamento"):
         assert command in result.stdout
     # Commands that should remain hidden/removed
-    for removed in ("interactive", "preventivo", "payment", "ai", "plugin", "web-scraper"):
+    for removed in (
+        "interactive",
+        "cliente",
+        "preventivo",
+        "payment",
+        "ai",
+        "plugin",
+        "web-scraper",
+    ):
         assert removed not in result.stdout
 
 
@@ -110,7 +118,7 @@ def test_help_and_version_do_not_start_the_assistant(monkeypatch):
 def test_help_groups_commands():
     result = runner.invoke(app, ["--help"], terminal_width=120)
     assert result.exit_code == 0
-    for panel in ("Assistente", "Gestione dati", "Configurazione e diagnostica"):
+    for panel in ("Assistente", "Strumenti", "Configurazione e diagnostica"):
         assert panel in result.stdout
     assert "openfatture assistant" in result.stdout
 
@@ -125,3 +133,21 @@ def test_removed_interactive_command_is_rejected(monkeypatch):
     result = runner.invoke(app, ["interactive", "start"])
     assert result.exit_code == 2
     assert "No such command" in result.output
+
+
+def test_cli_does_not_duplicate_assistant_tools():
+    """Data operations the assistant can perform have no second CLI path."""
+    duplicated = (
+        ["cliente", "list"],
+        ["fattura", "list"],
+        ["fattura", "show", "1"],
+        ["fattura", "create"],
+        ["fattura", "generate-pdf", "1"],
+        ["fattura", "set-status", "1", "bozza"],
+        ["pagamento", "record", "10"],
+        ["pagamento", "list"],
+    )
+    for args in duplicated:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 2, (args, result.output)
+        assert "No such command" in result.output

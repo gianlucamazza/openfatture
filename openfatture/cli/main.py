@@ -10,7 +10,7 @@ from openfatture.i18n import _
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import configure_dynamic_logging, set_correlation_id
 
-from .commands import assistant, cliente, config, fattura, init, pagamento, status
+from .commands import assistant, config, fattura, init, pagamento, status
 from .output import OutputGroup
 
 app = typer.Typer(
@@ -84,24 +84,16 @@ app.command(
     rich_help_panel="Configurazione e diagnostica",
 )(status.status)
 app.add_typer(
-    cliente.app,
-    name="cliente",
-    help="Consulta e gestisci i clienti",
-    rich_help_panel="Gestione dati",
-)
-app.add_typer(
     fattura.app,
     name="fattura",
-    help="Consulta e gestisci le fatture",
-    rich_help_panel="Gestione dati",
+    help="XML FatturaPA e registro SDI",
+    rich_help_panel="Strumenti",
 )
-
-
 app.add_typer(
     pagamento.app,
     name="pagamento",
-    help="Registra e gestisci gli incassi",
-    rich_help_panel="Gestione dati",
+    help="Manutenzione del registro incassi",
+    rich_help_panel="Strumenti",
 )
 
 if __name__ == "__main__":

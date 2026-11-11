@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The assistant tool `generate_invoice_summary_pdf` renders a PDF summary of a year's
+  invoices (invoiced, collected, outstanding and overdue totals, per-document status, clients)
+  into `data_dir/exports/riepiloghi/`. The figures come from one application query, not from the
+  model. Before, the assistant answered that no summary PDF could be produced.
+
+### Removed
+
+- **Breaking:** CLI commands that duplicated assistant tools are removed: the whole
+  `cliente` group, `fattura list|show|create|add-line|generate-pdf|set-status|create-credit-note`
+  and `pagamento list|show|record|allocate|allocate-batch|reverse|declare-status|bank-receipt`.
+  Ask the assistant instead; changes to data need `ai_tool_access = "full"` and are confirmed
+  by a person. The CLI keeps only operations without a tool: `fattura generate-xml`,
+  `sdi-journal`, `associate-receipt`, `resolve-submission` and `pagamento migrate`.
+
 ### Changed
 
 - **Assistant tool access is decided by risk class.** Every tool declares a `ToolRisk`
@@ -31,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The invoice PDF footer states it is a courtesy copy without fiscal value (the original is
   the FatturaPA XML sent through SDI), replacing the misleading digital-preservation note.
 - CLI and assistant share one default PDF template (`professional`).
+- `docs/PDF_GENERATION.md` documented a non-existent `openfatture pdf` command group; it now
+  shows how to ask the assistant for PDFs.
 
 ## [2.9.0] - 2026-11-10
 

@@ -66,18 +66,6 @@ cli-config-migrate-imported = [green]Importados en config.toml: { $keys }[/green
 cli-config-migrate-conflicts = [yellow]Ya definidos, no sobrescritos: { $keys }[/yellow]
 cli-config-migrate-nothing = Nada que migrar.
 cli-config-migrate-source-kept = [dim]{ $path } no se ha modificado: elimínalo tras comprobarlo.[/dim]
-cli-invoice-collected = Collected
-cli-invoice-residual = Outstanding
-cli-invoice-collection = Collection
-cli-invoice-document = Document
-cli-invoice-historical = Historical
-cli-invoice-unpaid = Unpaid
-cli-invoice-no-payment-record = Ningún cobro registrado
-cli-invoice-partially-paid = Cobrada parcialmente
-cli-invoice-fully-paid = Cobrada
-cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
-cli-invoice-total = Total
-
 ## Assistant and status
 assistant-describe-what-you-need = Describe lo que necesitas. /help para los comandos · /exit para salir
 assistant-thinking = Pensando…
@@ -118,46 +106,12 @@ assistant-no-pending = No hay ningún turno pendiente.
 
 ## Shared command output
 cli-common-error = [red]Error:[/red] { $error }
-cli-common-more-results = [dim]... y más. Usa --limit para ver más resultados.[/dim]
-cli-common-not-available = N/D
-cli-common-number = Número
-cli-common-date = Fecha
-cli-common-status = Estado
-cli-common-client = Cliente
-cli-common-amount = Importe
-cli-common-name = Nombre
-cli-common-notes = Notas
-cli-common-vat-number = NIF-IVA
-cli-common-tax-code = Código fiscal
-
 ## FATTURA Commands
-cli-fattura-none-found = [yellow]No se encontraron facturas.[/yellow]
-cli-fattura-list-title = Facturas ({ $count })
-cli-fattura-pec-to-verify = PEC: por verificar
-cli-fattura-statement = Declaración: { $value } · fuente: { $source }
-cli-fattura-show-title = [bold cyan]Factura n.º { $id }[/bold cyan]
-cli-fattura-submission-unverified = Resultado del envío por verificar; no repitas la transmisión automáticamente.
-cli-fattura-amounts = Importes
-cli-fattura-taxable = Base imponible
-cli-fattura-vat = IVA
-cli-fattura-line-items = [bold]Líneas:[/bold] { $count } en total
-cli-fattura-column-description = Descripción
-cli-fattura-column-quantity = Cant.
-cli-fattura-column-unit-price = Precio unitario
-cli-fattura-column-vat-rate = IVA %
-cli-fattura-created-id = ID de factura: [cyan]{ $id }[/cyan]
-cli-fattura-line = Línea n.º { $numero }: { $descrizione }
-cli-fattura-invoice-total = Total de la factura
-cli-fattura-pdf-generated = [green]✓[/green] PDF generado correctamente
 cli-fattura-xml-generated = [green]✓[/green] XML generado correctamente
 cli-fattura-xml-generated-dry-run = [green]✓[/green] XML generado correctamente (simulación, no se escribió ningún archivo)
 cli-fattura-xml-content = [bold]Contenido XML:[/bold]
 cli-fattura-output = Salida: [cyan]{ $path }[/cyan]
 cli-fattura-size = Tamaño: { $size } bytes
-cli-fattura-status-change = Estado: { $old } → { $new }
-cli-fattura-credit-note-id = ID de nota de crédito: [cyan]{ $id }[/cyan]
-cli-fattura-document-type = Tipo de documento
-cli-fattura-source-invoice = [dim]Factura de origen:[/dim]
 cli-fattura-journal-submission = Envío n.º { $id } · factura { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Recibo n.º { $id } · factura { $invoice } · { $outcome } · origen { $source }
 cli-fattura-associate-confirm = ¿Asociar el recibo { $receipt } a la factura { $invoice }?
@@ -169,20 +123,7 @@ cli-fattura-resolve-confirm = ¿Confirmas que el envío { $attempt } { $sent ->
 cli-fattura-submission-resolved = Verificación registrada
 
 ## CLIENTE Commands
-cli-cliente-none-found = [yellow]No se encontraron clientes.[/yellow]
-cli-cliente-list-title = Clientes ({ $count })
-cli-cliente-column-invoices = Facturas
-cli-cliente-show-title = [bold cyan]Cliente n.º { $id }[/bold cyan]
-cli-cliente-address = Dirección
-cli-cliente-contacts = Contactos
-cli-cliente-phone = Tel.
-cli-cliente-invoices-total = [bold]Facturas:[/bold] { $count } en total
-cli-cliente-recent-invoices = Facturas recientes
-cli-cliente-created-id = ID de cliente: [cyan]{ $id }[/cyan]
-
 ## PAGAMENTO Commands
-cli-pagamento-reverse-confirm = ¿Anular { $amount } del asiento { $entry }?
-
 ## INIT Command
 cli-init-title = [bold blue]Configuración de OpenFatture[/bold blue]
 cli-init-structured-needs-no-interactive = Usa --no-interactive con un formato de salida estructurado

@@ -66,18 +66,6 @@ cli-config-migrate-imported = [green]In config.toml importiert: { $keys }[/green
 cli-config-migrate-conflicts = [yellow]Bereits gesetzt, nicht überschrieben: { $keys }[/yellow]
 cli-config-migrate-nothing = Nichts zu migrieren.
 cli-config-migrate-source-kept = [dim]{ $path } wurde nicht geändert: nach Prüfung löschen.[/dim]
-cli-invoice-collected = Collected
-cli-invoice-residual = Outstanding
-cli-invoice-collection = Collection
-cli-invoice-document = Document
-cli-invoice-historical = Historical
-cli-invoice-unpaid = Unpaid
-cli-invoice-no-payment-record = Keine Zahlung erfasst
-cli-invoice-partially-paid = Teilweise bezahlt
-cli-invoice-fully-paid = Bezahlt
-cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
-cli-invoice-total = Total
-
 ## Assistant and status
 assistant-describe-what-you-need = Beschreibe, was du brauchst. /help für Befehle · /exit zum Beenden
 assistant-thinking = Denke nach…
@@ -118,46 +106,12 @@ assistant-no-pending = Kein offener Durchlauf.
 
 ## Shared command output
 cli-common-error = [red]Fehler:[/red] { $error }
-cli-common-more-results = [dim]... und weitere. Verwende --limit, um mehr Ergebnisse zu sehen.[/dim]
-cli-common-not-available = k. A.
-cli-common-number = Nummer
-cli-common-date = Datum
-cli-common-status = Status
-cli-common-client = Kunde
-cli-common-amount = Betrag
-cli-common-name = Name
-cli-common-notes = Notizen
-cli-common-vat-number = USt-IdNr.
-cli-common-tax-code = Steuernummer
-
 ## FATTURA Commands
-cli-fattura-none-found = [yellow]Keine Rechnungen gefunden.[/yellow]
-cli-fattura-list-title = Rechnungen ({ $count })
-cli-fattura-pec-to-verify = PEC: zu prüfen
-cli-fattura-statement = Erklärung: { $value } · Quelle: { $source }
-cli-fattura-show-title = [bold cyan]Rechnung Nr. { $id }[/bold cyan]
-cli-fattura-submission-unverified = Versandergebnis noch zu prüfen; die Übermittlung nicht automatisch wiederholen.
-cli-fattura-amounts = Beträge
-cli-fattura-taxable = Nettobetrag
-cli-fattura-vat = MwSt.
-cli-fattura-line-items = [bold]Positionen:[/bold] { $count } insgesamt
-cli-fattura-column-description = Beschreibung
-cli-fattura-column-quantity = Menge
-cli-fattura-column-unit-price = Einzelpreis
-cli-fattura-column-vat-rate = MwSt. %
-cli-fattura-created-id = Rechnungs-ID: [cyan]{ $id }[/cyan]
-cli-fattura-line = Position Nr. { $numero }: { $descrizione }
-cli-fattura-invoice-total = Rechnungssumme
-cli-fattura-pdf-generated = [green]✓[/green] PDF erfolgreich erstellt
 cli-fattura-xml-generated = [green]✓[/green] XML erfolgreich erstellt
 cli-fattura-xml-generated-dry-run = [green]✓[/green] XML erfolgreich erstellt (Probelauf, keine Datei geschrieben)
 cli-fattura-xml-content = [bold]XML-Inhalt:[/bold]
 cli-fattura-output = Ausgabe: [cyan]{ $path }[/cyan]
 cli-fattura-size = Größe: { $size } Byte
-cli-fattura-status-change = Status: { $old } → { $new }
-cli-fattura-credit-note-id = Gutschrift-ID: [cyan]{ $id }[/cyan]
-cli-fattura-document-type = Dokumenttyp
-cli-fattura-source-invoice = [dim]Ursprungsrechnung:[/dim]
 cli-fattura-journal-submission = Versand Nr. { $id } · Rechnung { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Empfangsbestätigung Nr. { $id } · Rechnung { $invoice } · { $outcome } · Quelle { $source }
 cli-fattura-associate-confirm = Empfangsbestätigung { $receipt } der Rechnung { $invoice } zuordnen?
@@ -169,20 +123,7 @@ cli-fattura-resolve-confirm = Bestätigen, dass Versand { $attempt } { $sent ->
 cli-fattura-submission-resolved = Prüfung erfasst
 
 ## CLIENTE Commands
-cli-cliente-none-found = [yellow]Keine Kunden gefunden.[/yellow]
-cli-cliente-list-title = Kunden ({ $count })
-cli-cliente-column-invoices = Rechnungen
-cli-cliente-show-title = [bold cyan]Kunde Nr. { $id }[/bold cyan]
-cli-cliente-address = Adresse
-cli-cliente-contacts = Kontakte
-cli-cliente-phone = Tel.
-cli-cliente-invoices-total = [bold]Rechnungen:[/bold] { $count } insgesamt
-cli-cliente-recent-invoices = Letzte Rechnungen
-cli-cliente-created-id = Kunden-ID: [cyan]{ $id }[/cyan]
-
 ## PAGAMENTO Commands
-cli-pagamento-reverse-confirm = { $amount } aus Buchung { $entry } stornieren?
-
 ## INIT Command
 cli-init-title = [bold blue]OpenFatture-Einrichtung[/bold blue]
 cli-init-structured-needs-no-interactive = Verwende --no-interactive mit einem strukturierten Ausgabeformat

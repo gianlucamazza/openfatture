@@ -96,17 +96,6 @@ status-missing = Missing
 status-invalid = Invalid
 status-local-only = Checks describe local configuration. AI authentication and SDI delivery are not verified by this command.
 cli-database-unavailable = Database unavailable. Check DATABASE_URL and permissions; use --debug for details.
-cli-invoice-collected = Collected
-cli-invoice-residual = Outstanding
-cli-invoice-collection = Collection
-cli-invoice-document = Document
-cli-invoice-historical = Historical
-cli-invoice-unpaid = Unpaid
-cli-invoice-no-payment-record = No payment recorded
-cli-invoice-partially-paid = Partially paid
-cli-invoice-fully-paid = Paid
-cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
-cli-invoice-total = Total
 assistant-reconciled = Verified outcome recorded. Use /resume to continue.
 assistant-reconcile-invalid = Invalid reconciliation: call_id, result and evidence are required.
 assistant-resolve-pending-first = Resolve the pending turn with /resume before clearing the history.
@@ -116,46 +105,12 @@ assistant-no-pending = No pending turn.
 
 ## Shared command output
 cli-common-error = [red]Error:[/red] { $error }
-cli-common-more-results = [dim]... and more. Use --limit to see more results.[/dim]
-cli-common-not-available = N/A
-cli-common-number = Number
-cli-common-date = Date
-cli-common-status = Status
-cli-common-client = Client
-cli-common-amount = Amount
-cli-common-name = Name
-cli-common-notes = Notes
-cli-common-vat-number = VAT number
-cli-common-tax-code = Tax code
-
 ## FATTURA Commands
-cli-fattura-none-found = [yellow]No invoices found.[/yellow]
-cli-fattura-list-title = Invoices ({ $count })
-cli-fattura-pec-to-verify = PEC: to be verified
-cli-fattura-statement = Statement: { $value } · source: { $source }
-cli-fattura-show-title = [bold cyan]Invoice #{ $id }[/bold cyan]
-cli-fattura-submission-unverified = Submission outcome to be verified; do not repeat the transmission automatically.
-cli-fattura-amounts = Amounts
-cli-fattura-taxable = Taxable amount
-cli-fattura-vat = VAT
-cli-fattura-line-items = [bold]Line items:[/bold] { $count } total
-cli-fattura-column-description = Description
-cli-fattura-column-quantity = Qty
-cli-fattura-column-unit-price = Unit price
-cli-fattura-column-vat-rate = VAT %
-cli-fattura-created-id = Invoice ID: [cyan]{ $id }[/cyan]
-cli-fattura-line = Line #{ $numero }: { $descrizione }
-cli-fattura-invoice-total = Invoice total
-cli-fattura-pdf-generated = [green]✓[/green] PDF generated successfully
 cli-fattura-xml-generated = [green]✓[/green] XML generated successfully
 cli-fattura-xml-generated-dry-run = [green]✓[/green] XML generated successfully (dry run, no file written)
 cli-fattura-xml-content = [bold]XML content:[/bold]
 cli-fattura-output = Output: [cyan]{ $path }[/cyan]
 cli-fattura-size = Size: { $size } bytes
-cli-fattura-status-change = Status: { $old } → { $new }
-cli-fattura-credit-note-id = Credit note ID: [cyan]{ $id }[/cyan]
-cli-fattura-document-type = Document type
-cli-fattura-source-invoice = [dim]Source invoice:[/dim]
 cli-fattura-journal-submission = Submission #{ $id } · invoice { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Receipt #{ $id } · invoice { $invoice } · { $outcome } · source { $source }
 cli-fattura-associate-confirm = Associate receipt { $receipt } with invoice { $invoice }?
@@ -167,20 +122,7 @@ cli-fattura-resolve-confirm = Confirm that submission { $attempt } { $sent ->
 cli-fattura-submission-resolved = Verification recorded
 
 ## CLIENTE Commands
-cli-cliente-none-found = [yellow]No clients found.[/yellow]
-cli-cliente-list-title = Clients ({ $count })
-cli-cliente-column-invoices = Invoices
-cli-cliente-show-title = [bold cyan]Client #{ $id }[/bold cyan]
-cli-cliente-address = Address
-cli-cliente-contacts = Contacts
-cli-cliente-phone = Phone
-cli-cliente-invoices-total = [bold]Invoices:[/bold] { $count } total
-cli-cliente-recent-invoices = Recent invoices
-cli-cliente-created-id = Client ID: [cyan]{ $id }[/cyan]
-
 ## PAGAMENTO Commands
-cli-pagamento-reverse-confirm = Reverse { $amount } from ledger entry { $entry }?
-
 ## INIT Command
 cli-init-title = [bold blue]OpenFatture Setup[/bold blue]
 cli-init-structured-needs-no-interactive = Use --no-interactive with a structured output format

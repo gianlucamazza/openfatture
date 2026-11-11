@@ -5,14 +5,12 @@ import json
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager, redirect_stdout
 from contextvars import ContextVar
-from decimal import Decimal
 from html import escape
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import typer
-from babel.numbers import format_currency
 from rich.console import Console
 from rich.table import Table
 from typer.core import TyperGroup
@@ -25,7 +23,7 @@ else:
     except ModuleNotFoundError:
         click = import_module("click")
 
-from openfatture.i18n import _, get_locale
+from openfatture.i18n import _
 from openfatture.platform.logging import redact_sensitive
 
 FORMAT_NAMES = {"rich", "json", "markdown", "html", "stream-json"}
@@ -34,11 +32,6 @@ _result: ContextVar[Any] = ContextVar("cli_result", default=None)
 
 def remember_result(value: Any) -> None:
     _result.set(value)
-
-
-def format_eur(amount: Decimal | float) -> str:
-    """Format a euro amount for human-readable output in the active locale."""
-    return format_currency(amount, "EUR", locale=get_locale())
 
 
 def clean(value: Any) -> Any:

@@ -8,13 +8,14 @@ invoicing. The public interface is intentionally agentic and small:
 - `openfatture assistant [MESSAGE]`
 - `openfatture config ...`
 - `openfatture status`
-- `openfatture cliente|fattura|pagamento ...` (deterministic data commands)
+- `openfatture fattura|pagamento ...` (only operations without an assistant
+  tool: FatturaPA XML file, SDI journal resolutions, ledger migration)
 
-Domain operations belong in the application and domain layers. The data
-command groups are thin adapters over the same application services the
-assistant tools use; they never query ORM models directly. Do not add another
-public command group for a workflow that the assistant can express through
-existing tools.
+Domain operations belong in the application and domain layers. Business
+operations are assistant tools; the CLI never duplicates them. Do not add a
+CLI command, or a command group, for anything the assistant can do through a
+tool. The remaining commands are thin adapters over application services and
+never query ORM models directly.
 
 ## Local workflow
 

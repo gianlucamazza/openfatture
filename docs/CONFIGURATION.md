@@ -216,19 +216,19 @@ it does not authenticate providers or certify fiscal correctness. Missing or
 invalid fiscal fields must be corrected before issuing documents. The setup
 wizard no longer assumes RF19.
 
-Direct `cliente`, `fattura` and `pagamento` commands initialize database
+The `fattura` and `pagamento` commands initialize database
 access on each new CLI process. No prior assistant or setup process is needed
 for an existing database. Running `openfatture` alone starts the interactive
 assistant; `openfatture --help` lists the commands.
 
 ### Assistant file exports
 
-Without `--output`, PDFs are written to `data_dir/exports/fatture/` (invoices)
-and `data_dir/exports/preventivi/` (quotes), never to the current directory.
+Without an output path, PDFs are written to `data_dir/exports/fatture/` (invoices)
+`data_dir/exports/preventivi/` (quotes) and `data_dir/exports/riepiloghi/`
+(yearly summaries), never to the current directory.
 When the assistant chooses an output path for PDF or CSV exports, the path is
 resolved inside `data_dir/exports`. Absolute paths or `..` segments that would
-leave that directory are refused before the tool runs. Commands typed by a
-person (`fattura generate-pdf --output ...`) are not restricted.
+leave that directory are refused before the tool runs.
 
 An invoice PDF is a courtesy copy: its footer says it has no fiscal value and
 that the original is the FatturaPA XML sent through SDI.
