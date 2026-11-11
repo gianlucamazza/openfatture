@@ -18,8 +18,9 @@ def get_document_tools() -> list[Tool]:
                 "sign_invoice_xml or a CSV export; '.' is the exports folder. Use it when "
                 "the user asks to open, view or show a document or folder. Returns "
                 "opened=false when nobody can see it (no graphical session): then give "
-                "the path instead. An error means the path is not allowed or no "
-                "application handles that file type."
+                "the path instead. An error means the path is outside those directories, "
+                "the file does not exist or is not one of those types, or no application "
+                "handles it. The file is not modified."
             ),
             category="documents",
             parameters=[
@@ -28,7 +29,7 @@ def get_document_tools() -> list[Tool]:
                     type=ToolParameterType.STRING,
                     description=(
                         "Document or folder path returned by a tool, absolute or relative "
-                        "to the exports directory"
+                        "to the exports directory; '.' opens the exports folder"
                     ),
                     required=True,
                 ),

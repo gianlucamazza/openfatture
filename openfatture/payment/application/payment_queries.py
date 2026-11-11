@@ -212,7 +212,7 @@ def search_bank_transactions(
 
     Args:
         description: Search in transaction description
-        status: Filter by status (unmatched, matched, ignored)
+        status: Filter by status (unmatched, partially_matched, matched, ignored)
         limit: Maximum results
 
     Returns:

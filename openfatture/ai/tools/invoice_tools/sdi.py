@@ -16,10 +16,13 @@ def tools() -> list[Tool]:
             name="generate_invoice_xml",
             risk=ToolRisk.LOCAL_ARTIFACT,
             description=(
-                "Generate the FatturaPA XML of an invoice, validate it against the XSD and, "
-                "if valid, save it in the archive with the SDI file name (returns xml_path). "
-                "Use it to produce the XML file, to check it before sending, and before "
-                "sign_invoice_xml. It does not transmit anything."
+                "Build the FatturaPA XML of an invoice from its current data, validate it "
+                "against the XSD and, only when valid, write it to the archive (archivio/xml) "
+                "with the SDI file name and record the path on the invoice. Returns valid, "
+                "invoice_number and xml_path; when invalid it returns valid=false with the "
+                "validation error and writes nothing. Fails when the invoice is not found or "
+                "has no lines. Use it to produce or check the XML and before sign_invoice_xml; "
+                "it transmits nothing."
             ),
             category="invoices",
             parameters=[
@@ -37,7 +40,14 @@ def tools() -> list[Tool]:
         Tool(
             name="send_invoice_to_sdi",
             risk=ToolRisk.TRANSMIT,
-            description="Send invoice to SDI via PEC. CRITICAL: Cannot be undone!",
+            description=(
+                "Transmit an invoice in BOZZA or DA_INVIARE status to SDI by PEC. Irreversible: "
+                "the document reaches the tax authority. Unsigned, the XML is regenerated from "
+                "the current data and validated first; signed, the stored .p7m is sent only "
+                "when it matches the current invoice data. Returns invoice_number, stato, "
+                "data_invio and sdi_address. Fails for invoices issued elsewhere, other "
+                "statuses, no lines, invalid XML, a missing or stale signature, or a PEC error."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
@@ -49,7 +59,7 @@ def tools() -> list[Tool]:
                 ToolParameter(
                     name="signed",
                     type=ToolParameterType.BOOLEAN,
-                    description="Whether XML is digitally signed (default False)",
+                    description="Send the signed .p7m made by sign_invoice_xml instead of the plain XML; default false",
                     required=False,
                     default=False,
                 ),

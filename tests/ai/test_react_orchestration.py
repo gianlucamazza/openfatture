@@ -333,17 +333,20 @@ class TestReActIntegration:
         assert "search_invoices" in system_prompt
         assert "get_invoice_details" in system_prompt
 
-    async def test_react_system_prompt_without_tools_and_with_stats(self):
+    async def test_react_system_prompt_keeps_the_product_rules(self):
         from openfatture.ai.domain.context import ChatContext
         from openfatture.ai.orchestration.react import build_react_system_prompt
+        from openfatture.ai.runtime.prompt import build_chat_system_prompt
 
-        context = ChatContext(user_input="Test query")
-        context.current_year_stats = {"anno": 2026, "totale_fatture": 3, "importo_totale": 120}
+        context = ChatContext(user_input="Test query", available_tools=["search_invoices"])
         prompt = build_react_system_prompt(context, [])
 
-        assert "Nessun tool disponibile" in prompt
-        assert "- Anno corrente: 2026" in prompt
-        assert "- Importo totale YTD: €120.00" in prompt
+        assert prompt.startswith(build_chat_system_prompt(context))
+        assert "issued_elsewhere" in prompt
+        assert "Nessuno strumento disponibile." in prompt
+        # Neither invented business data nor shouted rules.
+        for fossil in ("Gamma SpA", "CRITICAL", "SEMPRE"):
+            assert fossil not in prompt
 
     async def test_parser_handles_multiple_formats(self):
         """Test parser robustness with various XML response formats."""

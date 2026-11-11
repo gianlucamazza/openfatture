@@ -55,8 +55,6 @@ class AgentContext(BaseModel):
 
     # Additional data
     metadata: dict[str, Any] = Field(default_factory=dict)
-    relevant_documents: list[str] = Field(default_factory=list)
-    knowledge_snippets: list[dict[str, Any]] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -230,7 +228,6 @@ class ChatContext(AgentContext):
     # Business data enrichment
     recent_invoices_summary: str | None = None
     recent_clients_summary: str | None = None
-    current_year_stats: dict[str, Any] | None = None
 
     # User preferences
     preferred_response_style: str = "professional"  # professional, casual, technical

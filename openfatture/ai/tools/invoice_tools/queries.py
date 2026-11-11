@@ -6,6 +6,7 @@ from pydantic import validate_call
 
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
 from openfatture.billing.application import invoice_queries
+from openfatture.storage.database.models import StatoFattura
 
 
 @validate_call
@@ -44,38 +45,47 @@ def tools() -> list[Tool]:
         Tool(
             name="search_invoices",
             risk=ToolRisk.READ,
-            description="Search for invoices by number, year, status, or client",
+            description=(
+                "List invoices filtered by number or note text, year, status and client, newest "
+                "first (year, then number, descending). Each result has id, numero, anno, data, "
+                "cliente name, importo (total), stato, the payment summary (payment_status, "
+                "amount_paid, outstanding) and the SDI status evidence (status_origin, "
+                "submission_state); has_more is true when the limit was reached. It does not "
+                "search by client name: resolve the client with search_clients and pass "
+                "cliente_id. Use get_invoice_details for the lines of one invoice and "
+                "get_invoice_stats for yearly counts and totals."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
                     name="query",
                     type=ToolParameterType.STRING,
-                    description="Search query (numero or note)",
+                    description="Text contained in the invoice number or notes; client names are not matched",
                     required=False,
                 ),
                 ToolParameter(
                     name="anno",
                     type=ToolParameterType.INTEGER,
-                    description="Filter by year (e.g., 2025)",
+                    description="Invoice year (4 digits, 2000-2100); omit for all years",
                     required=False,
                 ),
                 ToolParameter(
                     name="stato",
                     type=ToolParameterType.STRING,
-                    description="Filter by status",
+                    description="Local invoice status; omit for any status",
                     required=False,
-                    enum=["bozza", "da_inviare", "inviata", "accettata", "rifiutata"],
+                    enum=[stato.value for stato in StatoFattura],
                 ),
                 ToolParameter(
                     name="cliente_id",
                     type=ToolParameterType.INTEGER,
-                    description="Filter by client ID",
+                    description="Client ID (from search_clients); omit for all clients",
                     required=False,
                 ),
                 ToolParameter(
                     name="limit",
                     type=ToolParameterType.INTEGER,
-                    description="Maximum number of results",
+                    description="Maximum number of invoices returned, 1-100; default 10",
                     required=False,
                     default=10,
                 ),
@@ -91,13 +101,21 @@ def tools() -> list[Tool]:
         Tool(
             name="get_invoice_details",
             risk=ToolRisk.READ,
-            description="Get detailed information about a specific invoice",
+            description=(
+                "Return one invoice in full: numero, anno, data_emissione, cliente (id, "
+                "denominazione, partita_iva), importi (imponibile, iva, totale), stato, notes, "
+                "the lines (descrizione, quantita, prezzo_unitario, aliquota_iva), the payment "
+                "records with due dates and the collected and outstanding amounts, and the SDI "
+                "status evidence. Returns an error when the invoice does not exist. Use "
+                "search_invoices to find the ID and check_invoice_sdi_status for the full SDI "
+                "notification timeline."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
                     name="fattura_id",
                     type=ToolParameterType.INTEGER,
-                    description="Invoice ID",
+                    description="Invoice ID (the id field from search_invoices)",
                     required=True,
                 ),
             ],
@@ -108,13 +126,21 @@ def tools() -> list[Tool]:
         Tool(
             name="get_invoice_stats",
             risk=ToolRisk.READ,
-            description="Get statistics about invoices (count, totals by status)",
+            description=(
+                "Return aggregate figures for the invoices of one year: totale_fatture, counts "
+                "per_stato (local technical status) and per_documento (separating historical "
+                "invoices issued elsewhere), importo_totale, incassato_totale, residuo_totale, "
+                "counts per_stato_incasso, and invii_da_verificare (submissions still pending or "
+                "uncertain). Read avvertenza_stato before drawing conclusions about SDI "
+                "transmission. Use it instead of adding up search_invoices results; use "
+                "generate_vat_report for VAT by rate or quarter."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
                     name="anno",
                     type=ToolParameterType.INTEGER,
-                    description="Year for statistics (current year if not specified)",
+                    description="Invoice year (4 digits, 2000-2100); defaults to the current year",
                     required=False,
                 ),
             ],

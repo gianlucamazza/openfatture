@@ -16,7 +16,16 @@ def tools() -> list[Tool]:
         Tool(
             name="create_riga",
             risk=ToolRisk.MUTATE,
-            description="Add line item to invoice. Updates invoice totals automatically.",
+            description=(
+                "Append a line to an invoice in BOZZA or DA_INVIARE status and recompute the "
+                "invoice totals (lines, social security contribution and stamp duty). Returns "
+                "riga_id, numero_riga, the line imponibile, iva and totale, and invoice_totale. "
+                "Fails when the invoice is not found, is in another status, or the VAT rate and "
+                "natura are inconsistent (a 0% rate needs a natura outside the forfettario "
+                "regime; a natura needs a 0% rate). Catalogue products are not linked: copy "
+                "price and VAT from search_prodotti. For a training course billed as one lump "
+                "sum use create_course_line."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
@@ -28,19 +37,19 @@ def tools() -> list[Tool]:
                 ToolParameter(
                     name="descrizione",
                     type=ToolParameterType.STRING,
-                    description="Item description",
+                    description="Line description as printed on the invoice",
                     required=True,
                 ),
                 ToolParameter(
                     name="quantita",
                     type=ToolParameterType.NUMBER,
-                    description="Quantity",
+                    description="Quantity in unita_misura (decimals allowed, e.g. 7.5 hours)",
                     required=True,
                 ),
                 ToolParameter(
                     name="prezzo_unitario",
                     type=ToolParameterType.NUMBER,
-                    description="Unit price in euros",
+                    description="Unit price in euros, VAT excluded",
                     required=True,
                 ),
                 ToolParameter(
@@ -55,7 +64,7 @@ def tools() -> list[Tool]:
                 ToolParameter(
                     name="unita_misura",
                     type=ToolParameterType.STRING,
-                    description="Unit of measure (default 'ore')",
+                    description="Unit of measure, e.g. ore, giorni, servizio, pz; default 'ore'",
                     required=False,
                     default="ore",
                 ),
@@ -80,49 +89,57 @@ def tools() -> list[Tool]:
         Tool(
             name="update_riga",
             risk=ToolRisk.MUTATE,
-            description="Update line item in invoice (only BOZZA or DA_INVIARE). Updates invoice totals automatically.",
+            description=(
+                "Change the fields passed on one invoice line, when the invoice is in BOZZA or "
+                "DA_INVIARE status; a change of quantity, price, rate or natura recomputes the "
+                "line and the invoice totals. Returns riga_id, numero_riga, changes, the line "
+                "amounts and invoice_totale; when nothing differs it succeeds with no changes. "
+                "Fails when the line is not found, the invoice status does not allow edits, or "
+                "the resulting rate and natura are inconsistent. Setting a 0% rate without "
+                "natura keeps the line's current natura."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
                     name="riga_id",
                     type=ToolParameterType.INTEGER,
-                    description="Line item ID",
+                    description="Line ID (riga_id returned by create_riga or create_course_line)",
                     required=True,
                 ),
                 ToolParameter(
                     name="descrizione",
                     type=ToolParameterType.STRING,
-                    description="Item description",
+                    description="New line description; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="quantita",
                     type=ToolParameterType.NUMBER,
-                    description="Quantity",
+                    description="New quantity in the line's unit of measure; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="prezzo_unitario",
                     type=ToolParameterType.NUMBER,
-                    description="Unit price in euros",
+                    description="New unit price in euros, VAT excluded; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="aliquota_iva",
                     type=ToolParameterType.NUMBER,
-                    description="VAT rate percentage",
+                    description="New VAT rate percentage (e.g. 22, 10, 0); omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="natura",
                     type=ToolParameterType.STRING,
-                    description="VAT natura, only with a 0% rate (e.g. N2.2, N1, N4)",
+                    description="New VAT natura, valid only with a 0% rate (e.g. N2.2 forfettario, N1, N4 exempt); omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="unita_misura",
                     type=ToolParameterType.STRING,
-                    description="Unit of measure",
+                    description="New unit of measure (e.g. ore, giorni, servizio); omit to keep it",
                     required=False,
                 ),
             ],
@@ -137,13 +154,19 @@ def tools() -> list[Tool]:
         Tool(
             name="delete_riga",
             risk=ToolRisk.MUTATE,
-            description="CRITICAL: Delete line item from invoice (only BOZZA or DA_INVIARE). Updates invoice totals automatically.",
+            description=(
+                "Remove one line from an invoice in BOZZA or DA_INVIARE status and recompute the "
+                "invoice totals. Irreversible. Returns riga_id, numero_riga, descrizione, "
+                "riga_totale (the removed amount) and invoice_totale. Fails when the line is not "
+                "found or the invoice status does not allow edits. Remaining lines keep their "
+                "numero_riga."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
                     name="riga_id",
                     type=ToolParameterType.INTEGER,
-                    description="Line item ID to delete",
+                    description="Line ID (riga_id returned by create_riga or create_course_line)",
                     required=True,
                 ),
             ],

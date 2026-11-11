@@ -16,11 +16,11 @@ BASE: dict[str, Any] = {
     "ai_model": None,
     "ai_api_key": None,
     "ai_base_url": None,
-    "ai_temperature": 0.3,
+    "ai_temperature": 0.4,
     "ai_max_tokens": 321,
     "ai_tools_enabled": False,
 }
-TUNING = {"temperature": 0.3, "max_tokens": 321, "tools_enabled": False}
+TUNING = {"temperature": 0.4, "max_tokens": 321, "tools_enabled": False}
 
 
 @pytest.fixture(autouse=True)

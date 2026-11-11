@@ -31,10 +31,11 @@ def search_clients(
             db_query = db.query(Cliente)
             if query:
                 query_lower = f"%{query.lower()}%"
+                # sanitize_sql_like_input escapes % and _ with a backslash.
                 db_query = db_query.filter(
-                    (Cliente.denominazione.ilike(query_lower))
-                    | (Cliente.partita_iva.ilike(query_lower))
-                    | (Cliente.codice_fiscale.ilike(query_lower))
+                    (Cliente.denominazione.ilike(query_lower, escape="\\"))
+                    | (Cliente.partita_iva.ilike(query_lower, escape="\\"))
+                    | (Cliente.codice_fiscale.ilike(query_lower, escape="\\"))
                 )
             db_query = db_query.order_by(Cliente.denominazione)
             clienti = db_query.limit(limit).all()
