@@ -66,18 +66,6 @@ cli-config-migrate-imported = [green]Importés dans config.toml : { $keys }[/gre
 cli-config-migrate-conflicts = [yellow]Déjà définis, non écrasés : { $keys }[/yellow]
 cli-config-migrate-nothing = Rien à migrer.
 cli-config-migrate-source-kept = [dim]{ $path } n'a pas été modifié : supprimez-le après vérification.[/dim]
-cli-invoice-collected = Collected
-cli-invoice-residual = Outstanding
-cli-invoice-collection = Collection
-cli-invoice-document = Document
-cli-invoice-historical = Historical
-cli-invoice-unpaid = Unpaid
-cli-invoice-no-payment-record = Aucun encaissement enregistré
-cli-invoice-partially-paid = Partiellement encaissée
-cli-invoice-fully-paid = Encaissée
-cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
-cli-invoice-total = Total
-
 ## Assistant and status
 assistant-describe-what-you-need = Décrivez ce dont vous avez besoin. /help pour les commandes · /exit pour quitter
 assistant-thinking = Réflexion…
@@ -118,48 +106,15 @@ assistant-no-pending = Aucun tour en attente.
 
 ## Shared command output
 cli-common-error = [red]Erreur :[/red] { $error }
-cli-common-more-results = [dim]... et plus encore. Utilisez --limit pour afficher plus de résultats.[/dim]
-cli-common-not-available = N/D
-cli-common-number = Numéro
-cli-common-date = Date
-cli-common-status = Statut
-cli-common-client = Client
-cli-common-amount = Montant
-cli-common-name = Nom
-cli-common-notes = Notes
-cli-common-vat-number = N° TVA
-cli-common-tax-code = Code fiscal
-
 ## FATTURA Commands
-cli-fattura-none-found = [yellow]Aucune facture trouvée.[/yellow]
-cli-fattura-list-title = Factures ({ $count })
-cli-fattura-pec-to-verify = PEC : à vérifier
-cli-fattura-statement = Déclaration : { $value } · source : { $source }
-cli-fattura-show-title = [bold cyan]Facture n° { $id }[/bold cyan]
-cli-fattura-submission-unverified = Résultat de l'envoi à vérifier ; ne répétez pas la transmission automatiquement.
-cli-fattura-amounts = Montants
-cli-fattura-taxable = Montant HT
-cli-fattura-vat = TVA
-cli-fattura-line-items = [bold]Lignes :[/bold] { $count } au total
-cli-fattura-column-description = Description
-cli-fattura-column-quantity = Qté
-cli-fattura-column-unit-price = Prix unitaire
-cli-fattura-column-vat-rate = TVA %
-cli-fattura-created-id = ID de la facture : [cyan]{ $id }[/cyan]
-cli-fattura-line = Ligne n° { $numero } : { $descrizione }
-cli-fattura-invoice-total = Total de la facture
-cli-fattura-pdf-generated = [green]✓[/green] PDF généré avec succès
 cli-fattura-xml-generated = [green]✓[/green] XML généré avec succès
 cli-fattura-xml-generated-dry-run = [green]✓[/green] XML généré avec succès (simulation, aucun fichier écrit)
 cli-fattura-xml-content = [bold]Contenu XML :[/bold]
 cli-fattura-output = Sortie : [cyan]{ $path }[/cyan]
 cli-fattura-size = Taille : { $size } octets
-cli-fattura-status-change = Statut : { $old } → { $new }
-cli-fattura-credit-note-id = ID de l'avoir : [cyan]{ $id }[/cyan]
-cli-fattura-document-type = Type de document
-cli-fattura-source-invoice = [dim]Facture d'origine :[/dim]
 cli-fattura-journal-submission = Envoi n° { $id } · facture { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Accusé n° { $id } · facture { $invoice } · { $outcome } · origine { $source }
+cli-fattura-journal-empty = Aucun envoi ni accusé SDI enregistré.
 cli-fattura-associate-confirm = Associer l'accusé { $receipt } à la facture { $invoice } ?
 cli-fattura-receipt-associated = Accusé associé
 cli-fattura-resolve-confirm = Confirmez-vous que l'envoi { $attempt } { $sent ->
@@ -169,20 +124,7 @@ cli-fattura-resolve-confirm = Confirmez-vous que l'envoi { $attempt } { $sent ->
 cli-fattura-submission-resolved = Vérification enregistrée
 
 ## CLIENTE Commands
-cli-cliente-none-found = [yellow]Aucun client trouvé.[/yellow]
-cli-cliente-list-title = Clients ({ $count })
-cli-cliente-column-invoices = Factures
-cli-cliente-show-title = [bold cyan]Client n° { $id }[/bold cyan]
-cli-cliente-address = Adresse
-cli-cliente-contacts = Contacts
-cli-cliente-phone = Tél.
-cli-cliente-invoices-total = [bold]Factures :[/bold] { $count } au total
-cli-cliente-recent-invoices = Factures récentes
-cli-cliente-created-id = ID du client : [cyan]{ $id }[/cyan]
-
 ## PAGAMENTO Commands
-cli-pagamento-reverse-confirm = Annuler { $amount } de l'écriture { $entry } ?
-
 ## INIT Command
 cli-init-title = [bold blue]Configuration d'OpenFatture[/bold blue]
 cli-init-structured-needs-no-interactive = Utilisez --no-interactive avec un format de sortie structuré
@@ -289,3 +231,67 @@ cli-formatter-model = Modèle : { $model }
 cli-formatter-tokens = Jetons : { $tokens }
 cli-formatter-cost = Coût : { $cost }
 cli-formatter-latency = Latence : { $latency } ms
+
+## Localized refusals of application services (error_code)
+cli-error-invoice-not-found = Facture introuvable.
+cli-error-invoice-issued-elsewhere = La facture a été émise ailleurs et n'est conservée qu'à titre de référence : aucun XML n'est généré, pour éviter un double envoi au SDI.
+cli-error-xml-invalid = Le XML n'est pas valide : { $detail }
+cli-error-xml-failed = Impossible de générer le XML : { $detail }
+cli-error-receipt-not-associable = L'accusé n'existe pas ou est déjà associé.
+cli-error-evidence-required = Une preuve vérifiée est requise (--evidence).
+cli-error-submission-not-found = Tentative d'envoi introuvable.
+cli-error-submission-already-resolved = La tentative d'envoi est déjà résolue.
+cli-error-sdi-evidence-contradicts = Les preuves SDI enregistrées contredisent le résultat « non envoyé ».
+cli-error-submission-concurrent-update = La tentative a été résolue entre-temps : rechargez et réessayez.
+
+## Command-line help
+cli-help-app = Facturation électronique avec assistant. Lancez openfatture pour converser.
+cli-help-epilog = Exemples : openfatture · openfatture assistant "Affiche les factures impayées"
+cli-help-version = Affiche la version et quitte.
+cli-help-debug = Affiche les journaux de diagnostic et les tracebacks.
+cli-help-format = Format de sortie : rich, json, markdown, stream-json, html
+cli-help-panel-assistant = Assistant
+cli-help-panel-setup = Configuration et diagnostic
+cli-help-panel-tools = Outils
+cli-help-assistant = Envoie une demande ou reprend une session
+cli-help-init = Initialise OpenFatture
+cli-help-config = Gère la configuration
+cli-help-status = Vérifie la configuration et la disponibilité
+cli-help-fattura = XML FatturaPA et journal SDI
+cli-help-pagamento = Maintenance du registre des encaissements
+cli-help-assistant-message = Demande pour l'assistant.
+cli-help-assistant-stream = Affiche la réponse pendant sa génération.
+cli-help-assistant-json = Renvoie la réponse en JSON.
+cli-help-assistant-session = Reprend une session enregistrée par son ID (active l'enregistrement).
+cli-help-init-interactive = Assistant de configuration interactif
+cli-help-status-json = Renvoie l'état en JSON.
+cli-help-config-show =
+    Affiche la configuration effective.
+
+    Pour chaque valeur, indique la source : environnement, trousseau ou fichier d'identifiants, config.toml, défaut.
+cli-help-config-reload = Recharge la configuration depuis l'environnement, le coffre de secrets et config.toml.
+cli-help-config-set =
+    Définit une valeur de configuration.
+
+    Seule KEY est écrite. Les secrets (clés API, mots de passe) vont dans le trousseau du système, ou dans le fichier privé d'identifiants s'il n'y a pas de trousseau ; les autres valeurs dans config.toml. Les clés imbriquées utilisent des points, par exemple debug_config.enable_debug_logging.
+cli-help-config-unset = Supprime KEY de config.toml ou du coffre de secrets et rétablit la valeur par défaut.
+cli-help-config-migrate =
+    Sort les secrets en clair de config.toml et importe éventuellement un fichier .env.
+
+    Les secrets vont dans le trousseau (ou le fichier privé d'identifiants) ; les autres valeurs de --env-file sont ajoutées à config.toml seulement si elles ne sont pas déjà définies. Le fichier source n'est jamais modifié.
+cli-help-config-env-file = Importe les réglages d'un fichier dotenv (les valeurs existantes sont conservées).
+cli-help-xml = Génère le XML FatturaPA d'une facture (sans validation XSD ni envoi).
+cli-help-invoice-id = ID de la facture
+cli-help-xml-output = Chemin du fichier XML
+cli-help-xml-dry-run = Affiche le XML sans écrire le fichier
+cli-help-sdi-journal = Affiche les envois PEC et les accusés SDI enregistrés, sans rien envoyer.
+cli-help-associate-receipt = Associe un accusé non résolu à une facture, après une vérification manuelle.
+cli-help-receipt-id = ID de l'accusé SDI
+cli-help-receipt-evidence = Preuve vérifiée (par ex. une référence)
+cli-help-resolve-submission = Résout un envoi PEC incertain, après vérification du résultat du transport.
+cli-help-attempt-id = ID de la tentative d'envoi
+cli-help-resolve-sent = Résultat vérifié : envoyé ou non envoyé
+cli-help-resolve-evidence = Preuve vérifiée (par ex. la référence du fournisseur)
+cli-help-collections-migrate = Met à jour les données historiques d'encaissement sans modifier les montants.
+cli-help-install-completion = Installe la complétion pour le shell courant.
+cli-help-show-completion = Affiche la complétion pour le shell courant, pour la copier ou la personnaliser.

@@ -10,10 +10,10 @@ application services and assistant tools.
 - `openfatture` (interactive assistant) and `openfatture assistant [MESSAGE]`
 - `openfatture config ...`
 - `openfatture status`
-- `openfatture cliente|fattura|pagamento ...` — deterministic data commands,
-  thin adapters over the same application services the assistant tools use
+- `openfatture fattura|pagamento ...` — only operations without an assistant
+  tool (FatturaPA XML file, SDI journal resolutions, ledger migration)
 
-No other business workflow gets its own top-level CLI group. See
+Business operations are assistant tools and are not duplicated in the CLI. See
 [CLI_REFERENCE.md](CLI_REFERENCE.md) and [AI_ARCHITECTURE.md](AI_ARCHITECTURE.md).
 
 ## Package layout (2.0)

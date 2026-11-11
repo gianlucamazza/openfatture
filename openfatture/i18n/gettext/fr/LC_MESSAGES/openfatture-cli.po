@@ -1,0 +1,286 @@
+# Click and Typer messages for the OpenFatture CLI.
+# Compile with: uv run python scripts/compile_cli_catalogs.py
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenFatture 2.10.0\n"
+"Report-Msgid-Bugs-To: https://github.com/gianlucamazza/openfatture/issues\n"
+"POT-Creation-Date: 2026-11-11 00:00+0000\n"
+"PO-Revision-Date: 2026-11-11 00:00+0000\n"
+"Last-Translator: OpenFatture contributors\n"
+"Language: fr\n"
+"Language-Team: fr <https://github.com/gianlucamazza/openfatture>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#, python-format
+msgid "%(prog)s, version %(version)s"
+msgstr "%(prog)s, version %(version)s"
+
+msgid "(deprecated) "
+msgstr "(obsolète) "
+
+msgid "(dynamic)"
+msgstr "(dynamique)"
+
+msgid "Aborted!"
+msgstr "Annulé."
+
+msgid "Aborted."
+msgstr "Annulé."
+
+#, python-brace-format
+msgid "Argument {name!r} takes {nargs} values."
+msgstr "L'argument {name!r} requiert {nargs} valeurs."
+
+msgid "Arguments"
+msgstr "Arguments"
+
+#, python-brace-format
+msgid ""
+"Choose from:\n"
+"\t{choices}"
+msgstr ""
+"Choisissez parmi :\n"
+"\t{choices}"
+
+msgid "Commands"
+msgstr "Commandes"
+
+#, python-brace-format
+msgid "Could not open file {filename!r}: {message}"
+msgstr "Impossible d'ouvrir le fichier {filename!r} : {message}"
+
+msgid "Couldn't detect Bash version, shell completion is not supported."
+msgstr "Version de Bash non détectée : complétion non prise en charge."
+
+#, python-brace-format
+msgid "DeprecationWarning: The command {name!r} is deprecated.{extra_message}"
+msgstr "DeprecationWarning : la commande {name!r} est obsolète.{extra_message}"
+
+#, python-brace-format
+msgid "DeprecationWarning: The {param_type} {name!r} is deprecated.{extra_message}"
+msgstr "DeprecationWarning : {param_type} {name!r} est obsolète.{extra_message}"
+
+#, python-brace-format
+msgid "Did you mean {possibility}?"
+msgid_plural "(Possible options: {possibilities})"
+msgstr[0] "Vouliez-vous dire {possibility} ?"
+msgstr[1] "(Options possibles : {possibilities})"
+
+msgid "Error"
+msgstr "Erreur"
+
+msgid "Error: The two entered values do not match."
+msgstr "Erreur : les deux valeurs saisies ne correspondent pas."
+
+msgid "Error: The value you entered was invalid."
+msgstr "Erreur : la valeur saisie est invalide."
+
+msgid "Error: invalid input"
+msgstr "Erreur : saisie invalide"
+
+#, python-brace-format
+msgid "Error: {e.message}"
+msgstr "Erreur : {e.message}"
+
+#, python-brace-format
+msgid "Error: {message}"
+msgstr "Erreur : {message}"
+
+#, python-brace-format
+msgid "Got unexpected extra argument ({args})"
+msgid_plural "Got unexpected extra arguments ({args})"
+msgstr[0] "Argument supplémentaire inattendu ({args})"
+msgstr[1] "Arguments supplémentaires inattendus ({args})"
+
+#, python-brace-format
+msgid "Invalid value for {param_hint}: {message}"
+msgstr "Valeur invalide pour {param_hint} : {message}"
+
+#, python-brace-format
+msgid "Invalid value: {message}"
+msgstr "Valeur invalide : {message}"
+
+msgid "Missing argument"
+msgstr "Argument manquant"
+
+msgid "Missing command."
+msgstr "Commande manquante."
+
+msgid "Missing option"
+msgstr "Option manquante"
+
+msgid "Missing parameter"
+msgstr "Paramètre manquant"
+
+#, python-brace-format
+msgid "Missing parameter: {param_name}"
+msgstr "Paramètre manquant : {param_name}"
+
+#, python-brace-format
+msgid "Missing {param_type}"
+msgstr "{param_type} manquant"
+
+#, python-brace-format
+msgid "No such command {name!r}."
+msgstr "La commande {name!r} n'existe pas."
+
+#, python-brace-format
+msgid "No such option: {name}"
+msgstr "Option inexistante : {name}"
+
+#, python-brace-format
+msgid "Option {name!r} does not take a value."
+msgstr "L'option {name!r} n'accepte pas de valeur."
+
+#, python-brace-format
+msgid "Option {name!r} requires an argument."
+msgid_plural "Option {name!r} requires {nargs} arguments."
+msgstr[0] "L'option {name!r} requiert un argument."
+msgstr[1] "L'option {name!r} requiert {nargs} arguments."
+
+msgid "Options"
+msgstr "Options"
+
+msgid "Press any key to continue..."
+msgstr "Appuyez sur une touche pour continuer..."
+
+msgid "Repeat for confirmation"
+msgstr "Répétez pour confirmer"
+
+msgid "Shell completion is not supported for Bash versions older than 4.4."
+msgstr "La complétion n'est pas prise en charge pour Bash avant la version 4.4."
+
+msgid "Show the version and exit."
+msgstr "Affiche la version et quitte."
+
+msgid "Show this message and exit."
+msgstr "Affiche ce message et quitte."
+
+#, python-brace-format
+msgid "Takes {nargs} values but 1 was given."
+msgid_plural "Takes {nargs} values but {len} were given."
+msgstr[0] "Requiert {nargs} valeurs mais 1 a été fournie."
+msgstr[1] "Requiert {nargs} valeurs mais {len} ont été fournies."
+
+#, python-brace-format
+msgid "Try '{command} {option}' for help."
+msgstr "Essayez '{command} {option}' pour l'aide."
+
+#, python-brace-format
+msgid "Try [blue]'{command_path} {help_option}'[/] for help."
+msgstr "Essayez [blue]'{command_path} {help_option}'[/] pour l'aide."
+
+msgid "Usage:"
+msgstr "Utilisation :"
+
+msgid "Value must be an iterable."
+msgstr "La valeur doit être un itérable."
+
+#, python-brace-format
+msgid "[default: {}]"
+msgstr "[défaut : {}]"
+
+#, python-brace-format
+msgid "[env var: {}]"
+msgstr "[variable d'environnement : {}]"
+
+msgid "[required]"
+msgstr "[obligatoire]"
+
+#, python-brace-format
+msgid "default: {default}"
+msgstr "défaut : {default}"
+
+msgid "directory"
+msgstr "répertoire"
+
+#, python-brace-format
+msgid "env var: {var}"
+msgstr "variable d'environnement : {var}"
+
+msgid "file"
+msgstr "fichier"
+
+msgid "path"
+msgstr "chemin"
+
+msgid "required"
+msgstr "obligatoire"
+
+msgid "unknown error"
+msgstr "erreur inconnue"
+
+#, python-brace-format
+msgid "{editor}: Editing failed"
+msgstr "{editor} : échec de la modification"
+
+#, python-brace-format
+msgid "{editor}: Editing failed: {e}"
+msgstr "{editor} : échec de la modification : {e}"
+
+#, python-brace-format
+msgid "{len_type} values are required, but {len_value} was given."
+msgid_plural "{len_type} values are required, but {len_value} were given."
+msgstr[0] "{len_type} valeurs sont requises, mais {len_value} a été fournie."
+msgstr[1] "{len_type} valeurs sont requises, mais {len_value} ont été fournies."
+
+#, python-brace-format
+msgid "{name} {filename!r} does not exist."
+msgstr "{name} {filename!r} n'existe pas."
+
+#, python-brace-format
+msgid "{name} {filename!r} is a directory."
+msgstr "{name} {filename!r} est un répertoire."
+
+#, python-brace-format
+msgid "{name} {filename!r} is a file."
+msgstr "{name} {filename!r} est un fichier."
+
+#, python-brace-format
+msgid "{name} {filename!r} is not executable."
+msgstr "{name} {filename!r} n'est pas exécutable."
+
+#, python-brace-format
+msgid "{name} {filename!r} is not readable."
+msgstr "{name} {filename!r} n'est pas lisible."
+
+#, python-brace-format
+msgid "{name} {filename!r} is not writable."
+msgstr "{name} {filename!r} n'est pas accessible en écriture."
+
+#, python-brace-format
+msgid "{text} {deprecated_message}"
+msgstr "{text} {deprecated_message}"
+
+#, python-brace-format
+msgid "{value!r} does not match the format {format}."
+msgid_plural "{value!r} does not match the formats {formats}."
+msgstr[0] "{value!r} ne correspond pas au format {format}."
+msgstr[1] "{value!r} ne correspond pas aux formats {formats}."
+
+#, python-brace-format
+msgid "{value!r} is not a valid UUID."
+msgstr "{value!r} n'est pas un UUID valide."
+
+#, python-brace-format
+msgid "{value!r} is not a valid boolean. Recognized values: {states}"
+msgstr "{value!r} n'est pas un booléen valide. Valeurs reconnues : {states}"
+
+#, python-brace-format
+msgid "{value!r} is not a valid {number_type}."
+msgstr "{value!r} n'est pas un {number_type} valide."
+
+#, python-brace-format
+msgid "{value!r} is not {choice}."
+msgid_plural "{value!r} is not one of {choices}."
+msgstr[0] "{value!r} n'est pas {choice}."
+msgstr[1] "{value!r} ne fait pas partie de {choices}."
+
+#, python-brace-format
+msgid "{value} is not in the range {range}."
+msgstr "{value} n'est pas dans l'intervalle {range}."
+

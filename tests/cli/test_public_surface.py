@@ -14,11 +14,19 @@ def test_public_commands_are_agent_first() -> None:
     # Core commands
     for command in ("assistant", "init", "config", "status"):
         assert command in result.stdout
-    # Deterministic data commands (documented in docs/CLI_REFERENCE.md)
-    for command in ("cliente", "fattura", "pagamento"):
+    # Tools without an assistant equivalent (documented in docs/CLI_REFERENCE.md)
+    for command in ("fattura", "pagamento"):
         assert command in result.stdout
     # Commands that should remain hidden/removed
-    for removed in ("interactive", "preventivo", "payment", "ai", "plugin", "web-scraper"):
+    for removed in (
+        "interactive",
+        "cliente",
+        "preventivo",
+        "payment",
+        "ai",
+        "plugin",
+        "web-scraper",
+    ):
         assert removed not in result.stdout
 
 
@@ -110,7 +118,7 @@ def test_help_and_version_do_not_start_the_assistant(monkeypatch):
 def test_help_groups_commands():
     result = runner.invoke(app, ["--help"], terminal_width=120)
     assert result.exit_code == 0
-    for panel in ("Assistente", "Gestione dati", "Configurazione e diagnostica"):
+    for panel in ("Assistente", "Strumenti", "Configurazione e diagnostica"):
         assert panel in result.stdout
     assert "openfatture assistant" in result.stdout
 
@@ -124,4 +132,62 @@ def test_removed_interactive_command_is_rejected(monkeypatch):
     monkeypatch.setattr(assistant, "run_sync_with_lifespan", unexpected)
     result = runner.invoke(app, ["interactive", "start"])
     assert result.exit_code == 2
-    assert "No such command" in result.output
+    assert "inesistente" in result.output
+
+
+def test_cli_does_not_duplicate_assistant_tools():
+    """Data operations the assistant can perform have no second CLI path."""
+    duplicated = (
+        ["cliente", "list"],
+        ["fattura", "list"],
+        ["fattura", "show", "1"],
+        ["fattura", "create"],
+        ["fattura", "generate-pdf", "1"],
+        ["fattura", "set-status", "1", "bozza"],
+        ["pagamento", "record", "10"],
+        ["pagamento", "list"],
+    )
+    for args in duplicated:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 2, (args, result.output)
+        assert "inesistente" in result.output
+
+
+def _commands(group, path=()):
+    import click
+
+    for name, command in group.commands.items():
+        yield (*path, name), command
+        if isinstance(command, click.Group):
+            yield from _commands(command, (*path, name))
+
+
+def test_every_command_and_parameter_is_described(monkeypatch):
+    """`--help` explains every command, argument and option, without the database."""
+    import typer
+
+    from openfatture.cli.commands import fattura, pagamento
+
+    def no_database():
+        raise AssertionError("--help must not open the database")
+
+    monkeypatch.setattr(fattura, "ensure_database", no_database)
+    monkeypatch.setattr(pagamento, "ensure_database", no_database)
+
+    root = typer.main.get_command(app)
+    undocumented = []
+    for path, command in _commands(root):
+        if not (command.help or command.short_help):
+            undocumented.append(" ".join(path))
+        for param in command.params:
+            if param.name != "help" and not getattr(param, "help", None):
+                undocumented.append(f"{' '.join(path)} {param.name}")
+        result = runner.invoke(app, [*path, "--help"])
+        assert result.exit_code == 0, (path, result.output)
+    assert undocumented == []
+
+
+def test_empty_sdi_journal_says_so(runtime_db):
+    result = runner.invoke(app, ["fattura", "sdi-journal"])
+    assert result.exit_code == 0
+    assert "Nessun invio o ricevuta SDI registrati." in result.stdout

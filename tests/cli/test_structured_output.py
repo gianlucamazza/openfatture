@@ -10,9 +10,7 @@ from openfatture.cli.main import app
 runner = CliRunner()
 
 
-@pytest.mark.parametrize(
-    "command", [["status"], ["cliente", "list"], ["fattura", "list"], ["pagamento", "list"]]
-)
+@pytest.mark.parametrize("command", [["status"], ["fattura", "sdi-journal"]])
 def test_json_is_one_business_envelope(runtime_db, command):
     result = runner.invoke(app, ["--format", "json", *command])
     assert result.exit_code == 0, result.output
@@ -23,7 +21,7 @@ def test_json_is_one_business_envelope(runtime_db, command):
 
 
 def test_domain_error_is_json(runtime_db):
-    result = runner.invoke(app, ["--format", "json", "fattura", "show", "999999"])
+    result = runner.invoke(app, ["--format", "json", "fattura", "generate-xml", "999999"])
     assert result.exit_code == 1
     assert json.loads(result.stdout)["success"] is False
 
@@ -66,13 +64,13 @@ def test_secret_redaction_preserves_usage_counts():
     }
 
 
-def test_denied_reversal_returns_cancelled_json_without_traceback(runtime_db):
+def test_denied_confirmation_returns_cancelled_json_without_traceback(runtime_db):
     result = runner.invoke(
         app,
-        ["--format", "json", "pagamento", "reverse", "1", "1", "--reason", "cancelled operation"],
+        ["--format", "json", "fattura", "associate-receipt", "1", "1", "--evidence", "PEC"],
         input="n\n",
     )
     assert result.exit_code == 1
     assert json.loads(result.stdout)["error"]["code"] == "cancelled"
-    assert "Stornare" in result.stderr
+    assert "Associare la ricevuta" in result.stderr
     assert "Traceback" not in result.stderr

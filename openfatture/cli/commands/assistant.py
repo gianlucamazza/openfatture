@@ -21,6 +21,7 @@ from rich.text import Text
 
 from openfatture.cli.lifespan import get_event_bus, run_sync_with_lifespan
 from openfatture.events.ai_events import AICommandCompletedEvent, AICommandStartedEvent
+from openfatture.i18n import _
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import get_logger
 
@@ -86,13 +87,13 @@ def _handle_slash_command(user_input: str, *, runtime: AssistantRuntime) -> str 
 @app.command()
 def assistant(
     ctx: typer.Context,
-    message: str | None = typer.Argument(None, help="A request for the OpenFatture assistant."),
-    stream: bool = typer.Option(True, "--stream/--no-stream", help="Stream the response."),
-    json_output: bool = typer.Option(False, "--json", help="Emit the response as JSON."),
+    message: str | None = typer.Argument(None, help=_("cli-help-assistant-message")),
+    stream: bool = typer.Option(True, "--stream/--no-stream", help=_("cli-help-assistant-stream")),
+    json_output: bool = typer.Option(False, "--json", help=_("cli-help-assistant-json")),
     session: str | None = typer.Option(
         None,
         "--session",
-        help="Resume a file-backed chat session by ID (enables persistence).",
+        help=_("cli-help-assistant-session"),
     ),
 ) -> None:
     """Ask the assistant to explain, inspect, or perform an invoicing task."""

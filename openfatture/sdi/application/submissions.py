@@ -103,13 +103,29 @@ def journaled_submission(
     return wrapped
 
 
+class SubmissionResolutionError(ValueError):
+    """A refused resolution; ``code`` identifies the reason for localized callers."""
+
+    def __init__(self, message: str, code: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 def resolve_submission(session: Any, attempt_id: int, *, sent: bool, note: str) -> None:
     """Called only by a human-confirmed CLI command after checking transport evidence."""
     if not note.strip():
-        raise ValueError("Verification evidence is required")
-    attempt = session.query(SDISubmissionAttempt).filter_by(id=attempt_id).with_for_update().one()
+        raise SubmissionResolutionError("Verification evidence is required", "evidence_required")
+    attempt = (
+        session.query(SDISubmissionAttempt).filter_by(id=attempt_id).with_for_update().one_or_none()
+    )
+    if attempt is None:
+        raise SubmissionResolutionError(
+            f"Submission {attempt_id} not found", "submission_not_found"
+        )
     if attempt.outcome not in {"pending", "uncertain"}:
-        raise ValueError("Only unresolved submissions can be resolved")
+        raise SubmissionResolutionError(
+            "Only unresolved submissions can be resolved", "submission_already_resolved"
+        )
     previous = attempt.outcome
     invoice = session.get(Fattura, attempt.invoice_id)
     if sent:
@@ -118,7 +134,10 @@ def resolve_submission(session: Any, attempt_id: int, *, sent: bool, note: str) 
         outcome, active = "confirmed_sent", invoice.id
     else:
         if invoice.numero_sdi or invoice.stato not in {StatoFattura.BOZZA, StatoFattura.DA_INVIARE}:
-            raise ValueError("Recorded SDI evidence contradicts a not-sent resolution")
+            raise SubmissionResolutionError(
+                "Recorded SDI evidence contradicts a not-sent resolution",
+                "sdi_evidence_contradicts",
+            )
         change_status(session, invoice, invoice.stato)
         outcome, active = "confirmed_not_sent", None
     from typing import cast
@@ -133,5 +152,7 @@ def resolve_submission(session: Any, attempt_id: int, *, sent: bool, note: str) 
         )
     )
     if cast(CursorResult[Any], result).rowcount != 1:
-        raise ValueError("Submission was resolved concurrently; reload")
+        raise SubmissionResolutionError(
+            "Submission was resolved concurrently; reload", "submission_concurrent_update"
+        )
     session.commit()

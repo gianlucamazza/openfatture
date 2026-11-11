@@ -7,14 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
-
-@pytest.mark.parametrize(
-    "command, expected",
-    [("fattura", "Nessuna fattura trovata"), ("cliente", "Nessun cliente trovato")],
-)
-def test_list_initializes_database_in_fresh_process(tmp_path, command, expected):
+def test_command_initializes_database_in_fresh_process(tmp_path):
     root = Path(__file__).resolve().parents[2]
     env = dict(
         os.environ,
@@ -26,7 +20,7 @@ def test_list_initializes_database_in_fresh_process(tmp_path, command, expected)
         LOCALE="it",
     )
     result = subprocess.run(
-        [sys.executable, "-m", "openfatture.cli.main", command, "list"],
+        [sys.executable, "-m", "openfatture.cli.main", "fattura", "sdi-journal"],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -34,11 +28,11 @@ def test_list_initializes_database_in_fresh_process(tmp_path, command, expected)
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
-    assert expected in result.stdout
+    assert (tmp_path / "test.db").is_file()
     assert "Traceback" not in result.stderr
 
 
-def test_list_database_failure_is_concise(tmp_path):
+def test_database_failure_is_concise(tmp_path):
     root = Path(__file__).resolve().parents[2]
     env = dict(
         os.environ,
@@ -47,7 +41,7 @@ def test_list_database_failure_is_concise(tmp_path):
         LOCALE="it",
     )
     result = subprocess.run(
-        [sys.executable, "-m", "openfatture.cli.main", "fattura", "list"],
+        [sys.executable, "-m", "openfatture.cli.main", "fattura", "sdi-journal"],
         cwd=tmp_path,
         env=env,
         capture_output=True,

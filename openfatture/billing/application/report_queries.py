@@ -1,13 +1,19 @@
 """Tools for generating business reports."""
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
 from pydantic import validate_call
-from sqlalchemy import extract, func, or_
+from sqlalchemy import Integer, cast, extract, func, or_
+from sqlalchemy.orm import Session, selectinload
 
+from openfatture.billing.application.invoice_queries import (
+    collected_amount,
+    payment_summary,
+    status_evidence,
+)
 from openfatture.payment.application.services.payment_overview import (
     PaymentDueEntry,
     collect_payment_due_summary,
@@ -15,8 +21,8 @@ from openfatture.payment.application.services.payment_overview import (
 from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
 from openfatture.platform.security import validate_integer_input
-from openfatture.storage.database.models import Cliente, Fattura, StatoFattura
-from openfatture.storage.session import db_session
+from openfatture.storage.database.models import Cliente, Fattura, StatoFattura, TipoDocumento
+from openfatture.storage.session import db_session, session_scope
 
 logger = get_logger(__name__)
 
@@ -320,4 +326,149 @@ def get_due_dates(window_days: int = 14, max_results: int = 20) -> dict[str, Any
 
         except Exception as e:
             logger.error("get_due_dates_failed", error=str(e))
+            return {"error": describe_error(e)}
+
+
+# =============================================================================
+# Invoice situation (one year, every document)
+# =============================================================================
+
+_ZERO = Decimal("0.00")
+
+
+def _is_local_draft(invoice: Fattura) -> bool:
+    return invoice.stato == StatoFattura.BOZZA and not invoice.issued_elsewhere
+
+
+def _overdue(invoice: Fattura, today: date) -> Decimal:
+    return sum(
+        (
+            p.saldo_residuo
+            for p in invoice.pagamenti
+            if p.data_scadenza is not None and p.data_scadenza < today
+        ),
+        _ZERO,
+    )
+
+
+def _situation_row(invoice: Fattura, today: date) -> dict[str, Any]:
+    credit_note = invoice.tipo_documento == TipoDocumento.TD04
+    row: dict[str, Any] = {
+        "id": invoice.id,
+        "numero": f"{invoice.numero}/{invoice.anno}",
+        "data": invoice.data_emissione.isoformat(),
+        "cliente": invoice.cliente.denominazione if invoice.cliente else "N/D",
+        "tipo_documento": invoice.tipo_documento.value,
+        "nota_credito": credit_note,
+        "totale": float(invoice.totale),
+        "issued_elsewhere": bool(invoice.issued_elsewhere),
+        "status_origin": status_evidence(invoice)["status_origin"],
+    }
+    if credit_note:
+        return {
+            **row,
+            "payment_status": None,
+            "amount_paid": 0.0,
+            "outstanding": 0.0,
+            "overdue": 0.0,
+            "next_due_date": None,
+        }
+    due_dates = sorted(
+        p.data_scadenza for p in invoice.pagamenti if p.data_scadenza and p.saldo_residuo > 0
+    )
+    summary = payment_summary(invoice)
+    return {
+        **row,
+        "payment_status": summary["payment_status"],
+        "amount_paid": summary["amount_paid"],
+        "outstanding": summary["outstanding"],
+        "overdue": float(_overdue(invoice, today)),
+        "next_due_date": due_dates[0].isoformat() if due_dates else None,
+    }
+
+
+def invoice_situation(
+    anno: int | None = None,
+    *,
+    session: Session | None = None,
+) -> dict[str, Any]:
+    """Every document of a year with collections, overdue amounts and clients.
+
+    Local drafts (``bozza`` not issued elsewhere) are counted but excluded from
+    the totals; credit notes (TD04, stored with positive amounts) reduce the net
+    invoiced amount and carry no collection.
+    """
+    year = (
+        validate_integer_input(anno, min_value=2000, max_value=2100)
+        if anno is not None
+        else datetime.now().year
+    )
+    today = date.today()
+    with session_scope(session) as db:
+        try:
+            invoices = (
+                db.query(Fattura)
+                .options(
+                    selectinload(Fattura.cliente),
+                    selectinload(Fattura.pagamenti),
+                    selectinload(Fattura.sdi_receipts),
+                    selectinload(Fattura.sdi_submissions),
+                    selectinload(Fattura.collection_entries),
+                    selectinload(Fattura.collection_statements),
+                )
+                .filter(Fattura.anno == year)
+                .order_by(cast(Fattura.numero, Integer), Fattura.numero)
+                .all()
+            )
+            drafts = [f for f in invoices if _is_local_draft(f)]
+            documents = [f for f in invoices if not _is_local_draft(f)]
+            rows = [_situation_row(f, today) for f in documents]
+            invoices_only = [f for f in documents if f.tipo_documento != TipoDocumento.TD04]
+            credit_notes = sum(
+                (f.totale for f in documents if f.tipo_documento == TipoDocumento.TD04), _ZERO
+            )
+            invoiced = sum((f.totale for f in invoices_only), _ZERO)
+            collected = sum((collected_amount(f) for f in invoices_only), _ZERO)
+            outstanding = sum(
+                (max(f.totale - collected_amount(f), _ZERO) for f in invoices_only), _ZERO
+            )
+            overdue = sum((_overdue(f, today) for f in invoices_only), _ZERO)
+            scheduled = sum((p.saldo_residuo for f in invoices_only for p in f.pagamenti), _ZERO)
+
+            by_client: dict[str, Decimal] = defaultdict(lambda: _ZERO)
+            for f in invoices_only:
+                by_client[f.cliente.denominazione if f.cliente else "N/D"] += f.totale
+            clients = [
+                {
+                    "cliente": name,
+                    "totale": float(amount),
+                    "quota": round(float(amount / invoiced * 100), 1) if invoiced else 0.0,
+                }
+                for name, amount in sorted(by_client.items(), key=lambda kv: -kv[1])
+            ]
+
+            logger.info("invoice_situation_generated", year=year, documents=len(rows))
+            return {
+                "anno": year,
+                "generated_on": today.isoformat(),
+                "documents_count": len(rows),
+                "excluded_drafts": len(drafts),
+                "historical_count": sum(1 for f in documents if f.issued_elsewhere),
+                "sdi_unverified_count": sum(
+                    1 for r in rows if r["status_origin"] in {"unverified", "local"}
+                ),
+                "totals": {
+                    "invoiced": float(invoiced),
+                    "credit_notes": float(credit_notes),
+                    "net_invoiced": float(invoiced - credit_notes),
+                    "collected": float(collected),
+                    "outstanding": float(outstanding),
+                    "overdue": float(overdue),
+                    "unscheduled": float(max(outstanding - scheduled, _ZERO)),
+                },
+                "documents": rows,
+                "clients": clients,
+            }
+        except Exception as e:
+            logger.error("invoice_situation_failed", year=year, error=str(e))
             return {"error": describe_error(e)}

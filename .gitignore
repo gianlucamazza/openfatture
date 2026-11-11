@@ -117,10 +117,11 @@ landing-page/node_modules/
 landing-page/dist/
 
 # Claude Code machine-local state
-# Shared project config under .claude/ stays tracked; these two are per-machine
-# (the lock file records a PID and session id).
+# Shared project config under .claude/ stays tracked; these are per-machine
+# (the lock file records a PID and session id; worktrees are agent checkouts).
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+.claude/worktrees/
 
 # Local scratch output and database backups
 /tmp/

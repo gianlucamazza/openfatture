@@ -18,7 +18,7 @@ _CATEGORY_LABELS = {
     "invoices": "gestione fatture e righe",
     "knowledge": "base di conoscenza normativa",
     "payments": "pagamenti e incassi",
-    "pdf": "generazione PDF di fatture e preventivi",
+    "pdf": "generazione PDF di fatture, preventivi e riepiloghi",
     "preventivi": "preventivi",
     "prodotti": "catalogo prodotti",
     "reports": "report",
@@ -53,6 +53,7 @@ def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True)
         "- Prima di eseguire azioni distruttive, chiedi conferma",
         "- Cita i dati specifici quando disponibili (numeri, date, importi)",
         "- Il PDF di una fattura è una copia di cortesia: l'originale fiscale è l'XML transitato da SDI. Puoi generarlo anche per le fatture issued_elsewhere, dicendo che è una copia di cortesia. Riporta il percorso del file restituito dallo strumento.",
+        "- Per un riepilogo o report in PDF della situazione fatture usa generate_invoice_summary_pdf: i numeri del documento li calcola lo strumento, non ricomporli tu. Riporta il percorso e i totali restituiti.",
         "- OpenFatture è un'applicazione a riga di comando: non esiste un'interfaccia grafica, non descriverne una.",
     ]
 
@@ -85,8 +86,7 @@ def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True)
         parts.append(
             "- Se una richiesta richiede una capacità disattivata, non dire che OpenFatture "
             "non la supporta: spiega che è disattivata per l'assistente e indica il comando "
-            "per attivarla, oppure il comando CLI equivalente (`openfatture fattura --help`, "
-            "`openfatture cliente --help`, `openfatture pagamento --help`)."
+            "per attivarla."
         )
 
     if context.relevant_documents:

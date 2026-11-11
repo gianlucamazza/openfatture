@@ -51,42 +51,41 @@ actual fiscal details and tax regime; AI configuration can be skipped.
 `status --json` reports local readiness and next steps, without contacting providers
 or verifying SDI delivery.
 
-### Create a draft and preview it without AI
+### Create a draft and preview it
 
-Run this example in a fresh demo database. On an existing database, replace `1`
-with the client and invoice IDs printed by the create commands. The sample client
-uses a demo VAT number and is for a draft preview only.
+Invoices, clients, PDFs and collections are handled by the assistant (`ai`
+extra and a configured provider). Changes to your data ask for confirmation
+first. With the default `ai_tool_access = "standard"` the assistant reads data
+and writes PDFs; set `ai_tool_access = "full"` to let it create records.
 
 ```bash
-uv run openfatture cliente create --name "Demo Client" --piva 12345678903
-uv run openfatture fattura create --client 1 --note "Demo draft"
-uv run openfatture fattura add-line --invoice 1 \
-  --desc "Software consulting" --qty 3 --price 90 --iva 22
-uv run openfatture fattura show 1
-uv run openfatture fattura generate-pdf 1 --output demo-invoice.pdf
+uv run openfatture config set ai_tool_access full
+uv run openfatture assistant "Crea il cliente Demo Client, P.IVA 12345678903"
+uv run openfatture assistant "Crea una bozza per Demo Client: 3 ore di consulenza a 90 euro, IVA 22%"
+uv run openfatture assistant "Genera il PDF della bozza appena creata"
 ```
 
-This creates a draft for €270 plus €59.40 VAT and a human-readable PDF; it does
-not transmit an invoice. The VAT rate is illustrative. Complete and verify both
-issuer and customer fiscal details before preparing a real invoice.
+The PDF is a courtesy copy in `data_dir/exports/fatture/`; nothing is
+transmitted. The VAT rate is illustrative. Complete and verify both issuer and
+customer fiscal details before preparing a real invoice.
 
-Explore the current command surface with `uv run openfatture --help` and
-`uv run openfatture fattura --help`.
+Explore the current command surface with `uv run openfatture --help`.
 
 ## What You Can Do
 
 | Domain | Examples | Entry point |
 | --- | --- | --- |
-| Clients and invoices | Create clients, add invoice lines, inspect totals and draft status | `cliente`, `fattura` commands; application services |
-| Documents | Generate FatturaPA XML, render PDF templates, create linked TD04 credit notes | `fattura generate-xml`, `generate-pdf`, `create-credit-note` |
+| Clients and invoices | Create clients, add invoice lines, inspect totals and draft status | Assistant tools |
+| Documents | Render PDF courtesy copies and yearly summaries, create linked TD04 credit notes | Assistant tools |
+| FatturaPA XML | Write the XML file of an invoice | `fattura generate-xml` |
 | Delivery | Send XML through a configured PEC account and process SDI notification files | SDI services; opt-in assistant tools |
 | Payments | Import bank statements and reconcile transactions with payments | Payment services; assistant tools |
 | Business workflows | Quotes, product records, CSV import/export, batch updates, and reports | Application services; assistant tools |
 | Automation | React to domain events with scripts and inspect persisted event records | Events and hooks; [hook examples](examples/hooks/) |
 
-Core capabilities live in application/domain packages. The CLI exposes a subset;
-other workflows use services or optional assistant tools, rather than a command
-for every operation.
+Core capabilities live in application/domain packages and are exposed as
+assistant tools. The CLI does not duplicate them: besides setup and diagnostics
+it keeps only the XML file, the SDI journal resolutions and the ledger migration.
 
 **XML generation and validation are separate concerns.** The current
 `fattura generate-xml` command calls generation with validation disabled.

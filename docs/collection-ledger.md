@@ -23,27 +23,29 @@ not delete ledger tables to erase history.
 
 ## Receiving and allocating money
 
+Collections are recorded, allocated, reversed and declared through the assistant
+(tools `record_collection`, `allocate_collection`, `allocate_collection_batch`,
+`reverse_collection`, `declare_collection_status`, `get_collections`); each
+change asks for confirmation.
+
 Amounts use decimal strings with at most two fractional digits, not binary floats.
 The receipt represents incoming money. Allocations associate it with one or more
 invoices and optionally a specific installment. A receipt without an allocation
 is available money, not a paid invoice.
 
 ```sh
-openfatture pagamento record 2000 --invoice 1 --request-id receipt-example-1
-openfatture pagamento record 500 --request-id receipt-example-2
-openfatture pagamento allocate 2 3 200 --request-id allocation-example-1
-openfatture pagamento allocate-batch 2 --allocations '[{"invoice_id":3,"amount":"100"},{"invoice_id":4,"amount":"200"}]' --request-id split-example-1
-openfatture pagamento list
-openfatture pagamento show 1
+openfatture assistant "Registra un incasso di 2000 euro sulla fattura 1"
+openfatture assistant "Ripartisci l'incasso 2: 100 euro sulla fattura 3 e 200 sulla 4"
+openfatture assistant "Mostra il registro incassi della fattura 1"
 ```
 
-Use the same request ID and identical arguments after a timeout or uncertain client
-response. A replay returns the stored result; conflicting reuse is rejected. A new
+Every mutating tool call carries a request ID. Repeating it with identical arguments
+after a timeout or uncertain response returns the stored result; conflicting reuse is rejected. A new
 ID means a new operation. Public operation IDs are limited to 64 characters.
 Splits commit completely or roll back completely. Concurrent allocations cannot
 spend more than receipt, invoice or installment balances allow.
 
-`bank-receipt UUID` registers an already-imported positive EUR movement. Bank
+`record_bank_collection` registers an already-imported positive EUR movement. Bank
 movements have one receipt identity; debits and other currencies are rejected.
 A partially allocated bank receipt remains `partially_matched` and reports its
 available balance. Resetting reconciliation appends reversals; original allocations
@@ -52,12 +54,12 @@ and legacy allocation evidence remain available.
 ## Corrections and declarations
 
 ```sh
-openfatture pagamento reverse 1 100 --reason 'Wrong invoice' --request-id correction-example-1
-openfatture pagamento declare-status 3 not_settled --source owner --date 2026-11-09 --request-id declaration-example-1
+openfatture assistant "Storna 100 euro dell'allocazione 1: fattura sbagliata"
+openfatture assistant "Dichiara che la fattura 3 non è stata saldata"
 ```
 
 A reversal corrects an allocation and releases its money for allocation again. It
-is **not a bank refund**. It requires human confirmation in the CLI. Receipts and
+is **not a bank refund**. It requires human confirmation. Receipts and
 allocation history cannot be deleted through legacy payment deletion. Legacy
 cumulative balance reductions can reverse manual/opening allocations; bank-backed
 collections require an explicit reconciliation correction.

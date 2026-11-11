@@ -5,14 +5,12 @@ import json
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager, redirect_stdout
 from contextvars import ContextVar
-from decimal import Decimal
 from html import escape
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import typer
-from babel.numbers import format_currency
 from rich.console import Console
 from rich.table import Table
 from typer.core import TyperGroup
@@ -25,7 +23,7 @@ else:
     except ModuleNotFoundError:
         click = import_module("click")
 
-from openfatture.i18n import _, get_locale
+from openfatture.i18n import _
 from openfatture.platform.logging import redact_sensitive
 
 FORMAT_NAMES = {"rich", "json", "markdown", "html", "stream-json"}
@@ -36,9 +34,26 @@ def remember_result(value: Any) -> None:
     _result.set(value)
 
 
-def format_eur(amount: Decimal | float) -> str:
-    """Format a euro amount for human-readable output in the active locale."""
-    return format_currency(amount, "EUR", locale=get_locale())
+# Refusals that application services identify with an ``error_code``. Their
+# ``error`` text stays English for the assistant; the CLI shows it localized.
+_ERROR_MESSAGES = {
+    "invoice_not_found": "cli-error-invoice-not-found",
+    "invoice_issued_elsewhere": "cli-error-invoice-issued-elsewhere",
+    "xml_invalid": "cli-error-xml-invalid",
+    "xml_failed": "cli-error-xml-failed",
+    "receipt_not_associable": "cli-error-receipt-not-associable",
+    "evidence_required": "cli-error-evidence-required",
+    "submission_not_found": "cli-error-submission-not-found",
+    "submission_already_resolved": "cli-error-submission-already-resolved",
+    "sdi_evidence_contradicts": "cli-error-sdi-evidence-contradicts",
+    "submission_concurrent_update": "cli-error-submission-concurrent-update",
+}
+
+
+def error_message(result: dict[str, Any]) -> str:
+    """The refusal in ``result`` in the user's language, else the service text."""
+    key = _ERROR_MESSAGES.get(str(result.get("error_code")))
+    return _(key, detail=str(result["error"])) if key else str(result["error"])
 
 
 def clean(value: Any) -> Any:
@@ -180,6 +195,21 @@ def _final_error(
 
 
 class OutputGroup(TyperGroup):
+    # Typer adds the completion options with fixed English help text.
+    # They are appended after the group is built, so localize them on use.
+    _COMPLETION_HELP = {
+        "install_completion": "cli-help-install-completion",
+        "show_completion": "cli-help-show-completion",
+    }
+
+    def get_params(self, ctx: click.Context) -> list[click.Parameter]:
+        params = super().get_params(ctx)
+        for param in params:
+            key = self._COMPLETION_HELP.get(param.name or "")
+            if key and hasattr(param, "help"):
+                param.help = _(key)
+        return params
+
     def invoke(self, ctx: click.Context) -> Any:
         kind = ctx.params.get("format_type", "rich")
         if kind not in FORMAT_NAMES:

@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from openfatture.platform.errors import describe_error
-from openfatture.sdi.application.submissions import resolve_submission
+from openfatture.sdi.application.submissions import (
+    SubmissionResolutionError,
+    resolve_submission,
+)
 from openfatture.sdi.notifiche.parser import NotificaSDI
 from openfatture.sdi.notifiche.processor import NotificationProcessor
 from openfatture.storage.database.models import SDINotificationRecord, SDISubmissionAttempt
@@ -44,7 +46,7 @@ def associate_receipt(receipt_id: int, invoice_id: int, evidence: str) -> dict[s
     with db_session() as session:
         receipt = session.get(SDINotificationRecord, receipt_id)
         if receipt is None or receipt.outcome not in ASSOCIABLE_OUTCOMES:
-            return {"error": "Receipt cannot be associated"}
+            return {"error": "Receipt cannot be associated", "error_code": "receipt_not_associable"}
         success, error, _notification = NotificationProcessor(session).process_notification(
             NotificaSDI.model_validate(json.loads(receipt.payload)),
             associated_invoice_id=invoice_id,
@@ -60,7 +62,7 @@ def resolve_submission_attempt(attempt_id: int, *, sent: bool, evidence: str) ->
     with db_session() as session:
         try:
             resolve_submission(session, attempt_id, sent=sent, note=evidence)
-        except ValueError as exc:
+        except SubmissionResolutionError as exc:
             session.rollback()
-            return {"error": describe_error(exc)}
+            return {"error": str(exc), "error_code": exc.code}
     return {"success": True, "attempt_id": attempt_id, "sent": sent}

@@ -54,7 +54,12 @@ def test_mutating_and_transmit_tools_require_confirmation() -> None:
 
 def test_default_access_exposes_pdf_but_no_mutation_or_send() -> None:
     names = _names(_registry(), Settings())
-    assert {"generate_invoice_pdf", "generate_preventivo_pdf", "search_invoices"} <= names
+    assert {
+        "generate_invoice_pdf",
+        "generate_preventivo_pdf",
+        "generate_invoice_summary_pdf",
+        "search_invoices",
+    } <= names
     assert "get_collections" in names
     assert "create_invoice" not in names
     assert "send_invoice_to_sdi" not in names
@@ -62,7 +67,9 @@ def test_default_access_exposes_pdf_but_no_mutation_or_send() -> None:
 
 def test_read_access_hides_pdf_and_full_shows_mutations() -> None:
     registry = _registry()
-    assert "generate_invoice_pdf" not in _names(registry, Settings(ai_tool_access="read"))
+    read = _names(registry, Settings(ai_tool_access="read"))
+    assert "generate_invoice_pdf" not in read
+    assert "generate_invoice_summary_pdf" not in read
     full = _names(registry, Settings(ai_tool_access="full"))
     assert "create_invoice" in full
     assert "send_invoice_to_sdi" not in full

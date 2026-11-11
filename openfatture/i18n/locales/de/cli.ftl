@@ -66,18 +66,6 @@ cli-config-migrate-imported = [green]In config.toml importiert: { $keys }[/green
 cli-config-migrate-conflicts = [yellow]Bereits gesetzt, nicht überschrieben: { $keys }[/yellow]
 cli-config-migrate-nothing = Nichts zu migrieren.
 cli-config-migrate-source-kept = [dim]{ $path } wurde nicht geändert: nach Prüfung löschen.[/dim]
-cli-invoice-collected = Collected
-cli-invoice-residual = Outstanding
-cli-invoice-collection = Collection
-cli-invoice-document = Document
-cli-invoice-historical = Historical
-cli-invoice-unpaid = Unpaid
-cli-invoice-no-payment-record = Keine Zahlung erfasst
-cli-invoice-partially-paid = Teilweise bezahlt
-cli-invoice-fully-paid = Bezahlt
-cli-invoice-historical-note = Issued elsewhere; sending blocked. SDI status unverified.
-cli-invoice-total = Total
-
 ## Assistant and status
 assistant-describe-what-you-need = Beschreibe, was du brauchst. /help für Befehle · /exit zum Beenden
 assistant-thinking = Denke nach…
@@ -118,48 +106,15 @@ assistant-no-pending = Kein offener Durchlauf.
 
 ## Shared command output
 cli-common-error = [red]Fehler:[/red] { $error }
-cli-common-more-results = [dim]... und weitere. Verwende --limit, um mehr Ergebnisse zu sehen.[/dim]
-cli-common-not-available = k. A.
-cli-common-number = Nummer
-cli-common-date = Datum
-cli-common-status = Status
-cli-common-client = Kunde
-cli-common-amount = Betrag
-cli-common-name = Name
-cli-common-notes = Notizen
-cli-common-vat-number = USt-IdNr.
-cli-common-tax-code = Steuernummer
-
 ## FATTURA Commands
-cli-fattura-none-found = [yellow]Keine Rechnungen gefunden.[/yellow]
-cli-fattura-list-title = Rechnungen ({ $count })
-cli-fattura-pec-to-verify = PEC: zu prüfen
-cli-fattura-statement = Erklärung: { $value } · Quelle: { $source }
-cli-fattura-show-title = [bold cyan]Rechnung Nr. { $id }[/bold cyan]
-cli-fattura-submission-unverified = Versandergebnis noch zu prüfen; die Übermittlung nicht automatisch wiederholen.
-cli-fattura-amounts = Beträge
-cli-fattura-taxable = Nettobetrag
-cli-fattura-vat = MwSt.
-cli-fattura-line-items = [bold]Positionen:[/bold] { $count } insgesamt
-cli-fattura-column-description = Beschreibung
-cli-fattura-column-quantity = Menge
-cli-fattura-column-unit-price = Einzelpreis
-cli-fattura-column-vat-rate = MwSt. %
-cli-fattura-created-id = Rechnungs-ID: [cyan]{ $id }[/cyan]
-cli-fattura-line = Position Nr. { $numero }: { $descrizione }
-cli-fattura-invoice-total = Rechnungssumme
-cli-fattura-pdf-generated = [green]✓[/green] PDF erfolgreich erstellt
 cli-fattura-xml-generated = [green]✓[/green] XML erfolgreich erstellt
 cli-fattura-xml-generated-dry-run = [green]✓[/green] XML erfolgreich erstellt (Probelauf, keine Datei geschrieben)
 cli-fattura-xml-content = [bold]XML-Inhalt:[/bold]
 cli-fattura-output = Ausgabe: [cyan]{ $path }[/cyan]
 cli-fattura-size = Größe: { $size } Byte
-cli-fattura-status-change = Status: { $old } → { $new }
-cli-fattura-credit-note-id = Gutschrift-ID: [cyan]{ $id }[/cyan]
-cli-fattura-document-type = Dokumenttyp
-cli-fattura-source-invoice = [dim]Ursprungsrechnung:[/dim]
 cli-fattura-journal-submission = Versand Nr. { $id } · Rechnung { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Empfangsbestätigung Nr. { $id } · Rechnung { $invoice } · { $outcome } · Quelle { $source }
+cli-fattura-journal-empty = Keine SDI-Übermittlungen oder Empfangsbestätigungen erfasst.
 cli-fattura-associate-confirm = Empfangsbestätigung { $receipt } der Rechnung { $invoice } zuordnen?
 cli-fattura-receipt-associated = Empfangsbestätigung zugeordnet
 cli-fattura-resolve-confirm = Bestätigen, dass Versand { $attempt } { $sent ->
@@ -169,20 +124,7 @@ cli-fattura-resolve-confirm = Bestätigen, dass Versand { $attempt } { $sent ->
 cli-fattura-submission-resolved = Prüfung erfasst
 
 ## CLIENTE Commands
-cli-cliente-none-found = [yellow]Keine Kunden gefunden.[/yellow]
-cli-cliente-list-title = Kunden ({ $count })
-cli-cliente-column-invoices = Rechnungen
-cli-cliente-show-title = [bold cyan]Kunde Nr. { $id }[/bold cyan]
-cli-cliente-address = Adresse
-cli-cliente-contacts = Kontakte
-cli-cliente-phone = Tel.
-cli-cliente-invoices-total = [bold]Rechnungen:[/bold] { $count } insgesamt
-cli-cliente-recent-invoices = Letzte Rechnungen
-cli-cliente-created-id = Kunden-ID: [cyan]{ $id }[/cyan]
-
 ## PAGAMENTO Commands
-cli-pagamento-reverse-confirm = { $amount } aus Buchung { $entry } stornieren?
-
 ## INIT Command
 cli-init-title = [bold blue]OpenFatture-Einrichtung[/bold blue]
 cli-init-structured-needs-no-interactive = Verwende --no-interactive mit einem strukturierten Ausgabeformat
@@ -289,3 +231,67 @@ cli-formatter-model = Modell: { $model }
 cli-formatter-tokens = Tokens: { $tokens }
 cli-formatter-cost = Kosten: { $cost }
 cli-formatter-latency = Latenz: { $latency } ms
+
+## Localized refusals of application services (error_code)
+cli-error-invoice-not-found = Rechnung nicht gefunden.
+cli-error-invoice-issued-elsewhere = Die Rechnung wurde anderswo ausgestellt und dient nur als Referenz: Es wird kein XML erzeugt, um eine doppelte SDI-Übermittlung zu vermeiden.
+cli-error-xml-invalid = Das XML ist ungültig: { $detail }
+cli-error-xml-failed = XML kann nicht erzeugt werden: { $detail }
+cli-error-receipt-not-associable = Die Empfangsbestätigung existiert nicht oder ist bereits zugeordnet.
+cli-error-evidence-required = Ein geprüfter Nachweis ist erforderlich (--evidence).
+cli-error-submission-not-found = Übermittlungsversuch nicht gefunden.
+cli-error-submission-already-resolved = Der Übermittlungsversuch ist bereits geklärt.
+cli-error-sdi-evidence-contradicts = Erfasste SDI-Nachweise widersprechen dem Ergebnis „nicht gesendet“.
+cli-error-submission-concurrent-update = Der Versuch wurde inzwischen geklärt: neu laden und erneut versuchen.
+
+## Command-line help
+cli-help-app = Elektronische Rechnungsstellung mit Assistent. Starte openfatture für ein Gespräch.
+cli-help-epilog = Beispiele: openfatture · openfatture assistant "Zeige unbezahlte Rechnungen"
+cli-help-version = Version anzeigen und beenden.
+cli-help-debug = Diagnoseprotokolle und Tracebacks anzeigen.
+cli-help-format = Ausgabeformat: rich, json, markdown, stream-json, html
+cli-help-panel-assistant = Assistent
+cli-help-panel-setup = Einrichtung und Diagnose
+cli-help-panel-tools = Werkzeuge
+cli-help-assistant = Anfrage senden oder Sitzung fortsetzen
+cli-help-init = OpenFatture initialisieren
+cli-help-config = Konfiguration verwalten
+cli-help-status = Konfiguration und Bereitschaft prüfen
+cli-help-fattura = FatturaPA-XML und SDI-Journal
+cli-help-pagamento = Wartung des Zahlungseingangsjournals
+cli-help-assistant-message = Anfrage an den Assistenten.
+cli-help-assistant-stream = Antwort während der Erzeugung anzeigen.
+cli-help-assistant-json = Antwort als JSON ausgeben.
+cli-help-assistant-session = Gespeicherte Sitzung über ihre ID fortsetzen (aktiviert die Speicherung).
+cli-help-init-interactive = Interaktiver Einrichtungsassistent
+cli-help-status-json = Status als JSON ausgeben.
+cli-help-config-show =
+    Wirksame Konfiguration anzeigen.
+
+    Für jeden Wert wird die Quelle angezeigt: Umgebung, Schlüsselbund oder Anmeldedatei, config.toml, Standard.
+cli-help-config-reload = Konfiguration aus Umgebung, Geheimnisspeicher und config.toml neu laden.
+cli-help-config-set =
+    Einen Konfigurationswert setzen.
+
+    Nur KEY wird geschrieben. Geheimnisse (API-Schlüssel, Passwörter) kommen in den Schlüsselbund des Systems oder, ohne Schlüsselbund, in die private Anmeldedatei; andere Werte in config.toml. Verschachtelte Schlüssel verwenden Punkte, z. B. debug_config.enable_debug_logging.
+cli-help-config-unset = KEY aus config.toml oder dem Geheimnisspeicher entfernen und den Standard wiederherstellen.
+cli-help-config-migrate =
+    Klartext-Geheimnisse aus config.toml verschieben und optional eine .env-Datei importieren.
+
+    Geheimnisse kommen in den Schlüsselbund (oder die private Anmeldedatei); andere Werte aus --env-file werden nur dann in config.toml übernommen, wenn sie noch nicht gesetzt sind. Die Quelldatei wird nie verändert.
+cli-help-config-env-file = Einstellungen aus einer dotenv-Datei importieren (vorhandene Werte bleiben).
+cli-help-xml = FatturaPA-XML einer Rechnung erzeugen (ohne XSD-Validierung, ohne Übermittlung).
+cli-help-invoice-id = Rechnungs-ID
+cli-help-xml-output = Pfad der XML-Datei
+cli-help-xml-dry-run = XML anzeigen, ohne die Datei zu schreiben
+cli-help-sdi-journal = Erfasste PEC-Übermittlungen und SDI-Empfangsbestätigungen anzeigen, ohne etwas zu senden.
+cli-help-associate-receipt = Eine ungeklärte Empfangsbestätigung nach manueller Prüfung einer Rechnung zuordnen.
+cli-help-receipt-id = ID der SDI-Empfangsbestätigung
+cli-help-receipt-evidence = Geprüfter Nachweis (z. B. eine Referenz)
+cli-help-resolve-submission = Eine unsichere PEC-Übermittlung klären, nachdem das Transportergebnis geprüft wurde.
+cli-help-attempt-id = ID des Übermittlungsversuchs
+cli-help-resolve-sent = Geprüftes Ergebnis: gesendet oder nicht gesendet
+cli-help-resolve-evidence = Geprüfter Nachweis (z. B. die Referenz des Anbieters)
+cli-help-collections-migrate = Historische Zahlungseingangsdaten aktualisieren, ohne Beträge zu ändern.
+cli-help-install-completion = Vervollständigung für die aktuelle Shell installieren.
+cli-help-show-completion = Vervollständigung für die aktuelle Shell anzeigen, zum Kopieren oder Anpassen.

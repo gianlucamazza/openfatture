@@ -5,6 +5,7 @@ from openfatture.ai.tools.output_paths import confined_output
 from openfatture.pdf.generator import DEFAULT_TEMPLATE, TEMPLATES
 from openfatture.pdf.tool_ops import (
     generate_invoice_pdf,
+    generate_invoice_summary_pdf,
     generate_preventivo_pdf,
     get_pdf_configuration,
 )
@@ -100,6 +101,37 @@ def get_pdf_tools() -> list[Tool]:
                 'generate_preventivo_pdf(preventivo_id=20, watermark_text="CONFIDENTIAL")',
             ],
             tags=["pdf", "preventivo", "quote", "generate", "document"],
+        ),
+        Tool(
+            name="generate_invoice_summary_pdf",
+            risk=ToolRisk.LOCAL_ARTIFACT,
+            description=(
+                "Generate a PDF summary of the invoice situation for a year (invoiced, "
+                "collected, outstanding and overdue amounts, per-document status, clients) "
+                "in the exports directory; the figures are computed from the database. "
+                "Returns the file path and the totals"
+            ),
+            category="pdf",
+            parameters=[
+                ToolParameter(
+                    name="anno",
+                    type=ToolParameterType.INTEGER,
+                    description="Year (current year if omitted)",
+                    required=False,
+                ),
+                ToolParameter(
+                    name="output_path",
+                    type=ToolParameterType.STRING,
+                    description="PDF file path relative to the exports directory (auto-generated if omitted)",
+                    required=False,
+                ),
+            ],
+            func=confined_output(generate_invoice_summary_pdf),
+            examples=[
+                "generate_invoice_summary_pdf()",
+                "generate_invoice_summary_pdf(anno=2025)",
+            ],
+            tags=["pdf", "report", "summary", "riepilogo", "situazione"],
         ),
         Tool(
             name="get_pdf_configuration",

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-11-11
+
+The assistant is the only path for business operations: tool access by risk class,
+PDFs and a yearly summary out of the box, and no CLI duplicates of assistant tools.
+
+### Added
+
+- The assistant tool `generate_invoice_summary_pdf` renders a PDF summary of a year's
+  invoices (invoiced, collected, outstanding and overdue totals, per-document status, clients)
+  into `data_dir/exports/riepiloghi/`. The figures come from one application query, not from the
+  model. Before, the assistant answered that no summary PDF could be produced.
+
+### Removed
+
+- **Breaking:** CLI commands that duplicated assistant tools are removed: the whole
+  `cliente` group, `fattura list|show|create|add-line|generate-pdf|set-status|create-credit-note`
+  and `pagamento list|show|record|allocate|allocate-batch|reverse|declare-status|bank-receipt`.
+  Ask the assistant instead; changes to data need `ai_tool_access = "full"` and are confirmed
+  by a person. The CLI keeps only operations without a tool: `fattura generate-xml`,
+  `sdi-journal`, `associate-receipt`, `resolve-submission` and `pagamento migrate`.
+
 ### Changed
 
 - **Assistant tool access is decided by risk class.** Every tool declares a `ToolRisk`
@@ -25,12 +46,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- PDFs generated without `--output` are written to `data_dir/exports/fatture/` (or
+- The CLI speaks the configured locale throughout. Command help comes from Fluent
+  (`cli-help-*`) in five languages instead of hard-coded text, and describes every command
+  and parameter. Click and Typer's own text (panel titles, `--help`, usage errors, prompts)
+  comes from bundled gettext catalogs (`openfatture/i18n/gettext`). Refusals of
+  `generate-xml`, `associate-receipt` and `resolve-submission` carry an `error_code` and are
+  shown localized; the English text stays for the assistant and the JSON envelope.
+- `fattura <command> --help` no longer opens the database: it failed without an
+  accessible database.
+- Resolving an unknown submission attempt reports "not found" instead of a SQLAlchemy error.
+- `fattura sdi-journal` says when the journal is empty; refusing XML for an invoice issued
+  elsewhere no longer prints a warning log line.
+- PDFs generated without an output path are written to `data_dir/exports/fatture/` (or
   `preventivi/`) instead of the current working directory, also when the assistant omits the
   path.
 - The invoice PDF footer states it is a courtesy copy without fiscal value (the original is
   the FatturaPA XML sent through SDI), replacing the misleading digital-preservation note.
 - CLI and assistant share one default PDF template (`professional`).
+- `docs/PDF_GENERATION.md` documented a non-existent `openfatture pdf` command group; it now
+  shows how to ask the assistant for PDFs.
 
 ## [2.9.0] - 2026-11-10
 

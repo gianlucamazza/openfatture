@@ -28,10 +28,9 @@ This is the current documentation index for the CLI-first, agentic product.
 - [Architecture diagrams](history/ARCHITECTURE_DIAGRAMS.md)
 - [Internationalization](history/I18N_CLI_IMPLEMENTATION.md)
 
-The assistant is the public entry point for business workflows. Only the
-`cliente`, `fattura` and `pagamento` data commands are exposed as
-deterministic CLI groups, as thin adapters over the same application services
-(see [CLI reference](CLI_REFERENCE.md)).
+The assistant is the public entry point for business workflows, and the CLI
+does not duplicate them. The `fattura` and `pagamento` groups keep only the
+operations without an assistant tool (see [CLI reference](CLI_REFERENCE.md)).
 
 ## Operations
 
