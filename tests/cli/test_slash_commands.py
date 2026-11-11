@@ -39,3 +39,39 @@ def test_slash_clear_persisted_session() -> None:
 def test_unknown_slash_is_handled() -> None:
     runtime = MagicMock(spec=AssistantRuntime, session_id=None)
     assert _handle_slash_command("/nope", runtime=runtime) == "handled"
+
+
+def _open(monkeypatch, command: str, documents: list, *, desktop: bool = True) -> tuple[str, list]:
+    from io import StringIO
+
+    from rich.console import Console
+
+    from openfatture.cli.commands import assistant
+    from openfatture.platform import opener
+
+    output = StringIO()
+    opened: list = []
+    monkeypatch.setattr(assistant, "console", Console(file=output, width=200))
+    monkeypatch.setattr(opener, "can_open", lambda: desktop)
+    monkeypatch.setattr(opener, "open_in_default_app", opened.append)
+    runtime = MagicMock(spec=AssistantRuntime, session_id=None)
+    assert _handle_slash_command(command, runtime=runtime, documents=documents) == "handled"
+    return output.getvalue(), opened
+
+
+def test_open_starts_the_latest_document(monkeypatch, tmp_path) -> None:
+    first, second = tmp_path / "a.pdf", tmp_path / "b.pdf"
+    text, opened = _open(monkeypatch, "/open", [first, second])
+    assert opened == [second]
+    assert "Aperto: b.pdf" in text
+    _text, opened = _open(monkeypatch, "/open 2", [first, second])
+    assert opened == [first]
+
+
+def test_open_explains_what_is_missing(monkeypatch, tmp_path) -> None:
+    document = tmp_path / "a.pdf"
+    assert "Nessun documento" in _open(monkeypatch, "/open", [])[0]
+    text, opened = _open(monkeypatch, "/open 3", [document])
+    assert opened == [] and "da 1 a 1" in text
+    text, opened = _open(monkeypatch, "/open", [document], desktop=False)
+    assert opened == [] and str(document) in text

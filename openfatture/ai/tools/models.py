@@ -24,8 +24,8 @@ class ToolRisk(StrEnum):
     """What a tool can affect. The agent access policy decides by this class.
 
     - ``read``: only reads local data.
-    - ``local_artifact``: writes a new file inside the exports directory and
-      touches no record (PDF, CSV export).
+    - ``local_artifact``: writes or opens a document inside the exports or
+      archive directory and touches no record (PDF, XML, CSV export).
     - ``mutate``: creates, changes or deletes records.
     - ``transmit``: sends data outside the machine (SDI/PEC).
     """

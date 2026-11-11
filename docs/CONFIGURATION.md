@@ -186,8 +186,9 @@ for diagnostic logs.
 
 The chat (`openfatture`) and single requests (`openfatture -m`) share a terminal presentation layer.
 Live previews are temporary; the complete Markdown response is printed once
-into scrollback. Slash commands support help, session ID, clearing messages
-and exit. Input history stays in memory. `NO_COLOR` is respected.
+into scrollback. Paths of generated documents are printed as terminal links.
+Slash commands support help, opening the latest document (`/open`), session
+ID, clearing messages and exit. Input history stays in memory. `NO_COLOR` is respected.
 
 Confirmations pause the live display. Denied operations are recorded as denied,
 not executed. Ctrl+C cancels an active asynchronous turn and waits for cleanup;

@@ -73,9 +73,16 @@ assistant-request-error = Anfrage fehlgeschlagen. Mit --debug erhältst du Detai
 assistant-confirm-operation = Diesen Vorgang bestätigen? [y/N]
 assistant-help = Slash-Befehle
     /help     Diese Hilfe anzeigen
+    /open     Letztes erzeugtes Dokument öffnen (/open 2 das davor)
     /exit     Beenden (auch: exit, quit, q)
     /session  Sitzungs-ID anzeigen
     /clear    Sitzungsnachrichten löschen
+assistant-document-open-hint = /open zum Öffnen
+assistant-open-none = In diesem Chat wurde kein Dokument erzeugt.
+assistant-open-invalid = Gib eine Zahl von 1 bis { $count } an: /open 1 ist das neueste Dokument.
+assistant-open-unavailable = Keine grafische Sitzung zum Öffnen: { $path }
+assistant-open-failed = Die Standardanwendung für { $path } kann nicht gestartet werden
+assistant-opened = Geöffnet: { $name }
 assistant-input = Du ›
 assistant-operation = Vorgang: { $name }
 assistant-tool-running = Läuft · { $name }

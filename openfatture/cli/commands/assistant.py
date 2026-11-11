@@ -6,7 +6,9 @@ import asyncio
 import sys
 import time
 import traceback
+from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -41,14 +43,45 @@ async def _render_stream(runtime: AssistantRuntime, message: str) -> str:
     return await ChatPresentation(console, get_settings().locale).render(runtime.stream(message))
 
 
-def _handle_slash_command(user_input: str, *, runtime: AssistantRuntime) -> str | None:
+def _open_document(argument: str, documents: Sequence[Path]) -> None:
+    """``/open [N]``: open the N-th most recent document of the chat (default 1)."""
+    from openfatture.platform.opener import can_open, open_in_default_app
+
+    if not documents:
+        console.print(Text(_text("assistant-open-none")))
+        return
+    try:
+        position = int(argument) if argument else 1
+    except ValueError:
+        position = 0
+    if not 1 <= position <= len(documents):
+        console.print(Text(_text("assistant-open-invalid", count=len(documents))))
+        return
+    document = documents[-position]
+    if not can_open():
+        console.print(Text(_text("assistant-open-unavailable", path=str(document))))
+        return
+    try:
+        open_in_default_app(document)
+    except OSError:
+        console.print(Text(_text("assistant-open-failed", path=str(document))))
+        return
+    console.print(Text(_text("assistant-opened", name=document.name)))
+
+
+def _handle_slash_command(
+    user_input: str, *, runtime: AssistantRuntime, documents: Sequence[Path] = ()
+) -> str | None:
     if not user_input.startswith("/"):
         return None
-    cmd = user_input.split(maxsplit=1)[0].lower()
+    cmd, _space, argument = user_input.partition(" ")
+    cmd = cmd.lower()
     if cmd in {"/exit", "/quit", "/q"}:
         return "exit"
     if cmd in {"/help", "/?"}:
         console.print(Text(_text("assistant-help")))
+    elif cmd == "/open":
+        _open_document(argument.strip(), documents)
     elif cmd == "/session":
         console.print(
             Text(
@@ -246,7 +279,9 @@ class _AssistantSession:
                     console.print(Text(self.ui.text("assistant-no-pending")))
                     continue
                 user_input = pending
-            slash = _handle_slash_command(user_input, runtime=self.runtime)
+            slash = _handle_slash_command(
+                user_input, runtime=self.runtime, documents=self.ui.documents
+            )
             if slash == "exit":
                 return None
             if not slash:

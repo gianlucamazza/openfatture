@@ -73,9 +73,16 @@ assistant-request-error = La solicitud falló. Usa --debug para ver los detalles
 assistant-confirm-operation = ¿Confirmar esta operación? [y/N]
 assistant-help = Comandos con barra
     /help     Mostrar esta ayuda
+    /open     Abrir el último documento generado (/open 2 el anterior)
     /exit     Salir (también: exit, quit, q)
     /session  Mostrar el ID de sesión
     /clear    Borrar los mensajes de la sesión
+assistant-document-open-hint = /open para abrirlo
+assistant-open-none = No se ha generado ningún documento en este chat.
+assistant-open-invalid = Indica un número de 1 a { $count }: /open 1 es el documento más reciente.
+assistant-open-unavailable = No hay sesión gráfica para abrirlo: { $path }
+assistant-open-failed = No se puede iniciar la aplicación predeterminada para { $path }
+assistant-opened = Abierto: { $name }
 assistant-input = Tú ›
 assistant-operation = Operación: { $name }
 assistant-tool-running = En ejecución · { $name }

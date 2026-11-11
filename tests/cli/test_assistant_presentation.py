@@ -221,3 +221,35 @@ async def test_console_logs_are_silenced_while_streaming(monkeypatch, debug):
     finally:
         root.removeHandler(handler)
     assert ("noisy_warning" in captured) is debug
+
+
+@pytest.mark.asyncio
+async def test_generated_document_is_a_link_and_remembered(monkeypatch, tmp_path):
+    from openfatture.platform import opener
+
+    pdf = tmp_path / "riepilogo.pdf"
+    pdf.write_bytes(b"%PDF")
+    monkeypatch.setattr(opener, "documents_in", lambda data: [pdf] if data else [])
+    ui, output = _terminal_ui(width=200)
+
+    async def stream():
+        await ui.activity("generate_invoice_summary_pdf")
+        await ui.finished("generate_invoice_summary_pdf", True, {"pdf_path": str(pdf)})
+        await ui.finished("search_invoices", True, None)
+        yield "Fatto."
+
+    await ui.render(stream())
+    text = output.getvalue()
+    assert "\x1b]8;id=" in text and pdf.as_uri() in text  # OSC 8 hyperlink
+    assert "/open per aprirlo" in text
+    assert ui.documents == [pdf]
+
+
+@pytest.mark.asyncio
+async def test_failed_tool_records_no_document(monkeypatch, tmp_path):
+    from openfatture.platform import opener
+
+    monkeypatch.setattr(opener, "documents_in", lambda data: pytest.fail("not inspected"))
+    ui, _output = _terminal_ui()
+    await ui.finished("generate_invoice_pdf", False, None)
+    assert ui.documents == []

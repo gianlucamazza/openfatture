@@ -73,9 +73,16 @@ assistant-request-error = La requête a échoué. Utilisez --debug pour les dét
 assistant-confirm-operation = Confirmer cette opération ? [y/N]
 assistant-help = Commandes slash
     /help     Afficher cette aide
+    /open     Ouvrir le dernier document généré (/open 2 le précédent)
     /exit     Quitter (aussi : exit, quit, q)
     /session  Afficher l'ID de session
     /clear    Effacer les messages de la session
+assistant-document-open-hint = /open pour l'ouvrir
+assistant-open-none = Aucun document généré dans ce chat.
+assistant-open-invalid = Indique un nombre de 1 à { $count } : /open 1 est le document le plus récent.
+assistant-open-unavailable = Aucune session graphique pour l'ouvrir : { $path }
+assistant-open-failed = Impossible de lancer l'application par défaut pour { $path }
+assistant-opened = Ouvert : { $name }
 assistant-input = Vous ›
 assistant-operation = Opération : { $name }
 assistant-tool-running = En cours · { $name }

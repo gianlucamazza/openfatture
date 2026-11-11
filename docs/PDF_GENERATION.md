@@ -652,6 +652,12 @@ documents issued elsewhere and outstanding amounts without a due date. Local
 drafts are excluded from the totals. The footer states that the summary is a
 management report, not a fiscal document.
 
+### Opening a generated PDF
+
+The chat shows the path of each generated PDF as a link (Ctrl+click), `/open`
+opens the latest one with the default PDF viewer, and "aprilo" asks the
+assistant to open it. See [CLI reference → Opening documents](CLI_REFERENCE.md#opening-documents).
+
 ---
 
 ## Python API
