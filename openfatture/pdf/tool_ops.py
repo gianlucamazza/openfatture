@@ -1,7 +1,7 @@
-"""Tools for PDF generation (invoices, quotes).
+"""Tools for PDF generation (invoices, quotes, yearly summary).
 
-Every PDF is a courtesy copy: the fiscal original is the FatturaPA XML sent
-through SDI. Without an explicit ``output_path`` files go under
+Invoice PDFs are courtesy copies: the fiscal original is the FatturaPA XML sent
+through SDI. The yearly summary is a management report. Without an explicit ``output_path`` files go under
 ``<data_dir>/exports``, never into the current working directory.
 """
 
@@ -10,6 +10,7 @@ from typing import Any
 
 from pydantic import validate_call
 
+from openfatture.billing.application.report_queries import invoice_situation
 from openfatture.pdf.generator import (
     DEFAULT_TEMPLATE,
     TEMPLATES,
@@ -17,6 +18,7 @@ from openfatture.pdf.generator import (
     PDFGeneratorConfig,
 )
 from openfatture.pdf.preventivo_generator import PreventivoPDFGenerator
+from openfatture.pdf.summary_generator import InvoiceSummaryPDF
 from openfatture.platform.config import Settings, get_settings
 from openfatture.platform.errors import describe_error
 from openfatture.platform.logging import get_logger
@@ -194,6 +196,47 @@ def generate_preventivo_pdf(
                 "generate_preventivo_pdf_failed", preventivo_id=preventivo_id, error=str(e)
             )
             return {"success": False, "error": describe_error(e)}
+
+
+@validate_call
+def generate_invoice_summary_pdf(
+    anno: int | None = None,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """
+    Generate the PDF summary of a year's invoices: totals, collections,
+    outstanding and overdue amounts, clients.
+
+    Args:
+        anno: Year (current year if omitted)
+        output_path: Output file path (default: exports/riepiloghi/riepilogo_fatture_YYYY.pdf)
+
+    Returns:
+        Dictionary with the PDF path and the totals printed in it
+    """
+    situation = invoice_situation(anno)
+    if "error" in situation:
+        return {"success": False, "error": situation["error"]}
+    try:
+        settings = get_settings()
+        target = output_path or _default_output(
+            settings, "riepiloghi", f"riepilogo_fatture_{situation['anno']}.pdf"
+        )
+        pdf_path = InvoiceSummaryPDF(_company_config(settings)).generate(situation, target)
+    except Exception as e:
+        logger.error("generate_invoice_summary_pdf_failed", anno=anno, error=str(e))
+        return {"success": False, "error": describe_error(e)}
+
+    logger.info("invoice_summary_pdf_generated", anno=situation["anno"], pdf_path=str(pdf_path))
+    return {
+        "success": True,
+        "anno": situation["anno"],
+        "documents_count": situation["documents_count"],
+        "totals": situation["totals"],
+        "pdf_path": str(pdf_path.absolute()),
+        "file_size": pdf_path.stat().st_size,
+        "message": f"Riepilogo PDF generato: {pdf_path.name}",
+    }
 
 
 @validate_call
