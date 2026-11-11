@@ -17,13 +17,44 @@ German, Spanish and French.
 | `--version`, `-v` | Print the version and exit |
 | `--debug` | Show diagnostic logs and tracebacks |
 | `--format`, `-f` | Output format for commands: `rich` (default), `json`, `markdown`, `stream-json`, `html` |
+| `--message`, `-m` | One request for the assistant instead of the chat |
+| `--session` | Resume a saved assistant session by its ID (enables persistence) |
+| `--stream/--no-stream` | Show the assistant response while it is generated (default `--stream`) |
+
+`--message` and `--session` apply only when no command is given.
 
 ## `openfatture`
 
-Starts the interactive assistant directly, using the same session handling and
-runtime as `openfatture assistant` without a message. Use `openfatture --help`
-to display the command reference. Structured output requires an explicit
-`assistant` request, for example `openfatture --format json assistant "List unpaid invoices"`.
+Starts the business assistant. The assistant can inspect local business data
+and use registered domain tools when the request requires an action. Requires
+the `ai` extra (`uv sync --extra ai`).
+
+```bash
+openfatture                                                  # interactive chat
+openfatture -m "Create an invoice for 3 hours of consulting at 90 euros"
+openfatture --no-stream -m "List unpaid invoices"
+openfatture --format json -m "Summarize this month's cash flow"
+openfatture --session <session-id>                           # resume a stored session
+```
+
+The chat persists turns to the file session store and prints the session ID.
+A `-m` request does not create a session unless `--session` is set (resume /
+continue that session). Structured output (`--format json` and the others)
+needs a `-m` request; without one the command exits with code 2 and the error
+code `interactive_format`.
+
+### Missing setup
+
+Before the assistant starts, OpenFatture checks the setup without changing it:
+
+| Missing | In a terminal | Otherwise (pipe, script, structured format) |
+| --- | --- | --- |
+| Company profile (`cedente_partita_iva`, `cedente_denominazione`) | runs `openfatture init` with the wizard | refuses, error code `setup_required` |
+| Database (absent, outdated or pre-2.8) or archive directory | runs `openfatture init` without the wizard (SQLite backup first) | refuses, error code `setup_required` |
+| Database from a newer OpenFatture | refuses, error code `newer_database` | refuses, error code `newer_database` |
+| AI API key (any provider except Ollama) | refuses with the `config set` command to run | refuses, error code `ai_key_missing` |
+
+A refusal prints what to run and exits with code **3**; nothing is created.
 
 ## `openfatture init`
 
@@ -36,24 +67,6 @@ OpenFatture when `status` asks for it.
 openfatture init
 openfatture init --no-interactive   # only directories and database schema
 ```
-
-## `openfatture assistant`
-
-Sends a natural-language request to the business assistant. The assistant can
-inspect local business data and use registered domain tools when the request
-requires an action. Requires the `ai` extra (`uv sync --extra ai`).
-
-```bash
-openfatture assistant "Create an invoice for 3 hours of consulting at 90 euros"
-openfatture assistant --no-stream "List unpaid invoices"
-openfatture assistant --json "Summarize this month's cash flow"
-openfatture assistant --session <session-id>   # resume a stored session
-```
-
-Without a message argument, starts an interactive multi-turn session. Interactive
-mode persists turns to the file session store and prints the session ID.
-One-shot messages do not create a session unless `--session` is set (resume /
-continue that session).
 
 ## `openfatture config`
 
@@ -105,7 +118,7 @@ canonical option reference.
 
 ### Pending assistant turns
 
-`openfatture assistant --session ID` resumes a pending turn before processing
+`openfatture --session ID` resumes a pending turn before processing
 another message. In the interactive assistant, `/resume` continues that turn;
 `/pending` lists tool calls whose outcomes require verification. `/reconcile`
 accepts a JSON object containing `call_id`, a verified ToolResult in `result`,

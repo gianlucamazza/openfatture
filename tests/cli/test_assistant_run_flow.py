@@ -7,7 +7,7 @@ import io
 import json
 from collections.abc import AsyncIterator, Iterator
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 import typer
@@ -96,12 +96,13 @@ class Harness(SimpleNamespace):
         message: str | None,
         *,
         stream: bool = True,
-        json_output: bool = False,
+        format_type: str = "rich",
         session_id: str | None = None,
     ) -> int:
         self.monkeypatch.setattr("sys.stdin", io.StringIO(self.stdin))
         try:
-            asyncio.run(assistant._run_assistant(None, message, stream, json_output, session_id))
+            ctx = cast(typer.Context, SimpleNamespace(obj={"format": format_type}))
+            asyncio.run(assistant._run_assistant(ctx, message, stream, session_id))
         except typer.Exit as exc:
             return int(exc.exit_code)
         return 0
@@ -198,7 +199,7 @@ def test_one_shot_failure_exits_one(harness: Harness) -> None:
 
 def test_machine_failure_does_not_print_human_hint(harness: Harness) -> None:
     harness.configure(outcomes={"ciao": False})
-    assert harness.run("ciao", json_output=True) == 1
+    assert harness.run("ciao", format_type="json") == 1
     assert _t("assistant-turn-failed") not in harness.text
     assert harness.runtime is not None
     assert harness.runtime.calls == [("run", "ciao")]
@@ -248,20 +249,12 @@ def test_uncertain_pending_turn_fails_one_shot(harness: Harness) -> None:
 
 
 def test_machine_pending_turn_is_silent(harness: Harness) -> None:
-    harness.configure(pending="earlier", stdin="")
-    assert harness.run(None, json_output=True) == 0
+    harness.configure(pending="earlier")
+    assert harness.run("earlier", format_type="json") == 0
     assert _t("assistant-resuming") not in harness.text
     assert harness.runtime is not None
     assert harness.runtime.calls == [("run", "earlier")]
 
-
-def test_machine_session_reads_one_request_per_line(harness: Harness) -> None:
-    harness.configure(stdin="uno\n\n  \ndue\n", outcomes={"uno": False})
-    assert harness.run(None, json_output=True) == 0
-    assert harness.runtime is not None
-    assert harness.runtime.calls == [("run", "uno"), ("run", "due")]
-    assert harness.factory_kwargs["persist_session"] is True
-    assert harness.completed.success is True
     assert _t("assistant-describe-what-you-need") not in harness.text
 
 
@@ -347,7 +340,7 @@ def test_machine_failure_renders_structured_error(
         raise RuntimeError("database down")
 
     monkeypatch.setattr(base, "init_db", broken)
-    assert harness.run("ciao", json_output=True) == 1
+    assert harness.run("ciao", format_type="json") == 1
     rendered = harness.text + capsys.readouterr().out
     payload = json.loads(rendered[rendered.index("{") :])
     assert payload["error"] == "RuntimeError"

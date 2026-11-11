@@ -177,7 +177,7 @@ cli-init-complete-body = [bold green]Configuration achevée[/bold green]
     Prochaines étapes :
       • Vérifier l'état : [cyan]openfatture status[/cyan]
       • Revoir les paramètres : [cyan]openfatture config show[/cyan]
-      • Assistant (nécessite [cyan]uv sync --extra ai[/cyan]) : [cyan]openfatture assistant "Affiche les factures ouvertes"[/cyan]
+      • Assistant (nécessite [cyan]uv sync --extra ai[/cyan]) : [cyan]openfatture -m "Affiche les factures ouvertes"[/cyan]
       • Aide : [cyan]openfatture --help[/cyan]
 
 ## STATUS Command
@@ -237,22 +237,21 @@ cli-error-submission-concurrent-update = La tentative a été résolue entre-tem
 
 ## Command-line help
 cli-help-app = Facturation électronique avec assistant. Lancez openfatture pour converser.
-cli-help-epilog = Exemples : openfatture · openfatture assistant "Affiche les factures impayées"
+cli-help-epilog = Exemples : openfatture · openfatture -m "Affiche les factures impayées"
 cli-help-version = Affiche la version et quitte.
 cli-help-debug = Affiche les journaux de diagnostic et les tracebacks.
 cli-help-format = Format de sortie : rich, json, markdown, stream-json, html
 cli-help-panel-assistant = Assistant
 cli-help-panel-setup = Configuration et diagnostic
 cli-help-panel-sdi = Vérifications SDI
-cli-help-assistant = Envoie une demande ou reprend une session
 cli-help-init = Initialise OpenFatture
 cli-help-config = Gère la configuration
 cli-help-status = Vérifie la configuration et la disponibilité
 cli-help-fattura = Journal SDI et résolutions avec preuve manuelle
 cli-help-assistant-message = Demande pour l'assistant.
 cli-help-assistant-stream = Affiche la réponse pendant sa génération.
-cli-help-assistant-json = Renvoie la réponse en JSON.
 cli-help-assistant-session = Reprend une session enregistrée par son ID (active l'enregistrement).
+cli-help-assistant-options-alone = --message et --session ne valent que pour l'assistant, sans commande.
 cli-help-init-interactive = Assistant de configuration interactif
 cli-help-status-json = Renvoie l'état en JSON.
 cli-help-config-show =
@@ -282,3 +281,20 @@ cli-help-resolve-evidence = Preuve vérifiée (par ex. la référence du fournis
 cli-help-install-completion = Installe la complétion pour le shell courant.
 cli-help-show-completion = Affiche la complétion pour le shell courant, pour la copier ou la personnaliser.
 cli-help-help-option = Affiche ce message et quitte.
+
+## Startup setup and status next steps
+status-next-init = Exécute : openfatture init
+status-next-set-field = openfatture config set { $field } '<valeur>'
+status-next-ai-extra = Pour l'assistant : uv sync --extra ai
+status-next-ai-key = openfatture config set ai_api_key '<clé>' (ou ai_provider ollama)
+status-next-try = Essaie : openfatture -m "Affiche les factures ouvertes"
+status-next-core-ready = La base est prête ; installe l'extra ai pour utiliser l'assistant
+status-next-help = openfatture --help
+status-next-upgrade-db = Mets à jour le schéma de la base de données : openfatture init
+status-next-newer-db = La base de données est plus récente que cette version : mets à jour OpenFatture
+status-next-migrate-secrets = Déplace les secrets en clair vers le trousseau : openfatture config migrate
+status-next-dotenv = ./.env n'est pas lu : utilise `uv run --env-file .env ...` ou importe-le avec `openfatture config migrate --env-file .env`
+cli-setup-running = Configuration manquante : lancement de openfatture init.
+cli-setup-required = Configuration manquante : exécute `openfatture init`.
+cli-setup-newer-database = La base de données provient d'une version plus récente d'OpenFatture : mets à jour OpenFatture.
+cli-setup-ai-key = Aucune clé API pour { $provider } : exécute `openfatture config set ai_api_key` ou utilise `openfatture config set ai_provider ollama`.

@@ -55,6 +55,25 @@ def main(
         "-f",
         help=_("cli-help-format"),
     ),
+    message: str | None = typer.Option(
+        None,
+        "--message",
+        "-m",
+        help=_("cli-help-assistant-message"),
+        rich_help_panel=_("cli-help-panel-assistant"),
+    ),
+    session: str | None = typer.Option(
+        None,
+        "--session",
+        help=_("cli-help-assistant-session"),
+        rich_help_panel=_("cli-help-panel-assistant"),
+    ),
+    stream: bool = typer.Option(
+        True,
+        "--stream/--no-stream",
+        help=_("cli-help-assistant-stream"),
+        rich_help_panel=_("cli-help-panel-assistant"),
+    ),
 ) -> None:
     """Configure the CLI and start the assistant when no command is selected."""
     # One correlation ID per CLI invocation ties together every log line,
@@ -66,12 +85,11 @@ def main(
     ctx.ensure_object(dict)
     ctx.obj["format"] = format_type
     if ctx.invoked_subcommand is None:
-        assistant.assistant(ctx, message=None, stream=True, json_output=False, session=None)
+        assistant.start(ctx, message=message, stream=stream, session=session)
+    elif message is not None or session is not None:
+        raise typer.BadParameter(_("cli-help-assistant-options-alone"))
 
 
-app.command(
-    "assistant", help=_("cli-help-assistant"), rich_help_panel=_("cli-help-panel-assistant")
-)(assistant.assistant)
 app.command("init", help=_("cli-help-init"), rich_help_panel=_("cli-help-panel-setup"))(init.init)
 app.add_typer(
     config.app,

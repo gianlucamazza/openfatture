@@ -115,7 +115,7 @@ update_invoice(
 
 ```bash
 # Via assistant
-openfatture assistant "Create invoice for Acme Corp, dated 2026-09-14"
+openfatture -m "Create invoice for Acme Corp, dated 2026-09-14"
 
 # The assistant will use:
 create_invoice(
@@ -127,7 +127,7 @@ create_invoice(
 ### Update existing draft date
 
 ```bash
-openfatture assistant "Change invoice 42 date to 2026-09-20"
+openfatture -m "Change invoice 42 date to 2026-09-20"
 
 # The assistant will use:
 update_invoice(

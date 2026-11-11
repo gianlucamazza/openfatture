@@ -184,7 +184,7 @@ for diagnostic logs.
 
 ## Terminal assistant behavior
 
-`openfatture` and `openfatture assistant` share a terminal presentation layer.
+The chat (`openfatture`) and single requests (`openfatture -m`) share a terminal presentation layer.
 Live previews are temporary; the complete Markdown response is printed once
 into scrollback. Slash commands support help, session ID, clearing messages
 and exit. Input history stays in memory. `NO_COLOR` is respected.

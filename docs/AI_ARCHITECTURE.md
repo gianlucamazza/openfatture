@@ -39,7 +39,7 @@ runtime = create_assistant_runtime(backend="chat")
 
 Interactive sessions can persist to the file session store
 (`persist_session=True`) and be resumed with `session_id=...` /
-`openfatture assistant --session <id>`. When persistence is on, history is
+`openfatture --session <id>`. When persistence is on, history is
 loaded from the store (do not also pass a parallel in-memory history that
 duplicates turns).
 
@@ -110,7 +110,7 @@ Back up the runtime directory together with the chat session files. The chat
 session store remains the source of conversation history; checkpoints belong
 to individual turns, identified by `session_id:turn_id`.
 
-A pending turn is saved before execution. Reopening `assistant --session ID`
+A pending turn is saved before execution. Reopening `openfatture --session ID`
 resumes it before accepting a new request. Inside an interactive session use
 `/resume`. A pending turn cannot be cleared or replaced by another message.
 Suspensions and interrupted attempts do not append completed conversation

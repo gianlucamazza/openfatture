@@ -60,9 +60,9 @@ and writes PDFs; set `ai_tool_access = "full"` to let it create records.
 
 ```bash
 uv run openfatture config set ai_tool_access full
-uv run openfatture assistant "Crea il cliente Demo Client, P.IVA 12345678903"
-uv run openfatture assistant "Crea una bozza per Demo Client: 3 ore di consulenza a 90 euro, IVA 22%"
-uv run openfatture assistant "Genera il PDF della bozza appena creata"
+uv run openfatture -m "Crea il cliente Demo Client, P.IVA 12345678903"
+uv run openfatture -m "Crea una bozza per Demo Client: 3 ore di consulenza a 90 euro, IVA 22%"
+uv run openfatture -m "Genera il PDF della bozza appena creata"
 ```
 
 The PDF is a courtesy copy in `data_dir/exports/fatture/`; nothing is
@@ -109,8 +109,8 @@ Once configured, start with read-only requests:
 
 ```bash
 uv run openfatture status --json
-uv run openfatture assistant "List my clients"
-uv run openfatture assistant "Show invoice 1 and its line items"
+uv run openfatture -m "List my clients"
+uv run openfatture -m "Show invoice 1 and its line items"
 uv run openfatture
 ```
 

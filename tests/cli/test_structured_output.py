@@ -53,7 +53,7 @@ def test_interactive_init_refused_in_machine_format(runtime_db):
 
 
 def test_interactive_assistant_refused_as_json(runtime_db):
-    result = runner.invoke(app, ["--format", "json", "assistant"])
+    result = runner.invoke(app, ["--format", "json"])
     assert result.exit_code == 2
     assert json.loads(result.stdout)["error"]["code"] == "interactive_format"
 

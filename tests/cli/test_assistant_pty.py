@@ -67,7 +67,7 @@ app()
 
 
 class Terminal:
-    def __init__(self, tmp_path, width, command=("assistant",)):
+    def __init__(self, tmp_path, width, command=()):
         import fcntl
         import pty
         import termios
@@ -87,6 +87,11 @@ class Terminal:
                 ARCHIVIO_DIR=str(tmp_path / "archive"),
                 CERTIFICATES_DIR=str(tmp_path / "certs"),
                 AI_MODEL="fake-model",
+                AI_API_KEY="fake-key",
+                CEDENTE_PARTITA_IVA="12345678903",
+                CEDENTE_DENOMINAZIONE="Test SRL",
+                OPENFATTURE_CONFIG_DIR=str(tmp_path / "config"),
+                OPENFATTURE_SECRET_BACKEND="file",
             )
             os.execve(sys.executable, [sys.executable, "-u", "-c", CHILD, *command], env)
         self.output = b""
@@ -127,11 +132,14 @@ class Terminal:
 
 
 @pytest.mark.parametrize("width", [40, 80, 120])
-@pytest.mark.parametrize("command", [(), ("assistant",)])
-def test_real_terminal_long_response_confirmation_and_interrupt(tmp_path, width, command):
-    terminal = Terminal(tmp_path, width, command)
+def test_real_terminal_long_response_confirmation_and_interrupt(tmp_path, width):
+    terminal = Terminal(tmp_path, width)
     try:
+        # A missing database is set up by `init` before the chat opens.
+        terminal.expect("Configurazione mancante")
+        terminal.expect("Inizializzazione del database")
         terminal.expect("Tu ›")
+        assert (tmp_path / "test.db").exists()
         terminal.send("long\n")
         terminal.expect("Paragraph 74.")
         terminal.expect("Tu ›")

@@ -74,7 +74,7 @@ def _resolve_backend_name(
 
 
 class AssistantRuntime:
-    """Single assistant entry used by ``openfatture assistant`` / interactive."""
+    """Single assistant entry used by ``openfatture`` (chat and ``-m`` requests)."""
 
     def __init__(
         self,

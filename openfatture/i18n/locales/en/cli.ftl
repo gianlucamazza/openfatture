@@ -176,7 +176,7 @@ cli-init-complete-body = [bold green]Setup finished[/bold green]
     Next steps:
       • Check readiness: [cyan]openfatture status[/cyan]
       • Review settings: [cyan]openfatture config show[/cyan]
-      • Assistant (needs [cyan]uv sync --extra ai[/cyan]): [cyan]openfatture assistant "List the open invoices"[/cyan]
+      • Assistant (needs [cyan]uv sync --extra ai[/cyan]): [cyan]openfatture -m "List the open invoices"[/cyan]
       • Help: [cyan]openfatture --help[/cyan]
 
 ## STATUS Command
@@ -236,22 +236,21 @@ cli-error-submission-concurrent-update = The attempt was resolved meanwhile: rel
 
 ## Command-line help
 cli-help-app = Electronic invoicing with an assistant. Run openfatture to start a conversation.
-cli-help-epilog = Examples: openfatture · openfatture assistant "Show unpaid invoices"
+cli-help-epilog = Examples: openfatture · openfatture -m "Show unpaid invoices"
 cli-help-version = Show the version and exit.
 cli-help-debug = Show diagnostic logs and tracebacks.
 cli-help-format = Output format: rich, json, markdown, stream-json, html
 cli-help-panel-assistant = Assistant
 cli-help-panel-setup = Setup and diagnostics
 cli-help-panel-sdi = SDI checks
-cli-help-assistant = Send a request or resume a session
 cli-help-init = Initialize OpenFatture
 cli-help-config = Manage the configuration
 cli-help-status = Check configuration and readiness
 cli-help-fattura = SDI journal and resolutions backed by manual evidence
 cli-help-assistant-message = A request for the assistant.
 cli-help-assistant-stream = Show the response while it is generated.
-cli-help-assistant-json = Emit the response as JSON.
 cli-help-assistant-session = Resume a saved session by its ID (enables persistence).
+cli-help-assistant-options-alone = --message and --session apply to the assistant only, without a command.
 cli-help-init-interactive = Interactive setup wizard
 cli-help-status-json = Emit the status as JSON.
 cli-help-config-show =
@@ -281,3 +280,20 @@ cli-help-resolve-evidence = Verified evidence (e.g. the provider reference)
 cli-help-install-completion = Install completion for the current shell.
 cli-help-show-completion = Show completion for the current shell, to copy it or customize the installation.
 cli-help-help-option = Show this message and exit.
+
+## Startup setup and status next steps
+status-next-init = Run: openfatture init
+status-next-set-field = openfatture config set { $field } '<value>'
+status-next-ai-extra = For the assistant: uv sync --extra ai
+status-next-ai-key = openfatture config set ai_api_key '<key>' (or ai_provider ollama)
+status-next-try = Try: openfatture -m "List the open invoices"
+status-next-core-ready = Core is ready; install the ai extra to use the assistant
+status-next-help = openfatture --help
+status-next-upgrade-db = Upgrade the database schema: openfatture init
+status-next-newer-db = The database is newer than this release: upgrade OpenFatture
+status-next-migrate-secrets = Move plaintext secrets to the keychain: openfatture config migrate
+status-next-dotenv = ./.env is not read: use `uv run --env-file .env ...` or import it with `openfatture config migrate --env-file .env`
+cli-setup-running = Configuration missing: starting openfatture init.
+cli-setup-required = Configuration missing: run `openfatture init`.
+cli-setup-newer-database = The database comes from a newer OpenFatture: upgrade OpenFatture.
+cli-setup-ai-key = No API key for { $provider }: run `openfatture config set ai_api_key` or use `openfatture config set ai_provider ollama`.

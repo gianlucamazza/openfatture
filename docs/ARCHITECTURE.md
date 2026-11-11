@@ -7,7 +7,7 @@ application services and assistant tools.
 ## Public surface
 
 - `openfatture init`
-- `openfatture` (interactive assistant) and `openfatture assistant [MESSAGE]`
+- `openfatture` (interactive assistant; `-m MESSAGE` for one request)
 - `openfatture config ...`
 - `openfatture status`
 - `openfatture fattura ...` — only the SDI journal and the resolutions that

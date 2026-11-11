@@ -25,7 +25,6 @@ from openfatture.i18n import _
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import get_logger
 
-app = typer.Typer(no_args_is_help=True)
 console = Console()
 logger = get_logger(__name__)
 
@@ -84,23 +83,24 @@ def _handle_slash_command(user_input: str, *, runtime: AssistantRuntime) -> str 
     return "handled"
 
 
-@app.command()
-def assistant(
-    ctx: typer.Context,
-    message: str | None = typer.Argument(None, help=_("cli-help-assistant-message")),
-    stream: bool = typer.Option(True, "--stream/--no-stream", help=_("cli-help-assistant-stream")),
-    json_output: bool = typer.Option(False, "--json", help=_("cli-help-assistant-json")),
-    session: str | None = typer.Option(
-        None,
-        "--session",
-        help=_("cli-help-assistant-session"),
-    ),
-) -> None:
-    """Ask the assistant to explain, inspect, or perform an invoicing task."""
-    if message is None and (json_output or (ctx.obj or {}).get("format", "rich") != "rich"):
-        from openfatture.cli.formatters.utils import get_format_from_context
-        from openfatture.cli.output import emit
+SETUP_REQUIRED_EXIT = 3
+"""Exit code when the configuration keeps the assistant from starting."""
 
+_SETUP_ERRORS = {
+    "profile": ("setup_required", "cli-setup-required"),
+    "database": ("setup_required", "cli-setup-required"),
+    "newer_database": ("newer_database", "cli-setup-newer-database"),
+    "ai_key": ("ai_key_missing", "cli-setup-ai-key"),
+}
+
+
+def start(ctx: typer.Context, *, message: str | None, stream: bool, session: str | None) -> None:
+    """Ask the assistant one request, or open the chat when ``message`` is None."""
+    from openfatture.cli.formatters.utils import get_format_from_context
+    from openfatture.cli.output import emit
+
+    format_type = get_format_from_context(ctx)
+    if message is None and format_type != "rich":
         emit(
             {
                 "success": False,
@@ -108,13 +108,52 @@ def assistant(
                 "warnings": [],
                 "error": {
                     "code": "interactive_format",
-                    "message": "Provide a single request when using a structured output format",
+                    "message": "Provide a single request (-m) when using a structured output format",
                 },
             },
-            get_format_from_context(ctx, json_output),
+            format_type,
         )
         raise typer.Exit(2)
-    run_sync_with_lifespan(_run_assistant(ctx, message, stream, json_output, session))
+    _ensure_setup(format_type)
+    run_sync_with_lifespan(_run_assistant(ctx, message, stream, session))
+
+
+def _ensure_setup(format_type: str) -> None:
+    """Run ``init`` in a terminal when the setup is missing; otherwise refuse to start.
+
+    Outside a terminal nothing is created: the command explains what is
+    missing and exits with :data:`SETUP_REQUIRED_EXIT`.
+    """
+    from openfatture.cli.commands.init import run_setup, setup_gap
+    from openfatture.platform.config import reload_settings
+
+    settings = get_settings()
+    gap = setup_gap(settings)
+    terminal = format_type == "rich" and console.is_terminal and sys.stdin.isatty()
+    if gap in ("profile", "database") and terminal:
+        console.print(_("cli-setup-running"))
+        run_setup(settings, wizard=gap == "profile")
+        settings = reload_settings()
+        gap = setup_gap(settings)
+    if gap is None:
+        return
+    code, key = _SETUP_ERRORS[gap]
+    text = _(key, provider=settings.ai_provider)
+    if format_type == "rich":
+        console.print(Text(text))
+    else:
+        from openfatture.cli.output import emit
+
+        emit(
+            {
+                "success": False,
+                "data": None,
+                "warnings": [],
+                "error": {"code": code, "message": text},
+            },
+            format_type,
+        )
+    raise typer.Exit(SETUP_REQUIRED_EXIT)
 
 
 @dataclass
@@ -150,20 +189,13 @@ class _AssistantSession:
             return bool(response.success)
 
     async def converse(self, message: str | None) -> None:
-        """Resume an interrupted turn, then serve the request, piped input or the chat."""
+        """Resume an interrupted turn, then serve the request or the chat."""
         if await self._resume_pending(message):
             return
         if message is not None:
             self.success = await self.execute(message)
             if not self.success:
                 raise typer.Exit(1)
-            return
-        if self.machine:
-            # One JSON/other formatted response per input line; no interactive banners.
-            for line in sys.stdin:
-                if line.strip():
-                    await self.execute(line.strip())
-            self.success = True
             return
         await self._chat()
 
@@ -189,7 +221,7 @@ class _AssistantSession:
         return message == pending
 
     async def _chat(self) -> None:
-        console.print(Text(f"OpenFatture · {self.settings.ai_model}"))
+        console.print(Text(f"OpenFatture · {self.settings.ai_model or self.settings.ai_provider}"))
         console.print(Text(self.ui.text("assistant-describe-what-you-need")))
         while (user_input := await self._next_request()) is not None:
             await self._chat_turn(user_input)
@@ -337,13 +369,12 @@ async def _run_assistant(
     ctx: typer.Context | None,
     message: str | None,
     stream: bool,
-    json_output: bool,
     session_id: str | None,
 ) -> None:
     from openfatture.cli.assistant_ui import ChatPresentation
     from openfatture.cli.formatters.utils import get_format_from_context
 
-    format_type = get_format_from_context(ctx, json_output)
+    format_type = get_format_from_context(ctx)
     settings = get_settings()
     ui = ChatPresentation(
         console,

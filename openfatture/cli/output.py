@@ -229,7 +229,7 @@ class OutputGroup(TyperGroup):
                 param_hint="--format",
             )
         args = [*getattr(ctx, "_protected_args", []), *ctx.args]
-        if kind == "rich" or not args or args[0] == "assistant":
+        if kind == "rich" or not args:  # no command: the assistant formats its own output
             return super().invoke(ctx)
         output = _CapturedOutput()
         token = _result.set(None)

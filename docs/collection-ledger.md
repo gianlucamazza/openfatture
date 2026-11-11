@@ -36,9 +36,9 @@ invoices and optionally a specific installment. A receipt without an allocation
 is available money, not a paid invoice.
 
 ```sh
-openfatture assistant "Registra un incasso di 2000 euro sulla fattura 1"
-openfatture assistant "Ripartisci l'incasso 2: 100 euro sulla fattura 3 e 200 sulla 4"
-openfatture assistant "Mostra il registro incassi della fattura 1"
+openfatture -m "Registra un incasso di 2000 euro sulla fattura 1"
+openfatture -m "Ripartisci l'incasso 2: 100 euro sulla fattura 3 e 200 sulla 4"
+openfatture -m "Mostra il registro incassi della fattura 1"
 ```
 
 Every mutating tool call carries a request ID. Repeating it with identical arguments
@@ -56,8 +56,8 @@ and legacy allocation evidence remain available.
 ## Corrections and declarations
 
 ```sh
-openfatture assistant "Storna 100 euro dell'allocazione 1: fattura sbagliata"
-openfatture assistant "Dichiara che la fattura 3 non è stata saldata"
+openfatture -m "Storna 100 euro dell'allocazione 1: fattura sbagliata"
+openfatture -m "Dichiara che la fattura 3 non è stata saldata"
 ```
 
 A reversal corrects an allocation and releases its money for allocation again. It
