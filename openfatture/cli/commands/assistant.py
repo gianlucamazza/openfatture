@@ -69,6 +69,29 @@ def _open_document(argument: str, documents: Sequence[Path]) -> None:
     console.print(Text(_text("assistant-opened", name=document.name)))
 
 
+def _show_memory() -> None:
+    from openfatture.ai.memory import get_memory_store
+
+    notes = get_memory_store().entries()
+    if not notes:
+        console.print(Text(_text("assistant-memory-empty")))
+        return
+    console.print(Text(_text("assistant-memory-title")))
+    for note in notes:
+        console.print(Text(f"  [{note.id}] {note.text}"))
+
+
+def _forget(argument: str) -> None:
+    from openfatture.ai.memory import NoteError, get_memory_store
+
+    try:
+        note = get_memory_store().remove(int(argument))
+    except (ValueError, NoteError):
+        console.print(Text(_text("assistant-forget-invalid")))
+        return
+    console.print(Text(_text("assistant-forgot", text=note.text)))
+
+
 def _handle_slash_command(
     user_input: str, *, runtime: AssistantRuntime, documents: Sequence[Path] = ()
 ) -> str | None:
@@ -82,6 +105,10 @@ def _handle_slash_command(
         console.print(Text(_text("assistant-help")))
     elif cmd == "/open":
         _open_document(argument.strip(), documents)
+    elif cmd == "/memory":
+        _show_memory()
+    elif cmd == "/forget":
+        _forget(argument.strip())
     elif cmd == "/session":
         console.print(
             Text(
@@ -127,8 +154,18 @@ _SETUP_ERRORS = {
 }
 
 
-def start(ctx: typer.Context, *, message: str | None, stream: bool, session: str | None) -> None:
-    """Ask the assistant one request, or open the chat when ``message`` is None."""
+def start(
+    ctx: typer.Context,
+    *,
+    message: str | None,
+    stream: bool,
+    session: str | None,
+    resume_latest: bool = False,
+) -> None:
+    """Ask the assistant one request, or open the chat when ``message`` is None.
+
+    ``resume_latest`` continues the most recent conversation (``--continue``).
+    """
     from openfatture.cli.formatters.utils import get_format_from_context
     from openfatture.cli.output import emit
 
@@ -148,7 +185,21 @@ def start(ctx: typer.Context, *, message: str | None, stream: bool, session: str
         )
         raise typer.Exit(2)
     _ensure_setup(format_type)
+    if resume_latest:
+        session = _latest_session_id()
+        if session is None and format_type == "rich":
+            console.print(Text(_("cli-assistant-no-session-to-continue")))
     run_sync_with_lifespan(_run_assistant(ctx, message, stream, session))
+
+
+def _latest_session_id() -> str | None:
+    """The most recently updated saved conversation that has messages."""
+    from openfatture.ai.session import get_session_store
+
+    for saved in get_session_store().get_recent_sessions(limit=20):
+        if saved.messages:
+            return saved.id
+    return None
 
 
 def _ensure_setup(format_type: str) -> None:

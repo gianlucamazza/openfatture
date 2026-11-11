@@ -223,6 +223,8 @@ class ChatContext(AgentContext):
     available_tools: list[str] = Field(default_factory=list)
     # Tool category -> command that enables it; filled from the registry policy.
     disabled_capabilities: dict[str, str] = Field(default_factory=dict)
+    # Long-term notes the user saved (id, text), shown to the model as data.
+    memory_notes: list[tuple[int, str]] = Field(default_factory=list)
     tool_results: list[dict[str, Any]] = Field(default_factory=list)
 
     # Business data enrichment

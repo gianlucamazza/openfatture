@@ -5,7 +5,7 @@ invoicing. The public interface is intentionally agentic and small:
 
 - `openfatture init`
 - `openfatture` (starts the interactive assistant; `-m MESSAGE` sends one
-  request)
+  request; `--continue` resumes the latest conversation)
 - `openfatture config ...`
 - `openfatture status`
 - `openfatture fattura ...` (only the SDI journal and the resolutions that

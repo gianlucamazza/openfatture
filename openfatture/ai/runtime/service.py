@@ -225,9 +225,16 @@ class AssistantRuntime:
         elif history is not None:
             conv = _history_from_dicts(history) or ConversationHistory()
         elif self._session is not None:
-            conv = ConversationHistory()
-            for msg in self._session.messages:
-                conv.add_message(Message(role=msg.role, content=msg.content))
+            from openfatture.ai.runtime.history import trim_history
+
+            stored = [
+                Message(role=msg.role, content=msg.content)
+                for msg in self._session.messages
+                if msg.role in (Role.USER, Role.ASSISTANT)
+            ]
+            # Built directly: trim_history is the only cut, so the
+            # ConversationHistory message cap does not drop more.
+            conv = ConversationHistory(messages=trim_history(stored), max_messages=10_000)
         else:
             conv = ConversationHistory()
         context = ChatContext(user_input=user_input, conversation_history=conv)
@@ -246,6 +253,9 @@ class AssistantRuntime:
             context.metadata["checkpoint_directory"] = str(
                 self.settings.data_dir / "ai" / "runtime"
             )
+        from openfatture.ai.memory import get_memory_store
+
+        context.memory_notes = [(note.id, note.text) for note in get_memory_store().entries()]
         if self.enable_tools and not context.available_tools:
             context.available_tools = [t.name for t in self._tool_registry.list_tools()]
             context.disabled_capabilities = self._tool_registry.disabled_capabilities()

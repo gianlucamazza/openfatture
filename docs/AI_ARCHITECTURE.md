@@ -135,6 +135,27 @@ human approval. ReAct providers use the same model/tool graph, receipts and
 system prompt; the prompt only gains the text protocol their parser reads and
 the tool catalogue.
 
+## Memory
+
+Two tiers, as in [LangGraph's memory model](https://docs.langchain.com/oss/python/langgraph/add-memory):
+
+- **Short-term** is the conversation (`ai/session`). The stored transcript is
+  capped by message count; `ai/runtime/history.py` trims what the model
+  receives to a token budget (`HISTORY_TOKEN_BUDGET`, approximate counting),
+  from a user message, keeping the latest exchange whole and noting omitted
+  messages. Provider usage counters never drive the cut: they include the
+  prompt of every turn and used to empty the history. Per-turn LangGraph
+  checkpoints are durability, not memory.
+- **Long-term** is a small set of user notes (`ai/memory`, `data_dir/ai/memory.json`).
+  Memory writes are an injection surface (an attacker who can put text in an
+  invoice note or a CSV could try to make the agent remember it), so:
+  `remember_note` and `forget_note` are `mutate` tools behind confirmation; the
+  prompt allows notes only from what the user asks to remember, never from
+  tool results; credentials are refused; the user lists and deletes notes with
+  `/memory` and `/forget`; and notes reach the model in a section that frames
+  them as data, not instructions, with tool data taking precedence. The notes
+  change the system prompt only when one is saved or deleted.
+
 ## System prompt
 
 `ai/runtime/prompt.py` builds one system prompt for every backend: product
@@ -153,7 +174,8 @@ the provider can reuse its cached prefix.
 reply to a greeting, documents issued elsewhere reported as unverified rather
 than unsent, summary totals computed by the tool, disabled capabilities pointing
 at the setting, outstanding amounts including invoices without installments,
-and a receipt "ieri" recorded with yesterday's date.
+a receipt "ieri" recorded with yesterday's date, the previous turn remembered,
+and a stated preference offered as a note.
 
 A durable receipt is reserved before invoking a tool. Completed receipts are
 reused. If the process stops after reservation but before its result is saved,

@@ -225,3 +225,38 @@ def test_empty_sdi_journal_says_so(runtime_db):
     result = runner.invoke(app, ["fattura", "sdi-journal"])
     assert result.exit_code == 0
     assert "Nessun invio o ricevuta SDI registrati." in result.stdout
+
+
+def test_continue_resumes_the_latest_conversation(monkeypatch):
+    from openfatture.cli.commands import assistant
+
+    calls = []
+
+    async def record(ctx, message, stream, session):
+        calls.append(session)
+
+    monkeypatch.setattr(assistant, "_ensure_setup", lambda format_type: None)
+    monkeypatch.setattr(assistant, "_run_assistant", record)
+    monkeypatch.setattr(assistant, "_latest_session_id", lambda: "s-latest")
+    assert runner.invoke(app, ["--continue"]).exit_code == 0
+    monkeypatch.setattr(assistant, "_latest_session_id", lambda: None)
+    result = runner.invoke(app, ["-c"])
+    assert result.exit_code == 0
+    assert "ne inizio una nuova" in result.output
+    assert calls == ["s-latest", None]
+    conflict = runner.invoke(app, ["--continue", "--session", "x"])
+    assert conflict.exit_code == 2
+
+
+def test_latest_session_skips_empty_ones(monkeypatch, tmp_path):
+    from openfatture.ai.session import get_session_store
+    from openfatture.ai.session.models import ChatSession
+    from openfatture.cli.commands import assistant
+
+    store = get_session_store(tmp_path)
+    older = ChatSession()
+    older.add_user_message("ciao")
+    store.save(older)
+    store.save(ChatSession())  # newer, but empty
+    monkeypatch.setattr("openfatture.ai.session.get_session_store", lambda: store)
+    assert assistant._latest_session_id() == older.id

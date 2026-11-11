@@ -117,7 +117,15 @@ class ChatPresentation:
                 ) -> Iterator[Completion]:
                     text = document.text_before_cursor
                     if text.startswith("/") and " " not in text and "\n" not in text:
-                        for command in ("/help", "/open", "/exit", "/session", "/clear"):
+                        for command in (
+                            "/help",
+                            "/open",
+                            "/memory",
+                            "/forget",
+                            "/exit",
+                            "/session",
+                            "/clear",
+                        ):
                             if command.startswith(text):
                                 yield Completion(command, start_position=-len(text))
 
