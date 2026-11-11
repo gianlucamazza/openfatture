@@ -293,3 +293,5 @@ cli-help-attempt-id = ID del intento de envío
 cli-help-resolve-sent = Resultado verificado: enviado o no enviado
 cli-help-resolve-evidence = Evidencia verificada (p. ej. la referencia del proveedor)
 cli-help-collections-migrate = Actualiza los datos históricos de cobros sin cambiar los importes.
+cli-help-install-completion = Instala el autocompletado para la shell actual.
+cli-help-show-completion = Muestra el autocompletado para la shell actual, para copiarlo o personalizarlo.

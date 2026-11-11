@@ -195,6 +195,21 @@ def _final_error(
 
 
 class OutputGroup(TyperGroup):
+    # Typer adds the completion options with fixed English help text.
+    # They are appended after the group is built, so localize them on use.
+    _COMPLETION_HELP = {
+        "install_completion": "cli-help-install-completion",
+        "show_completion": "cli-help-show-completion",
+    }
+
+    def get_params(self, ctx: click.Context) -> list[click.Parameter]:
+        params = super().get_params(ctx)
+        for param in params:
+            key = self._COMPLETION_HELP.get(param.name or "")
+            if key and isinstance(param, click.Option):
+                param.help = _(key)
+        return params
+
     def invoke(self, ctx: click.Context) -> Any:
         kind = ctx.params.get("format_type", "rich")
         if kind not in FORMAT_NAMES:

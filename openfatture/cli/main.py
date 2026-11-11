@@ -6,12 +6,15 @@ import typer
 from rich.console import Console
 
 from openfatture import __version__
-from openfatture.i18n import _
+from openfatture.i18n import _, get_locale
 from openfatture.platform.config import get_settings
 from openfatture.platform.logging import configure_dynamic_logging, set_correlation_id
 
+from . import framework_i18n
 from .commands import assistant, config, fattura, init, pagamento, status
 from .output import OutputGroup
+
+framework_i18n.install(get_locale())
 
 app = typer.Typer(
     cls=OutputGroup,

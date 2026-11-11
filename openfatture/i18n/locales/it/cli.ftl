@@ -289,3 +289,5 @@ cli-help-attempt-id = ID del tentativo di invio
 cli-help-resolve-sent = Esito verificato: inviato o non inviato
 cli-help-resolve-evidence = Riscontro verificato (es. riferimento del provider)
 cli-help-collections-migrate = Aggiorna i dati storici degli incassi senza cambiare gli importi.
+cli-help-install-completion = Installa il completamento per la shell corrente.
+cli-help-show-completion = Mostra il completamento per la shell corrente, da copiare o personalizzare.

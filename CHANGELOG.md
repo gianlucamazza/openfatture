@@ -46,10 +46,17 @@ PDFs and a yearly summary out of the box, and no CLI duplicates of assistant too
 
 ### Fixed
 
-- `--help` is in one language, describes every command and parameter, and the
-  `fattura`/`pagamento` group help is defined once; `fattura sdi-journal` says when the
-  journal is empty; refusing XML for an invoice issued elsewhere no longer prints a warning
-  log line.
+- The CLI speaks the configured locale throughout. Command help comes from Fluent
+  (`cli-help-*`) in five languages instead of hard-coded text, and describes every command
+  and parameter. Click and Typer's own text (panel titles, `--help`, usage errors, prompts)
+  comes from bundled gettext catalogs (`openfatture/i18n/gettext`). Refusals of
+  `generate-xml`, `associate-receipt` and `resolve-submission` carry an `error_code` and are
+  shown localized; the English text stays for the assistant and the JSON envelope.
+- `fattura <command> --help` no longer opens the database: it failed without an
+  accessible database.
+- Resolving an unknown submission attempt reports "not found" instead of a SQLAlchemy error.
+- `fattura sdi-journal` says when the journal is empty; refusing XML for an invoice issued
+  elsewhere no longer prints a warning log line.
 - PDFs generated without an output path are written to `data_dir/exports/fatture/` (or
   `preventivi/`) instead of the current working directory, also when the assistant omits the
   path.

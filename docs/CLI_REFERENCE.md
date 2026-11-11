@@ -7,6 +7,10 @@ diagnostics, it keeps only the operations the assistant does not perform:
 writing the FatturaPA XML file, the SDI journal and its human-evidence
 resolutions, and the collection ledger migration.
 
+Help, messages and errors follow the configured locale (`locale` in
+`config.toml`, or `OPENFATTURE_LOCALE`): Italian by default, also English,
+German, Spanish and French.
+
 ## Global options
 
 | Option | Purpose |

@@ -293,3 +293,5 @@ cli-help-attempt-id = ID des Übermittlungsversuchs
 cli-help-resolve-sent = Geprüftes Ergebnis: gesendet oder nicht gesendet
 cli-help-resolve-evidence = Geprüfter Nachweis (z. B. die Referenz des Anbieters)
 cli-help-collections-migrate = Historische Zahlungseingangsdaten aktualisieren, ohne Beträge zu ändern.
+cli-help-install-completion = Vervollständigung für die aktuelle Shell installieren.
+cli-help-show-completion = Vervollständigung für die aktuelle Shell anzeigen, zum Kopieren oder Anpassen.

@@ -132,7 +132,7 @@ def test_removed_interactive_command_is_rejected(monkeypatch):
     monkeypatch.setattr(assistant, "run_sync_with_lifespan", unexpected)
     result = runner.invoke(app, ["interactive", "start"])
     assert result.exit_code == 2
-    assert "No such command" in result.output
+    assert "inesistente" in result.output
 
 
 def test_cli_does_not_duplicate_assistant_tools():
@@ -150,7 +150,7 @@ def test_cli_does_not_duplicate_assistant_tools():
     for args in duplicated:
         result = runner.invoke(app, args)
         assert result.exit_code == 2, (args, result.output)
-        assert "No such command" in result.output
+        assert "inesistente" in result.output
 
 
 def _commands(group, path=()):
