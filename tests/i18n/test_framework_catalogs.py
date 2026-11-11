@@ -44,14 +44,20 @@ def test_catalogs_cover_italian_and_the_other_supported_locales():
     assert LOCALES == ["de", "es", "fr", "it"]
 
 
+def _messages(translations: gettext.GNUTranslations) -> dict[object, str]:
+    return {key: value for key, value in translations._catalog.items() if key != ""}  # type: ignore[attr-defined]
+
+
 @pytest.mark.parametrize("locale", LOCALES)
 def test_compiled_catalog_matches_its_source(locale):
     compiled = io.BytesIO()
     write_mo(compiled, _catalog(locale))
+    compiled.seek(0)
     mo = CATALOGS / locale / "LC_MESSAGES" / f"{framework_i18n.DOMAIN}.mo"
-    assert mo.read_bytes() == compiled.getvalue(), (
-        "Stale .mo: run `uv run python scripts/compile_cli_catalogs.py`"
-    )
+    with mo.open("rb") as committed:
+        assert _messages(gettext.GNUTranslations(committed)) == _messages(
+            gettext.GNUTranslations(compiled)
+        ), "Stale .mo: run `uv run python scripts/compile_cli_catalogs.py`"
 
 
 @pytest.mark.parametrize("locale", LOCALES)

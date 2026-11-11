@@ -206,7 +206,7 @@ class OutputGroup(TyperGroup):
         params = super().get_params(ctx)
         for param in params:
             key = self._COMPLETION_HELP.get(param.name or "")
-            if key and isinstance(param, click.Option):
+            if key and hasattr(param, "help"):
                 param.help = _(key)
         return params
 
