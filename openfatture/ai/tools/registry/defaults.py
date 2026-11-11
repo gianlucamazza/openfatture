@@ -40,6 +40,7 @@ def _register_default_tools(registry: ToolRegistry) -> None:
         batch_tools,
         client_tools,
         collection_tools,
+        document_tools,
         invoice_tools,
         knowledge_tools,
         payment_tools,
@@ -62,6 +63,7 @@ def _register_default_tools(registry: ToolRegistry) -> None:
         preventivo_tools.get_preventivo_tools,
         prodotto_tools.get_prodotto_tools,
         pdf_tools.get_pdf_tools,
+        document_tools.get_document_tools,
         sdi_tools.get_sdi_tools,
         signature_tools.get_signature_tools,
     )

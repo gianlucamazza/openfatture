@@ -57,7 +57,9 @@ class ToolRegistry:
         self.execution_timeout_seconds: float = 60
         self.confirmation_callback: ConfirmCallback | None = None
         self.activity_callback: ActivityCallback | None = None
-        self.outcome_callback: Callable[[str, bool], Awaitable[None]] | None = None
+        # Called after every execution with the tool name, its success and, on
+        # success, the result data (for example the path of a generated file).
+        self.outcome_callback: Callable[[str, bool, Any], Awaitable[None]] | None = None
 
         self._tools: dict[str, Tool] = {}
         self._categories: dict[str, list[str]] = {}
@@ -299,6 +301,7 @@ class ToolRegistry:
             "success": False,
             "result": "interrupted_outcome_unknown",
         }
+        data: Any = None
         try:
             result = await self._execute_tool(
                 tool_name, snapshot, confirmed=confirmed, source=source
@@ -306,13 +309,15 @@ class ToolRegistry:
             outcome.update(
                 success=result.success, result=result.error_type or result.error or "completed"
             )
+            if result.success:
+                data = result.data
             return result
         finally:
             accounting = current_accounting.get()
             if accounting is not None:
                 accounting.tool_outcomes.append(outcome)
             if self.outcome_callback:
-                await self.outcome_callback(tool_name, bool(outcome["success"]))
+                await self.outcome_callback(tool_name, bool(outcome["success"]), data)
 
     async def _execute_tool(
         self,

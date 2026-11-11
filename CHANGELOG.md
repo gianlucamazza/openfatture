@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-11-12
+
+Generated documents can be opened from the chat.
+
+### Added
+
+- The path of a document a tool writes (PDF, FatturaPA XML, signed `.p7m`, CSV) is printed as
+  a terminal link under the tool line: Ctrl+click opens it.
+- `/open [N]` in the chat opens the latest generated document, or the N-th most
+  recent, with the default application.
+- Assistant tool `open_document` (risk class `local_artifact`, so enabled with
+  the default access) for requests such as "aprilo".
+- `openfatture.platform.opener`: only `.pdf`, `.xml`, `.p7m` and `.csv` files,
+  or folders, in the exports or archive directory are opened, after resolving
+  symbolic links; the application starts detached; a launcher that reports no
+  handler for the file type is an error; without a person at the terminal or a
+  graphical session the path is returned instead.
+
+### Changed
+
+- The tool registry's outcome callback also receives the result data of a
+  successful tool.
+
 ## [2.11.0] - 2026-11-11
 
 The CLI keeps only what the assistant must not do: the SDI journal and the

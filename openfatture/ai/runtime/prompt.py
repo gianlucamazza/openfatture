@@ -15,6 +15,7 @@ logger = get_logger(__name__)
 _CATEGORY_LABELS = {
     "batch": "import/export CSV e aggiornamenti massivi",
     "clients": "gestione clienti",
+    "documents": "apertura dei documenti generati",
     "invoices": "gestione fatture e righe",
     "knowledge": "base di conoscenza normativa",
     "payments": "pagamenti e incassi",
@@ -55,6 +56,7 @@ def build_chat_system_prompt(context: ChatContext, *, enable_tools: bool = True)
         "- Il PDF di una fattura è una copia di cortesia: l'originale fiscale è l'XML transitato da SDI. Puoi generarlo anche per le fatture issued_elsewhere, dicendo che è una copia di cortesia. Riporta il percorso del file restituito dallo strumento.",
         "- Per il file XML FatturaPA di una fattura (da caricare su un portale, da dare a un intermediario o da firmare) usa generate_invoice_xml: lo valida con lo schema XSD, lo salva nell'archivio solo se valido e non trasmette nulla. Riporta il percorso o gli errori di validazione.",
         "- Per un riepilogo o report in PDF della situazione fatture usa generate_invoice_summary_pdf: i numeri del documento li calcola lo strumento, non ricomporli tu. Riporta il percorso e i totali restituiti.",
+        "- Se l'utente chiede di aprire, vedere o mostrare un documento generato, usa open_document con il percorso restituito dallo strumento che l'ha creato; apri solo su richiesta. Se risponde opened=false, riporta il percorso.",
         "- OpenFatture è un'applicazione a riga di comando: non esiste un'interfaccia grafica, non descriverne una.",
     ]
 

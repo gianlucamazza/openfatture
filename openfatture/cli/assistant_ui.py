@@ -6,6 +6,7 @@ import re
 import time
 from collections.abc import AsyncIterator, Iterator
 from contextlib import ExitStack, asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from rich.console import Console, Group, RenderableType
@@ -84,6 +85,8 @@ class ChatPresentation:
         self.buffer = ""
         self.tool: str | None = None
         self.status_since = time.monotonic()
+        # Documents the tools produced in this chat, oldest first (for /open).
+        self.documents: list[Path] = []
 
     def _set_status(self, tool: str | None) -> None:
         self.tool = tool
@@ -114,7 +117,7 @@ class ChatPresentation:
                 ) -> Iterator[Completion]:
                     text = document.text_before_cursor
                     if text.startswith("/") and " " not in text and "\n" not in text:
-                        for command in ("/help", "/exit", "/session", "/clear"):
+                        for command in ("/help", "/open", "/exit", "/session", "/clear"):
                             if command.startswith(text):
                                 yield Completion(command, start_position=-len(text))
 
@@ -150,14 +153,31 @@ class ChatPresentation:
             self._commit(everything=True)
             self._set_status(name)
 
-    async def finished(self, name: str, success: bool) -> None:
+    async def finished(self, name: str, success: bool, data: Any = None) -> None:
+        from openfatture.platform.opener import documents_in
+
+        documents = documents_in(data) if success else []
+        for document in documents:
+            if document in self.documents:
+                self.documents.remove(document)
+            self.documents.append(document)
         if self.live:
             mark, style = ("✓", "green") if success else ("✗", "red")
             label = self.text(
                 "assistant-tool-completed" if success else "assistant-tool-failed", name=name
             )
             self.console.print(Text.assemble((f"{mark} ", style), (label, "dim")))
+            for document in documents:
+                self.console.print(self.document_line(document))
             self._set_status(None)
+
+    def document_line(self, document: Path) -> Text:
+        """The path of ``document`` as a terminal link (Ctrl+click opens it)."""
+        return Text.assemble(
+            ("  ↳ ", "dim"),
+            (str(document), f"link {document.as_uri()}"),
+            ("  " + self.text("assistant-document-open-hint"), "dim"),
+        )
 
     async def render(self, iterator: AsyncIterator[Any]) -> str:
         from openfatture.platform.config import get_settings

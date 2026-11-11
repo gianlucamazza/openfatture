@@ -1,6 +1,6 @@
 # OpenFatture project status
 
-**Current version:** 2.11.0  
+**Current version:** 2.12.0  
 **Product posture:** CLI-first; `openfatture` starts the interactive assistant  
 **Runtime:** Python 3.12+ and `uv`
 

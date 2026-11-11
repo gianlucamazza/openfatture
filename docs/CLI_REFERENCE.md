@@ -108,12 +108,33 @@ external evidence, so they are not assistant tools.
 Interactive assistant slash commands (when no one-shot message is given):
 
 - `/help` — list commands
+- `/open [N]` — open the N-th most recent document the chat generated (default
+  the latest) with the default application; see [Opening documents](#opening-documents)
 - `/exit` — end the session
 - `/session` — show session id
 - `/clear` — clear persisted messages for the current session
 
 Use `openfatture --help` and command-specific `--help` output as the
 canonical option reference.
+
+### Opening documents
+
+When a tool writes a document (PDF, FatturaPA XML, signed `.p7m`, CSV export), the chat prints
+its path under the tool line as a terminal link: Ctrl+click (Cmd+click on
+macOS) opens it in terminals that support OSC 8 hyperlinks. `/open` opens the
+latest document, `/open 2` the one before. Asking the assistant to open a
+document ("aprilo") uses the `open_document` tool, enabled with the default
+`ai_tool_access = "standard"`.
+
+Only `.pdf`, `.xml`, `.p7m` and `.csv` files, or folders ("apri la cartella
+delle esportazioni"), inside the exports or the archive directory can be
+opened, after resolving symbolic links. The default application (`xdg-open` on
+Linux, `open` on macOS, the file association on Windows) starts detached from
+the chat; when the launcher reports within two seconds that no application
+handles the file type, the chat says so. A `.p7m` needs a signature viewer
+installed (for example the one your signing device came with). Without a person at the terminal or a
+graphical session (SSH, scripts) nothing is opened and the path is shown
+instead.
 
 
 ### Pending assistant turns
