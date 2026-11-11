@@ -234,7 +234,9 @@ def _build_status() -> dict[str, Any]:
 
 
 @app.command()
-def status(json_output: bool = typer.Option(False, "--json", help="Emit status as JSON.")) -> None:
+def status(
+    json_output: bool = typer.Option(False, "--json", help="Restituisci lo stato in JSON."),
+) -> None:
     """Show local configuration and storage readiness without changing state."""
     data = _build_status()
     remember_result(data)

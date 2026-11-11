@@ -114,6 +114,7 @@ cli-fattura-output = Ausgabe: [cyan]{ $path }[/cyan]
 cli-fattura-size = Größe: { $size } Byte
 cli-fattura-journal-submission = Versand Nr. { $id } · Rechnung { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Empfangsbestätigung Nr. { $id } · Rechnung { $invoice } · { $outcome } · Quelle { $source }
+cli-fattura-journal-empty = Keine SDI-Übermittlungen oder Empfangsbestätigungen erfasst.
 cli-fattura-associate-confirm = Empfangsbestätigung { $receipt } der Rechnung { $invoice } zuordnen?
 cli-fattura-receipt-associated = Empfangsbestätigung zugeordnet
 cli-fattura-resolve-confirm = Bestätigen, dass Versand { $attempt } { $sent ->

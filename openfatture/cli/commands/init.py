@@ -35,7 +35,7 @@ def init(
         True,
         "--interactive/--no-interactive",
         "-i/-n",
-        help="Run interactive setup wizard",
+        help="Configurazione guidata interattiva",
     ),
 ) -> None:
     """

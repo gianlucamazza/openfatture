@@ -11,7 +11,7 @@ from rich.console import Console
 from openfatture.cli.database import ensure_database
 from openfatture.cli.output import remember_result
 
-app = typer.Typer(name="pagamento", help="Collection ledger maintenance")
+app = typer.Typer(name="pagamento")
 console = Console()
 
 
@@ -22,7 +22,7 @@ def prepare() -> None:
 
 @app.command("migrate")
 def migrate_collections() -> None:
-    """Upgrade existing collection data without changing monetary balances."""
+    """Aggiorna i dati storici degli incassi senza cambiare gli importi."""
     from openfatture.payment.application.collection_migration import upgrade_collection_database
     from openfatture.storage.database import base
 

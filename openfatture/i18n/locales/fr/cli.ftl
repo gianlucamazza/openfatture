@@ -114,6 +114,7 @@ cli-fattura-output = Sortie : [cyan]{ $path }[/cyan]
 cli-fattura-size = Taille : { $size } octets
 cli-fattura-journal-submission = Envoi n° { $id } · facture { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Accusé n° { $id } · facture { $invoice } · { $outcome } · origine { $source }
+cli-fattura-journal-empty = Aucun envoi ni accusé SDI enregistré.
 cli-fattura-associate-confirm = Associer l'accusé { $receipt } à la facture { $invoice } ?
 cli-fattura-receipt-associated = Accusé associé
 cli-fattura-resolve-confirm = Confirmez-vous que l'envoi { $attempt } { $sent ->

@@ -7,6 +7,14 @@ diagnostics, it keeps only the operations the assistant does not perform:
 writing the FatturaPA XML file, the SDI journal and its human-evidence
 resolutions, and the collection ledger migration.
 
+## Global options
+
+| Option | Purpose |
+| --- | --- |
+| `--version`, `-v` | Print the version and exit |
+| `--debug` | Show diagnostic logs and tracebacks |
+| `--format`, `-f` | Output format for commands: `rich` (default), `json`, `markdown`, `stream-json`, `html` |
+
 ## `openfatture`
 
 Starts the interactive assistant directly, using the same session handling and

@@ -9,7 +9,7 @@ from rich.console import Console
 from openfatture.cli.output import remember_result
 from openfatture.i18n import _
 
-app = typer.Typer(name="fattura", help="FatturaPA XML and SDI journal")
+app = typer.Typer(name="fattura")
 console = Console()
 
 
@@ -22,11 +22,11 @@ def prepare_database() -> None:
 
 @app.command("generate-xml")
 def generate_xml(
-    fattura_id: int = typer.Argument(..., help="Invoice ID"),
-    output: str = typer.Option(None, "--output", "-o", help="Output XML file path"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Show XML without writing file"),
+    fattura_id: int = typer.Argument(..., help="ID della fattura"),
+    output: str = typer.Option(None, "--output", "-o", help="Percorso del file XML"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Mostra l'XML senza scrivere il file"),
 ) -> None:
-    """Generate FatturaPA XML for an invoice."""
+    """Genera l'XML FatturaPA di una fattura (senza validazione XSD né invio)."""
     from openfatture.sdi.application.invoice_sdi_ops import generate_invoice_xml
 
     result = generate_invoice_xml(fattura_id, output_path=output, dry_run=dry_run)
@@ -47,11 +47,13 @@ def generate_xml(
 
 @app.command("sdi-journal")
 def sdi_journal() -> None:
-    """Inspect recorded submissions and imported receipts without sending anything."""
+    """Mostra gli invii PEC e le ricevute SDI registrati, senza inviare nulla."""
     from openfatture.sdi.application.journal_ops import list_sdi_journal
 
     journal = list_sdi_journal()
     remember_result(journal)
+    if not journal["submissions"] and not journal["receipts"]:
+        console.print(_("cli-fattura-journal-empty"))
     for attempt in journal["submissions"]:
         console.print(
             _(
@@ -78,9 +80,11 @@ def sdi_journal() -> None:
 
 @app.command("associate-receipt")
 def associate_receipt(
-    receipt_id: int, invoice_id: int, evidence: str = typer.Option(..., "--evidence")
+    receipt_id: int = typer.Argument(..., help="ID della ricevuta SDI"),
+    invoice_id: int = typer.Argument(..., help="ID della fattura"),
+    evidence: str = typer.Option(..., "--evidence", help="Riscontro verificato (es. riferimento)"),
 ) -> None:
-    """Associate an unresolved receipt after explicit human verification."""
+    """Associa una ricevuta non risolta a una fattura, dopo una verifica manuale."""
     from openfatture.sdi.application import journal_ops
 
     if not typer.confirm(
@@ -98,11 +102,15 @@ def associate_receipt(
 
 @app.command("resolve-submission")
 def resolve_submission_command(
-    attempt_id: int,
-    sent: bool = typer.Option(..., "--sent/--not-sent"),
-    evidence: str = typer.Option(..., "--evidence"),
+    attempt_id: int = typer.Argument(..., help="ID del tentativo di invio"),
+    sent: bool = typer.Option(
+        ..., "--sent/--not-sent", help="Esito verificato: inviato o non inviato"
+    ),
+    evidence: str = typer.Option(
+        ..., "--evidence", help="Riscontro verificato (es. riferimento del provider)"
+    ),
 ) -> None:
-    """Resolve an uncertain PEC attempt only after checking transport evidence."""
+    """Risolve un invio PEC incerto, dopo aver verificato l'esito del trasporto."""
     from openfatture.sdi.application.journal_ops import resolve_submission_attempt
 
     if not typer.confirm(

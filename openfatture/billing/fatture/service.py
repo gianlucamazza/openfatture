@@ -43,7 +43,8 @@ class InvoiceService:
                 "This invoice was issued elsewhere and is stored for reference only. "
                 "XML generation is blocked to prevent duplicate SDI submissions."
             )
-            logger.warning(
+            # An expected refusal, reported to the caller: not a warning.
+            logger.info(
                 "xml_generation_blocked_issued_elsewhere",
                 invoice_id=fattura.numero,
                 anno=fattura.anno,

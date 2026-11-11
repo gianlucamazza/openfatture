@@ -86,13 +86,15 @@ def _handle_slash_command(user_input: str, *, runtime: AssistantRuntime) -> str 
 @app.command()
 def assistant(
     ctx: typer.Context,
-    message: str | None = typer.Argument(None, help="A request for the OpenFatture assistant."),
-    stream: bool = typer.Option(True, "--stream/--no-stream", help="Stream the response."),
-    json_output: bool = typer.Option(False, "--json", help="Emit the response as JSON."),
+    message: str | None = typer.Argument(None, help="Richiesta per l'assistente."),
+    stream: bool = typer.Option(
+        True, "--stream/--no-stream", help="Mostra la risposta mentre viene generata."
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Restituisci la risposta in JSON."),
     session: str | None = typer.Option(
         None,
         "--session",
-        help="Resume a file-backed chat session by ID (enables persistence).",
+        help="Riprendi una sessione salvata tramite il suo ID (attiva il salvataggio).",
     ),
 ) -> None:
     """Ask the assistant to explain, inspect, or perform an invoicing task."""

@@ -151,3 +151,35 @@ def test_cli_does_not_duplicate_assistant_tools():
         result = runner.invoke(app, args)
         assert result.exit_code == 2, (args, result.output)
         assert "No such command" in result.output
+
+
+def _commands(group, path=()):
+    import click
+
+    for name, command in group.commands.items():
+        yield (*path, name), command
+        if isinstance(command, click.Group):
+            yield from _commands(command, (*path, name))
+
+
+def test_every_command_and_parameter_is_described():
+    """`--help` explains every command, argument and option (no blank rows)."""
+    import typer
+
+    root = typer.main.get_command(app)
+    undocumented = []
+    for path, command in _commands(root):
+        if not (command.help or command.short_help):
+            undocumented.append(" ".join(path))
+        for param in command.params:
+            if param.name != "help" and not getattr(param, "help", None):
+                undocumented.append(f"{' '.join(path)} {param.name}")
+        result = runner.invoke(app, [*path, "--help"])
+        assert result.exit_code == 0, (path, result.output)
+    assert undocumented == []
+
+
+def test_empty_sdi_journal_says_so(runtime_db):
+    result = runner.invoke(app, ["fattura", "sdi-journal"])
+    assert result.exit_code == 0
+    assert "Nessun invio o ricevuta SDI registrati." in result.stdout

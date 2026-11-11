@@ -113,6 +113,7 @@ cli-fattura-output = File: [cyan]{ $path }[/cyan]
 cli-fattura-size = Dimensione: { $size } byte
 cli-fattura-journal-submission = Invio n. { $id } · fattura { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Ricevuta n. { $id } · fattura { $invoice } · { $outcome } · origine { $source }
+cli-fattura-journal-empty = Nessun invio o ricevuta SDI registrati.
 cli-fattura-associate-confirm = Associare la ricevuta { $receipt } alla fattura { $invoice }?
 cli-fattura-receipt-associated = Ricevuta associata
 cli-fattura-resolve-confirm = Confermi che l'invio { $attempt } { $sent ->

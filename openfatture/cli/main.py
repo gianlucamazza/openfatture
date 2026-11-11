@@ -43,14 +43,14 @@ def main(
         "-v",
         callback=version_callback,
         is_eager=True,
-        help="Show the version and exit.",
+        help="Mostra la versione ed esci.",
     ),
-    debug: bool = typer.Option(False, "--debug", help="Show diagnostic logs and tracebacks."),
+    debug: bool = typer.Option(False, "--debug", help="Mostra log diagnostici e traceback."),
     format_type: str = typer.Option(
         "rich",
         "--format",
         "-f",
-        help="Output format: rich, json, markdown, stream-json, html",
+        help="Formato di output: rich, json, markdown, stream-json, html",
     ),
 ) -> None:
     """Configure the CLI and start the assistant when no command is selected."""
