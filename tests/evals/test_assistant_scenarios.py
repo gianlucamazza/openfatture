@@ -33,9 +33,14 @@ pytestmark = [
 
 @pytest.fixture
 def workspace(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
+    provider_env: dict[str, str],
 ) -> Iterator[Session]:
-    """Isolated database and data directories; provider settings stay the user's."""
+    """Isolated database and data directories; the provider is the user's."""
+    for name, value in provider_env.items():
+        monkeypatch.setenv(name, value)
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("ARCHIVIO_DIR", str(tmp_path / "data" / "archivio"))
     monkeypatch.setenv("AI_TOOL_ACCESS", "standard")
