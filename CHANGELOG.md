@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-11-11
+
+The assistant is the only path for business operations: tool access by risk class,
+PDFs and a yearly summary out of the box, and no CLI duplicates of assistant tools.
+
 ### Added
 
 - The assistant tool `generate_invoice_summary_pdf` renders a PDF summary of a year's
@@ -41,7 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- PDFs generated without `--output` are written to `data_dir/exports/fatture/` (or
+- `--help` is in one language, describes every command and parameter, and the
+  `fattura`/`pagamento` group help is defined once; `fattura sdi-journal` says when the
+  journal is empty; refusing XML for an invoice issued elsewhere no longer prints a warning
+  log line.
+- PDFs generated without an output path are written to `data_dir/exports/fatture/` (or
   `preventivi/`) instead of the current working directory, also when the assistant omits the
   path.
 - The invoice PDF footer states it is a courtesy copy without fiscal value (the original is
