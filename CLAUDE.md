@@ -48,6 +48,24 @@ Use `uv run python -m pytest`, not an unrelated global pytest executable.
   duplicate implementations.
 - Update the CLI reference and tests when the public surface changes.
 
+## Assistant prompt and tool descriptions
+
+- One system prompt, `openfatture/ai/runtime/prompt.py`. The ReAct prompt
+  (providers without native tool calling) appends only its text protocol.
+- The prompt states product context and how to read the data (fiscal
+  original, SDI states, collection ledger), in prose with the reason. A rule
+  about one tool goes in `_TOOL_RULES`, which is rendered only while that tool
+  is enabled.
+- Tool descriptions are English contracts: what the tool does and returns,
+  limits, failure modes, and which neighbouring tool to use instead. No
+  shouted words; confirmations are enforced by `requires_confirmation`, not by
+  prompt text.
+- The prompt depends only on session-scoped inputs, so it is identical across
+  turns. `tests/ai/test_system_prompt.py` holds these invariants.
+- Before and after changing the prompt or descriptions, run the model
+  scenarios (they call the configured provider and cost money):
+  `OPENFATTURE_EVAL=1 uv run python -m pytest -m llm_eval tests/evals`.
+
 ## Documentation
 
 The canonical user-facing references are:

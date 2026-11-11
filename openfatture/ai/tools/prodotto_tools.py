@@ -21,37 +21,45 @@ def get_prodotto_tools() -> list[Tool]:
         Tool(
             name="search_prodotti",
             risk=ToolRisk.READ,
-            description="Search products/services in catalog with optional filters (category, type, code, description)",
+            description=(
+                "List catalogue entries (products and services with a default price) ordered by "
+                "code, filtered by exact category, type, and case-insensitive partial matches "
+                "on code or description. Each result has prodotto_id, codice, descrizione, "
+                "prezzo_unitario, aliquota_iva, unita_misura, categoria and is_servizio; "
+                "has_more is true when the limit was reached. Invoice and quote lines are not "
+                "linked to the catalogue: pass the price, VAT rate and unit found here to "
+                "create_riga or create_preventivo."
+            ),
             category="prodotti",
             parameters=[
                 ToolParameter(
                     name="categoria",
                     type=ToolParameterType.STRING,
-                    description="Filter by category",
+                    description="Category, exact and case-sensitive match; omit for all categories",
                     required=False,
                 ),
                 ToolParameter(
                     name="is_servizio",
                     type=ToolParameterType.BOOLEAN,
-                    description="Filter by type (True=service, False=product)",
+                    description="true for services only, false for goods only; omit for both",
                     required=False,
                 ),
                 ToolParameter(
                     name="codice_contains",
                     type=ToolParameterType.STRING,
-                    description="Filter by product code (partial match)",
+                    description="Text contained in the code, case-insensitive",
                     required=False,
                 ),
                 ToolParameter(
                     name="descrizione_contains",
                     type=ToolParameterType.STRING,
-                    description="Filter by description (partial match)",
+                    description="Text contained in the description, case-insensitive",
                     required=False,
                 ),
                 ToolParameter(
                     name="limit",
                     type=ToolParameterType.INTEGER,
-                    description="Maximum results (default 20)",
+                    description="Maximum number of entries returned, 1-100; default 20",
                     required=False,
                     default=20,
                 ),
@@ -67,13 +75,18 @@ def get_prodotto_tools() -> list[Tool]:
         Tool(
             name="get_prodotto_details",
             risk=ToolRisk.READ,
-            description="Get detailed information about a specific product/service including usage statistics",
+            description=(
+                "Return one catalogue entry with codice, descrizione, prezzo_unitario, "
+                "aliquota_iva, unita_misura, categoria, is_servizio and note, plus usage_stats: "
+                "times_used (invoice lines referencing it) and the five most recent of those "
+                "invoices. Returns an error when the entry does not exist."
+            ),
             category="prodotti",
             parameters=[
                 ToolParameter(
                     name="prodotto_id",
                     type=ToolParameterType.INTEGER,
-                    description="Product ID",
+                    description="Catalogue entry ID (prodotto_id from search_prodotti)",
                     required=True,
                 ),
             ],
@@ -84,58 +97,64 @@ def get_prodotto_tools() -> list[Tool]:
         Tool(
             name="create_prodotto",
             risk=ToolRisk.MUTATE,
-            description="Create a new product/service in catalog with pricing and VAT information",
+            description=(
+                "Add a product or service to the catalogue with its default price, VAT rate and "
+                "unit. Returns prodotto_id, codice, descrizione, prezzo_unitario and "
+                "aliquota_iva. Fails when the code already exists (the error gives the existing "
+                "ID) or a value is out of range. The catalogue is a reference list: it does not "
+                "change any invoice or quote."
+            ),
             category="prodotti",
             parameters=[
                 ToolParameter(
                     name="codice",
                     type=ToolParameterType.STRING,
-                    description="Unique product code (max 50 chars)",
+                    description="Unique catalogue code, 1-50 characters (e.g. WEB-CONS)",
                     required=True,
                 ),
                 ToolParameter(
                     name="descrizione",
                     type=ToolParameterType.STRING,
-                    description="Product description (max 500 chars)",
+                    description="Description used on lines, 1-500 characters",
                     required=True,
                 ),
                 ToolParameter(
                     name="prezzo_unitario",
                     type=ToolParameterType.NUMBER,
-                    description="Unit price (must be positive)",
+                    description="Default unit price in euros, VAT excluded, greater than 0",
                     required=True,
                 ),
                 ToolParameter(
                     name="aliquota_iva",
                     type=ToolParameterType.NUMBER,
-                    description="VAT rate (default 22%)",
+                    description="VAT rate percentage, 0-100; default 22. No natura is stored, so a 0% rate needs one on each line",
                     required=False,
                     default=22.0,
                 ),
                 ToolParameter(
                     name="unita_misura",
                     type=ToolParameterType.STRING,
-                    description="Unit of measure (default 'ore')",
+                    description="Unit of measure, at most 10 characters (e.g. ore, giorni, pz); default 'ore'",
                     required=False,
                     default="ore",
                 ),
                 ToolParameter(
                     name="categoria",
                     type=ToolParameterType.STRING,
-                    description="Optional category",
+                    description="Category for grouping and filtering, at most 100 characters",
                     required=False,
                 ),
                 ToolParameter(
                     name="is_servizio",
                     type=ToolParameterType.BOOLEAN,
-                    description="True for service, False for product (default True)",
+                    description="true for a service, false for goods; default true",
                     required=False,
                     default=True,
                 ),
                 ToolParameter(
                     name="note",
                     type=ToolParameterType.STRING,
-                    description="Optional notes",
+                    description="Free-text internal notes",
                     required=False,
                 ),
             ],
@@ -150,55 +169,60 @@ def get_prodotto_tools() -> list[Tool]:
         Tool(
             name="update_prodotto",
             risk=ToolRisk.MUTATE,
-            description="Update product/service information (selective field updates)",
+            description=(
+                "Change the fields passed on a catalogue entry; the code cannot be changed. "
+                "Returns prodotto_id, codice and the list of fields set. Fails when the entry "
+                "is not found, no field is given, or a value is out of range (same limits as "
+                "create_prodotto). Existing invoice and quote lines keep their own prices."
+            ),
             category="prodotti",
             parameters=[
                 ToolParameter(
                     name="prodotto_id",
                     type=ToolParameterType.INTEGER,
-                    description="Product ID to update",
+                    description="Catalogue entry ID",
                     required=True,
                 ),
                 ToolParameter(
                     name="descrizione",
                     type=ToolParameterType.STRING,
-                    description="New description",
+                    description="New description, 1-500 characters; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="prezzo_unitario",
                     type=ToolParameterType.NUMBER,
-                    description="New unit price",
+                    description="New unit price in euros, VAT excluded, greater than 0; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="aliquota_iva",
                     type=ToolParameterType.NUMBER,
-                    description="New VAT rate",
+                    description="New VAT rate percentage, 0-100; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="unita_misura",
                     type=ToolParameterType.STRING,
-                    description="New unit of measure",
+                    description="New unit of measure, at most 10 characters; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="categoria",
                     type=ToolParameterType.STRING,
-                    description="New category",
+                    description="New category, at most 100 characters; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="is_servizio",
                     type=ToolParameterType.BOOLEAN,
-                    description="New product type",
+                    description="true for a service, false for goods; omit to keep it",
                     required=False,
                 ),
                 ToolParameter(
                     name="note",
                     type=ToolParameterType.STRING,
-                    description="New notes",
+                    description="New notes, replacing the current ones; omit to keep them",
                     required=False,
                 ),
             ],
@@ -213,19 +237,25 @@ def get_prodotto_tools() -> list[Tool]:
         Tool(
             name="delete_prodotto",
             risk=ToolRisk.MUTATE,
-            description="CRITICAL: Delete product/service from catalog (irreversible operation)",
+            description=(
+                "Delete a catalogue entry. Irreversible. Returns prodotto_id, codice, "
+                "descrizione, was_used and usage_count. An entry referenced by invoice lines is "
+                "refused (the error reports usage_count) unless force is true; with force the "
+                "lines stay unchanged and only lose the reference. Fails when the entry is not "
+                "found."
+            ),
             category="prodotti",
             parameters=[
                 ToolParameter(
                     name="prodotto_id",
                     type=ToolParameterType.INTEGER,
-                    description="Product ID to delete",
+                    description="Catalogue entry ID",
                     required=True,
                 ),
                 ToolParameter(
                     name="force",
                     type=ToolParameterType.BOOLEAN,
-                    description="Force deletion even if used in invoices (default False)",
+                    description="Also delete an entry referenced by invoice lines; default false refuses it",
                     required=False,
                     default=False,
                 ),

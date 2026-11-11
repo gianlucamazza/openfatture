@@ -291,7 +291,9 @@ class Settings(BaseSettings):
         default=None,
         description="AI API base URL (for local models)",
     )
-    ai_temperature: float = Field(default=0.7, description="AI temperature")
+    # Low by default: answers report invoice data and choose tools, they are not
+    # creative writing. Providers that accept only their default ignore it.
+    ai_temperature: float = Field(default=0.3, description="AI temperature")
     ai_max_tokens: int = Field(default=2000, description="AI max tokens")
 
     ai_model_timeout_seconds: float = Field(default=120, gt=0)

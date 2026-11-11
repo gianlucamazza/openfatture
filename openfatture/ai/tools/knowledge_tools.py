@@ -105,26 +105,40 @@ def get_knowledge_tools() -> list[Tool]:
         Tool(
             name="search_knowledge_base",
             risk=ToolRisk.READ,
-            description="Esegue una ricerca semantica nella knowledge base normativa e operativa",
+            description=(
+                "Semantic search over the packaged knowledge base on Italian VAT and "
+                "FatturaPA rules (VAT rates, natura codes, reverse charge, split payment, "
+                "regime forfettario). Returns count and results, each with source, section, "
+                "citation (law reference when available), source_path, similarity (0-1) and "
+                "an excerpt of up to 400 characters, best match first. The knowledge base is "
+                "indexed on first use, which can take a while. When retrieval is disabled it "
+                "returns no results with message 'RAG disabled'; with OpenAI embeddings and "
+                "no OPENAI_API_KEY it returns an error. It does not read invoices or clients. "
+                "Cite the returned citation when answering a regulatory question."
+            ),
             category="knowledge",
             func=search_knowledge_base,
             parameters=[
                 ToolParameter(
                     name="query",
                     type=ToolParameterType.STRING,
-                    description="Domanda o tema da cercare",
+                    description="Question or topic in natural language, Italian or English, up to 500 characters",
                     required=True,
                 ),
                 ToolParameter(
                     name="source",
                     type=ToolParameterType.STRING,
-                    description="Filtra per ID sorgente definito nel manifest (opzionale)",
+                    description=(
+                        "Restrict to one knowledge source by its manifest ID (currently "
+                        "'iva_fatturapa'); an unknown ID returns no results. All sources "
+                        "when omitted"
+                    ),
                     required=False,
                 ),
                 ToolParameter(
                     name="top_k",
                     type=ToolParameterType.INTEGER,
-                    description="Numero massimo di risultati (default 5)",
+                    description="Maximum number of excerpts, 1-20 (default 5)",
                     required=False,
                     default=5,
                 ),

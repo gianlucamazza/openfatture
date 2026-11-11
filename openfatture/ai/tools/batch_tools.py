@@ -22,31 +22,46 @@ def get_batch_tools() -> list[Tool]:
         Tool(
             name="export_invoices_to_csv",
             risk=ToolRisk.LOCAL_ARTIFACT,
-            description="Export invoices to CSV file with optional filters (year, client)",
+            description=(
+                "Write invoices in every state except bozza to a CSV file in the exports "
+                "directory and return exported_count and the absolute output_path. Without "
+                "include_lines there is one row per invoice with columns numero, anno, "
+                "data_emissione, cliente, stato, imponibile, iva, totale and note; with "
+                "include_lines there is one row per line item, adding riga_descrizione, "
+                "riga_quantita, riga_prezzo_unitario and riga_aliquota_iva and dropping note. An "
+                "existing file at the path is overwritten. Returns an error when no invoice "
+                "matches or the path resolves outside the exports directory."
+            ),
             category="batch",
             parameters=[
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="CSV file path relative to the exports directory",
+                    description=(
+                        "CSV file path relative to the exports directory; missing subfolders "
+                        "are created; absolute paths or .. are accepted only inside that directory"
+                    ),
                     required=True,
                 ),
                 ToolParameter(
                     name="anno",
                     type=ToolParameterType.INTEGER,
-                    description="Filter by year (optional)",
+                    description="Invoice year, 2000 to 2100; omit for all years",
                     required=False,
                 ),
                 ToolParameter(
                     name="cliente_id",
                     type=ToolParameterType.INTEGER,
-                    description="Filter by client ID (optional)",
+                    description="Only invoices of this client id; omit for all clients",
                     required=False,
                 ),
                 ToolParameter(
                     name="include_lines",
                     type=ToolParameterType.BOOLEAN,
-                    description="Include invoice line items in separate rows",
+                    description=(
+                        "true for one row per line item (an invoice without lines still gets one "
+                        "row); default false, one row per invoice"
+                    ),
                     required=False,
                     default=False,
                 ),
@@ -61,13 +76,24 @@ def get_batch_tools() -> list[Tool]:
         Tool(
             name="export_clients_to_csv",
             risk=ToolRisk.LOCAL_ARTIFACT,
-            description="Export all clients to CSV file",
+            description=(
+                "Write every client, ordered by name, to a CSV file in the exports directory and "
+                "return exported_count and the absolute output_path. Columns: id, denominazione, "
+                "partita_iva, codice_fiscale, email, pec, indirizzo, cap, comune, provincia, "
+                "nazione and codice_destinatario (0000000 when empty); phone and notes are not "
+                "exported. The file can be read back by import_clients_from_csv. An existing file "
+                "at the path is overwritten. Returns an error when there are no clients or the "
+                "path resolves outside the exports directory."
+            ),
             category="batch",
             parameters=[
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="CSV file path relative to the exports directory",
+                    description=(
+                        "CSV file path relative to the exports directory; missing subfolders "
+                        "are created; absolute paths or .. are accepted only inside that directory"
+                    ),
                     required=True,
                 ),
             ],
@@ -78,19 +104,33 @@ def get_batch_tools() -> list[Tool]:
         Tool(
             name="import_invoices_from_csv",
             risk=ToolRisk.MUTATE,
-            description="Import invoices from CSV file (creates new invoices as drafts)",
+            description=(
+                "Create draft (bozza) invoice headers from a UTF-8 CSV with a header row and "
+                "columns numero, anno, data_emissione (YYYY-MM-DD), cliente_id, imponibile, iva, "
+                "totale and optional note. Amounts are stored as given, not recomputed, and no "
+                "line items are created, so the drafts need lines before they can be sent. A row "
+                "fails for an unknown client, an existing numero/anno, or a missing or unparsable "
+                "value; failed rows are skipped and the valid rows are committed. Returns "
+                "imported_count, failed_count, total_rows and the first 10 errors."
+            ),
             category="batch",
             parameters=[
                 ToolParameter(
                     name="csv_path",
                     type=ToolParameterType.STRING,
-                    description="Path to CSV file to import",
+                    description=(
+                        "Path to the CSV file, absolute or relative to the current working "
+                        "directory"
+                    ),
                     required=True,
                 ),
                 ToolParameter(
                     name="default_cliente_id",
                     type=ToolParameterType.INTEGER,
-                    description="Default client ID if not in CSV (optional)",
+                    description=(
+                        "Client id used for every row when the CSV has no cliente_id column; an "
+                        "empty cliente_id cell still fails its row"
+                    ),
                     required=False,
                 ),
             ],
@@ -102,13 +142,26 @@ def get_batch_tools() -> list[Tool]:
         Tool(
             name="import_clients_from_csv",
             risk=ToolRisk.MUTATE,
-            description="Import clients from CSV file (creates new clients)",
+            description=(
+                "Create clients from a UTF-8 CSV with a header row. Recognised columns: "
+                "denominazione (required), partita_iva and codice_fiscale (at least one per row), "
+                "email, pec, indirizzo, cap, comune, provincia, nazione (default IT) and "
+                "codice_destinatario (default 0000000); other columns, such as id, are ignored. "
+                "Unlike create_client it does not look for an existing client with the same "
+                "partita IVA or codice fiscale, so importing the same rows twice creates "
+                "duplicates; check with search_clients first. Failed rows are skipped and the "
+                "valid rows are committed. Returns imported_count, failed_count, total_rows and "
+                "the first 10 errors."
+            ),
             category="batch",
             parameters=[
                 ToolParameter(
                     name="csv_path",
                     type=ToolParameterType.STRING,
-                    description="Path to CSV file to import",
+                    description=(
+                        "Path to the CSV file, absolute or relative to the current working "
+                        "directory"
+                    ),
                     required=True,
                 ),
             ],
@@ -120,26 +173,40 @@ def get_batch_tools() -> list[Tool]:
         Tool(
             name="bulk_update_invoices_status",
             risk=ToolRisk.MUTATE,
-            description="Bulk update invoice status for multiple invoices at once",
+            description=(
+                "Set the status of every invoice of one year, optionally of one client, as a "
+                "single all-or-nothing change. Only manual changes between bozza and da_inviare "
+                "are possible: if any selected invoice is in another state, is historical (issued "
+                "elsewhere), or fails the da_inviare checks (client, line items and FatturaPA XML "
+                "passing XSD validation), nothing changes and every invoice is reported as "
+                "failed. Invoices already in the target state count as updated. Sent and "
+                "delivered states are set only by SDI transmission and receipts. Returns "
+                "updated_count, failed_count and the first 10 errors."
+            ),
             category="batch",
             parameters=[
                 ToolParameter(
                     name="anno",
                     type=ToolParameterType.INTEGER,
-                    description="Year to filter invoices",
+                    description=(
+                        "Invoice year, 2000 to 2100; every invoice of that year is selected"
+                    ),
                     required=True,
                 ),
                 ToolParameter(
                     name="new_status",
                     type=ToolParameterType.STRING,
-                    description="New status to set",
+                    description=(
+                        "Target status: bozza or da_inviare (sent and delivered states come from "
+                        "SDI, not from this tool)"
+                    ),
                     required=True,
-                    enum=["bozza", "da_inviare", "inviata", "consegnata"],
+                    enum=["bozza", "da_inviare"],
                 ),
                 ToolParameter(
                     name="cliente_id",
                     type=ToolParameterType.INTEGER,
-                    description="Optional client filter",
+                    description="Restrict the selection to invoices of this client id",
                     required=False,
                 ),
             ],

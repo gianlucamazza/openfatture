@@ -123,8 +123,10 @@ def search_invoices(
             )
 
             if query:
+                # sanitize_sql_like_input escapes % and _ with a backslash.
                 db_query = db_query.filter(
-                    (Fattura.numero.contains(query)) | (Fattura.note.contains(query))
+                    Fattura.numero.contains(query, escape="\\")
+                    | Fattura.note.contains(query, escape="\\")
                 )
             if anno:
                 db_query = db_query.filter(Fattura.anno == anno)
@@ -236,10 +238,13 @@ def get_invoice_details(
             if fattura.righe:
                 details["righe"] = [
                     {
+                        "id": r.id,
+                        "numero_riga": r.numero_riga,
                         "descrizione": r.descrizione,
                         "quantita": float(r.quantita),
                         "prezzo_unitario": float(r.prezzo_unitario),
                         "aliquota_iva": float(r.aliquota_iva),
+                        "natura": r.natura,
                     }
                     for r in fattura.righe
                 ]

@@ -124,8 +124,28 @@ human interaction callback answers the exact tool name and parameter payload;
 `Command(resume=...)` records the decision. Without an interaction callback,
 the graph remains suspended, and no tool is run. The registry still applies
 its allowlist, enablement and confirmation rules. Model arguments cannot grant
-human approval. ReAct providers use the same model/tool graph and receipts;
-they retain their text prompt/parser protocol.
+human approval. ReAct providers use the same model/tool graph, receipts and
+system prompt; the prompt only gains the text protocol their parser reads and
+the tool catalogue.
+
+## System prompt
+
+`ai/runtime/prompt.py` builds one system prompt for every backend: product
+context (a local CLI, Markdown in a terminal, answers in the user's language),
+how to read the data (the SDI XML is the fiscal original, `issued_elsewhere`,
+uncertain PEC submissions, the collection ledger) and how actions behave
+(completion only after a successful tool result; confirmation comes from the
+registry, never as a second question in text). Rules about one tool are listed
+only while that tool is enabled. The prompt depends only on the enabled tools
+and the hidden capabilities, so it is identical on every turn of a session and
+the provider can reuse its cached prefix.
+
+`tests/ai/test_system_prompt.py` checks these invariants. The scenarios in
+`tests/evals/` run against the configured model (marker `llm_eval`, opt-in with
+`OPENFATTURE_EVAL=1`, billed by the provider) and measure behaviour: a short
+reply to a greeting, documents issued elsewhere reported as unverified rather
+than unsent, summary totals computed by the tool, disabled capabilities pointing
+at the setting.
 
 A durable receipt is reserved before invoking a tool. Completed receipts are
 reused. If the process stops after reservation but before its result is saved,

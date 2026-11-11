@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any
 
 from pydantic import validate_call
-from sqlalchemy import Integer, cast, extract, func, or_
+from sqlalchemy import Integer, case, cast, extract, func, or_
 from sqlalchemy.orm import Session, selectinload
 
 from openfatture.billing.application.invoice_queries import (
@@ -104,10 +104,16 @@ def generate_vat_report(
                     "message": "No invoices found for the selected period",
                 }
 
-            # Calculate totals
-            totale_imponibile = sum(f.imponibile for f in fatture)
-            totale_iva = sum(f.iva for f in fatture)
-            totale_fatturato = sum(f.totale for f in fatture)
+            # Credit notes (TD04) are stored with positive amounts and reduce
+            # the taxable base and the VAT, as in invoice_situation.
+            def sign(fattura: Fattura) -> Decimal:
+                return (
+                    Decimal("-1") if fattura.tipo_documento == TipoDocumento.TD04 else Decimal("1")
+                )
+
+            totale_imponibile = sum(sign(f) * f.imponibile for f in fatture)
+            totale_iva = sum(sign(f) * f.iva for f in fatture)
+            totale_fatturato = sum(sign(f) * f.totale for f in fatture)
 
             # Breakdown by VAT rate
             by_aliquota: dict[Decimal, dict[str, Decimal]] = defaultdict(
@@ -117,8 +123,8 @@ def generate_vat_report(
             for f in fatture:
                 for riga in f.righe:
                     aliquota = riga.aliquota_iva
-                    by_aliquota[aliquota]["imponibile"] += riga.imponibile
-                    by_aliquota[aliquota]["iva"] += riga.iva
+                    by_aliquota[aliquota]["imponibile"] += sign(f) * riga.imponibile
+                    by_aliquota[aliquota]["iva"] += sign(f) * riga.iva
 
             # Format breakdown
             vat_breakdown = []
@@ -176,19 +182,25 @@ def generate_client_report(anno: int | None = None, limit: int = 20) -> dict[str
 
     with db_session() as db:
         try:
-            # Query with aggregation
+            # Credit notes (TD04) reduce a client's revenue.
+            revenue = func.sum(
+                case(
+                    (Fattura.tipo_documento == TipoDocumento.TD04, -Fattura.totale),
+                    else_=Fattura.totale,
+                )
+            )
             results = (
                 db.query(
                     Fattura.cliente_id,
                     func.count(Fattura.id).label("num_fatture"),
-                    func.sum(Fattura.totale).label("totale_fatturato"),
+                    revenue.label("totale_fatturato"),
                 )
                 .filter(Fattura.anno == anno)
                 .filter(
                     or_(Fattura.stato != StatoFattura.BOZZA, Fattura.issued_elsewhere.is_(True))
                 )
                 .group_by(Fattura.cliente_id)
-                .order_by(func.sum(Fattura.totale).desc())
+                .order_by(revenue.desc())
                 .limit(limit)
                 .all()
             )

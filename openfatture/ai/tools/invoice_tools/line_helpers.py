@@ -113,7 +113,15 @@ def tools() -> list[Tool]:
         Tool(
             name="create_course_line",
             risk=ToolRisk.MUTATE,
-            description="Create a lump-sum line for a course with formatted FT-style description (title, dates, location).",
+            description=(
+                "Add one lump-sum line for a training course or event to an invoice in BOZZA or "
+                "DA_INVIARE status: quantity 1, unit 'servizio', price imponibile, and the "
+                "description 'Corso di formazione: \"<title>\" eseguito il <date>' (or 'dal "
+                "<start> al <end>') followed by 'presso <location>' and the notes. Totals are "
+                "recomputed as with create_riga, and it returns the same fields (riga_id, line "
+                "amounts, invoice_totale) and fails the same way. Use create_riga for lines "
+                "billed by quantity, such as hours."
+            ),
             category="invoices",
             parameters=[
                 ToolParameter(
@@ -125,49 +133,49 @@ def tools() -> list[Tool]:
                 ToolParameter(
                     name="course_title",
                     type=ToolParameterType.STRING,
-                    description="Course title",
+                    description="Course or event title, quoted in the description",
                     required=True,
                 ),
                 ToolParameter(
                     name="imponibile",
                     type=ToolParameterType.NUMBER,
-                    description="Total course fee in euros",
+                    description="Course fee in euros, VAT excluded; it becomes the unit price of the single line",
                     required=True,
                 ),
                 ToolParameter(
                     name="start_date",
                     type=ToolParameterType.STRING,
-                    description="Course start date (DD.MM.YYYY)",
+                    description="Start date as it should appear in the description (written verbatim, e.g. 14.09.2026)",
                     required=True,
                 ),
                 ToolParameter(
                     name="end_date",
                     type=ToolParameterType.STRING,
-                    description="Course end date (DD.MM.YYYY, optional)",
+                    description="End date in the same format as start_date; omit for a single-day course",
                     required=False,
                 ),
                 ToolParameter(
                     name="location",
                     type=ToolParameterType.STRING,
-                    description="Course location (optional)",
+                    description="Venue appended as 'presso <location>'; omit to leave it out",
                     required=False,
                 ),
                 ToolParameter(
                     name="additional_notes",
                     type=ToolParameterType.STRING,
-                    description="Additional notes (optional)",
+                    description="Extra text appended to the description after a blank line",
                     required=False,
                 ),
                 ToolParameter(
                     name="aliquota_iva",
                     type=ToolParameterType.NUMBER,
-                    description="VAT rate percentage; omit for the cedente default",
+                    description="VAT rate percentage; omit for the cedente default (0% in the forfettario regime, else 22%)",
                     required=False,
                 ),
                 ToolParameter(
                     name="natura",
                     type=ToolParameterType.STRING,
-                    description="VAT natura, only with a 0% rate (default N2.2 for forfettario)",
+                    description="VAT natura, valid only with a 0% rate; defaults to N2.2 in the forfettario regime",
                     required=False,
                 ),
             ],

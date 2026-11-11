@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.13.0] - 2026-11-12
+
+The assistant's instructions are reorganized for current models, and every
+tool states its contract.
+
+### Changed
+
+- **One system prompt for every provider.** The ReAct prompt (providers
+  without native tool calling) used to replace it, dropping every rule about
+  invoices issued elsewhere, uncertain PEC submissions and the collection
+  ledger; it now appends only its text protocol and tool catalogue, without
+  invented example data or shouted rules.
+- The system prompt is organized in sections (product context, how to read the
+  data, actions, tools) written as prose with the reasons. Rules about one tool
+  appear only while that tool is enabled. The assistant answers in the user's
+  language.
+- Removed the prompt rule "ask for confirmation before destructive actions":
+  the registry already asks, and the rule produced a second question in text.
+- Tool descriptions and parameter descriptions are rewritten as contracts:
+  what each tool returns, its limits, failure modes and the neighbouring tool
+  to use instead. No "CRITICAL" prefixes.
+- `ai_temperature` defaults to 0.3 (it was 0.7).
+- `search_invoices` filters by every invoice status.
+- `get_invoice_details` returns each line's `id`, `numero_riga` and `natura`,
+  so the assistant can edit or delete lines of existing invoices.
+
+### Fixed
+
+- Searching invoices or clients for text containing `_` or `%` found nothing.
+- The VAT report and the client report added credit notes (TD04) instead of
+  subtracting them.
+
+### Added
+
+- `tests/ai/test_system_prompt.py`: invariants of the prompt and of the tool
+  descriptions.
+- `tests/evals/`: behaviour scenarios against the configured model (marker
+  `llm_eval`, opt-in with `OPENFATTURE_EVAL=1`; they call the provider).
+
+### Removed
+
+- The never-populated `ChatContext.current_year_stats`, `relevant_documents`
+  and `knowledge_snippets`, and the prompt sections that read them.
+
 ## [2.12.0] - 2026-11-12
 
 Generated documents can be opened from the chat.

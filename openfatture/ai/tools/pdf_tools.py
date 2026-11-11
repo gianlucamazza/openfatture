@@ -23,27 +23,39 @@ def get_pdf_tools() -> list[Tool]:
             name="generate_invoice_pdf",
             risk=ToolRisk.LOCAL_ARTIFACT,
             description=(
-                "Generate the courtesy-copy PDF of an invoice (also for invoices issued "
-                "elsewhere) in the exports directory; returns the file path"
+                "Generate the courtesy-copy PDF of an invoice, including invoices issued "
+                "elsewhere, as PDF/A with the configured company data. The fiscal original "
+                "remains the FatturaPA XML (generate_invoice_xml). Writes "
+                "fatture/fattura_<numero>_<anno>.pdf in the exports directory unless "
+                "output_path is given, overwriting an existing file. Returns success, "
+                "fattura_id, numero, template, issued_elsewhere, pdf_path (absolute), "
+                "file_size and courtesy_copy. Errors: invoice not found, invalid template, "
+                "output_path outside the exports directory."
             ),
             category="pdf",
             parameters=[
                 ToolParameter(
                     name="fattura_id",
                     type=ToolParameterType.INTEGER,
-                    description="Invoice ID to generate PDF for",
+                    description="Invoice ID (fattura_id)",
                     required=True,
                 ),
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="PDF file path relative to the exports directory (auto-generated if omitted)",
+                    description=(
+                        "PDF path relative to the exports directory (an absolute path must "
+                        "be inside it); the default file name when omitted"
+                    ),
                     required=False,
                 ),
                 ToolParameter(
                     name="template",
                     type=ToolParameterType.STRING,
-                    description="Template name",
+                    description=(
+                        "Layout: minimalist (plain), professional (with logo, the default) "
+                        "or branded (logo, configured colours and watermark)"
+                    ),
                     required=False,
                     default=DEFAULT_TEMPLATE,
                     enum=list(TEMPLATES),
@@ -51,14 +63,17 @@ def get_pdf_tools() -> list[Tool]:
                 ToolParameter(
                     name="enable_qr_code",
                     type=ToolParameterType.BOOLEAN,
-                    description="Enable SEPA QR code for payments",
+                    description="Print a SEPA credit-transfer (EPC) QR code for the amount due (default false)",
                     required=False,
                     default=False,
                 ),
                 ToolParameter(
                     name="watermark_text",
                     type=ToolParameterType.STRING,
-                    description="Optional watermark text (e.g., BOZZA, DRAFT)",
+                    description=(
+                        "Text printed diagonally across each page, such as BOZZA; drawn "
+                        "only with the branded template, ignored by the others"
+                    ),
                     required=False,
                 ),
             ],
@@ -73,25 +88,36 @@ def get_pdf_tools() -> list[Tool]:
         Tool(
             name="generate_preventivo_pdf",
             risk=ToolRisk.LOCAL_ARTIFACT,
-            description="Generate PDF for a preventivo (quote/estimate) with auto-watermark for drafts",
+            description=(
+                "Generate the PDF of a preventivo (quote) with the configured company data. "
+                "A quote in bozza status gets the BOZZA watermark unless watermark_text is "
+                "given. Writes preventivi/preventivo_<numero>_<anno>.pdf in the exports "
+                "directory unless output_path is given, overwriting an existing file. "
+                "Returns success, preventivo_id, numero, stato, has_watermark, pdf_path "
+                "(absolute) and file_size. Errors: quote not found, output_path outside the "
+                "exports directory."
+            ),
             category="pdf",
             parameters=[
                 ToolParameter(
                     name="preventivo_id",
                     type=ToolParameterType.INTEGER,
-                    description="Preventivo ID to generate PDF for",
+                    description="Quote ID (preventivo_id)",
                     required=True,
                 ),
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="PDF file path relative to the exports directory (auto-generated if omitted)",
+                    description=(
+                        "PDF path relative to the exports directory (an absolute path must "
+                        "be inside it); the default file name when omitted"
+                    ),
                     required=False,
                 ),
                 ToolParameter(
                     name="watermark_text",
                     type=ToolParameterType.STRING,
-                    description="Optional watermark text (default: BOZZA for drafts)",
+                    description="Watermark text; defaults to BOZZA for draft quotes and to none otherwise",
                     required=False,
                 ),
             ],
@@ -106,23 +132,32 @@ def get_pdf_tools() -> list[Tool]:
             name="generate_invoice_summary_pdf",
             risk=ToolRisk.LOCAL_ARTIFACT,
             description=(
-                "Generate a PDF summary of the invoice situation for a year (invoiced, "
-                "collected, outstanding and overdue amounts, per-document status, clients) "
-                "in the exports directory; the figures are computed from the database. "
-                "Returns the file path and the totals"
+                "Generate a PDF summary of one year's invoice situation: every document with "
+                "its SDI and payment status, totals and the share of each client. Local "
+                "drafts are excluded; credit notes (TD04) reduce net_invoiced and carry no "
+                "collection. Writes riepiloghi/riepilogo_fatture_<anno>.pdf in the exports "
+                "directory unless output_path is given, overwriting an existing file. "
+                "Returns success, anno, documents_count, totals (invoiced, credit_notes, "
+                "net_invoiced, collected, outstanding, overdue, unscheduled), pdf_path and "
+                "file_size, so it also answers questions about collected and outstanding "
+                "amounts. For VAT totals use generate_vat_report; for due dates use "
+                "get_due_dates."
             ),
             category="pdf",
             parameters=[
                 ToolParameter(
                     name="anno",
                     type=ToolParameterType.INTEGER,
-                    description="Year (current year if omitted)",
+                    description="Invoice year, 2000-2100; the current year when omitted",
                     required=False,
                 ),
                 ToolParameter(
                     name="output_path",
                     type=ToolParameterType.STRING,
-                    description="PDF file path relative to the exports directory (auto-generated if omitted)",
+                    description=(
+                        "PDF path relative to the exports directory (an absolute path must "
+                        "be inside it); the default file name when omitted"
+                    ),
                     required=False,
                 ),
             ],
@@ -136,7 +171,14 @@ def get_pdf_tools() -> list[Tool]:
         Tool(
             name="get_pdf_configuration",
             risk=ToolRisk.READ,
-            description="Get available PDF templates, configuration options, and current defaults",
+            description=(
+                "Describe the PDF options: the available templates with their features, "
+                "the current company data printed on PDFs (name, VAT number, address), the "
+                "default template, whether a logo and which primary colour are configured, "
+                "and the QR-code and watermark options. Read-only; use it to choose "
+                "arguments for generate_invoice_pdf or to check the company data before "
+                "generating."
+            ),
             category="pdf",
             parameters=[],
             func=get_pdf_configuration,
