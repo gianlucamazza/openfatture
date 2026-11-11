@@ -106,11 +106,6 @@ assistant-no-pending = No pending turn.
 ## Shared command output
 cli-common-error = [red]Error:[/red] { $error }
 ## FATTURA Commands
-cli-fattura-xml-generated = [green]✓[/green] XML generated successfully
-cli-fattura-xml-generated-dry-run = [green]✓[/green] XML generated successfully (dry run, no file written)
-cli-fattura-xml-content = [bold]XML content:[/bold]
-cli-fattura-output = Output: [cyan]{ $path }[/cyan]
-cli-fattura-size = Size: { $size } bytes
 cli-fattura-journal-submission = Submission #{ $id } · invoice { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Receipt #{ $id } · invoice { $invoice } · { $outcome } · source { $source }
 cli-fattura-journal-empty = No SDI submissions or receipts recorded.
@@ -232,10 +227,6 @@ cli-formatter-cost = Cost: { $cost }
 cli-formatter-latency = Latency: { $latency } ms
 
 ## Localized refusals of application services (error_code)
-cli-error-invoice-not-found = Invoice not found.
-cli-error-invoice-issued-elsewhere = The invoice was issued elsewhere and is kept for reference only: no XML is generated, to avoid a duplicate SDI submission.
-cli-error-xml-invalid = The XML is not valid: { $detail }
-cli-error-xml-failed = Cannot generate the XML: { $detail }
 cli-error-receipt-not-associable = The receipt does not exist or is already associated.
 cli-error-evidence-required = Verified evidence is required (--evidence).
 cli-error-submission-not-found = Submission attempt not found.
@@ -251,13 +242,12 @@ cli-help-debug = Show diagnostic logs and tracebacks.
 cli-help-format = Output format: rich, json, markdown, stream-json, html
 cli-help-panel-assistant = Assistant
 cli-help-panel-setup = Setup and diagnostics
-cli-help-panel-tools = Tools
+cli-help-panel-sdi = SDI checks
 cli-help-assistant = Send a request or resume a session
 cli-help-init = Initialize OpenFatture
 cli-help-config = Manage the configuration
 cli-help-status = Check configuration and readiness
-cli-help-fattura = FatturaPA XML and SDI journal
-cli-help-pagamento = Collection ledger maintenance
+cli-help-fattura = SDI journal and resolutions backed by manual evidence
 cli-help-assistant-message = A request for the assistant.
 cli-help-assistant-stream = Show the response while it is generated.
 cli-help-assistant-json = Emit the response as JSON.
@@ -279,10 +269,7 @@ cli-help-config-migrate =
 
     Secrets go to the OS keychain (or the private credentials file); other values from --env-file are added to config.toml only when not already set. The source file is never modified.
 cli-help-config-env-file = Import settings from a dotenv file (existing values are kept).
-cli-help-xml = Generate the FatturaPA XML of an invoice (no XSD validation, no transmission).
 cli-help-invoice-id = Invoice ID
-cli-help-xml-output = XML file path
-cli-help-xml-dry-run = Show the XML without writing the file
 cli-help-sdi-journal = Show recorded PEC submissions and SDI receipts, without sending anything.
 cli-help-associate-receipt = Associate an unresolved receipt with an invoice, after a manual check.
 cli-help-receipt-id = SDI receipt ID
@@ -291,7 +278,6 @@ cli-help-resolve-submission = Resolve an uncertain PEC submission, after checkin
 cli-help-attempt-id = Submission attempt ID
 cli-help-resolve-sent = Verified outcome: sent or not sent
 cli-help-resolve-evidence = Verified evidence (e.g. the provider reference)
-cli-help-collections-migrate = Upgrade historical collection data without changing amounts.
 cli-help-install-completion = Install completion for the current shell.
 cli-help-show-completion = Show completion for the current shell, to copy it or customize the installation.
 cli-help-help-option = Show this message and exit.

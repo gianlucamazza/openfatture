@@ -8,8 +8,8 @@ invoicing. The public interface is intentionally agentic and small:
 - `openfatture assistant [MESSAGE]`
 - `openfatture config ...`
 - `openfatture status`
-- `openfatture fattura|pagamento ...` (only operations without an assistant
-  tool: FatturaPA XML file, SDI journal resolutions, ledger migration)
+- `openfatture fattura ...` (only the SDI journal and the resolutions that
+  need a person's evidence, which must never come from the model)
 
 Domain operations belong in the application and domain layers. Business
 operations are assistant tools; the CLI never duplicates them. Do not add a

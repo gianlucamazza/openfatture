@@ -21,7 +21,11 @@ def test_json_is_one_business_envelope(runtime_db, command):
 
 
 def test_domain_error_is_json(runtime_db):
-    result = runner.invoke(app, ["--format", "json", "fattura", "generate-xml", "999999"])
+    result = runner.invoke(
+        app,
+        ["--format", "json", "fattura", "associate-receipt", "999", "1", "--evidence", "x"],
+        input="y\n",
+    )
     assert result.exit_code == 1
     assert json.loads(result.stdout)["success"] is False
 

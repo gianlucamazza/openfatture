@@ -77,7 +77,7 @@ Explore the current command surface with `uv run openfatture --help`.
 | --- | --- | --- |
 | Clients and invoices | Create clients, add invoice lines, inspect totals and draft status | Assistant tools |
 | Documents | Render PDF courtesy copies and yearly summaries, create linked TD04 credit notes | Assistant tools |
-| FatturaPA XML | Write the XML file of an invoice | `fattura generate-xml` |
+| FatturaPA XML | Generate the XSD-validated XML file of an invoice in the archive | Assistant tools |
 | Delivery | Send XML through a configured PEC account and process SDI notification files | SDI services; opt-in assistant tools |
 | Payments | Import bank statements and reconcile transactions with payments | Payment services; assistant tools |
 | Business workflows | Quotes, product records, CSV import/export, batch updates, and reports | Application services; assistant tools |
@@ -85,12 +85,11 @@ Explore the current command surface with `uv run openfatture --help`.
 
 Core capabilities live in application/domain packages and are exposed as
 assistant tools. The CLI does not duplicate them: besides setup and diagnostics
-it keeps only the XML file, the SDI journal resolutions and the ledger migration.
+it keeps only the SDI journal and the resolutions that need a person's evidence.
 
-**XML generation and validation are separate concerns.** The current
-`fattura generate-xml` command calls generation with validation disabled.
-The service layer and `validate_invoice_xml` assistant tool provide validation;
-a generated file alone is not evidence of XSD validity or SDI acceptance.
+**The XML file is always validated.** The `generate_invoice_xml` assistant tool
+writes the file to the archive only when it passes the FatturaPA XSD; XSD
+validity is still not evidence of SDI acceptance.
 See [XSD validation](docs/XSD_VALIDATION.md).
 
 ## AI-Assisted Workflows

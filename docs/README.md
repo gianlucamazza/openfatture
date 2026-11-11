@@ -29,8 +29,8 @@ This is the current documentation index for the CLI-first, agentic product.
 - [Internationalization](history/I18N_CLI_IMPLEMENTATION.md)
 
 The assistant is the public entry point for business workflows, and the CLI
-does not duplicate them. The `fattura` and `pagamento` groups keep only the
-operations without an assistant tool (see [CLI reference](CLI_REFERENCE.md)).
+does not duplicate them. The `fattura` group keeps only the SDI journal and
+the resolutions that need a person's evidence (see [CLI reference](CLI_REFERENCE.md)).
 
 ## Operations
 

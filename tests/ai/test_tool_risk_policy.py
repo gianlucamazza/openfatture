@@ -58,6 +58,7 @@ def test_default_access_exposes_pdf_but_no_mutation_or_send() -> None:
         "generate_invoice_pdf",
         "generate_preventivo_pdf",
         "generate_invoice_summary_pdf",
+        "generate_invoice_xml",
         "search_invoices",
     } <= names
     assert "get_collections" in names
@@ -70,6 +71,7 @@ def test_read_access_hides_pdf_and_full_shows_mutations() -> None:
     read = _names(registry, Settings(ai_tool_access="read"))
     assert "generate_invoice_pdf" not in read
     assert "generate_invoice_summary_pdf" not in read
+    assert "generate_invoice_xml" not in read  # it writes the archive file
     full = _names(registry, Settings(ai_tool_access="full"))
     assert "create_invoice" in full
     assert "send_invoice_to_sdi" not in full

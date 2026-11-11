@@ -106,11 +106,6 @@ assistant-no-pending = Nessun turno pendente.
 ## Shared command output
 cli-common-error = [red]Errore:[/red] { $error }
 ## FATTURA Commands
-cli-fattura-xml-generated = [green]✓[/green] XML generato correttamente
-cli-fattura-xml-generated-dry-run = [green]✓[/green] XML generato correttamente (simulazione, nessun file scritto)
-cli-fattura-xml-content = [bold]Contenuto XML:[/bold]
-cli-fattura-output = File: [cyan]{ $path }[/cyan]
-cli-fattura-size = Dimensione: { $size } byte
 cli-fattura-journal-submission = Invio n. { $id } · fattura { $invoice } · { $filename } · { $outcome }
 cli-fattura-journal-receipt = Ricevuta n. { $id } · fattura { $invoice } · { $outcome } · origine { $source }
 cli-fattura-journal-empty = Nessun invio o ricevuta SDI registrati.
@@ -229,10 +224,6 @@ cli-formatter-cost = Costo: { $cost }
 cli-formatter-latency = Latenza: { $latency } ms
 
 ## Localized refusals of application services (error_code)
-cli-error-invoice-not-found = Fattura non trovata.
-cli-error-invoice-issued-elsewhere = La fattura è stata emessa altrove ed è conservata solo come riferimento: l'XML non viene generato per evitare un doppio invio allo SDI.
-cli-error-xml-invalid = L'XML non è valido: { $detail }
-cli-error-xml-failed = Impossibile generare l'XML: { $detail }
 cli-error-receipt-not-associable = La ricevuta non esiste o è già stata associata.
 cli-error-evidence-required = Serve un riscontro verificato (--evidence).
 cli-error-submission-not-found = Tentativo di invio non trovato.
@@ -248,13 +239,12 @@ cli-help-debug = Mostra log diagnostici e traceback.
 cli-help-format = Formato di output: rich, json, markdown, stream-json, html
 cli-help-panel-assistant = Assistente
 cli-help-panel-setup = Configurazione e diagnostica
-cli-help-panel-tools = Strumenti
+cli-help-panel-sdi = Verifiche SDI
 cli-help-assistant = Invia una richiesta o riprendi una sessione
 cli-help-init = Inizializza OpenFatture
 cli-help-config = Gestisci la configurazione
 cli-help-status = Verifica configurazione e disponibilità
-cli-help-fattura = XML FatturaPA e registro SDI
-cli-help-pagamento = Manutenzione del registro incassi
+cli-help-fattura = Registro SDI e risoluzioni con prova manuale
 cli-help-assistant-message = Richiesta per l'assistente.
 cli-help-assistant-stream = Mostra la risposta mentre viene generata.
 cli-help-assistant-json = Restituisci la risposta in JSON.
@@ -276,10 +266,7 @@ cli-help-config-migrate =
 
     I segreti vanno nel portachiavi (o nel file privato delle credenziali); gli altri valori di --env-file entrano in config.toml solo se non sono già impostati. Il file di origine non viene modificato.
 cli-help-config-env-file = Importa le impostazioni da un file dotenv (i valori già presenti restano).
-cli-help-xml = Genera l'XML FatturaPA di una fattura (senza validazione XSD né invio).
 cli-help-invoice-id = ID della fattura
-cli-help-xml-output = Percorso del file XML
-cli-help-xml-dry-run = Mostra l'XML senza scrivere il file
 cli-help-sdi-journal = Mostra gli invii PEC e le ricevute SDI registrati, senza inviare nulla.
 cli-help-associate-receipt = Associa una ricevuta non risolta a una fattura, dopo una verifica manuale.
 cli-help-receipt-id = ID della ricevuta SDI
@@ -288,7 +275,6 @@ cli-help-resolve-submission = Risolve un invio PEC incerto, dopo aver verificato
 cli-help-attempt-id = ID del tentativo di invio
 cli-help-resolve-sent = Esito verificato: inviato o non inviato
 cli-help-resolve-evidence = Riscontro verificato (es. riferimento del provider)
-cli-help-collections-migrate = Aggiorna i dati storici degli incassi senza cambiare gli importi.
 cli-help-install-completion = Installa il completamento per la shell corrente.
 cli-help-show-completion = Mostra il completamento per la shell corrente, da copiare o personalizzare.
 cli-help-help-option = Mostra questo messaggio ed esci.

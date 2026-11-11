@@ -11,7 +11,7 @@ from openfatture.platform.config import get_settings
 from openfatture.platform.logging import configure_dynamic_logging, set_correlation_id
 
 from . import framework_i18n
-from .commands import assistant, config, fattura, init, pagamento, status
+from .commands import assistant, config, fattura, init, status
 from .output import OutputGroup
 
 framework_i18n.install(get_locale())
@@ -88,13 +88,7 @@ app.add_typer(
     fattura.app,
     name="fattura",
     help=_("cli-help-fattura"),
-    rich_help_panel=_("cli-help-panel-tools"),
-)
-app.add_typer(
-    pagamento.app,
-    name="pagamento",
-    help=_("cli-help-pagamento"),
-    rich_help_panel=_("cli-help-panel-tools"),
+    rich_help_panel=_("cli-help-panel-sdi"),
 )
 
 if __name__ == "__main__":

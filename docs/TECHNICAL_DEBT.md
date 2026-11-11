@@ -50,7 +50,7 @@ it is not left in code comments.
 
 | Area | Level | Notes |
 |------|-------|--------|
-| Public CLI surface | Low | Assistant (`openfatture`, `assistant`), `init`, `config`, `status`, plus documented `cliente` / `fattura` / `pagamento` adapters |
+| Public CLI surface | Low | Assistant (`openfatture`, `assistant`), `init`, `config`, `status`, plus the `fattura` SDI journal and human-evidence resolutions |
 | Core billing / SDI / payment | Low | Tools → application services; payment suite floor 75% |
 | Package layout | Low | Bounded packages; no empty placeholders; extras explicit |
 | Config / SSOT | Low | Version, backends, AI credentials hydrated consistently (#32) |
@@ -167,7 +167,7 @@ Documenting them here prevents them from being treated as silent backlog bugs.
 | Textual (or other) TUI | Non-goal | [#44](https://github.com/gianlucamazza/openfatture/issues/44); interactive terminal exists |
 | MCP server / external tool bus | Non-goal until designed | [#44](https://github.com/gianlucamazza/openfatture/issues/44); hooks + tool contracts today |
 | Browser / web app surface | Explicit non-goal | [#44](https://github.com/gianlucamazza/openfatture/issues/44); see STATUS |
-| Domain CLI command tree growth | Forbidden | Only `cliente` / `fattura` / `pagamento` exist, as adapters over application services |
+| Domain CLI command tree growth | Forbidden | Only `fattura` exists (SDI journal and human-evidence resolutions), as an adapter over application services; business operations are assistant tools |
 | Lightning / LND payments | Removed | Archive only; reintroduce only as greenfield design |
 
 ---

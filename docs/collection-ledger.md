@@ -7,19 +7,21 @@ not create a receipt or assert that the amount received is zero.
 
 ## Migration and recovery
 
-Back up the SQLite file while application writers are stopped, then run:
+The ledger schema is part of the packaged database migrations. After upgrading
+OpenFatture from a release without the ledger, stop other application writers
+and run:
 
 ```sh
-openfatture pagamento migrate
+openfatture init
 ```
 
-This command upgrades the schema and turns historical cumulative paid amounts into
-opening receipts and allocations. Individual receipt dates remain unknown when not
-attested. Existing bank allocations retain their transaction provenance. Monetary
-mismatches abort the migration. It is idempotent. SQLite schema rebuilding temporarily
-disables foreign keys on its own connection and validates them before commit. Do
-not run concurrent writers during migration. Restore the backup to downgrade; do
-not delete ledger tables to erase history.
+`init` backs up the SQLite file next to the database, then upgrades the schema
+and turns historical cumulative paid amounts into opening receipts and
+allocations. Individual receipt dates remain unknown when not attested. Existing
+bank allocations retain their transaction provenance. Monetary mismatches abort
+the migration. It is idempotent, and every collection operation also prepares
+any balances not migrated yet in its own transaction. Restore the backup to
+downgrade; do not delete ledger tables to erase history.
 
 ## Receiving and allocating money
 

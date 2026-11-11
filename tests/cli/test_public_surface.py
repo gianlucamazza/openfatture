@@ -16,15 +16,15 @@ def test_public_commands_are_agent_first() -> None:
     # Core commands
     for command in ("assistant", "init", "config", "status"):
         assert command in result.stdout
-    # Tools without an assistant equivalent (documented in docs/CLI_REFERENCE.md)
-    for command in ("fattura", "pagamento"):
-        assert command in result.stdout
+    # SDI resolutions that need a person's evidence (docs/CLI_REFERENCE.md)
+    assert "fattura" in result.stdout
     # Commands that should remain hidden/removed
     for removed in (
         "interactive",
         "cliente",
         "preventivo",
         "payment",
+        "pagamento",
         "ai",
         "plugin",
         "web-scraper",
@@ -120,7 +120,7 @@ def test_help_and_version_do_not_start_the_assistant(monkeypatch):
 def test_help_groups_commands():
     result = runner.invoke(app, ["--help"], terminal_width=120)
     assert result.exit_code == 0
-    for panel in ("Assistente", "Strumenti", "Configurazione e diagnostica"):
+    for panel in ("Assistente", "Verifiche SDI", "Configurazione e diagnostica"):
         assert panel in result.stdout
     assert "openfatture assistant" in result.stdout
 
@@ -146,8 +146,9 @@ def test_cli_does_not_duplicate_assistant_tools():
         ["fattura", "create"],
         ["fattura", "generate-pdf", "1"],
         ["fattura", "set-status", "1", "bozza"],
+        ["fattura", "generate-xml", "1"],
         ["pagamento", "record", "10"],
-        ["pagamento", "list"],
+        ["pagamento", "migrate"],
     )
     for args in duplicated:
         result = runner.invoke(app, args)
@@ -168,13 +169,12 @@ def test_every_command_and_parameter_is_described(monkeypatch):
     """`--help` explains every command, argument and option, without the database."""
     import typer
 
-    from openfatture.cli.commands import fattura, pagamento
+    from openfatture.cli.commands import fattura
 
     def no_database():
         raise AssertionError("--help must not open the database")
 
     monkeypatch.setattr(fattura, "ensure_database", no_database)
-    monkeypatch.setattr(pagamento, "ensure_database", no_database)
 
     root = typer.main.get_command(app)
     undocumented = []

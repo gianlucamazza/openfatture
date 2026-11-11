@@ -1,11 +1,10 @@
 # CLI Reference
 
 OpenFatture exposes a deliberately small public command surface. Business
-operations (clients, invoices, lines, PDFs, collections, reports) are requests
-to the assistant; the CLI does not duplicate them. Besides setup and
-diagnostics, it keeps only the operations the assistant does not perform:
-writing the FatturaPA XML file, the SDI journal and its human-evidence
-resolutions, and the collection ledger migration.
+operations (clients, invoices, lines, PDFs, the FatturaPA XML file,
+collections, reports) are requests to the assistant; the CLI does not
+duplicate them. Besides setup and diagnostics, it keeps only the SDI journal
+and its human-evidence resolutions, which the assistant must not perform.
 
 Help, messages and errors follow the configured locale (`locale` in
 `config.toml`, or `OPENFATTURE_LOCALE`): Italian by default, also English,
@@ -86,19 +85,12 @@ openfatture status --json
 
 | Command | Purpose |
 | --- | --- |
-| `generate-xml ID [--output PATH] [--dry-run]` | Build FatturaPA XML (no XSD validation, no transmission) |
 | `sdi-journal` | Read-only list of PEC attempts and imported receipts |
 | `associate-receipt RECEIPT INVOICE --evidence TEXT` | Associate an unresolved receipt (asks for confirmation) |
 | `resolve-submission ID --sent/--not-sent --evidence TEXT` | Resolve an uncertain PEC attempt (asks for confirmation) |
 
 Receipt association and submission resolution record a person's verification of
 external evidence, so they are not assistant tools.
-
-## `openfatture pagamento`
-
-| Command | Purpose |
-| --- | --- |
-| `migrate` | Upgrade pre-ledger collection data without changing balances |
 
 Interactive assistant slash commands (when no one-shot message is given):
 

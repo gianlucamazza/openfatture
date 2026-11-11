@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, cast
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy import Table, func, inspect, select
-from sqlalchemy.engine import Connection, Engine, Inspector
+from sqlalchemy.engine import Connection, Inspector
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from openfatture.storage.database.models import (
@@ -213,25 +213,3 @@ def upgrade_collections(connection: Connection) -> None:
         session.commit()
     finally:
         session.close()
-
-
-def upgrade_collection_database(engine: Engine) -> None:
-    """Run the collection upgrade in one transaction with foreign-key validation."""
-    with engine.connect() as connection:
-        sqlite = connection.dialect.name == "sqlite"
-        if sqlite:
-            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
-            connection.commit()
-            connection.exec_driver_sql("BEGIN IMMEDIATE")
-        try:
-            upgrade_collections(connection)
-            if sqlite and connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall():
-                raise ValueError("Foreign-key validation failed")
-            connection.commit()
-        except Exception:
-            connection.rollback()
-            raise
-        finally:
-            if sqlite:
-                connection.exec_driver_sql("PRAGMA foreign_keys=ON")
-                connection.commit()

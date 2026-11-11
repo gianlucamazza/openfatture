@@ -1,6 +1,9 @@
-"""Invoice commands without an assistant equivalent: XML file and SDI journal.
+"""SDI journal and the resolutions that need a person's evidence.
 
-Searching, creating and editing invoices, and their PDFs, go through the assistant.
+Everything else about invoices (search, editing, PDF, FatturaPA XML, sending)
+goes through the assistant. These commands stay out of it on purpose: the
+evidence that a PEC was or was not sent must be typed by a person, never
+supplied by the model.
 """
 
 import typer
@@ -13,32 +16,6 @@ from openfatture.i18n import _
 
 app = typer.Typer(name="fattura")
 console = Console()
-
-
-@app.command("generate-xml", help=_("cli-help-xml"))
-def generate_xml(
-    fattura_id: int = typer.Argument(..., help=_("cli-help-invoice-id")),
-    output: str = typer.Option(None, "--output", "-o", help=_("cli-help-xml-output")),
-    dry_run: bool = typer.Option(False, "--dry-run", help=_("cli-help-xml-dry-run")),
-) -> None:
-    """Write the FatturaPA XML of an invoice."""
-    ensure_database()
-    from openfatture.sdi.application.invoice_sdi_ops import generate_invoice_xml
-
-    result = generate_invoice_xml(fattura_id, output_path=output, dry_run=dry_run)
-    remember_result(result)
-    if "error" in result:
-        console.print(_("cli-common-error", error=escape(error_message(result))))
-        raise typer.Exit(code=1)
-
-    if dry_run:
-        console.print(_("cli-fattura-xml-generated-dry-run"))
-        console.print("\n" + _("cli-fattura-xml-content"))
-        console.print(result["xml_content"])
-        return
-    console.print(_("cli-fattura-xml-generated"))
-    console.print(_("cli-fattura-output", path=str(result["xml_path"])))
-    console.print(_("cli-fattura-size", size=result["file_size"]))
 
 
 @app.command("sdi-journal", help=_("cli-help-sdi-journal"))

@@ -75,7 +75,8 @@ class InvoiceService:
                     )
 
             # Build XML
-            xml_content = self.xml_builder.build(fattura, output_path)
+            # Written only once valid: an invalid file must never sit in the archive.
+            xml_content = self.xml_builder.build(fattura)
 
             # Validate if requested
             if validate:
@@ -93,7 +94,8 @@ class InvoiceService:
                         validation_errors=[error] if error else [],
                     )
 
-            # Update fattura record
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(xml_content, encoding="utf-8")
             fattura.xml_path = str(output_path)
 
             logger.info(
