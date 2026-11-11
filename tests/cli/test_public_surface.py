@@ -9,13 +9,18 @@ from openfatture.cli.main import app
 runner = CliRunner()
 
 
+def _plain(text: str) -> str:
+    """Output without the ANSI colour codes Rich emits on CI terminals."""
+    return re.sub(r"\x1b\[[0-9;]*m", "", text)
+
+
 def test_public_commands_are_agent_first() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
     # Core commands
     for command in ("--message", "init", "config", "status"):
-        assert command in result.stdout
+        assert command in _plain(result.stdout)
     # SDI resolutions that need a person's evidence (docs/CLI_REFERENCE.md)
     assert "fattura" in result.stdout
     # Commands that should remain hidden/removed
@@ -106,7 +111,7 @@ def test_assistant_options_are_refused_with_a_command(monkeypatch):
     monkeypatch.setattr(assistant, "run_sync_with_lifespan", unexpected)
     result = runner.invoke(app, ["-m", "ciao", "status"])
     assert result.exit_code == 2
-    assert "--message" in result.output
+    assert "--message" in _plain(result.output)
 
 
 def test_removed_assistant_command_is_rejected(monkeypatch):
@@ -146,7 +151,7 @@ def test_help_groups_commands():
     assert result.exit_code == 0
     for panel in ("Assistente", "Verifiche SDI", "Configurazione e diagnostica"):
         assert panel in result.stdout
-    assert 'openfatture -m "' in result.stdout
+    assert 'openfatture -m "' in _plain(result.stdout)
 
 
 def test_removed_interactive_command_is_rejected(monkeypatch):
@@ -210,7 +215,7 @@ def test_every_command_and_parameter_is_described(monkeypatch):
                 undocumented.append(f"{' '.join(path)} {param.name}")
         result = runner.invoke(app, [*path, "--help"])
         assert result.exit_code == 0, (path, result.output)
-        plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        plain = _plain(result.output)
         text = " ".join(plain.replace("│", " ").split())
         assert "Mostra questo messaggio ed esci." in text, path
     assert undocumented == []
