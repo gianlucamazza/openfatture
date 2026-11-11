@@ -10,19 +10,16 @@ from rich.console import Console
 
 from openfatture.cli.database import ensure_database
 from openfatture.cli.output import remember_result
+from openfatture.i18n import _
 
 app = typer.Typer(name="pagamento")
 console = Console()
 
 
-@app.callback()
-def prepare() -> None:
-    ensure_database()
-
-
-@app.command("migrate")
+@app.command("migrate", help=_("cli-help-collections-migrate"))
 def migrate_collections() -> None:
-    """Aggiorna i dati storici degli incassi senza cambiare gli importi."""
+    """Upgrade pre-ledger collection data."""
+    ensure_database()
     from openfatture.payment.application.collection_migration import upgrade_collection_database
     from openfatture.storage.database import base
 

@@ -162,9 +162,17 @@ def _commands(group, path=()):
             yield from _commands(command, (*path, name))
 
 
-def test_every_command_and_parameter_is_described():
-    """`--help` explains every command, argument and option (no blank rows)."""
+def test_every_command_and_parameter_is_described(monkeypatch):
+    """`--help` explains every command, argument and option, without the database."""
     import typer
+
+    from openfatture.cli.commands import fattura, pagamento
+
+    def no_database():
+        raise AssertionError("--help must not open the database")
+
+    monkeypatch.setattr(fattura, "ensure_database", no_database)
+    monkeypatch.setattr(pagamento, "ensure_database", no_database)
 
     root = typer.main.get_command(app)
     undocumented = []

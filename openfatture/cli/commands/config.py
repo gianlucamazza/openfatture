@@ -38,14 +38,9 @@ def _format_value(value: Any, fallback: str | None = None) -> str:
     return str(value)
 
 
-@app.command("show")
+@app.command("show", help=_("cli-help-config-show"))
 def show_config() -> None:
-    """
-    Mostra la configurazione effettiva.
-
-    Per ogni valore indica la provenienza: ambiente, portachiavi o file delle
-    credenziali, config.toml, predefinito.
-    """
+    """Show the effective configuration and its sources."""
     settings = get_settings()
     sources = config_sources()
     backend = SecretStore().backend
@@ -256,26 +251,19 @@ def show_config() -> None:
     )
 
 
-@app.command("reload")
+@app.command("reload", help=_("cli-help-config-reload"))
 def reload_config() -> None:
-    """Ricarica la configurazione da ambiente, archivio segreti e config.toml."""
+    """Reload the configuration."""
     reload_settings()
     console.print(_("cli-config-reload-success"))
 
 
-@app.command("set")
+@app.command("set", help=_("cli-help-config-set"))
 def set_config(
     key: str = typer.Argument(..., help=_("cli-config-help-key")),
     value: str = typer.Argument(..., help=_("cli-config-help-value")),
 ) -> None:
-    """
-    Imposta un valore di configurazione.
-
-    Scrive solo KEY. I segreti (chiavi API, password) vanno nel portachiavi del
-    sistema, o nel file privato delle credenziali se il portachiavi non c'è; gli
-    altri valori in config.toml. Le chiavi annidate usano il punto, ad esempio
-    debug_config.enable_debug_logging.
-    """
+    """Set one configuration value."""
     from openfatture.platform.logging import redact_sensitive
 
     try:
@@ -310,9 +298,9 @@ def set_config(
     reload_settings()
 
 
-@app.command("unset")
+@app.command("unset", help=_("cli-help-config-unset"))
 def unset_config(key: str = typer.Argument(..., help=_("cli-config-help-key"))) -> None:
-    """Rimuove KEY da config.toml o dall'archivio segreti e ripristina il predefinito."""
+    """Remove one configuration value."""
     from openfatture.platform.config import read_config_file
 
     try:
@@ -334,7 +322,7 @@ def unset_config(key: str = typer.Argument(..., help=_("cli-config-help-key"))) 
     reload_settings()
 
 
-@app.command("migrate")
+@app.command("migrate", help=_("cli-help-config-migrate"))
 def migrate_config(
     env_file: Annotated[
         Path | None,
@@ -342,17 +330,11 @@ def migrate_config(
             "--env-file",
             exists=True,
             dir_okay=False,
-            help="Importa le impostazioni da un file dotenv (i valori già presenti restano).",
+            help=_("cli-help-config-env-file"),
         ),
     ] = None,
 ) -> None:
-    """
-    Sposta i segreti in chiaro fuori da config.toml e importa un file .env.
-
-    I segreti vanno nel portachiavi (o nel file privato delle credenziali); gli
-    altri valori di --env-file entrano in config.toml solo se non sono già
-    impostati. Il file di origine non viene modificato.
-    """
+    """Move plaintext secrets; import a .env file."""
     from openfatture.platform.config import read_config_file
 
     store = SecretStore()

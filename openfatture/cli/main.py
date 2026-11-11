@@ -16,8 +16,8 @@ from .output import OutputGroup
 app = typer.Typer(
     cls=OutputGroup,
     name="openfatture",
-    help="Fatturazione elettronica con assistente. Avvia openfatture per conversare.",
-    epilog='Esempi: openfatture · openfatture assistant "Mostra le fatture non pagate"',
+    help=_("cli-help-app"),
+    epilog=_("cli-help-epilog"),
     add_completion=True,
     rich_markup_mode="rich",
     no_args_is_help=False,
@@ -43,14 +43,14 @@ def main(
         "-v",
         callback=version_callback,
         is_eager=True,
-        help="Mostra la versione ed esci.",
+        help=_("cli-help-version"),
     ),
-    debug: bool = typer.Option(False, "--debug", help="Mostra log diagnostici e traceback."),
+    debug: bool = typer.Option(False, "--debug", help=_("cli-help-debug")),
     format_type: str = typer.Option(
         "rich",
         "--format",
         "-f",
-        help="Formato di output: rich, json, markdown, stream-json, html",
+        help=_("cli-help-format"),
     ),
 ) -> None:
     """Configure the CLI and start the assistant when no command is selected."""
@@ -67,33 +67,31 @@ def main(
 
 
 app.command(
-    "assistant", help="Invia una richiesta o riprendi una sessione", rich_help_panel="Assistente"
+    "assistant", help=_("cli-help-assistant"), rich_help_panel=_("cli-help-panel-assistant")
 )(assistant.assistant)
-app.command("init", help="Inizializza OpenFatture", rich_help_panel="Configurazione e diagnostica")(
-    init.init
-)
+app.command("init", help=_("cli-help-init"), rich_help_panel=_("cli-help-panel-setup"))(init.init)
 app.add_typer(
     config.app,
     name="config",
-    help="Gestisci la configurazione",
-    rich_help_panel="Configurazione e diagnostica",
+    help=_("cli-help-config"),
+    rich_help_panel=_("cli-help-panel-setup"),
 )
 app.command(
     "status",
-    help="Verifica configurazione e disponibilità",
-    rich_help_panel="Configurazione e diagnostica",
+    help=_("cli-help-status"),
+    rich_help_panel=_("cli-help-panel-setup"),
 )(status.status)
 app.add_typer(
     fattura.app,
     name="fattura",
-    help="XML FatturaPA e registro SDI",
-    rich_help_panel="Strumenti",
+    help=_("cli-help-fattura"),
+    rich_help_panel=_("cli-help-panel-tools"),
 )
 app.add_typer(
     pagamento.app,
     name="pagamento",
-    help="Manutenzione del registro incassi",
-    rich_help_panel="Strumenti",
+    help=_("cli-help-pagamento"),
+    rich_help_panel=_("cli-help-panel-tools"),
 )
 
 if __name__ == "__main__":

@@ -239,3 +239,53 @@ cli-error-submission-not-found = Tentativo di invio non trovato.
 cli-error-submission-already-resolved = Il tentativo di invio è già stato risolto.
 cli-error-sdi-evidence-contradicts = Le evidenze SDI registrate contraddicono l'esito "non inviato".
 cli-error-submission-concurrent-update = Il tentativo è stato risolto nel frattempo: ricarica e riprova.
+
+## Command-line help
+cli-help-app = Fatturazione elettronica con assistente. Avvia openfatture per conversare.
+cli-help-epilog = Esempi: openfatture · openfatture assistant "Mostra le fatture non pagate"
+cli-help-version = Mostra la versione ed esci.
+cli-help-debug = Mostra log diagnostici e traceback.
+cli-help-format = Formato di output: rich, json, markdown, stream-json, html
+cli-help-panel-assistant = Assistente
+cli-help-panel-setup = Configurazione e diagnostica
+cli-help-panel-tools = Strumenti
+cli-help-assistant = Invia una richiesta o riprendi una sessione
+cli-help-init = Inizializza OpenFatture
+cli-help-config = Gestisci la configurazione
+cli-help-status = Verifica configurazione e disponibilità
+cli-help-fattura = XML FatturaPA e registro SDI
+cli-help-pagamento = Manutenzione del registro incassi
+cli-help-assistant-message = Richiesta per l'assistente.
+cli-help-assistant-stream = Mostra la risposta mentre viene generata.
+cli-help-assistant-json = Restituisci la risposta in JSON.
+cli-help-assistant-session = Riprendi una sessione salvata tramite il suo ID (attiva il salvataggio).
+cli-help-init-interactive = Configurazione guidata interattiva
+cli-help-status-json = Restituisci lo stato in JSON.
+cli-help-config-show =
+    Mostra la configurazione effettiva.
+
+    Per ogni valore indica la provenienza: ambiente, portachiavi o file delle credenziali, config.toml, predefinito.
+cli-help-config-reload = Ricarica la configurazione da ambiente, archivio segreti e config.toml.
+cli-help-config-set =
+    Imposta un valore di configurazione.
+
+    Scrive solo KEY. I segreti (chiavi API, password) vanno nel portachiavi del sistema, o nel file privato delle credenziali se il portachiavi non c'è; gli altri valori in config.toml. Le chiavi annidate usano il punto, ad esempio debug_config.enable_debug_logging.
+cli-help-config-unset = Rimuove KEY da config.toml o dall'archivio segreti e ripristina il predefinito.
+cli-help-config-migrate =
+    Sposta i segreti in chiaro fuori da config.toml e importa un file .env.
+
+    I segreti vanno nel portachiavi (o nel file privato delle credenziali); gli altri valori di --env-file entrano in config.toml solo se non sono già impostati. Il file di origine non viene modificato.
+cli-help-config-env-file = Importa le impostazioni da un file dotenv (i valori già presenti restano).
+cli-help-xml = Genera l'XML FatturaPA di una fattura (senza validazione XSD né invio).
+cli-help-invoice-id = ID della fattura
+cli-help-xml-output = Percorso del file XML
+cli-help-xml-dry-run = Mostra l'XML senza scrivere il file
+cli-help-sdi-journal = Mostra gli invii PEC e le ricevute SDI registrati, senza inviare nulla.
+cli-help-associate-receipt = Associa una ricevuta non risolta a una fattura, dopo una verifica manuale.
+cli-help-receipt-id = ID della ricevuta SDI
+cli-help-receipt-evidence = Riscontro verificato (es. riferimento)
+cli-help-resolve-submission = Risolve un invio PEC incerto, dopo aver verificato l'esito del trasporto.
+cli-help-attempt-id = ID del tentativo di invio
+cli-help-resolve-sent = Esito verificato: inviato o non inviato
+cli-help-resolve-evidence = Riscontro verificato (es. riferimento del provider)
+cli-help-collections-migrate = Aggiorna i dati storici degli incassi senza cambiare gli importi.
