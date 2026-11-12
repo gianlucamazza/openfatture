@@ -10,6 +10,7 @@ from openfatture.ai.tools.models import Tool, ToolResult, ToolRisk
 from openfatture.ai.tools.registry.metrics import circuit_breaker_stats, circuit_breaker_summary
 from openfatture.ai.tools.registry.policy import (
     ACCESS_RISKS,
+    OFFLINE_COMMAND,
     ToolSource,
     access_command,
     confirmation_required,
@@ -227,16 +228,22 @@ class ToolRegistry:
         settings = get_settings()
         levels = list(ACCESS_RISKS)
         lowest: dict[str, AiToolAccess] = {}
+        offline: set[str] = set()
         for tool in self._tools.values():
             level = minimum_access_for(tool.risk)
             if level is None or not tool.enabled:
                 continue
             if is_tool_enabled_for_agent(tool, settings, apply_access=True):
                 continue
+            if tool.risk is ToolRisk.LOOKUP and settings.ai_offline:
+                offline.add(tool.category)
+                continue
             current = lowest.get(tool.category)
             if current is None or levels.index(level) < levels.index(current):
                 lowest[tool.category] = level
-        return {category: access_command(lowest[category]) for category in sorted(lowest)}
+        commands = {category: access_command(level) for category, level in lowest.items()}
+        commands.update(dict.fromkeys(offline - set(lowest), OFFLINE_COMMAND))
+        return dict(sorted(commands.items()))
 
     def get_circuit_breaker_stats(self) -> dict[str, dict[str, Any]]:
         """Statistics for all circuit breakers, keyed by tool name."""
@@ -421,7 +428,7 @@ class ToolRegistry:
                 "stay off unless explicitly listed in ai_enabled_tools."
             )
         elif tool.enabled:
-            error = f"Tool '{tool.name}' is disabled. Enable it with: {disabled_remediation(tool)}"
+            error = f"Tool '{tool.name}' is disabled. Enable it with: {disabled_remediation(tool, get_settings())}"
         else:
             error = f"Tool '{tool.name}' is disabled"
         return ToolResult(

@@ -200,6 +200,16 @@ cli-status-readiness = [bold]Readiness[/bold]  core: [cyan]{ $core ->
         [yes] configured
        *[no] not configured
     }[/cyan]
+cli-status-flows-title = Data leaving the computer
+cli-status-column-flow = Flow
+cli-status-column-destination = Destination
+cli-status-flow-model = AI model (every assistant request)
+cli-status-flow-embeddings = Knowledge-base indexing
+cli-status-flow-lookups = VAT number checks (VIES)
+cli-status-flow-sdi = Invoices sent to SDI (PEC)
+cli-status-local = local (nothing leaves)
+cli-status-off = off
+cli-status-flows-note = Details and how to reduce them: docs/PRIVACY.md
 cli-status-title = OpenFatture status
 cli-status-label-ai-api-key-configured = AI API key configured
 cli-status-label-assistant-backend = Assistant backend

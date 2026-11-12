@@ -63,6 +63,15 @@ Rollback: `ASSISTANT_BACKEND=chat`. Inspect with `openfatture status --json`
 ## Boundaries
 
 - Provider selection and credentials come from configuration.
+- No open web access. An agent with private data, untrusted input (invoice
+  notes, imported files, SDI receipts) and an outbound channel can be steered
+  into exfiltration ([OWASP LLM01](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)),
+  and a URL fetch or web search tool is such a channel. Online capabilities are
+  narrow `lookup` tools (`check_vat_vies`): fixed endpoint, validated
+  identifier, typed output, untrusted text truncated and cleaned, hidden by
+  `ai_offline`, like MCP's `openWorldHint` marks open-world tools. The prompt
+  frames every tool result as data, never instructions. `status` reports every
+  outward flow (`platform/data_flows.py`, [privacy](PRIVACY.md)).
 - Domain validation stays deterministic outside the model.
 - Every tool declares a risk class (`ToolRisk`: `read`, `local_artifact`,
   `mutate`, `transmit`; unclassified tools count as `mutate`). The access

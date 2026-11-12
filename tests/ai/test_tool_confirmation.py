@@ -22,10 +22,9 @@ from openfatture.ai.tools.registry.policy import (
     confirmation_required,
     disabled_remediation,
     is_tool_enabled_for_agent,
-    parse_enabled_tools,
     strip_reserved_parameters,
 )
-from openfatture.platform.config import Settings
+from openfatture.platform.config import Settings, parse_enabled_tools
 
 
 def _settings(
@@ -86,8 +85,11 @@ class TestPolicyHelpers:
         ("access", "visible"),
         [
             ("read", {ToolRisk.READ}),
-            ("standard", {ToolRisk.READ, ToolRisk.LOCAL_ARTIFACT}),
-            ("full", {ToolRisk.READ, ToolRisk.LOCAL_ARTIFACT, ToolRisk.MUTATE}),
+            ("standard", {ToolRisk.READ, ToolRisk.LOOKUP, ToolRisk.LOCAL_ARTIFACT}),
+            (
+                "full",
+                {ToolRisk.READ, ToolRisk.LOOKUP, ToolRisk.LOCAL_ARTIFACT, ToolRisk.MUTATE},
+            ),
         ],
     )
     def test_access_level_exposes_risk_classes(self, access: str, visible: set[ToolRisk]) -> None:

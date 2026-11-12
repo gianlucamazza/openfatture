@@ -340,10 +340,18 @@ class Settings(BaseSettings):
     ai_tool_access: AiToolAccess = Field(
         default="full",
         description=(
-            "Which AI tools the assistant may use, by risk: 'read' (lookups), "
-            "'standard' (lookups plus local documents: PDF, XML, CSV) or 'full' "
+            "Which AI tools the assistant may use, by risk: 'read' (local lookups), "
+            "'standard' (also online registry lookups and local documents: PDF, "
+            "XML, CSV) or 'full' "
             "(also creates, changes and deletes records, each behind a human "
             "confirmation). No level enables SDI/PEC send."
+        ),
+    )
+    ai_offline: bool = Field(
+        default=False,
+        description=(
+            "Hide the assistant tools that query online registries (such as VIES). "
+            "With Ollama and local embeddings nothing then leaves the computer."
         ),
     )
     ai_enabled_tools: str = Field(
@@ -382,6 +390,11 @@ class Settings(BaseSettings):
     def create_dir_if_not_exists(cls, v: Path) -> Path:
         """Normalize a path; setup commands create directories explicitly."""
         return v.expanduser()
+
+
+def parse_enabled_tools(raw: str) -> frozenset[str]:
+    """Parse ``ai_enabled_tools`` into the set of extra tool names."""
+    return frozenset(part.strip() for part in (raw or "").split(",") if part.strip())
 
 
 # Global settings instance

@@ -33,6 +33,9 @@ Use `uv run python -m pytest`, not an unrelated global pytest executable.
 ## Design rules
 
 - Prefer explicit, typed interfaces and small modules.
+- No generic web fetch or web search tools. An online capability is a narrow
+  `lookup` tool with a fixed endpoint and validated input, listed in
+  `platform/data_flows.py` and `docs/PRIVACY.md`.
 - Startup only reads the setup. When it is missing, the assistant runs `init`
   in a terminal and otherwise refuses with exit code 3; nothing else creates
   the database or the configuration.

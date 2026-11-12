@@ -195,6 +195,10 @@ def test_status_text_exposes_blocking_fields(tmp_path, monkeypatch):
         "assistant_backend_id",
     ):
         data[key] = "test"
+    from openfatture.platform.config import Settings as RealSettings
+    from openfatture.platform.data_flows import data_destinations
+
+    data["data_destinations"] = data_destinations(RealSettings(ai_provider="ollama"))
     monkeypatch.setattr(status, "_build_status", lambda: data)
     monkeypatch.setattr(status, "get_settings", lambda: settings)
     result = CliRunner().invoke(status.app, [], terminal_width=120)

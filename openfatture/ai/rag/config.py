@@ -5,7 +5,7 @@ This module defines configuration settings for the RAG system using Pydantic.
 
 import os
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -151,27 +151,15 @@ def get_rag_config() -> RAGConfig:
     Returns:
         RAGConfig instance with settings from environment
     """
-    # Smart default: Use sentence-transformers when using Ollama
-    # to avoid needing OpenAI API key for local-only setup
-    default_provider = "openai"
-    ai_provider = os.getenv("OPENFATTURE_AI_PROVIDER") or os.getenv("AI_PROVIDER")
-    if ai_provider == "ollama" and "OPENFATTURE_RAG_EMBEDDING_PROVIDER" not in os.environ:
-        default_provider = "sentence-transformers"
-        _logger.info(
-            "rag_default_embeddings_sentence_transformers",
-            reason="AI_PROVIDER=ollama detected",
-        )
+    # Local embeddings with Ollama (configured anywhere, not only in the
+    # environment), so a local-only setup needs no OpenAI key.
+    from openfatture.platform.config import get_settings
+    from openfatture.platform.data_flows import embedding_provider
 
-    provider_raw = os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER", default_provider)
-    if provider_raw not in {"openai", "sentence-transformers"}:
-        _logger.warning(
-            "invalid_embedding_provider",
-            provider=provider_raw,
-            fallback=default_provider,
-        )
-        provider_raw = default_provider
-
-    provider = cast(Literal["openai", "sentence-transformers"], provider_raw)
+    raw = os.getenv("OPENFATTURE_RAG_EMBEDDING_PROVIDER")
+    if raw is not None and raw not in {"openai", "sentence-transformers"}:
+        _logger.warning("invalid_embedding_provider", provider=raw)
+    provider = embedding_provider(get_settings())
 
     return RAGConfig(
         enabled=os.getenv("OPENFATTURE_RAG_ENABLED", "true").lower() == "true",

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-11-12
+
+The assistant can check EU VAT numbers online, and OpenFatture states what
+leaves the computer.
+
+### Added
+
+- `check_vat_vies`: verifies an EU VAT number in VIES (European Commission).
+  It sends only the number and the issuer's partita IVA as requester, so VIES
+  returns the consultation number (`request_identifier`) that proves the
+  check. An unavailable national registry is reported as "not verifiable now",
+  not as an invalid number. Input is validated before any request; returned
+  name and address are truncated and cleaned.
+- Risk class `lookup` for tools that query online registries: enabled from
+  `ai_tool_access = "standard"`, hidden with `ai_tool_access = "read"` or the
+  new `ai_offline = true`.
+- `openfatture status` lists the data that leaves the computer (AI model,
+  knowledge-base embeddings, VIES, SDI) and `status --json` reports it in
+  `data_destinations`. New `docs/PRIVACY.md`.
+
+### Changed
+
+- The system prompt frames everything tool results contain (invoice notes,
+  imported files, SDI receipts, VIES) as data: instructions found there are not
+  followed.
+- Knowledge-base embeddings are local when `ai_provider = "ollama"` is set in
+  the configuration file too, not only in the environment.
+
 ## [2.15.0] - 2026-11-12
 
 The assistant remembers the conversation, and keeps notes across
