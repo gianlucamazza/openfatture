@@ -201,6 +201,16 @@ cli-status-readiness = [bold]Disponibilité[/bold]  noyau : [cyan]{ $core ->
         [yes] configuré
        *[no] non configuré
     }[/cyan]
+cli-status-flows-title = Données qui quittent l'ordinateur
+cli-status-column-flow = Flux
+cli-status-column-destination = Destination
+cli-status-flow-model = Modèle d'IA (chaque demande à l'assistant)
+cli-status-flow-embeddings = Indexation de la base de connaissances
+cli-status-flow-lookups = Vérification des numéros de TVA (VIES)
+cli-status-flow-sdi = Envoi des factures au SDI (PEC)
+cli-status-local = local (aucune donnée ne sort)
+cli-status-off = désactivé
+cli-status-flows-note = Détails et comment les réduire : docs/PRIVACY.md
 cli-status-title = État d'OpenFatture
 cli-status-label-ai-api-key-configured = Clé API IA configurée
 cli-status-label-assistant-backend = Backend de l'assistant

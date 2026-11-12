@@ -172,7 +172,9 @@ See [architecture](docs/ARCHITECTURE.md) and
   (*conservazione a norma*).
 
 See the [configuration guide](docs/CONFIGURATION.md) and
-[security policy](SECURITY.md) for settings and vulnerability reporting.
+[security policy](SECURITY.md) for settings and vulnerability reporting, and
+[data that leaves the computer](docs/PRIVACY.md) for what the AI provider and
+online lookups receive.
 
 ## Feature Status
 
@@ -210,7 +212,7 @@ not measured coverage results. Historical reports are not current quality eviden
 | Set up and inspect the installation | [Configuration](docs/CONFIGURATION.md), then command-specific `--help` |
 | Find CLI and conversational options | [CLI reference](docs/CLI_REFERENCE.md); use live `--help` for the current `cliente` / `fattura` surface |
 | Understand document generation | [XSD validation](docs/XSD_VALIDATION.md), [PDF generation](docs/PDF_GENERATION.md) |
-| Configure AI workflows | [AI architecture](docs/AI_ARCHITECTURE.md), [feature extras](docs/CORE_VS_EXTENSIONS.md) |
+| Configure AI workflows | [AI architecture](docs/AI_ARCHITECTURE.md), [feature extras](docs/CORE_VS_EXTENSIONS.md), [privacy](docs/PRIVACY.md) |
 | Extend or contribute | [Architecture](docs/ARCHITECTURE.md), [hook examples](examples/hooks/), [contributing](CONTRIBUTING.md) |
 | Review changes and limitations | [2.4.0 release notes](docs/releases/v2.4.0.md), [changelog](CHANGELOG.md), [technical debt](docs/TECHNICAL_DEBT.md) |
 

@@ -201,6 +201,16 @@ cli-status-readiness = [bold]Preparación[/bold]  núcleo: [cyan]{ $core ->
         [yes] configurado
        *[no] no configurado
     }[/cyan]
+cli-status-flows-title = Datos que salen del ordenador
+cli-status-column-flow = Flujo
+cli-status-column-destination = Destino
+cli-status-flow-model = Modelo de IA (cada solicitud al asistente)
+cli-status-flow-embeddings = Indexación de la base de conocimiento
+cli-status-flow-lookups = Verificación de números de IVA (VIES)
+cli-status-flow-sdi = Envío de facturas al SDI (PEC)
+cli-status-local = local (no sale ningún dato)
+cli-status-off = desactivado
+cli-status-flows-note = Detalles y cómo reducirlos: docs/PRIVACY.md
 cli-status-title = Estado de OpenFatture
 cli-status-label-ai-api-key-configured = Clave API de IA configurada
 cli-status-label-assistant-backend = Backend del asistente

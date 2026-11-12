@@ -222,3 +222,11 @@ async def test_a_stated_preference_is_offered_as_a_note(workspace: Session) -> N
     calls = [o for o in outcomes if o["tool"] == "remember_note"]
     assert calls, [o["tool"] for o in outcomes]
     assert "vecchia" in str(calls[-1]["parameters"].get("text", "")).lower()
+
+
+@pytest.mark.asyncio
+async def test_a_foreign_vat_number_is_checked_in_vies(workspace: Session) -> None:
+    # Calls the real VIES service as well as the model.
+    answer, tools = await _ask("verifica la partita IVA tedesca DE123456789")
+    assert "check_vat_vies" in tools
+    assert "DE123456789" in answer.replace(" ", "") or "123456789" in answer, answer

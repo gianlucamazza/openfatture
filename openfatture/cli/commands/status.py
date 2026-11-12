@@ -151,6 +151,12 @@ def _configuration() -> dict[str, Any]:
     }
 
 
+def _data_destinations(settings: Settings) -> dict[str, Any]:
+    from openfatture.platform.data_flows import data_destinations
+
+    return data_destinations(settings)
+
+
 def _build_status() -> dict[str, Any]:
     settings = get_settings()
     extras = available_extras()
@@ -204,6 +210,7 @@ def _build_status() -> dict[str, Any]:
         "assistant_backend_id": assistant_backend_id,
         "readiness": readiness,
         "configuration": configuration,
+        "data_destinations": _data_destinations(settings),
         "extras": extras,
         "extensions": {
             # Supported extension mechanism: user hook scripts (see docs/CORE_VS_EXTENSIONS.md)
@@ -296,6 +303,33 @@ def status(
         for step in ready["next_steps"]:
             console.print(f"  • {step}")
         console.print()
+
+    flows = Table(title=_("cli-status-flows-title", locale=locale))
+    flows.add_column(_("cli-status-column-flow", locale=locale), style="cyan")
+    flows.add_column(_("cli-status-column-destination", locale=locale))
+    destinations = data["data_destinations"]
+    model = destinations["model"]
+    flows.add_row(
+        _("cli-status-flow-model", locale=locale),
+        _("cli-status-local", locale=locale) if model["local"] else str(model["host"]),
+    )
+    embeddings = destinations["embeddings"]
+    flows.add_row(
+        _("cli-status-flow-embeddings", locale=locale),
+        _("cli-status-local", locale=locale) if embeddings["local"] else str(embeddings["host"]),
+    )
+    lookups = destinations["lookups"]
+    flows.add_row(
+        _("cli-status-flow-lookups", locale=locale),
+        str(lookups["host"]) if lookups["enabled"] else _("cli-status-off", locale=locale),
+    )
+    sdi = destinations["sdi"]
+    flows.add_row(
+        _("cli-status-flow-sdi", locale=locale),
+        str(sdi["host"]) if sdi["enabled"] else _("cli-status-off", locale=locale),
+    )
+    console.print(flows)
+    console.print(_("cli-status-flows-note", locale=locale), markup=False)
 
     extras_table = Table(title=_("cli-status-extras-title", locale=locale))
     extras_table.add_column(_("cli-status-column-extra", locale=locale), style="cyan")

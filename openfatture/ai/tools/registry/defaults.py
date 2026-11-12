@@ -51,6 +51,7 @@ def _register_default_tools(registry: ToolRegistry) -> None:
         report_tools,
         sdi_tools,
         signature_tools,
+        vat_tools,
     )
 
     providers = (
@@ -68,6 +69,7 @@ def _register_default_tools(registry: ToolRegistry) -> None:
         memory_tools.get_memory_tools,
         sdi_tools.get_sdi_tools,
         signature_tools.get_signature_tools,
+        vat_tools.get_vat_tools,
     )
     for provider in providers:
         for tool in provider():

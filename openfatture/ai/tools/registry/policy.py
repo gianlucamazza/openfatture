@@ -24,7 +24,7 @@ import sys
 from typing import TYPE_CHECKING, Any, Literal
 
 from openfatture.ai.tools.models import Tool, ToolRisk
-from openfatture.platform.config import AiToolAccess
+from openfatture.platform.config import AiToolAccess, parse_enabled_tools
 
 if TYPE_CHECKING:
     from openfatture.platform.config import Settings
@@ -42,14 +42,9 @@ _TOTAL_KEYS = ("totale", "total", "importo")
 ToolSource = Literal["ai", "human"]
 ACCESS_RISKS: dict[AiToolAccess, frozenset[ToolRisk]] = {
     "read": frozenset({ToolRisk.READ}),
-    "standard": frozenset({ToolRisk.READ, ToolRisk.LOCAL_ARTIFACT}),
-    "full": frozenset({ToolRisk.READ, ToolRisk.LOCAL_ARTIFACT, ToolRisk.MUTATE}),
+    "standard": frozenset({ToolRisk.READ, ToolRisk.LOOKUP, ToolRisk.LOCAL_ARTIFACT}),
+    "full": frozenset({ToolRisk.READ, ToolRisk.LOOKUP, ToolRisk.LOCAL_ARTIFACT, ToolRisk.MUTATE}),
 }
-
-
-def parse_enabled_tools(raw: str) -> frozenset[str]:
-    """Parse ``ai_enabled_tools`` into the set of extra tool names."""
-    return frozenset(part.strip() for part in (raw or "").split(",") if part.strip())
 
 
 def is_transmit_tool(tool: Tool) -> bool:
@@ -74,9 +69,14 @@ def is_tool_enabled_for_agent(tool: Tool, settings: Settings, *, apply_access: b
         return tool.name in extra
     if not apply_access:
         return tool.enabled
+    if tool.risk is ToolRisk.LOOKUP and settings.ai_offline:
+        return False
     return tool.enabled and (
         tool.risk in ACCESS_RISKS[settings.ai_tool_access] or tool.name in extra
     )
+
+
+OFFLINE_COMMAND = "openfatture config set ai_offline false"
 
 
 def access_command(level: AiToolAccess) -> str:
@@ -84,8 +84,10 @@ def access_command(level: AiToolAccess) -> str:
     return f"openfatture config set ai_tool_access {level}"
 
 
-def disabled_remediation(tool: Tool) -> str:
+def disabled_remediation(tool: Tool, settings: Settings | None = None) -> str:
     """The configuration command that would expose ``tool`` to the assistant."""
+    if tool.risk is ToolRisk.LOOKUP and settings is not None and settings.ai_offline:
+        return OFFLINE_COMMAND
     level = minimum_access_for(tool.risk)
     if level is None:
         return f"openfatture config set ai_enabled_tools {tool.name}"

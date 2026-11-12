@@ -201,6 +201,16 @@ cli-status-readiness = [bold]Bereitschaft[/bold]  Kern: [cyan]{ $core ->
         [yes] konfiguriert
        *[no] nicht konfiguriert
     }[/cyan]
+cli-status-flows-title = Daten, die den Computer verlassen
+cli-status-column-flow = Fluss
+cli-status-column-destination = Ziel
+cli-status-flow-model = KI-Modell (jede Anfrage an den Assistenten)
+cli-status-flow-embeddings = Indexierung der Wissensbasis
+cli-status-flow-lookups = USt-IdNr.-Prüfung (VIES)
+cli-status-flow-sdi = Rechnungsversand an SDI (PEC)
+cli-status-local = lokal (nichts verlässt den Computer)
+cli-status-off = aus
+cli-status-flows-note = Details und wie man sie reduziert: docs/PRIVACY.md
 cli-status-title = OpenFatture-Status
 cli-status-label-ai-api-key-configured = KI-API-Schlüssel konfiguriert
 cli-status-label-assistant-backend = Assistent-Backend

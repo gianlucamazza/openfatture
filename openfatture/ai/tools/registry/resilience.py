@@ -16,7 +16,7 @@ def bulkhead_config_for(risk: ToolRisk | None) -> BulkheadConfig:
     """Concurrency limits: reads run wider and wait longer than writes."""
     if risk is None:
         return BulkheadConfig()
-    if risk is ToolRisk.READ:
+    if risk in (ToolRisk.READ, ToolRisk.LOOKUP):
         return BulkheadConfig(max_concurrent_executions=10, acquisition_timeout_seconds=15.0)
     return BulkheadConfig(max_concurrent_executions=2, acquisition_timeout_seconds=5.0)
 
@@ -25,7 +25,7 @@ def circuit_breaker_config_for(risk: ToolRisk | None) -> CircuitBreakerConfig:
     """Failure policy: reads are lenient and recover fast, writes trip early."""
     if risk is None:
         return CircuitBreakerConfig()
-    if risk is ToolRisk.READ:
+    if risk in (ToolRisk.READ, ToolRisk.LOOKUP):
         return CircuitBreakerConfig(
             failure_threshold=10,
             success_threshold=3,

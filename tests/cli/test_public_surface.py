@@ -52,6 +52,7 @@ def test_status_supports_machine_readable_output() -> None:
     assert "hooks_dir" in payload["extensions"]
     assert "assistant_available" in payload["feature_flags"]
     assert "limitations" in payload
+    assert set(payload["data_destinations"]) == {"model", "embeddings", "lookups", "sdi"}
     readiness = payload["readiness"]
     assert "core_ready" in readiness
     assert "assistant_ready" in readiness

@@ -118,3 +118,14 @@ def test_prompt_states_disabled_capabilities_with_command(enable_tools: bool) ->
     assert ("`openfatture config set ai_tool_access standard`" in prompt) is enable_tools
     assert "I tools includono" not in prompt
     assert "copia di cortesia" in prompt
+
+
+def test_online_lookups_follow_access_and_the_offline_switch() -> None:
+    registry = _registry()
+    assert "check_vat_vies" in _names(registry, Settings(ai_tool_access="standard"))
+    assert "check_vat_vies" in _names(registry, Settings())
+    assert "check_vat_vies" not in _names(registry, Settings(ai_tool_access="read"))
+    offline = Settings(ai_offline=True)
+    assert "check_vat_vies" not in _names(registry, offline)
+    with patch("openfatture.ai.tools.registry.core.get_settings", return_value=offline):
+        assert registry.disabled_capabilities()["vat"] == "openfatture config set ai_offline false"

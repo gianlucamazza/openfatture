@@ -24,6 +24,8 @@ class ToolRisk(StrEnum):
     """What a tool can affect. The agent access policy decides by this class.
 
     - ``read``: only reads local data.
+    - ``lookup``: reads a public registry over the network (fixed endpoint,
+      validated identifier sent, nothing changed); off with ``ai_offline``.
     - ``local_artifact``: writes or opens a document inside the exports or
       archive directory and touches no record (PDF, XML, CSV export).
     - ``mutate``: creates, changes or deletes records.
@@ -31,6 +33,7 @@ class ToolRisk(StrEnum):
     """
 
     READ = "read"
+    LOOKUP = "lookup"
     LOCAL_ARTIFACT = "local_artifact"
     MUTATE = "mutate"
     TRANSMIT = "transmit"
