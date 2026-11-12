@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The confirmation prompt shows client, total and invoice number from the
+  local database when present, and labels values that came only from the
+  model, so a model-supplied name or amount cannot disguise which invoice
+  will be sent.
+- The local invoice lookup for that prompt runs off the event loop.
+- A confirmation prompt cancelled or timed out no longer consumes the next
+  line of input.
+- A TTY is no longer enough to treat the process as interactive: the CLI
+  assistant opts in explicitly, so a server started from a terminal does
+  not prompt on its own stdin.
+
 ## [2.16.0] - 2026-11-12
 
 The assistant can check EU VAT numbers online, and OpenFatture states what
