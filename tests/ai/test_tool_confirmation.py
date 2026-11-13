@@ -7,11 +7,17 @@ The transmit function is always a MagicMock.
 from __future__ import annotations
 
 import asyncio
+import os
+import select
+import sys
 import threading
 import time
+from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import typer
 
 from openfatture.ai.tools.invoice_tools import get_invoice_tools
 from openfatture.ai.tools.models import Tool, ToolParameter, ToolParameterType, ToolRisk
@@ -21,10 +27,25 @@ from openfatture.ai.tools.registry.policy import (
     build_confirmation_prompt,
     confirmation_required,
     disabled_remediation,
+    is_interactive,
     is_tool_enabled_for_agent,
+    prompt_human_confirmation,
+    set_interactive_session,
     strip_reserved_parameters,
 )
 from openfatture.platform.config import Settings, parse_enabled_tools
+
+
+@pytest.fixture(autouse=True)
+def _reset_interactive_session() -> Any:
+    set_interactive_session(False)
+    yield
+    set_interactive_session(False)
+
+
+class _Tty:
+    def isatty(self) -> bool:
+        return True
 
 
 def _settings(
@@ -170,6 +191,40 @@ class TestConfirmationPrompt:
         assert "Acme S.r.l." in prompt
         assert "1220" in prompt
         assert "10" in prompt
+        assert "model provided" not in prompt
+
+    def test_prompt_prefers_database_values_over_model(self) -> None:
+        with patch(
+            "openfatture.ai.tools.registry.policy._lookup_local_invoice_context",
+            return_value={"client": "Acme S.r.l.", "total": 1220.0, "numero": "10"},
+        ):
+            prompt = build_confirmation_prompt(
+                "send_invoice_to_sdi",
+                {
+                    "fattura_id": 42,
+                    "cliente": "Evildoer S.p.A.",
+                    "totale": 1,
+                    "numero": "99",
+                },
+            )
+        assert "invoice ID 42" in prompt
+        assert "number 10 (from database; model provided 99)" in prompt
+        assert "client Acme S.r.l. (from database; model provided Evildoer S.p.A.)" in prompt
+        assert "total 1220.0 (from database; model provided 1)" in prompt
+
+    def test_prompt_labels_model_provided_values_when_lookup_empty(self) -> None:
+        with patch(
+            "openfatture.ai.tools.registry.policy._lookup_local_invoice_context",
+            return_value={},
+        ):
+            prompt = build_confirmation_prompt(
+                "send_invoice_to_sdi",
+                {"fattura_id": 42, "cliente": "Acme S.r.l.", "totale": 1220.0, "numero": "10"},
+            )
+        assert "invoice ID 42" in prompt
+        assert "number 10 (model provided)" in prompt
+        assert "client Acme S.r.l. (model provided)" in prompt
+        assert "total 1220.0 (model provided)" in prompt
 
 
 class TestSendToolDefaultDisabled:
@@ -413,7 +468,7 @@ class TestInteractivePromptDoesNotBlock:
         ask_idents: list[int] = []
         loop_progressed = False
 
-        def fake_ask(prompt: str) -> bool:
+        def fake_ask(prompt: str, cancelled: threading.Event | None = None) -> bool:
             ask_idents.append(threading.get_ident())
             assert "42" in prompt
             time.sleep(0.15)
@@ -520,3 +575,181 @@ class TestDefaultRegistryAllDoesNotEnableSend:
         assert result.success is False
         assert result.error_type == "tool_disabled"
         transmit.assert_not_called()
+
+
+class TestInvoiceLookupRunsOffEventLoop:
+    @pytest.mark.asyncio
+    async def test_invoice_lookup_runs_off_the_event_loop(self) -> None:
+        loop_ident = threading.get_ident()
+        lookup_idents: list[int] = []
+        loop_progressed = False
+
+        def fake_lookup(fattura_id: Any) -> dict[str, Any]:
+            lookup_idents.append(threading.get_ident())
+            assert fattura_id == 42
+            time.sleep(0.15)
+            return {"client": "Acme S.r.l.", "total": 1220.0, "numero": "10"}
+
+        async def marker() -> None:
+            nonlocal loop_progressed
+            await asyncio.sleep(0.05)
+            loop_progressed = True
+
+        with (
+            patch(
+                "openfatture.ai.tools.registry.policy.is_interactive",
+                return_value=True,
+            ),
+            patch(
+                "openfatture.ai.tools.registry.policy._lookup_local_invoice_context",
+                side_effect=fake_lookup,
+            ),
+            patch(
+                "openfatture.ai.tools.registry.policy._ask_tty_confirmation",
+                return_value=False,
+            ),
+        ):
+            result, _ = await asyncio.gather(
+                prompt_human_confirmation("send_invoice_to_sdi", {"fattura_id": 42}),
+                marker(),
+            )
+
+        assert lookup_idents
+        assert lookup_idents[0] != loop_ident
+        assert loop_progressed is True
+        assert result is False
+
+
+class TestStalePromptDoesNotSwallowNextLine:
+    async def _assert_line_survives(self, run: Any) -> None:
+        read_fd, write_fd = os.pipe()
+        stdin = os.fdopen(read_fd, "r", buffering=1)
+        try:
+            with (
+                patch(
+                    "openfatture.ai.tools.registry.policy.is_interactive",
+                    return_value=True,
+                ),
+                patch("sys.stdin", stdin),
+            ):
+                await run()
+                os.write(write_fd, b"yes\n")
+                ready, _, _ = select.select([read_fd], [], [], 0.3)
+                assert ready, "stale prompt swallowed the next line"
+                assert stdin.readline() == "yes\n"
+        finally:
+            stdin.close()
+            os.close(write_fd)
+
+    @pytest.mark.asyncio
+    async def test_cancelled_prompt_does_not_swallow_next_line(self) -> None:
+        async def run() -> None:
+            task = asyncio.create_task(
+                prompt_human_confirmation("send_invoice_to_sdi", {"fattura_id": 1})
+            )
+            await asyncio.sleep(0.15)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        await self._assert_line_survives(run)
+
+    @pytest.mark.asyncio
+    async def test_timed_out_prompt_does_not_swallow_next_line(self) -> None:
+        async def run() -> None:
+            with pytest.raises(TimeoutError):
+                await asyncio.wait_for(
+                    prompt_human_confirmation("send_invoice_to_sdi", {"fattura_id": 1}),
+                    timeout=0.15,
+                )
+
+        await self._assert_line_survives(run)
+
+
+class TestInteractivityBeyondTty:
+    def test_tty_alone_is_not_interactive(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "stdin", _Tty())
+        monkeypatch.setattr(sys, "stdout", _Tty())
+        monkeypatch.delenv("OPENFATTURE_INTERACTIVE", raising=False)
+        set_interactive_session(False)
+        assert is_interactive() is False
+
+    def test_cli_session_and_tty_is_interactive(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "stdin", _Tty())
+        monkeypatch.setattr(sys, "stdout", _Tty())
+        monkeypatch.delenv("OPENFATTURE_INTERACTIVE", raising=False)
+        set_interactive_session(True)
+        assert is_interactive() is True
+
+    def test_cli_session_without_tty_is_not_interactive(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(sys, "stdin", SimpleNamespace(isatty=lambda: False))
+        monkeypatch.setattr(sys, "stdout", _Tty())
+        monkeypatch.delenv("OPENFATTURE_INTERACTIVE", raising=False)
+        set_interactive_session(True)
+        assert is_interactive() is False
+
+    def test_env_opt_in_with_tty_is_interactive(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "stdin", _Tty())
+        monkeypatch.setattr(sys, "stdout", _Tty())
+        monkeypatch.setenv("OPENFATTURE_INTERACTIVE", "1")
+        set_interactive_session(False)
+        assert is_interactive() is True
+
+    def test_env_opt_out_overrides_cli_session(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "stdin", _Tty())
+        monkeypatch.setattr(sys, "stdout", _Tty())
+        monkeypatch.setenv("OPENFATTURE_INTERACTIVE", "0")
+        set_interactive_session(True)
+        assert is_interactive() is False
+
+    def test_assistant_start_opts_in_for_the_run(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from openfatture.cli.commands import assistant
+
+        seen: list[bool] = []
+
+        def fake_run(_coro: Any) -> None:
+            monkeypatch.setattr(sys, "stdin", _Tty())
+            monkeypatch.setattr(sys, "stdout", _Tty())
+            monkeypatch.delenv("OPENFATTURE_INTERACTIVE", raising=False)
+            seen.append(is_interactive())
+            _coro.close()
+
+        monkeypatch.setattr(assistant, "_ensure_setup", lambda _fmt: None)
+        monkeypatch.setattr(assistant, "run_sync_with_lifespan", fake_run)
+        monkeypatch.setattr(
+            "openfatture.cli.formatters.utils.get_format_from_context",
+            lambda _ctx: "rich",
+        )
+
+        assistant.start(
+            cast(typer.Context, SimpleNamespace()), message="hello", stream=False, session=None
+        )
+
+        assert seen == [True]
+        assert is_interactive() is False
+
+    def test_assistant_start_resets_opt_in_on_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from openfatture.cli.commands import assistant
+
+        def fake_run(_coro: Any) -> None:
+            _coro.close()
+            raise typer.Exit(1)
+
+        monkeypatch.setattr(assistant, "_ensure_setup", lambda _fmt: None)
+        monkeypatch.setattr(assistant, "run_sync_with_lifespan", fake_run)
+        monkeypatch.setattr(
+            "openfatture.cli.formatters.utils.get_format_from_context",
+            lambda _ctx: "rich",
+        )
+        monkeypatch.setattr(sys, "stdin", _Tty())
+        monkeypatch.setattr(sys, "stdout", _Tty())
+        monkeypatch.delenv("OPENFATTURE_INTERACTIVE", raising=False)
+
+        with pytest.raises(typer.Exit):
+            assistant.start(
+                cast(typer.Context, SimpleNamespace()), message="hello", stream=False, session=None
+            )
+
+        assert is_interactive() is False
