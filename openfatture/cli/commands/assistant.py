@@ -189,7 +189,15 @@ def start(
         session = _latest_session_id()
         if session is None and format_type == "rich":
             console.print(Text(_("cli-assistant-no-session-to-continue")))
-    run_sync_with_lifespan(_run_assistant(ctx, message, stream, session))
+    # Opt in for TTY confirmation prompts for this CLI run only. A server
+    # started from a terminal does not inherit this and will not prompt.
+    from openfatture.ai.tools.registry.policy import set_interactive_session
+
+    set_interactive_session(True)
+    try:
+        run_sync_with_lifespan(_run_assistant(ctx, message, stream, session))
+    finally:
+        set_interactive_session(False)
 
 
 def _latest_session_id() -> str | None:

@@ -126,8 +126,9 @@ creation, reconciliation and other record changes, each confirmed by a person).
 in `AI_ENABLED_TOOLS`.
 
 `AI_TOOLS_REQUIRE_CONFIRMATION=true` is the default. Tools marked as requiring
-confirmation need human approval: a terminal can prompt, while noninteractive
-callers without approval are refused. The model cannot approve itself. Turning
+confirmation need human approval: the CLI assistant can prompt on a terminal,
+while noninteractive callers without approval are refused. The model cannot
+approve itself. Turning
 this setting off skips confirmation but still requires transmit-tool opt-in.
 See [AI architecture](docs/AI_ARCHITECTURE.md) for runtime details.
 
